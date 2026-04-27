@@ -283,12 +283,11 @@ function getStyles(accent: string): string {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       max-width: 180mm;
       margin: 0 auto;
-      padding: 8mm 12mm 12mm 12mm;
+      padding: 10mm 14mm 14mm 14mm;
       font-size: 10pt;
-      line-height: 1.6;
+      line-height: 1.7;
       color: #1a1a1a;
       background: #fff;
-      /* RETRAIT DE min-height: 297mm QUI CAUSAIT LA SUPERPOSITION */
     }
 
     /* ── EN-TÊTE ── */
@@ -351,11 +350,11 @@ function getStyles(accent: string): string {
     .main-title {
       text-align: center;
       font-family: 'Playfair Display', serif;
-      font-size: 18pt;
+      font-size: 17pt;
       font-weight: 600;
       color: #000;
-      margin: 20px 0 12px 0;
-      padding: 12px 10px;
+      margin: 25px 0 14px 0;
+      padding: 14px 10px;
       background: #fafafa;
       border-radius: 4px;
       border-top: 3px solid ${accent};
@@ -367,7 +366,7 @@ function getStyles(accent: string): string {
       font-size: 9pt;
       font-weight: 500;
       color: #444;
-      margin-bottom: 15px;
+      margin-bottom: 18px;
       line-height: 1.4;
     }
     .between-parties {
@@ -375,7 +374,7 @@ function getStyles(accent: string): string {
       font-size: 9pt;
       font-weight: 600;
       color: #333;
-      margin: 0 auto 20px auto;
+      margin: 0 auto 22px auto;
       padding: 10px;
       border-radius: 4px;
       letter-spacing: 0.3px;
@@ -385,7 +384,7 @@ function getStyles(accent: string): string {
     /* ── BLOC PARTIES ── */
     .parties-wrapper {
       border: 1px solid #ccc;
-      margin: 0 0 20px 0;
+      margin: 0 0 25px 0;
       display: flex;
       border-radius: 4px;
       overflow: hidden;
@@ -394,7 +393,7 @@ function getStyles(accent: string): string {
     }
     .party-col {
       flex: 1;
-      padding: 15px;
+      padding: 16px;
       min-width: 0;
     }
     .party-col:first-child {
@@ -437,8 +436,8 @@ function getStyles(accent: string): string {
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: ${accent};
-      margin: 20px 0 10px 0;
-      padding-bottom: 5px;
+      margin: 25px 0 12px 0;
+      padding-bottom: 6px;
       border-bottom: 2px solid #000;
       break-inside: avoid;
     }
@@ -446,17 +445,17 @@ function getStyles(accent: string): string {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      margin: 0 0 20px 0;
-      font-size: 8pt;
+      margin: 0 0 25px 0;
+      font-size: 8.5pt;
       border-radius: 4px;
       overflow: hidden;
       border: 1px solid #ccc;
       break-inside: avoid;
     }
     .recap-table th, .recap-table td {
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-bottom: 1px solid #ddd;
-      line-height: 1.3;
+      line-height: 1.4;
     }
     .recap-table tr:last-child th, .recap-table tr:last-child td {
       border-bottom: none;
@@ -476,10 +475,10 @@ function getStyles(accent: string): string {
     }
 
     /* ── ARTICLES ── */
-    .articles-section { margin-top: 15px; }
+    .articles-section { margin-top: 20px; }
     .article-block {
-      margin: 0 0 15px 0;
-      /* RETRAIT DU BREAK-INSIDE: AVOID QUI CAUSAIT LA SUPERPOSITION DES GRANDS PARAGRAPHES */
+      margin: 0 0 22px 0;
+      padding-bottom: 10px;
     }
     .article-title {
       font-family: 'Playfair Display', serif;
@@ -490,13 +489,13 @@ function getStyles(accent: string): string {
       break-after: avoid;
     }
     .article-body {
-      font-size: 8pt;
+      font-size: 8.5pt;
       text-align: justify;
       color: #333;
-      line-height: 1.5;
+      line-height: 1.6;
     }
     .article-body p {
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       text-indent: 0;
       word-wrap: break-word;
       overflow-wrap: break-word;

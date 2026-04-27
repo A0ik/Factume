@@ -211,24 +211,6 @@ export function ContractValidator({
             className="overflow-hidden"
           >
             <div className="space-y-2 p-2">
-              {/* Sélecteur de secteur */}
-              <div className="mb-3">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Secteur d'activité (optionnel)
-                </label>
-                <select
-                  value={selectedSector}
-                  onChange={(e) => setSelectedSector(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                >
-                  <option value="">Sélectionner un secteur...</option>
-                  {getAllSectors().map((sectorRule) => (
-                    <option key={sectorRule.id} value={sectorRule.id}>
-                      {sectorRule.sector} - {sectorRule.collectiveAgreement}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               {/* Erreurs bloquantes */}
               {errorsBySeverity.error.length > 0 && (

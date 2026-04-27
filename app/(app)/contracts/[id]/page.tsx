@@ -145,11 +145,14 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const handleGeneratePayslip = () => {
     if (!contract) return;
     try {
-      const data = creerBulletinDepuisContrat({ ...contract, contractType } as any, '', '');
+      const now = new Date();
+      const periodeDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const periodeFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const data = creerBulletinDepuisContrat({ ...contract, contractType } as any, periodeDebut, periodeFin);
       setPayslipData(data);
       setShowPayslipEditor(true);
     } catch {
-      toast.error('Erreur');
+      toast.error('Impossible de générer le bulletin');
     }
   };
 

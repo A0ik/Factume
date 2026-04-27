@@ -296,12 +296,86 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     employeeSignature: data.employee_signature,
   });
 
+  // Champs obligatoires par type pour un contrat légal
+  const getRequiredFields = (): { key: string; label: string }[] => {
+    const base = [
+      { key: 'employee_first_name', label: 'Prénom du salarié' },
+      { key: 'employee_last_name', label: 'Nom du salarié' },
+      { key: 'employee_address', label: 'Adresse du salarié' },
+      { key: 'employee_postal_code', label: 'Code postal du salarié' },
+      { key: 'employee_city', label: 'Ville du salarié' },
+      { key: 'employee_birth_date', label: 'Date de naissance' },
+      { key: 'employee_nationality', label: 'Nationalité' },
+      { key: 'contract_start_date', label: 'Date de début du contrat' },
+      { key: 'job_title', label: 'Intitulé du poste' },
+      { key: 'work_location', label: 'Lieu de travail' },
+      { key: 'work_schedule', label: 'Horaires de travail' },
+      { key: 'salary_amount', label: 'Salaire' },
+      { key: 'company_name', label: "Nom de l'entreprise" },
+      { key: 'company_address', label: "Adresse de l'entreprise" },
+      { key: 'company_postal_code', label: "Code postal de l'entreprise" },
+      { key: 'company_city', label: "Ville de l'entreprise" },
+      { key: 'company_siret', label: 'SIRET' },
+      { key: 'employer_name', label: "Nom de l'employeur" },
+      { key: 'employer_title', label: "Titre de l'employeur" },
+    ];
+
+    if (contractType === 'cdd') {
+      base.push({ key: 'contract_end_date', label: 'Date de fin du contrat' });
+      base.push({ key: 'contract_reason', label: 'Motif de recours' });
+    }
+
+    if (contractType === 'other') {
+      const cat = formData.contract_category || 'stage';
+      if (cat === 'stage' || cat === 'apprentissage' || cat === 'professionnalisation') {
+        if (formData.tutor_name !== undefined) base.push({ key: 'tutor_name', label: 'Nom du tuteur' });
+        if (formData.school_name !== undefined) base.push({ key: 'school_name', label: "Nom de l'école" });
+      }
+    }
+
+    return base;
+  };
+
   const generateContractHTML = () => {
+    // Validation obligatoire avant génération
+    const required = getRequiredFields();
+    const missing = required.filter(f => {
+      const val = (formData as any)[f.key];
+      return !val || (typeof val === 'string' && val.trim() === '');
+    });
+
+    if (missing.length > 0) {
+      const labels = missing.map(f => f.label).join(', ');
+      setError(`Champs obligatoires manquants pour un contrat légal : ${labels}`);
+      toast.error(`Contrat incomplet — ${missing.length} champ(s) manquant(s)`);
+      return;
+    }
+
+    setError('');
     const templateData = toCamelCase(formData);
     const html = generateTemplate(templateData);
     setContractHtml(html);
     setStep('preview');
     loadPdfPreview();
+  };
+
+  const handleGeneratePayslip = () => {
+    // Validation minimale
+    if (!formData.salary_amount || !formData.job_title) {
+      toast.error('Remplissez au minimum le poste et le salaire pour générer un bulletin');
+      return;
+    }
+    try {
+      const now = new Date();
+      const periodeDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const periodeFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const data = creerBulletinDepuisContrat(toCamelCase(formData), periodeDebut, periodeFin);
+      setPayslipData(data);
+      setShowPayslipEditor(true);
+    } catch (e) {
+      console.error('Bulletin error:', e);
+      toast.error('Impossible de générer le bulletin — vérifiez les données du contrat');
+    }
   };
 
   const loadPdfPreview = async () => {
@@ -433,16 +507,6 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     } finally { setLoading(false); }
   };
 
-  const handleGeneratePayslip = () => {
-    try {
-      const data = creerBulletinDepuisContrat(toCamelCase(formData), '', '');
-      setPayslipData(data);
-      setShowPayslipEditor(true);
-    } catch {
-      toast.error('Impossible de générer le bulletin de paie');
-    }
-  };
-
   const steps = ['upload', 'edit', 'preview'];
   const stepIndex = steps.indexOf(step);
 
@@ -558,6 +622,17 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           {/* Validation */}
           <ContractValidator contractType={contractType as any} contractData={formData as any} onValidationChange={() => {}} />
 
+          {/* Error block */}
+          {error && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-700 dark:text-red-400 text-sm">Contrat incomplet</p>
+                <p className="text-red-600 dark:text-red-300 text-sm mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-center gap-4">
             {mode === 'create' && (
@@ -572,7 +647,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
 
       {/* Preview Step */}
       {step === 'preview' && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           {/* Validation */}
           <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-lg p-6">
             <div className="flex items-center gap-3 mb-4"><Shield className="w-6 h-6 text-primary" /><h3 className="text-lg font-bold">Validation légale</h3></div>
