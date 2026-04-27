@@ -1,25 +1,34 @@
 /**
- * Server-side PDF generation for French labor contracts.
- * Renders the HTML template via html-pdf-node (Puppeteer) for pixel-perfect output.
- * The HTML template already handles all layout, page breaks, and styling.
+ * Server-side PDF generation using Puppeteer directly.
+ * Renders the HTML template for perfect fidelity with the preview.
  */
-import htmlPdfNode from 'html-pdf-node';
+import puppeteer from 'puppeteer';
 import { generateContract } from '@/lib/labor-law/contract-templates';
 
 export type { ContractTemplateData } from '@/lib/labor-law/contract-templates';
 
-export async function generateContractPdfBuffer(data: Parameters<typeof generateContract>[0]): Promise<Uint8Array> {
+export async function generateContractPdfBuffer(
+  data: Parameters<typeof generateContract>[0]
+): Promise<Uint8Array> {
   const html = generateContract(data);
 
-  const buffer = await htmlPdfNode.generatePdf(
-    { content: html },
-    {
-      format: 'A4',
-      printBackground: true,
-      // Margins are handled by the @page rule inside the HTML template
-      margin: { top: '0', bottom: '0', left: '0', right: '0' },
-    }
-  );
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    headless: true,
+  });
 
-  return new Uint8Array(buffer);
+  try {
+    const page = await browser.newPage();
+    // networkidle2 — page is considered loaded when ≤2 pending network requests
+    await page.setContent(html, { waitUntil: 'networkidle2', timeout: 30_000 });
+    const pdf = await page.pdf({
+      format: 'a4',
+      printBackground: true,
+      // Margins are handled by @page CSS in the template
+      margin: { top: 0, bottom: 0, left: 0, right: 0 },
+    });
+    return new Uint8Array(pdf);
+  } finally {
+    await browser.close();
+  }
 }

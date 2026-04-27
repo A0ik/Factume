@@ -3,7 +3,9 @@ import { generateContractDOCX } from '@/lib/labor-law/docx-export-service';
 
 export async function POST(req: NextRequest) {
   try {
-    const contractData = await req.json();
+    const body = await req.json();
+    // Form sends { contract: data }, direct calls may send data at root level
+    const contractData = body.contract ?? body;
 
     // Validation basique
     if (!contractData.contractType || !contractData.employeeFirstName || !contractData.employeeLastName) {

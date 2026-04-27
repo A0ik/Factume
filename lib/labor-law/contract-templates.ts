@@ -252,42 +252,40 @@ function getStyles(accent: string): string {
 
     @page {
       size: A4;
-      margin: 15mm;
-    }
-    @media print {
-      html, body {
-        height: auto;
-        width: 210mm;
+      margin: 18mm 15mm 20mm 15mm;
+      @bottom-center {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: 'Inter', Helvetica, Arial, sans-serif;
+        font-size: 7pt;
+        color: #888;
       }
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        margin: 0;
-        padding: 0;
-      }
-      .page-break, .signature-page-break { break-before: always; }
-      .no-print { display: none !important; }
-      body * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+      @bottom-left {
+        content: "Document confidentiel";
+        font-family: 'Inter', Helvetica, Arial, sans-serif;
+        font-size: 7pt;
+        color: #bbb;
       }
     }
 
     *, *::before, *::after { box-sizing: border-box; }
 
-    html {
-      font-size: 10pt;
-    }
+    html { font-size: 10pt; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
       max-width: 180mm;
       margin: 0 auto;
-      padding: 10mm 14mm 14mm 14mm;
       font-size: 10pt;
       line-height: 1.7;
       color: #1a1a1a;
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @media print {
+      .page-break, .signature-page-break { break-before: always; }
+      .no-print { display: none !important; }
     }
 
     /* ── EN-TÊTE ── */
@@ -477,26 +475,30 @@ function getStyles(accent: string): string {
     /* ── ARTICLES ── */
     .articles-section { margin-top: 20px; }
     .article-block {
-      margin: 0 0 22px 0;
-      padding-bottom: 10px;
+      margin: 0 0 18px 0;
+      padding: 14px 16px;
+      border-left: 3px solid ${accent};
+      background: #fafafa;
+      border-radius: 0 6px 6px 0;
+      break-inside: avoid;
     }
     .article-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 10pt;
-      font-weight: 600;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: 10.5pt;
+      font-weight: 700;
       color: #000;
       margin: 0 0 8px 0;
       break-after: avoid;
+      letter-spacing: 0.1px;
     }
     .article-body {
       font-size: 8.5pt;
       text-align: justify;
       color: #333;
-      line-height: 1.6;
+      line-height: 1.65;
     }
     .article-body p {
-      margin: 0 0 10px 0;
-      text-indent: 0;
+      margin: 0 0 8px 0;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
@@ -608,7 +610,7 @@ function getStyles(accent: string): string {
       line-height: 1.3;
     }
     .sig-area {
-      height: 80px;
+      height: 90px;
       margin: 0 0 10px 0;
       display: flex;
       align-items: center;
@@ -617,11 +619,15 @@ function getStyles(accent: string): string {
       border-radius: 4px;
       border: 1px dashed #999;
       padding: 8px;
+      overflow: hidden;
     }
     .sig-area img {
-      max-height: 70px;
+      max-height: 80px;
       max-width: 100%;
+      width: auto;
+      height: auto;
       object-fit: contain;
+      display: block;
     }
     .sig-area-label {
       font-size: 8pt;
@@ -1131,8 +1137,8 @@ function buildContractHTML(data: ContractTemplateData): string {
   </div>
   ` : ''}
 
-  <!-- PIED DE PAGE -->
-  <div class="doc-footer">
+  <!-- PIED DE PAGE (visible uniquement en aperçu web, pas en PDF) -->
+  <div class="doc-footer no-print">
     <div>
       <strong>${esc(data.companyName)}</strong>
       &nbsp;·&nbsp; SIRET ${esc(data.companySiret)}

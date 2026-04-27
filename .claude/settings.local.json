@@ -123,7 +123,9 @@
       "Bash(curl -s https://jsonplaceholder.typicode.com/posts/1)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node -e \"require\\('html-pdf-node'\\)\")",
+      "Bash(node -e \"const p = require\\('puppeteer'\\); p.launch\\(\\).then\\(b => { console.log\\('OK', b.version\\(\\)\\); b.close\\(\\); }\\).catch\\(e => console.error\\('FAIL:', e.message\\)\\)\")"
     ]
   },
   "enableAllProjectMcpServers": true,
