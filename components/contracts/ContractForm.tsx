@@ -139,6 +139,63 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  // Converts camelCase AI response keys → snake_case form keys
+  const mapAIParsed = (parsed: Record<string, unknown>): Partial<ContractFormData> => {
+    const keyMap: Record<string, string> = {
+      employeeFirstName: 'employee_first_name',
+      employeeLastName: 'employee_last_name',
+      employeeEmail: 'employee_email',
+      employeePhone: 'employee_phone',
+      employeeAddress: 'employee_address',
+      employeePostalCode: 'employee_postal_code',
+      employeeCity: 'employee_city',
+      employeeBirthDate: 'employee_birth_date',
+      employeeSocialSecurity: 'employee_social_security',
+      employeeNationality: 'employee_nationality',
+      employeeQualification: 'employee_qualification',
+      contractStartDate: 'contract_start_date',
+      contractEndDate: 'contract_end_date',
+      startDate: 'contract_start_date',
+      endDate: 'contract_end_date',
+      trialPeriodDays: 'trial_period_days',
+      jobTitle: 'job_title',
+      workLocation: 'work_location',
+      workSchedule: 'work_schedule',
+      workingHours: 'working_hours',
+      salaryAmount: 'salary_amount',
+      salaryFrequency: 'salary_frequency',
+      contractReason: 'contract_reason',
+      replacedEmployeeName: 'replaced_employee_name',
+      contractClassification: 'contract_classification',
+      companyName: 'company_name',
+      companyAddress: 'company_address',
+      companyPostalCode: 'company_postal_code',
+      companyCity: 'company_city',
+      companySiret: 'company_siret',
+      employerName: 'employer_name',
+      employerTitle: 'employer_title',
+      collectiveAgreement: 'collective_agreement',
+      probationClause: 'probation_clause',
+      nonCompeteClause: 'non_compete_clause',
+      mobilityClause: 'mobility_clause',
+      tutorName: 'tutor_name',
+      schoolName: 'school_name',
+      speciality: 'speciality',
+      objectives: 'objectives',
+      tasks: 'tasks',
+      durationWeeks: 'duration_weeks',
+      contractCategory: 'contract_category',
+      contractTitle: 'contract_title',
+    };
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value !== null && value !== undefined && value !== '') {
+        out[keyMap[key] ?? key] = value;
+      }
+    }
+    return out as Partial<ContractFormData>;
+  };
+
   // File upload analysis
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
@@ -156,8 +213,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       }));
       results.forEach(r => {
         if (r.extractedData) {
-          const clean = Object.fromEntries(Object.entries(r.extractedData).filter(([, v]) => v !== null && v !== undefined && v !== ''));
-          setFormData(prev => ({ ...prev, ...clean }));
+          setFormData(prev => ({ ...prev, ...mapAIParsed(r.extractedData) }));
         }
       });
       setStep('edit');
@@ -200,7 +256,10 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       const res = await fetch('/api/process-voice-contract', { method: 'POST', body: fd });
       if (!res.ok) throw new Error('Erreur voix');
       const result = await res.json();
-      if (result.parsed) setFormData(prev => ({ ...prev, ...result.parsed }));
+      if (result.parsed) {
+        setFormData(prev => ({ ...prev, ...mapAIParsed(result.parsed) }));
+        setStep('edit');
+      }
     } catch {
       setError('Erreur lors du traitement vocal');
     } finally {
@@ -221,9 +280,9 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       if (!res.ok) throw new Error('Erreur texte');
       const result = await res.json();
       if (result.parsed) {
-        const clean = Object.fromEntries(Object.entries(result.parsed).filter(([, v]) => v !== null && v !== undefined && v !== ''));
-        setFormData(prev => ({ ...prev, ...clean }));
+        setFormData(prev => ({ ...prev, ...mapAIParsed(result.parsed) }));
         setTextInput('');
+        setStep('edit');
       }
     } catch {
       setError('Erreur lors de l\'analyse du texte');
@@ -665,7 +724,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
             {pdfPreviewUrl ? (
               <iframe src={pdfPreviewUrl} className="w-full h-[700px] rounded-2xl border border-gray-100 dark:border-white/10 mb-6" />
             ) : !pdfPreviewLoading && contractHtml && (
-              <div className="w-full h-[700px] overflow-auto rounded-2xl border border-gray-100 dark:border-white/10 mb-6 p-6 bg-white" dangerouslySetInnerHTML={{ __html: contractHtml }} />
+              <iframe srcDoc={contractHtml} className="w-full h-[700px] rounded-2xl border border-gray-100 dark:border-white/10 mb-6 bg-white" />
             )}
 
             {/* Signatures */}
