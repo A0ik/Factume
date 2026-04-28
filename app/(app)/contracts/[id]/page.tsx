@@ -96,22 +96,25 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
     if (!contract) return;
     setExportLoading(true);
     try {
-      const res = await fetch('/api/contracts/pdf', {
+      const res = await fetch('/api/contracts/html-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contract: { ...contract, contractType } }),
       });
       if (!res.ok) throw new Error('Erreur');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Contrat_${TYPE_LABELS[contractType]}_${contract.employee_last_name}_${new Date().toISOString().split('T')[0]}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF téléchargé');
-    } catch {
-      toast.error('Erreur');
+      const htmlContent = await res.text();
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) throw new Error('Popups bloqués — autorisez les popups pour ce site');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 400);
+      };
+      toast.success('Aperçu PDF ouvert — utilisez Imprimer pour sauvegarder en PDF');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur PDF');
     } finally {
       setExportLoading(false);
     }

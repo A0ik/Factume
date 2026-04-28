@@ -1,9 +1,14 @@
 /**
  * Service d'export de contrats au format DOCX (Word)
- * Utilise la bibliothèque docx.js pour générer des documents Word modifiables
+ * Génère un document Word professionnel avec structure complète
  */
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip } from 'docx';
+import {
+  Document, Packer, Paragraph, TextRun, AlignmentType,
+  convertInchesToTwip, BorderStyle, TableCell, TableRow, Table, WidthType,
+  PageNumber, Footer, Header, ShadingType, UnderlineType, PageBreak,
+} from 'docx';
+import { getContractArticles } from './contract-templates';
 
 export interface ContractData {
   accentColor?: string;
@@ -105,54 +110,22 @@ export interface ContractData {
   signatureDate?: string;
 }
 
-/**
- * Génère un document DOCX pour un contrat
- */
-export async function generateContractDOCX(data: ContractData): Promise<Blob> {
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: [
-        // Titre du document
-        new Paragraph({
-          text: getContractTitle(data.contractType),
-          heading: HeadingLevel.HEADING_1,
-          alignment: AlignmentType.CENTER,
-          spacing: { after: convertInchesToTwip(0.3) }
-        }),
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-        // Référence légale
-        new Paragraph({
-          text: getLegalReference(data.contractType),
-          alignment: AlignmentType.CENTER,
-          spacing: { after: convertInchesToTwip(0.5) }
-        }),
-
-        // Entreprise et Salarié
-        ...generatePartiesSection(data),
-
-        // Informations clés
-        ...generateKeyInfoSection(data),
-
-        // Articles du contrat
-        ...generateArticles(data),
-
-        // Signatures
-        ...generateSignatureSection(data)
-      ]
-    }]
-  });
-
-  // Générer le blob DOCX
-  const buffer = await Packer.toBuffer(doc);
-  return new Blob([new Uint8Array(buffer)], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  });
+function fmtDate(dateStr?: string): string {
+  if (!dateStr) return '___________';
+  const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-/**
- * Retourne le titre du contrat selon le type
- */
+function fmtMoney(amount?: string): string {
+  if (!amount) return '___________';
+  const num = parseFloat(amount);
+  if (isNaN(num)) return amount;
+  return num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
 function getContractTitle(type: string): string {
   const titles: Record<string, string> = {
     cdd: 'CONTRAT DE TRAVAIL À DURÉE DÉTERMINÉE',
@@ -162,318 +135,372 @@ function getContractTitle(type: string): string {
     professionnalisation: 'CONTRAT DE PROFESSIONNALISATION',
     interim: 'CONTRAT DE MISSION TEMPORAIRE',
     portage: 'CONTRAT DE PORTAGE SALARIAL',
-    freelance: 'CONTRAT DE PRESTATION DE SERVICES'
+    freelance: 'CONTRAT DE PRESTATION DE SERVICES',
   };
   return titles[type] || 'CONTRAT DE TRAVAIL';
 }
 
-/**
- * Retourne la référence légale
- */
-function getLegalReference(type: string): string {
+function getLegalRef(type: string): string {
   const refs: Record<string, string> = {
-    cdd: 'Réf : Articles L.1242-1 et suivants du Code du travail',
-    cdi: 'Réf : Articles L.1221-1 et suivants du Code du travail',
-    stage: 'Réf : Articles L.124-1 et suivants du Code de l\'éducation',
-    apprentissage: 'Réf : Articles L.6211-1 et suivants du Code du travail',
-    professionnalisation: 'Réf : Articles L.6325-1 et suivants du Code du travail'
+    cdd: 'Articles L. 1242-1 et suivants du Code du travail',
+    cdi: 'Articles L. 1221-1 et suivants du Code du travail',
+    stage: "Articles L. 124-1 et suivants du Code de l'éducation",
+    apprentissage: 'Articles L. 6211-1 et suivants du Code du travail',
+    professionnalisation: 'Articles L. 6325-1 et suivants du Code du travail',
+    interim: 'Articles L. 1251-1 et suivants du Code du travail',
   };
-  return refs[type] || 'Réf : Code du travail';
+  return refs[type] || 'Articles L. 1221-1 et suivants du Code du travail';
 }
 
-/**
- * Génère la section des parties (entreprise et salarié)
- */
-function generatePartiesSection(data: ContractData): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-
-  // Entreprise
-  paragraphs.push(
-    new Paragraph({
-      text: `ENTRE : ${data.companyName}`,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Adresse : ', bold: true }),
-        new TextRun(`${data.companyAddress}, ${data.companyPostalCode} ${data.companyCity}\n`)
-      ],
-      spacing: { after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'SIRET : ', bold: true }),
-        new TextRun(`${data.companySiret}\n`)
-      ],
-      spacing: { after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Représentée par : ', bold: true }),
-        new TextRun(`${data.employerName}, ${data.employerTitle}\n`)
-      ],
-      spacing: { after: convertInchesToTwip(0.3) }
-    })
-  );
-
-  // Salarié
-  paragraphs.push(
-    new Paragraph({
-      text: `ET : ${data.employeeFirstName} ${data.employeeLastName}`,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Adresse : ', bold: true }),
-        new TextRun(`${data.employeeAddress}, ${data.employeePostalCode} ${data.employeeCity}\n`)
-      ],
-      spacing: { after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Né(e) le : ', bold: true }),
-        new TextRun(`${formatDate(data.employeeBirthDate)}`)
-      ],
-      spacing: { after: convertInchesToTwip(0.1) }
-    })
-  );
-
-  if (data.employeeEmail || data.employeePhone) {
-    const contactInfo = [data.employeeEmail, data.employeePhone].filter(Boolean).join(' - ');
-    paragraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({ text: 'Contact : ', bold: true }),
-          new TextRun(contactInfo)
-        ],
-        spacing: { after: convertInchesToTwip(0.3) }
-      })
-    );
-  }
-
-  return paragraphs;
-}
-
-/**
- * Génère la section des informations clés
- */
-function generateKeyInfoSection(data: ContractData): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-
-  paragraphs.push(
-    new Paragraph({
-      text: 'IL A ÉTÉ CONVENU CE QUI SUIT :',
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  // Tableau des informations clés
-  const keyInfo = [
-    [`Poste occupé`, data.jobTitle],
-    [`Date de début`, formatDate(data.contractStartDate)],
-    data.contractEndDate ? [`Date de fin`, formatDate(data.contractEndDate)] : null,
-    [`Lieu de travail`, data.workLocation],
-    [`Horaires`, data.workSchedule],
-    [`Salaire`, `${data.salaryAmount}€ ${getSalaryLabel(data.salaryFrequency)}`],
-    data.trialPeriodDays ? [`Période d'essai`, `${data.trialPeriodDays} jours`] : null,
-    data.contractClassification ? [`Classification`, data.contractClassification] : null,
-    data.collectiveAgreement ? [`Convention collective`, data.collectiveAgreement] : null
-  ].filter(Boolean) as [string, string][];
-
-  for (const [label, value] of keyInfo) {
-    paragraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({ text: `${label} : `, bold: true }),
-          new TextRun(value)
-        ],
-        spacing: { after: convertInchesToTwip(0.1) }
-      })
-    );
-  }
-
-  return paragraphs;
-}
-
-/**
- * Génère les articles du contrat
- */
-function generateArticles(data: ContractData): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-  let articleNumber = 1;
-
-  // Article 1 - Objet
-  paragraphs.push(
-    new Paragraph({
-      text: `Article ${articleNumber++} - Objet`,
-      heading: HeadingLevel.HEADING_3,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      text: getArticleObjet(data),
-      spacing: { after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  // Article 2 - Durée
-  paragraphs.push(
-    new Paragraph({
-      text: `Article ${articleNumber++} - Durée`,
-      heading: HeadingLevel.HEADING_3,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      text: getArticleDuree(data),
-      spacing: { after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  // Article 3 - Rémunération
-  paragraphs.push(
-    new Paragraph({
-      text: `Article ${articleNumber++} - Rémunération`,
-      heading: HeadingLevel.HEADING_3,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      text: getArticleRemuneration(data),
-      spacing: { after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  // Article 4 - Lieu de travail
-  paragraphs.push(
-    new Paragraph({
-      text: `Article ${articleNumber++} - Lieu de travail`,
-      heading: HeadingLevel.HEADING_3,
-      spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-    }),
-    new Paragraph({
-      text: `Le lieu de travail habituel est fixé à : ${data.workLocation}.`,
-      spacing: { after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  // Clause de non-concurrence (si applicable)
-  if (data.nonCompeteClause && data.nonCompeteCompensation) {
-    paragraphs.push(
-      new Paragraph({
-        text: `Article ${articleNumber++} - Clause de non-concurrence`,
-        heading: HeadingLevel.HEADING_3,
-        spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.1) }
-      }),
-      new Paragraph({
-        text: getArticleNonConcurrence(data),
-        spacing: { after: convertInchesToTwip(0.2) }
-      })
-    );
-  }
-
-  return paragraphs;
-}
-
-/**
- * Génère la section des signatures
- */
-function generateSignatureSection(data: ContractData): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-
-  paragraphs.push(
-    new Paragraph({
-      text: '',
-      spacing: { after: convertInchesToTwip(0.5) }
-    }),
-    new Paragraph({
-      text: 'FAIT À _________________',
-      alignment: AlignmentType.RIGHT,
-      spacing: { after: convertInchesToTwip(0.5) }
-    }),
-    new Paragraph({
-      text: `En deux exemplaires originaux,`
-    }),
-    new Paragraph({
-      text: `Pour l'employeur\t\t\t\t\t\tPour le salarié`,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: convertInchesToTwip(1) }
-    }),
-    new Paragraph({
-      text: `\n\n\n\n${data.companyName}\t\t\t\t\t\t${data.employeeFirstName} ${data.employeeLastName}\n\n\n`,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: convertInchesToTwip(1) }
-    }),
-    new Paragraph({
-      text: 'Signature\t\t\t\t\t\t\t\t\tSignature',
-      alignment: AlignmentType.CENTER,
-      spacing: { after: convertInchesToTwip(0.2) }
-    })
-  );
-
-  return paragraphs;
-}
-
-// Helpers pour générer le contenu des articles
-function getArticleObjet(data: ContractData): string {
-  return `${data.companyName} engage ${data.employeeFirstName} ${data.employeeLastName} à compter du ${formatDate(data.contractStartDate)} en qualité de ${data.jobTitle}.`;
-}
-
-function getArticleDuree(data: ContractData): string {
-  switch (data.contractType) {
-    case 'cdi':
-      return 'Le présent contrat est conclu pour une durée indéterminée.';
-    case 'cdd':
-      return `Le présent contrat est conclu pour une durée déterminée du ${formatDate(data.contractStartDate)} au ${formatDate(data.contractEndDate!)}.`;
-    case 'stage':
-      return `Le stage se déroulera du ${formatDate(data.contractStartDate)} au ${formatDate(data.contractEndDate!)}, soit une durée de ${data.durationWeeks || '___'} semaines.`;
-    default:
-      return 'Le contrat est conclu selon les modalités définies ci-dessus.';
-  }
-}
-
-function getArticleRemuneration(data: ContractData): string {
-  let remuneration = `En contrepartie de son travail, le salarié percevra un salaire de ${data.salaryAmount}€ ${getSalaryLabel(data.salaryFrequency)}.`;
-
-  const avantages: string[] = [];
-  if (data.hasTransport) avantages.push('remboursement 50% titre de transport');
-  if (data.hasMeal) avantages.push('titres restaurant');
-  if (data.hasHealth) avantages.push('mutuelle d\'entreprise');
-
-  if (avantages.length > 0) {
-    remuneration += `\n\nAvantages en nature : ${avantages.join(', ')}.`;
-  }
-
-  return remuneration;
-}
-
-function getArticleNonConcurrence(data: ContractData): string {
-  return `En contrepartie d'une indemnité mensuelle compensatrice de ${data.nonCompeteCompensation}€ brut, le salarié s'engage à ne pas exercer d'activité concurrente pendant une durée de 12 mois suivant la rupture du contrat.
-
-Cette clause respecte les conditions de validité posées par les articles L1227-1 et suivants du Code du travail (limitation dans le temps, l'espace et l'activité, et contrepartie financière).`;
-}
-
-/**
- * Formate une date au format français
- */
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR');
-  } catch {
-    return dateStr;
-  }
-}
-
-/**
- * Retourne le label de la fréquence de salaire
- */
 function getSalaryLabel(freq: string): string {
   const labels: Record<string, string> = {
     monthly: 'brut mensuel',
-    hourly: 'brut horaire',
-    weekly: 'brut hebdomadaire',
-    flat_rate: 'forfait brut'
+    hourly: 'brut / heure',
+    weekly: 'brut / semaine',
+    flat_rate: 'forfait brut',
   };
   return labels[freq] || freq;
+}
+
+// ── Paragraph builders ────────────────────────────────────────────────────────
+
+const sp = (before = 0, after = 120) => ({ before, after });
+
+function h1(text: string): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, bold: true, size: 28, color: '1a1a1a', allCaps: true })],
+    alignment: AlignmentType.CENTER,
+    spacing: sp(0, 200),
+  });
+}
+
+function h2(text: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        bold: true,
+        size: 24,
+        color: '1a1a1a',
+        underline: { type: UnderlineType.SINGLE },
+      }),
+    ],
+    spacing: sp(300, 120),
+  });
+}
+
+function h3(text: string, articleNum: number): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: `Article ${articleNum} — `, bold: true, size: 22, color: '2C3E50' }),
+      new TextRun({ text, bold: true, size: 22, color: '2C3E50' }),
+    ],
+    spacing: sp(240, 80),
+  });
+}
+
+function body(text: string, indent = false): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, size: 21 })],
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: sp(0, 120),
+    indent: indent ? { left: convertInchesToTwip(0.3) } : undefined,
+  });
+}
+
+function bold(label: string, value: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: label, bold: true, size: 21 }),
+      new TextRun({ text: value, size: 21 }),
+    ],
+    spacing: sp(0, 80),
+  });
+}
+
+function separator(): Paragraph {
+  return new Paragraph({
+    border: {
+      bottom: { color: 'CCCCCC', style: BorderStyle.SINGLE, size: 6 },
+    },
+    spacing: sp(120, 120),
+    children: [],
+  });
+}
+
+function blankLine(): Paragraph {
+  return new Paragraph({ children: [], spacing: sp(0, 160) });
+}
+
+function pageBreak(): Paragraph {
+  return new Paragraph({ children: [new PageBreak()] });
+}
+
+// ── Info table (key-value rows) ───────────────────────────────────────────────
+
+function infoTable(rows: [string, string][]): Table {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.DOTTED, color: 'DDDDDD', size: 4 },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: rows.map(([label, value]) =>
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 35, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.SOLID, color: 'F5F5F5' },
+            children: [new Paragraph({
+              children: [new TextRun({ text: label, bold: true, size: 20 })],
+              spacing: sp(40, 40),
+              indent: { left: convertInchesToTwip(0.1) },
+            })],
+          }),
+          new TableCell({
+            width: { size: 65, type: WidthType.PERCENTAGE },
+            children: [new Paragraph({
+              children: [new TextRun({ text: value, size: 20 })],
+              spacing: sp(40, 40),
+              indent: { left: convertInchesToTwip(0.1) },
+            })],
+          }),
+        ],
+      })
+    ),
+  });
+}
+
+// ── Signature blocks ──────────────────────────────────────────────────────────
+
+function signatureTable(data: ContractData): Table {
+  const sigDate = data.signatureDate ? fmtDate(data.signatureDate) : fmtDate(new Date().toISOString().split('T')[0]);
+  const city = data.signatureCity || data.companyCity || '_____________';
+
+  const makeBlock = (title: string, name: string) => new TableCell({
+    width: { size: 50, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+    },
+    children: [
+      new Paragraph({ children: [new TextRun({ text: title, bold: true, size: 22 })], spacing: sp(0, 80) }),
+      new Paragraph({ children: [new TextRun({ text: name, size: 20 })], spacing: sp(0, 120) }),
+      new Paragraph({ children: [new TextRun({ text: `À ${city}, le ${sigDate}`, size: 18, italics: true, color: '666666' })], spacing: sp(0, 200) }),
+      new Paragraph({
+        border: { bottom: { style: BorderStyle.SINGLE, color: '333333', size: 6 } },
+        spacing: sp(280, 40),
+        children: [],
+      }),
+      new Paragraph({ children: [new TextRun({ text: 'Signature (précédée de la mention "Lu et approuvé")', size: 16, color: '888888', italics: true })], spacing: sp(40, 0) }),
+    ],
+  });
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          makeBlock("Pour l'employeur :", `${data.companyName}\nReprésenté(e) par ${data.employerName}, ${data.employerTitle}`),
+          makeBlock('Pour le/la salarié(e) :', `${data.employeeFirstName} ${data.employeeLastName}`),
+        ],
+      }),
+    ],
+  });
+}
+
+// ── Main generator ────────────────────────────────────────────────────────────
+
+export async function generateContractDOCX(data: ContractData): Promise<Blob> {
+  const title = getContractTitle(data.contractType);
+  const legalRef = getLegalRef(data.contractType);
+
+  // ── Summary info table rows ───────────────────────────────────────────────
+  const summaryRows: [string, string][] = [
+    ['Poste / Fonction', data.jobTitle],
+    ["Date d'entrée en fonction", fmtDate(data.contractStartDate)],
+  ];
+  if (data.contractEndDate) summaryRows.push(['Date de fin prévue', fmtDate(data.contractEndDate)]);
+  if (data.durationWeeks && data.contractType === 'stage') summaryRows.push(['Durée du stage', `${data.durationWeeks} semaines`]);
+  if (data.trialPeriodDays) summaryRows.push(["Période d'essai", `${data.trialPeriodDays} jours${data.trialPeriodRenewable ? ' (renouvelable)' : ''}`]);
+  summaryRows.push(['Durée du travail', data.workingHours ? `${data.workingHours} h / semaine` : '35 h / semaine (temps plein)']);
+  summaryRows.push(['Horaires', data.workSchedule || 'Selon planning']);
+  summaryRows.push(['Lieu de travail habituel', data.workLocation]);
+  summaryRows.push(['Rémunération', `${fmtMoney(data.salaryAmount)} ${getSalaryLabel(data.salaryFrequency)}`]);
+  if (data.contractClassification) summaryRows.push(['Classification', `${data.contractClassification}${data.contractCoefficient ? ` — Coeff. ${data.contractCoefficient}` : ''}`]);
+  if (data.collectiveAgreement) summaryRows.push(['Convention collective', `${data.collectiveAgreement}${data.collectiveAgreementIdcc ? ` (IDCC ${data.collectiveAgreementIdcc})` : ''}`]);
+  if (data.contractType === 'cdd' && data.contractReason) summaryRows.push(['Motif du CDD', data.contractReason]);
+  if (data.schoolName) summaryRows.push(["Établissement d'enseignement", data.schoolName]);
+  if (data.tutorName) summaryRows.push(['Maître de stage / Tuteur', data.tutorName]);
+
+  // ── Articles — mêmes que le PDF, extraits du template HTML partagé ──────────
+  // getContractArticles() utilise le même generateArticles() que le template HTML,
+  // garantissant que le Word et le PDF ont un contenu identique.
+  const sharedArticles = getContractArticles(data as any);
+  const articles: Paragraph[] = [];
+
+  for (let i = 0; i < sharedArticles.length; i++) {
+    const { title: artTitle, paragraphs } = sharedArticles[i];
+    // Titre de l'article
+    articles.push(new Paragraph({
+      children: [
+        new TextRun({ text: `Article ${i + 1} — `, bold: true, size: 22, color: '2C3E50' }),
+        new TextRun({ text: artTitle, bold: true, size: 22, color: '2C3E50' }),
+      ],
+      spacing: sp(240, 80),
+      border: { left: { style: BorderStyle.THICK, color: '2C3E50', size: 12 } },
+      indent: { left: convertInchesToTwip(0.15) },
+    }));
+    // Paragraphes du corps
+    for (const para of paragraphs) {
+      articles.push(new Paragraph({
+        children: [new TextRun({ text: para, size: 21 })],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: sp(0, 100),
+        indent: { left: convertInchesToTwip(0.15) },
+      }));
+    }
+    articles.push(new Paragraph({ children: [], spacing: sp(0, 60) }));
+  }
+
+  // ── Build document ─────────────────────────────────────────────────────────
+  const doc = new Document({
+    title,
+    description: `Contrat de travail — ${data.companyName} / ${data.employeeFirstName} ${data.employeeLastName}`,
+    sections: [{
+      properties: {
+        page: {
+          margin: {
+            top: convertInchesToTwip(1),
+            bottom: convertInchesToTwip(1),
+            left: convertInchesToTwip(1.18),
+            right: convertInchesToTwip(1.18),
+          },
+        },
+      },
+      headers: {
+        default: new Header({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${title} — `, size: 18, color: '888888' }),
+                new TextRun({ text: `${data.companyName} / ${data.employeeFirstName} ${data.employeeLastName}`, size: 18, color: '555555', bold: true }),
+              ],
+              border: { bottom: { style: BorderStyle.SINGLE, color: 'DDDDDD', size: 4 } },
+              spacing: sp(0, 60),
+            }),
+          ],
+        }),
+      },
+      footers: {
+        default: new Footer({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Page ', size: 16, color: '888888' }),
+                new TextRun({ children: [PageNumber.CURRENT], size: 16, color: '888888' }),
+                new TextRun({ text: ' sur ', size: 16, color: '888888' }),
+                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, color: '888888' }),
+                new TextRun({ text: `     —     ${data.companyName} — SIRET ${data.companySiret}`, size: 16, color: 'AAAAAA' }),
+              ],
+              alignment: AlignmentType.CENTER,
+              border: { top: { style: BorderStyle.SINGLE, color: 'DDDDDD', size: 4 } },
+              spacing: sp(60, 0),
+            }),
+          ],
+        }),
+      },
+      children: [
+        // ── TITRE ──────────────────────────────────────────────────────────
+        h1(title),
+        new Paragraph({
+          children: [new TextRun({ text: legalRef, size: 18, italics: true, color: '666666' })],
+          alignment: AlignmentType.CENTER,
+          spacing: sp(0, 80),
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: `Document confidentiel — ${new Date().toLocaleDateString('fr-FR')}`, size: 16, color: '999999' })],
+          alignment: AlignmentType.CENTER,
+          spacing: sp(0, 300),
+        }),
+
+        separator(),
+
+        // ── PARTIES ────────────────────────────────────────────────────────
+        h2('ENTRE LES SOUSSIGNÉS'),
+
+        bold("L'Employeur : ", `${data.companyName}`),
+        bold('Adresse : ', `${data.companyAddress}, ${data.companyPostalCode} ${data.companyCity}`),
+        bold('SIRET : ', data.companySiret),
+        ...(data.companyAPE ? [bold('Code APE : ', data.companyAPE)] : []),
+        bold('Représenté(e) par : ', `${data.employerName}, ${data.employerTitle}`),
+
+        blankLine(),
+
+        bold('ET : ', `${data.employeeFirstName} ${data.employeeLastName}`),
+        bold('Né(e) le : ', fmtDate(data.employeeBirthDate)),
+        ...(data.employeeBirthPlace ? [bold('Lieu de naissance : ', data.employeeBirthPlace)] : []),
+        bold('Nationalité : ', data.employeeNationality),
+        bold('Demeurant : ', `${data.employeeAddress}, ${data.employeePostalCode} ${data.employeeCity}`),
+        ...(data.employeeEmail ? [bold('Email : ', data.employeeEmail)] : []),
+        ...(data.employeePhone ? [bold('Téléphone : ', data.employeePhone)] : []),
+        ...(data.employeeSocialSecurity ? [bold('N° Sécurité sociale : ', data.employeeSocialSecurity)] : []),
+
+        separator(),
+
+        // ── TABLEAU RÉCAPITULATIF ────────────────────────────────────────────
+        h2('IL A ÉTÉ CONVENU ET ARRÊTÉ CE QUI SUIT'),
+
+        new Paragraph({
+          children: [new TextRun({ text: 'Récapitulatif des conditions essentielles du contrat :', size: 20, italics: true, color: '444444' })],
+          spacing: sp(0, 100),
+        }),
+        infoTable(summaryRows),
+        blankLine(),
+
+        separator(),
+
+        // ── ARTICLES DU CONTRAT ──────────────────────────────────────────────
+        h2('CONDITIONS GÉNÉRALES DU CONTRAT'),
+        ...articles,
+
+        blankLine(),
+        separator(),
+
+        // ── SIGNATURES ─────────────────────────────────────────────────────
+        pageBreak(),
+        h2('SIGNATURES'),
+        new Paragraph({
+          children: [new TextRun({ text: 'Fait en deux exemplaires originaux, dont un est remis à chaque partie.', size: 20, italics: true })],
+          alignment: AlignmentType.CENTER,
+          spacing: sp(0, 400),
+        }),
+        signatureTable(data),
+
+        blankLine(),
+        blankLine(),
+        new Paragraph({
+          children: [new TextRun({ text: 'L\'employeur reconnaît avoir remis un exemplaire du présent contrat au salarié.', size: 18, color: '888888', italics: true })],
+          alignment: AlignmentType.CENTER,
+          spacing: sp(200, 0),
+        }),
+      ],
+    }],
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  return new Blob([new Uint8Array(buffer)], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
 }

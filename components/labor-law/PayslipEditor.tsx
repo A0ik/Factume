@@ -19,16 +19,32 @@ const PayslipField = React.memo(function PayslipField({
 }: {
   label: string; value: string | number; onChange?: (v: string) => void; type?: string; readOnly?: boolean; step?: string;
 }) {
-  const safeValue = typeof value === 'number' && isNaN(value) ? '' : value;
+  // Local string state so intermediate input (e.g. "2000.", "-", "") isn't clobbered by parent re-render
+  const toString = (v: string | number) =>
+    (v === undefined || v === null || (typeof v === 'number' && isNaN(v))) ? '' : String(v);
+
+  const [local, setLocal] = React.useState(() => toString(value));
+  const [focused, setFocused] = React.useState(false);
+
+  // Sync from parent only when not actively editing (e.g. AI modify)
+  React.useEffect(() => {
+    if (!focused) setLocal(toString(value));
+  }, [value, focused]);
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
       <input
         type={type}
-        value={safeValue}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        value={readOnly ? toString(value) : local}
+        onChange={onChange && !readOnly ? (e) => {
+          setLocal(e.target.value);
+          onChange(e.target.value);
+        } : undefined}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         readOnly={readOnly}
-        step={step}
+        step={step ?? (type === 'number' ? 'any' : undefined)}
         className={`w-full px-3 py-2 text-sm rounded-xl border-2 outline-none transition-all
           ${readOnly
             ? 'bg-gray-50 dark:bg-slate-800/50 border-gray-100 dark:border-white/5 text-gray-500 cursor-not-allowed'
@@ -88,7 +104,18 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
   const [openSection, setOpenSection] = useState<string>('salaire');
 
   const update = useCallback(<K extends keyof BulletinPaieData>(field: K, value: BulletinPaieData[K]) => {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData(prev => {
+      const next = { ...prev, [field]: value };
+      // Auto-recalculate tauxHoraire when salary or hours change
+      if (field === 'salaireBrut' || field === 'heuresMensuelles') {
+        const brut = field === 'salaireBrut' ? (value as number) : prev.salaireBrut;
+        const heures = field === 'heuresMensuelles' ? (value as number) : prev.heuresMensuelles;
+        if (brut > 0 && heures > 0) {
+          next.tauxHoraire = parseFloat((brut / heures).toFixed(4));
+        }
+      }
+      return next;
+    });
   }, []);
 
   const handleToggle = useCallback((id: string) => {
@@ -120,29 +147,50 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    setPdfLoading(true);
+  const handlePrint = async () => {
     try {
       const res = await fetch('/api/payslips/html', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payslip: data }),
       });
+      if (!res.ok) throw new Error((await res.json()).error || 'Erreur HTML');
+      const htmlContent = await res.text();
+      const w = window.open('', '_blank');
+      if (!w) throw new Error('Impossible d\'ouvrir une nouvelle fenêtre. Autorisez les popups.');
+      w.document.write(htmlContent);
+      w.document.close();
+      setTimeout(() => w.print(), 500);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur impression');
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const res = await fetch('/api/payslips/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payslip: data }),
+      });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Erreur HTML');
+        throw new Error(err.error || 'Erreur PDF');
       }
-      const htmlContent = await res.text();
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-        setTimeout(() => {
-          newWindow.print();
-        }, 500);
-      } else {
-        throw new Error('Impossible d\'ouvrir une nouvelle fenêtre. Veuillez autoriser les popups.');
-      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const month = data.periodeDebut
+        ? new Date(data.periodeDebut).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).replace(/ /g, '_')
+        : 'bulletin';
+      a.download = `Bulletin_Paie_${data.nom}_${data.prenom}_${month}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('PDF téléchargé !');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement');
     } finally {
@@ -217,6 +265,46 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
             )}
           </div>
 
+          {/* ─── Taux Accident du Travail — mis en avant obligatoire ─── */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-800 flex items-center justify-center flex-shrink-0">
+                <Activity className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold text-amber-900 dark:text-amber-100 mb-1 text-sm">
+                  Taux Accident du Travail (AT) — à vérifier impérativement
+                </div>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+                  Ce taux varie selon votre secteur d'activité. Il est fixé par la CPAM chaque année.
+                  Vérifiez votre notification de taux AT ou consultez votre expert-comptable.
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-1 block">
+                      Taux AT personnalisé (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="15"
+                      value={(data as any).tauxAccidentTravail ?? 0.70}
+                      onChange={(e) => update('tauxAccidentTravail' as any, parseFloat(e.target.value) || 0.70)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-200/30 outline-none font-bold"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 text-xs text-amber-700 dark:text-amber-400 pt-4">
+                    <span>Bureaux / commerce : ~0,70 %</span>
+                    <span>Restauration : ~1,20 %</span>
+                    <span>BTP : ~2,50–5,00 %</span>
+                    <span>Industrie : ~1,50–3,00 %</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Sections */}
           <PayslipSection id="salarie" title="Salarié" icon={User} openSection={openSection} onToggle={handleToggle}>
             <div className="grid grid-cols-2 gap-3">
@@ -245,13 +333,18 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
           </PayslipSection>
 
           <PayslipSection id="salaire" title="Rémunération de base" icon={Euro} openSection={openSection} onToggle={handleToggle}>
-            <div className="grid grid-cols-2 gap-3">
-              <PayslipField label="Salaire brut (€)" value={data.salaireBrut} onChange={(v) => update('salaireBrut', parseFloat(v) || 0)} type="number" />
-              <PayslipField label="Salaire brut annuel (€)" value={data.salaireBrutAnnuel} onChange={(v) => update('salaireBrutAnnuel', parseFloat(v) || 0)} type="number" />
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 mb-1">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                Le taux horaire est recalculé automatiquement quand vous modifiez le salaire brut ou les heures mensuelles.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <PayslipField label="Heures mensuelles" value={data.heuresMensuelles} onChange={(v) => update('heuresMensuelles', parseFloat(v) || 0)} type="number" />
-              <PayslipField label="Taux horaire (€)" value={data.tauxHoraire ?? ''} onChange={(v) => update('tauxHoraire', parseFloat(v) || undefined)} type="number" />
+              <PayslipField label="Salaire brut (€)" value={data.salaireBrut || ''} onChange={(v) => { const n = parseFloat(v); update('salaireBrut', isNaN(n) ? 0 : n); }} type="number" />
+              <PayslipField label="Salaire brut annuel (€)" value={data.salaireBrutAnnuel || ''} onChange={(v) => { const n = parseFloat(v); update('salaireBrutAnnuel', isNaN(n) ? 0 : n); }} type="number" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <PayslipField label="Heures mensuelles" value={data.heuresMensuelles || ''} onChange={(v) => { const n = parseFloat(v); update('heuresMensuelles', isNaN(n) ? 0 : n); }} type="number" />
+              <PayslipField label="Taux horaire (€) — auto-calculé" value={data.tauxHoraire ?? ''} readOnly type="number" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
@@ -561,21 +654,7 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
           </button>
           <div className="flex gap-3">
             <button
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/payslips/html', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ payslip: data }),
-                  });
-                  if (!res.ok) throw new Error('Erreur génération HTML');
-                  const html = await res.text();
-                  const w = window.open('', '_blank');
-                  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 250); }
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : 'Erreur lors de la génération');
-                }
-              }}
+              onClick={handlePrint}
               className="px-5 py-2.5 bg-gray-100 dark:bg-slate-700 rounded-xl font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />

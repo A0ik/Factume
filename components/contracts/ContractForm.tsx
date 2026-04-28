@@ -75,8 +75,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
   const [contractHtml, setContractHtml] = useState('');
   const [textInput, setTextInput] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
+  const [livePreviewHtml, setLivePreviewHtml] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -415,7 +414,6 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     const html = generateTemplate(templateData);
     setContractHtml(html);
     setStep('preview');
-    loadPdfPreview();
   };
 
   const handleGeneratePayslip = () => {
@@ -437,22 +435,12 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     }
   };
 
-  const loadPdfPreview = async () => {
-    const required = ['employee_first_name', 'employee_last_name', 'employee_address', 'employee_postal_code', 'employee_city', 'employee_birth_date', 'contract_start_date', 'job_title', 'work_location', 'salary_amount', 'company_name', 'company_siret', 'employer_name'];
-    if (required.some(f => !(formData as any)[f])) return;
-    setPdfPreviewLoading(true);
-    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-    setPdfPreviewUrl(null);
-    try {
-      const res = await fetch('/api/contracts/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contract: toCamelCase(formData),
-        }),
-      });
-      if (res.ok) setPdfPreviewUrl(URL.createObjectURL(await res.blob()));
-    } catch {} finally { setPdfPreviewLoading(false); }
+  const openLivePreview = () => {
+    const html = generateTemplate(toCamelCase(formData));
+    setLivePreviewHtml(html);
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+    else toast.error('Autorisez les popups pour prévisualiser');
   };
 
   const validateRequired = () => {
@@ -520,22 +508,19 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     try {
       validateRequired();
       setLoading(true);
-      const res = await fetch('/api/contracts/pdf', {
+      const res = await fetch('/api/contracts/html-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contract: toCamelCase(formData) }),
       });
-      if (!res.ok) throw new Error('Erreur PDF');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Contrat_${contractType.toUpperCase()}_${formData.employee_last_name || 'salarie'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      a.remove();
-      toast.success('PDF téléchargé !');
+      if (!res.ok) throw new Error('Erreur génération');
+      const htmlContent = await res.text();
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) throw new Error('Popups bloqués — autorisez les popups pour votre navigateur');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.onload = () => setTimeout(() => printWindow.print(), 400);
+      toast.success('Aperçu ouvert — utilisez « Enregistrer en PDF » dans la boîte d\'impression');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally { setLoading(false); }
@@ -693,10 +678,16 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {mode === 'create' && (
               <button onClick={() => setStep('upload')} className="px-6 py-3 bg-gray-100 dark:bg-slate-700 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">&larr; Retour</button>
             )}
+            <button
+              onClick={openLivePreview}
+              className="px-6 py-3 bg-primary/10 text-primary rounded-xl font-semibold hover:bg-primary/20 transition-colors flex items-center gap-2"
+            >
+              <Eye className="w-5 h-5" />Prévisualiser
+            </button>
             <button onClick={generateContractHTML} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
               <FileText className="w-5 h-5" />Générer le contrat
             </button>
@@ -716,14 +707,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           {/* Preview */}
           <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-lg p-8">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3"><Eye className="w-7 h-7 text-primary" />Aperçu du contrat</h2>
-            {pdfPreviewLoading && (
-              <div className="flex items-center justify-center h-[600px] rounded-2xl border border-gray-100 dark:border-white/10 mb-6 bg-gray-50 dark:bg-slate-800/50">
-                <div className="flex flex-col items-center gap-3 text-primary"><Loader2 className="w-8 h-8 animate-spin" /><span className="text-sm font-medium">Génération PDF...</span></div>
-              </div>
-            )}
-            {pdfPreviewUrl ? (
-              <iframe src={pdfPreviewUrl} className="w-full h-[700px] rounded-2xl border border-gray-100 dark:border-white/10 mb-6" />
-            ) : !pdfPreviewLoading && contractHtml && (
+            {contractHtml && (
               <iframe srcDoc={contractHtml} className="w-full h-[700px] rounded-2xl border border-gray-100 dark:border-white/10 mb-6 bg-white" />
             )}
 

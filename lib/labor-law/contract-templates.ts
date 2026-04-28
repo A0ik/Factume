@@ -991,9 +991,94 @@ function buildContractHTML(data: ContractTemplateData): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} — ${esc(data.employeeFirstName)} ${esc(data.employeeLastName)}</title>
-  <style>${getStyles(accent)}</style>
+  <script defer src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 15mm 22mm 15mm;
+      @bottom-center {
+        content: "Page " counter(page) " / " counter(pages);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 8.5pt;
+        color: #888;
+      }
+      @top-right {
+        content: "${esc(data.companyName)} — Confidentiel";
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 7.5pt;
+        color: #aaa;
+      }
+    }
+    ${getStyles(accent)}
+
+    /* ── Aperçu PDF (écran uniquement) ── */
+    @media screen {
+      html { background: #e8e8e8; min-height: 100%; }
+      body {
+        background: #fff;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+        margin: 0 auto;
+        padding: 20mm 18mm;
+        min-height: 297mm;
+      }
+      .print-toolbar {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 9999;
+        background: #1a1a2e;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+      }
+      .print-toolbar-info { opacity: 0.8; }
+      .print-toolbar-info strong { color: #fff; opacity: 1; }
+      .print-btn {
+        background: ${accent};
+        color: #fff;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.15s;
+      }
+      .print-btn:hover { opacity: 0.88; }
+      body { padding-top: 62px; }
+    }
+    @media print {
+      html { background: #fff; }
+      body { padding: 0; box-shadow: none; }
+      .print-toolbar { display: none !important; }
+      /* Numéros de page via CSS counters (Chromium 2024+) */
+      .page-number::before { content: counter(page); counter-increment: page; }
+    }
+  </style>
 </head>
 <body>
+
+  <!-- BARRE D'OUTILS D'IMPRESSION (screen uniquement) -->
+  <div class="print-toolbar no-print">
+    <div class="print-toolbar-info">
+      <strong>${title}</strong>
+      &nbsp;·&nbsp; ${esc(data.employeeFirstName)} ${esc(data.employeeLastName)}
+      &nbsp;·&nbsp; ${esc(data.companyName)}
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span style="opacity:0.6;font-size:12px;">Les numéros de page s'afficheront automatiquement à l'impression</span>
+      <button class="print-btn" onclick="window.print()">
+        ⬇ Enregistrer en PDF / Imprimer
+      </button>
+    </div>
+  </div>
 
   <!-- EN-TÊTE -->
   <div class="doc-header">
@@ -1137,18 +1222,65 @@ function buildContractHTML(data: ContractTemplateData): string {
   </div>
   ` : ''}
 
-  <!-- PIED DE PAGE (visible uniquement en aperçu web, pas en PDF) -->
-  <div class="doc-footer no-print">
+  <!-- PIED DE PAGE -->
+  <div class="doc-footer">
     <div>
       <strong>${esc(data.companyName)}</strong>
       &nbsp;·&nbsp; SIRET ${esc(data.companySiret)}
       &nbsp;·&nbsp; ${esc(data.companyAddress)}, ${esc(data.companyPostalCode)} ${esc(data.companyCity)}
     </div>
-    <div>Réf. ${docRef}</div>
+    <div>Réf. ${docRef} &nbsp;·&nbsp; Document confidentiel</div>
   </div>
 
 </body>
 </html>`;
+}
+
+// ─────────────────────────────────────────────
+// EXPORT PARTAGÉ — articles pour DOCX
+// ─────────────────────────────────────────────
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '$1')
+    .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '$1')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n')
+    .replace(/<div[^>]*>/gi, ' ').replace(/<\/div>/gi, '\n')
+    .replace(/<span[^>]*>/gi, '').replace(/<\/span>/gi, '')
+    .replace(/&nbsp;/gi, '\u00a0')
+    .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
+    .replace(/[ \t]+/g, ' ')
+    .split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+}
+
+/**
+ * Retourne les articles du contrat en texte brut — même contenu que le PDF.
+ * Utilisé par l'export DOCX pour garantir l'identité des deux documents.
+ */
+export function getContractArticles(data: ContractTemplateData): { title: string; paragraphs: string[] }[] {
+  const rawHtml = generateArticles(data);
+
+  // Découpe sur les blocs article-block
+  const blocks = rawHtml.split(/(?=<div class="article-block">)/g).filter(s => s.includes('article-block'));
+
+  return blocks.map(block => {
+    // Titre : "Article N — Titre"
+    const titleMatch = block.match(/Article\s+\d+\s+[—–-]\s+(.+?)<\/div>/);
+    const title = titleMatch ? stripHtml(titleMatch[1]) : '';
+
+    // Corps de l'article (tout le contenu de .article-body)
+    const bodyMatch = block.match(/<div class="article-body">([\s\S]+)/);
+    const bodyRaw = bodyMatch ? bodyMatch[1].replace(/<\/div>\s*$/, '') : '';
+
+    // Sépare par <p> et par les .legal-note / .highlight-box (traités comme des paragraphes)
+    const chunks = bodyRaw
+      .split(/<\/p>|<\/div>/)
+      .map(chunk => stripHtml(chunk))
+      .filter(t => t.trim().length > 5);
+
+    return { title, paragraphs: chunks };
+  });
 }
 
 // ─────────────────────────────────────────────
