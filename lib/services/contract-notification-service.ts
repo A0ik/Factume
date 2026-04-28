@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
 
 export type ContractNotificationType =
@@ -68,7 +68,7 @@ export async function sendContractNotification(options: ContractNotificationOpti
   const link = `/contracts/${contractId}?type=${contractType}`;
 
   // 1. Insert notification in database
-  const supabase = createAdminClient();
+  const supabase = getSupabaseClient();
   try {
     await supabase.from('notifications').insert({
       user_id: userId,

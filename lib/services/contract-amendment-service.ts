@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
 import { ContractType, Contract, AmendmentType, ContractAmendment } from '@/types';
 import { sendContractNotification } from '@/lib/services/contract-notification-service';
