@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
+import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -13,6 +14,32 @@ const CONTRACT_LABELS: Record<string, string> = {
   cdd: 'CDD',
   other: 'Contrat de travail',
 };
+
+// Helper pour logger les événements de signature
+async function logSignatureEvent(
+  admin: any,
+  contractId: string,
+  contractType: string,
+  eventType: string,
+  tokenId: string | null = null,
+  metadata: Record<string, any> = {},
+  req?: NextRequest
+) {
+  try {
+    await admin.from('contract_signature_logs').insert({
+      contract_id: contractId,
+      contract_type: contractType,
+      token_id: tokenId,
+      event_type: eventType,
+      ip_address: req?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req?.headers.get('x-real-ip') || null,
+      user_agent: req?.headers.get('user-agent') || null,
+      metadata,
+    });
+  } catch (err) {
+    // Ne pas échouer si le log échoue
+    console.error('Erreur log signature:', err);
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,10 +66,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Verifier que le contrat appartient a l'utilisateur
+    // Verifier que le contrat appartient a l'utilisateur et récupérer toutes les données
     const { data: contract, error: contractError } = await admin
       .from(TABLE_MAP[contractType])
-      .select('id, user_id, employee_email')
+      .select('*')
       .eq('id', contractId)
       .single();
 
@@ -50,13 +77,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
     }
 
-    // Invalider les anciens tokens non signes pour ce contrat
+    // IMPORTANT : Vérifier que l'employeur a signé avant d'envoyer au salarié
+    if (!contract.employer_signature) {
+      return NextResponse.json({
+        error: 'L\'employeur doit signer le contrat avant de l\'envoyer au salarié. Veuillez signer dans la section prévisualisation.',
+        code: 'EMPLOYER_SIGNATURE_REQUIRED'
+      }, { status: 400 });
+    }
+
+    // Vérifier qu'il n'y a pas déjà une demande en cours (token non expiré)
+    const { data: existingToken } = await admin
+      .from('contract_signing_tokens')
+      .select('id, token, expires_at')
+      .eq('contract_id', contractId)
+      .eq('contract_type', contractType)
+      .is('signed_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (existingToken) {
+      // Une demande est déjà en cours, on renvoie le même token
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me';
+      const signingUrl = `${appUrl}/sign/${existingToken.token}`;
+      const expiresAt = new Date(existingToken.expires_at);
+
+      return NextResponse.json({
+        success: true,
+        token: existingToken.token,
+        alreadyExists: true,
+        signingUrl,
+        expiresAt: expiresAt.toISOString(),
+        message: 'Une demande de signature est déjà en cours pour ce contrat.'
+      });
+    }
+
+    // Invalider les anciens tokens expirés pour ce contrat
     await admin
       .from('contract_signing_tokens')
       .delete()
       .eq('contract_id', contractId)
       .eq('contract_type', contractType)
-      .is('signed_at', null);
+      .lt('expires_at', new Date().toISOString());
 
     // Creer un nouveau token
     const { data: tokenData, error: tokenError } = await admin
@@ -67,29 +128,26 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         employee_email: employeeEmail.trim(),
       })
-      .select('token')
+      .select('token, id, expires_at')
       .single();
 
     if (tokenError || !tokenData) {
+      await logSignatureEvent(admin, contractId, contractType, 'token_creation_failed', null, { error: tokenError?.message }, req);
       return NextResponse.json({ error: 'Erreur lors de la création du token' }, { status: 500 });
     }
+
+    // Log la création du token
+    await logSignatureEvent(admin, contractId, contractType, 'token_created', tokenData.id, { token: tokenData.token }, req);
 
     // Generer le PDF du contrat
     let attachment = undefined;
     try {
-      const { data: fullContract } = await admin
-        .from(TABLE_MAP[contractType])
-        .select('*')
-        .eq('id', contractId)
-        .single();
-
-      if (fullContract) {
-        const pdfBytes = await generateContractPdfBuffer({ ...fullContract, contractType });
-        attachment = [{
-          content: Buffer.from(pdfBytes).toString('base64'),
-          name: `Contrat_${CONTRACT_LABELS[contractType]}_${employeeName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-        }];
-      }
+      const templateData = dbToContractTemplate(contract, contractType);
+      const pdfBytes = await generateContractPdfBuffer(templateData);
+      attachment = [{
+        content: Buffer.from(pdfBytes).toString('base64'),
+        name: `Contrat_${CONTRACT_LABELS[contractType]}_${employeeName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+      }];
     } catch (err) {
       console.error('Erreur generation PDF:', err);
     }
@@ -126,31 +184,60 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email: employeeEmail.trim(), name: employeeName }],
-        subject: `Demande de signature — Votre ${label}`,
-        htmlContent,
-        attachment,
-      }),
-    });
+    let emailSent = false;
+    let emailError = null;
 
-    if (!brevoRes.ok) {
-      let errBody: { message?: string } = {};
-      try { errBody = await brevoRes.json(); } catch { /* empty */ }
-      return NextResponse.json({ error: errBody.message || 'Erreur Brevo' }, { status: brevoRes.status });
+    try {
+      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: employeeEmail.trim(), name: employeeName }],
+          subject: `Demande de signature — Votre ${label}`,
+          htmlContent,
+          attachment,
+        }),
+      });
+
+      if (brevoRes.ok) {
+        emailSent = true;
+        await logSignatureEvent(admin, contractId, contractType, 'email_sent', tokenData.id, { recipient: employeeEmail.trim() }, req);
+      } else {
+        let errBody: { message?: string } = {};
+        try { errBody = await brevoRes.json(); } catch { /* empty */ }
+        emailError = errBody.message || 'Erreur Brevo';
+        await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError }, req);
+      }
+    } catch (emailErr) {
+      emailError = emailErr instanceof Error ? emailErr.message : 'Erreur inconnue';
+      await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError }, req);
     }
 
-    // Mettre a jour le statut du contrat
-    await admin
-      .from(TABLE_MAP[contractType])
-      .update({ document_status: 'pending_signature', updated_at: new Date().toISOString() })
-      .eq('id', contractId);
+    // Mettre a jour le statut du contrat uniquement si l'email a été envoyé
+    if (emailSent) {
+      await admin
+        .from(TABLE_MAP[contractType])
+        .update({ document_status: 'pending_signature', updated_at: new Date().toISOString() })
+        .eq('id', contractId);
 
-    return NextResponse.json({ success: true, token: tokenData.token });
+      return NextResponse.json({
+        success: true,
+        token: tokenData.token,
+        alreadyExists: false,
+        signingUrl,
+        expiresAt: tokenData.expires_at,
+      });
+    } else {
+      // Email non envoyé mais token créé - on informe l'utilisateur
+      return NextResponse.json({
+        success: false,
+        token: tokenData.token,
+        error: emailError,
+        retryable: true,
+        message: 'Le token a été créé mais l\'email n\'a pas pu être envoyé. Vous pouvez réessayer.'
+      }, { status: 202 }); // Accepted but with warning
+    }
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });

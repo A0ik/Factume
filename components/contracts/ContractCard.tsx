@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Building2, Calendar, User, Euro, Trash2, Eye, FileEdit, Copy } from 'lucide-react';
+import { FileText, Building2, Calendar, User, Euro, Trash2, Eye, FileEdit, Copy, Send, Clock, RefreshCw } from 'lucide-react';
 import { ContractSummary, ContractType } from '@/types';
 import { ContractStatusBadge, ContractTypeBadge } from './ContractStatusBadge';
 import Link from 'next/link';
@@ -16,6 +16,11 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
   const fmtMoney = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 
+  // Check if there's an active signing request
+  const expiresAt = contract.signing_token_expires_at;
+  const hasActiveSigning = expiresAt ? new Date(expiresAt) > new Date() : false;
+  const signingExpires = hasActiveSigning && expiresAt ? new Date(expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -24,17 +29,45 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
       className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-sm hover:shadow-md transition-all p-5"
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ContractTypeBadge type={contract.contract_type} />
           {contract.contract_type === 'other' && contract.contract_category && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">{contract.contract_category}</span>
           )}
           <ContractStatusBadge status={contract.status} />
+          {hasActiveSigning && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+              <Send className="w-3 h-3" />
+              Signature envoyée
+            </span>
+          )}
+          {(contract.renewal_count || 0) > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+              <RefreshCw className="w-3 h-3" />
+              R{(contract.renewal_count || 0)}
+            </span>
+          )}
         </div>
         {contract.contract_number && (
           <span className="text-xs text-gray-500 font-mono">{contract.contract_number}</span>
         )}
       </div>
+
+      {/* Signing status indicator */}
+      {hasActiveSigning && (
+        <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-medium">En attente de signature</span>
+            <span className="text-blue-600 dark:text-blue-400">• Expire le {signingExpires}</span>
+          </div>
+          {contract.signing_view_count && contract.signing_view_count > 0 && (
+            <div className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+              Vu {contract.signing_view_count} fois
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2 mb-4">
         <div className="flex items-center gap-2">

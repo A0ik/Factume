@@ -2,6 +2,9 @@
 import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
 import { ContractType, ContractStatus, ContractSummary, ContractDashboardStats, ContractFormData, Contract } from '@/types';
+import { sendContractNotification } from '@/lib/services/contract-notification-service';
+import { canTransition } from '@/lib/services/contract-lifecycle-service';
+import { renewContract as renewContractService } from '@/lib/services/contract-renewal-service';
 
 interface ContractState {
   contracts: ContractSummary[];
@@ -13,6 +16,7 @@ interface ContractState {
   updateContractStatus: (id: string, contractType: ContractType, status: ContractStatus) => Promise<void>;
   deleteContract: (id: string, contractType: ContractType) => Promise<void>;
   duplicateContract: (id: string, contractType: ContractType, profile: any) => Promise<{ id: string; contract_number: string } | null>;
+  renewContract: (id: string, contractType: ContractType, newEndDate: string, reason: string, profile: any) => Promise<{ id: string; contract_number: string } | null>;
   getContractDetail: (id: string, contractType: ContractType) => Promise<Contract>;
   getNextContractNumber: (type: ContractType, count: number) => string;
   computeStats: () => void;
@@ -48,15 +52,26 @@ export const useContractStore = create<ContractState>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const [cdiRes, cddRes, otherRes] = await Promise.all([
-        supabase.from('contracts_cdi').select('id, contract_number, employee_first_name, employee_last_name, company_name, job_title, contract_start_date, salary_amount, salary_frequency, document_status, created_at').eq('user_id', session.user.id).order('created_at', { ascending: false }),
-        supabase.from('contracts_cdd').select('id, contract_number, employee_first_name, employee_last_name, company_name, job_title, contract_start_date, contract_end_date, salary_amount, salary_frequency, document_status, created_at').eq('user_id', session.user.id).order('created_at', { ascending: false }),
-        supabase.from('contracts_other').select('id, contract_number, contract_category, employee_first_name, employee_last_name, company_name, job_title, start_date, end_date, salary_amount, salary_frequency, document_status, created_at').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+      // Fetch contracts and active signing tokens in parallel
+      const [cdiRes, cddRes, otherRes, tokensRes] = await Promise.all([
+        supabase.from('contracts_cdi').select('id, contract_number, employee_first_name, employee_last_name, company_name, job_title, contract_start_date, salary_amount, salary_frequency, document_status, created_at, renewal_count').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('contracts_cdd').select('id, contract_number, employee_first_name, employee_last_name, company_name, job_title, contract_start_date, contract_end_date, salary_amount, salary_frequency, document_status, created_at, renewal_count').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('contracts_other').select('id, contract_number, contract_category, employee_first_name, employee_last_name, company_name, job_title, start_date, end_date, salary_amount, salary_frequency, document_status, created_at, renewal_count').eq('user_id', session.user.id).order('created_at', { ascending: false }),
+        supabase.from('contract_signing_tokens').select('id, contract_id, contract_type, expires_at, view_count').eq('user_id', session.user.id).is('signed_at', null),
       ]);
+
+      // Build a map of active tokens by contract_id and type
+      const tokensMap = new Map<string, { expires_at: string; view_count: number }>();
+      (tokensRes.data || []).forEach((t: any) => {
+        const key = `${t.contract_id}:${t.contract_type}`;
+        tokensMap.set(key, { expires_at: t.expires_at, view_count: t.view_count || 0 });
+      });
 
       const all: ContractSummary[] = [];
 
       (cdiRes.data || []).forEach((c: any) => {
+        const tokenKey = `${c.id}:cdi`;
+        const token = tokensMap.get(tokenKey);
         all.push({
           id: c.id,
           contract_number: c.contract_number || '',
@@ -69,10 +84,15 @@ export const useContractStore = create<ContractState>((set, get) => ({
           salary_amount: c.salary_amount,
           salary_frequency: c.salary_frequency,
           created_at: c.created_at,
+          signing_token_expires_at: token?.expires_at,
+          signing_view_count: token?.view_count,
+          renewal_count: c.renewal_count || 0,
         });
       });
 
       (cddRes.data || []).forEach((c: any) => {
+        const tokenKey = `${c.id}:cdd`;
+        const token = tokensMap.get(tokenKey);
         all.push({
           id: c.id,
           contract_number: c.contract_number || '',
@@ -86,10 +106,15 @@ export const useContractStore = create<ContractState>((set, get) => ({
           salary_amount: c.salary_amount,
           salary_frequency: c.salary_frequency,
           created_at: c.created_at,
+          signing_token_expires_at: token?.expires_at,
+          signing_view_count: token?.view_count,
+          renewal_count: c.renewal_count || 0,
         });
       });
 
       (otherRes.data || []).forEach((c: any) => {
+        const tokenKey = `${c.id}:other`;
+        const token = tokensMap.get(tokenKey);
         all.push({
           id: c.id,
           contract_number: c.contract_number || '',
@@ -104,6 +129,9 @@ export const useContractStore = create<ContractState>((set, get) => ({
           salary_amount: c.salary_amount,
           salary_frequency: c.salary_frequency,
           created_at: c.created_at,
+          signing_token_expires_at: token?.expires_at,
+          signing_view_count: token?.view_count,
+          renewal_count: c.renewal_count || 0,
         });
       });
 
@@ -249,10 +277,62 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
   updateContractStatus: async (id, contractType, status) => {
     const supabase = getSupabaseClient();
+
+    // Valider la transition
+    const { data: contract } = await supabase
+      .from(TABLE_MAP[contractType])
+      .select('document_status')
+      .eq('id', id)
+      .single();
+
+    if (contract && !canTransition(contract.document_status as ContractStatus, status)) {
+      throw new Error(`Transition non autorisée: ${contract.document_status} → ${status}`);
+    }
+
     const row: any = { document_status: status, updated_at: new Date().toISOString() };
-    if (status === 'signed') row.employer_signature_date = new Date().toISOString().split('T')[0];
     const { error } = await supabase.from(TABLE_MAP[contractType]).update(row).eq('id', id);
     if (error) throw error;
+
+    // Envoyer notification si changement de statut significatif
+    const notificationTypes: Record<ContractStatus, 'contract_signed' | 'contract_activated' | 'contract_ended' | 'contract_cancelled' | null> = {
+      draft: null,
+      pending_signature: null,
+      signed: 'contract_signed',
+      active: 'contract_activated',
+      ended: 'contract_ended',
+      terminated: null,
+      cancelled: 'contract_cancelled',
+    };
+
+    const notifType = notificationTypes[status];
+    if (notifType) {
+      // Récupérer les détails du contrat pour la notification
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        try {
+          const { data: contract } = await supabase
+            .from(TABLE_MAP[contractType])
+            .select('contract_number, employee_first_name, employee_last_name')
+            .eq('id', id)
+            .single();
+
+          if (contract) {
+            await sendContractNotification({
+              userId: session.user.id,
+              type: notifType,
+              contractId: id,
+              contractType,
+              employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
+              contractNumber: contract.contract_number,
+            });
+          }
+        } catch (err) {
+          console.error('Failed to send contract notification:', err);
+          // Non-critical, don't throw
+        }
+      }
+    }
+
     set((s) => ({
       contracts: s.contracts.map((c) => c.id === id ? { ...c, status } : c),
     }));
@@ -339,6 +419,18 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
 
     return get().createContract(formData, profile);
+  },
+
+  renewContract: async (id, contractType, newEndDate, reason, profile) => {
+    try {
+      const result = await renewContractService(id, contractType, newEndDate, reason, profile);
+      if (result) {
+        await get().fetchContracts();
+      }
+      return result;
+    } catch (err) {
+      throw err;
+    }
   },
 
   getContractDetail: async (id, contractType) => {

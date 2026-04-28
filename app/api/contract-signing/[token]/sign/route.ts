@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
+import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
+import { sendContractNotification } from '@/lib/services/contract-notification-service';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -84,6 +86,30 @@ export async function POST(
       .update({ signed_at: new Date().toISOString() })
       .eq('id', tokenRecord.id);
 
+    // Envoyer notification in-app + push à l'employeur
+    try {
+      const { data: contract } = await admin
+        .from(tableName)
+        .select('contract_number, employee_first_name, employee_last_name')
+        .eq('id', tokenRecord.contract_id)
+        .single();
+
+      if (contract) {
+        await sendContractNotification({
+          userId: tokenRecord.user_id,
+          type: 'contract_signed',
+          contractId: tokenRecord.contract_id,
+          contractType: tokenRecord.contract_type,
+          employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
+          contractNumber: contract.contract_number,
+          metadata: { signedBy: signerName, signedAt: new Date().toISOString() },
+        });
+      }
+    } catch (notifErr) {
+      console.error('Erreur notification in-app:', notifErr);
+      // Non-critical, continue with email
+    }
+
     // Notifier l'employeur par email
     try {
       const { data: profile } = await admin
@@ -103,7 +129,8 @@ export async function POST(
         let attachment = undefined;
         if (fullContract) {
           try {
-            const pdfBytes = await generateContractPdfBuffer({ ...fullContract, contractType: tokenRecord.contract_type });
+            const templateData = dbToContractTemplate(fullContract, tokenRecord.contract_type);
+            const pdfBytes = await generateContractPdfBuffer(templateData);
             attachment = [{
               content: Buffer.from(pdfBytes).toString('base64'),
               name: `Contrat_signe_${CONTRACT_LABELS[tokenRecord.contract_type]}.pdf`,

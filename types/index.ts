@@ -46,6 +46,7 @@ export interface Profile {
   trial_start_date?: string;
   trial_end_date?: string;
   is_trial_active?: boolean;
+  auto_contract_transitions?: boolean;
   created_at: string;
 }
 
@@ -495,6 +496,11 @@ export interface ContractSummary {
   salary_amount: number;
   salary_frequency: SalaryFrequency;
   created_at: string;
+  // Signature tracking
+  signing_token_expires_at?: string;
+  signing_view_count?: number;
+  // Renewal tracking
+  renewal_count?: number;
 }
 
 export interface ContractDashboardStats {
@@ -575,4 +581,62 @@ export interface ContractFormData {
   employee_signature?: string;
   employer_signature_date?: string;
   employee_signature_date?: string;
+}
+
+export interface ContractRenewal {
+  id: string;
+  original_contract_id: string;
+  renewed_contract_id: string | null;
+  contract_type: ContractType;
+  user_id: string;
+  renewal_number: number;
+  previous_end_date: string;
+  new_end_date: string;
+  renewal_reason: string | null;
+  created_at: string;
+}
+
+export type AmendmentType = 'salary_change' | 'schedule_change' | 'location_change' | 'position_change' | 'other';
+
+export interface ContractAmendment {
+  id: string;
+  contract_id: string;
+  contract_type: ContractType;
+  user_id: string;
+  amendment_number: string;
+  amendment_type: AmendmentType;
+  description: string;
+  changes: Record<string, { old: any; new: any; label: string }>;
+  effective_date: string;
+  document_status: ContractStatus;
+  employer_signature?: string;
+  employee_signature?: string;
+  employer_signature_date?: string;
+  employee_signature_date?: string;
+  created_at: string;
+}
+
+export interface ContractAttachment {
+  id: string;
+  contract_id: string;
+  contract_type: ContractType;
+  user_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  description?: string;
+  category: 'identity' | 'diploma' | 'contract' | 'other';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractComment {
+  id: string;
+  contract_id: string;
+  contract_type: ContractType;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
 }

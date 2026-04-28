@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, FileText, Building2, User, Calendar, Euro, Download, Send,
   Trash2, Copy, FileEdit, Loader2, CheckCircle, Clock, Shield,
-  FileCheck, History, Sparkles, Calculator
+  FileCheck, History, Sparkles, Calculator, X, AlertCircle, RefreshCw, Paperclip, MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -19,8 +19,16 @@ import { ContractEmailModal } from '@/components/labor-law/ContractEmailModal';
 import { ContractVersionHistory } from '@/components/labor-law/ContractVersionHistory';
 import { AISuggestionsModal } from '@/components/labor-law/AISuggestionsModal';
 import { PayslipEditor } from '@/components/labor-law/PayslipEditor';
+import { ContractRenewalModal } from '@/components/contracts/ContractRenewalModal';
+import { ContractRenewalHistory } from '@/components/contracts/ContractRenewalHistory';
+import { ContractAmendmentModal } from '@/components/contracts/ContractAmendmentModal';
+import { ContractAmendmentList } from '@/components/contracts/ContractAmendmentList';
+import { ContractAttachments } from '@/components/contracts/ContractAttachments';
+import { ContractComments } from '@/components/contracts/ContractComments';
 import { creerBulletinDepuisContrat } from '@/lib/labor-law/bulletin-paie';
+import { ContractAttachment } from '@/types';
 import { generateContract as generateTemplate } from '@/lib/labor-law/contract-templates';
+import { getSupabaseClient } from '@/lib/supabase';
 
 const TYPE_LABELS: Record<ContractType, string> = { cdi: 'CDI', cdd: 'CDD', other: 'Autre' };
 
@@ -30,7 +38,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const contractType = (searchParams.get('type') || 'cdi') as ContractType;
   const router = useRouter();
   const { profile } = useAuthStore();
-  const { getContractDetail, deleteContract, duplicateContract, updateContractStatus } = useContractStore();
+  const { getContractDetail, deleteContract, duplicateContract, updateContractStatus, renewContract } = useContractStore();
 
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +49,11 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const [showAISuggestions, setShowAISuggestions] = useState(false);
   const [showPayslipEditor, setShowPayslipEditor] = useState(false);
   const [payslipData, setPayslipData] = useState<any>(null);
+  const [cancelingSignature, setCancelingSignature] = useState(false);
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [showAmendmentModal, setShowAmendmentModal] = useState(false);
+  const [showRenewalHistory, setShowRenewalHistory] = useState(false);
+  const [attachments, setAttachments] = useState<ContractAttachment[]>([]);
 
   useEffect(() => {
     loadContract();
@@ -51,11 +64,24 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
     try {
       const data = await getContractDetail(id, contractType);
       setContract(data);
+      await loadAttachments();
     } catch {
       toast.error('Contrat introuvable');
       router.push('/contracts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAttachments = async () => {
+    try {
+      const res = await fetch(`/api/contracts/attachments?contractId=${id}&contractType=${contractType}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAttachments(data);
+      }
+    } catch {
+      console.error('Failed to load attachments');
     }
   };
 
@@ -89,6 +115,49 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
       toast.success('Statut mis à jour');
     } catch {
       toast.error('Erreur');
+    }
+  };
+
+  const handleCancelSigningRequest = async () => {
+    if (!confirm('Annuler la demande de signature en cours ? Le salarié ne pourra plus signer ce contrat.')) return;
+
+    setCancelingSignature(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Récupérer le token actif pour ce contrat
+      const { data: tokenData } = await supabase
+        .from('contract_signing_tokens')
+        .select('token')
+        .eq('contract_id', id)
+        .eq('contract_type', contractType)
+        .is('signed_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (tokenData) {
+        const res = await fetch(`/api/contract-signing/${tokenData.token}/cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (!res.ok) throw new Error('Erreur');
+
+        toast.success('Demande de signature annulée');
+        setContract(prev => prev ? { ...prev, document_status: 'draft' } as Contract : prev);
+      } else {
+        toast.error('Aucune demande de signature en cours');
+      }
+    } catch {
+      toast.error('Erreur lors de l\'annulation');
+    } finally {
+      setCancelingSignature(false);
     }
   };
 
@@ -160,6 +229,14 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+  const handleAttachmentAdded = (attachment: ContractAttachment) => {
+    setAttachments(prev => [attachment, ...prev]);
+  };
+
+  const handleAttachmentDeleted = (deletedId: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== deletedId));
+  };
   const fmtMoney = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
 
   if (loading) {
@@ -196,6 +273,16 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
             )}
             {contract.document_status === 'signed' && (
               <button onClick={() => handleStatusChange('active')} className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl text-sm font-semibold hover:bg-green-200 transition-colors">Activer</button>
+            )}
+            {contract.contract_type === 'cdd' && contract.document_status === 'active' && (
+              <button onClick={() => setShowRenewalModal(true)} className="px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl text-sm font-semibold hover:bg-purple-200 transition-colors flex items-center gap-1.5">
+                <RefreshCw className="w-4 h-4" /> Renouveler
+              </button>
+            )}
+            {(contract.document_status === 'active' || contract.document_status === 'signed') && (
+              <button onClick={() => setShowAmendmentModal(true)} className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-blue-200 transition-colors flex items-center gap-1.5">
+                <FileEdit className="w-4 h-4" /> Avenant
+              </button>
             )}
           </div>
         </div>
@@ -282,6 +369,32 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
             )}
           </div>
         </motion.div>
+
+        {/* Amendments */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2"><FileEdit className="w-5 h-5 text-primary" />Avenants</h3>
+          </div>
+          <ContractAmendmentList contractId={id} />
+        </motion.div>
+
+        {/* Attachments */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-sm p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><Paperclip className="w-5 h-5 text-primary" />Pièces jointes</h3>
+          <ContractAttachments
+            contractId={id}
+            contractType={contractType}
+            attachments={attachments}
+            onAttachmentAdded={handleAttachmentAdded}
+            onAttachmentDeleted={handleAttachmentDeleted}
+          />
+        </motion.div>
+
+        {/* Comments */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-sm p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-primary" />Commentaires</h3>
+          <ContractComments contractId={id} contractType={contractType} />
+        </motion.div>
       </div>
 
       {/* Action Buttons */}
@@ -309,9 +422,19 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
         <button onClick={handleDuplicate} className="px-5 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
           <Copy className="w-4 h-4" />Dupliquer
         </button>
-        <button onClick={handleDelete} className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2 text-sm">
-          <Trash2 className="w-4 h-4" />Supprimer
-        </button>
+        {/* Bouton pour annuler une demande de signature en cours */}
+        {contract.document_status === 'pending_signature' && (
+          <button onClick={handleCancelSigningRequest} disabled={cancelingSignature} className="px-5 py-2.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center gap-2 text-sm disabled:opacity-50">
+            {cancelingSignature ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+            {cancelingSignature ? 'Annulation...' : 'Annuler la demande'}
+          </button>
+        )}
+        {/* Bloquer la suppression des contrats signés, actifs ou terminés */}
+        {!['signed', 'active', 'ended'].includes(contract.document_status) && (
+          <button onClick={handleDelete} className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2 text-sm">
+            <Trash2 className="w-4 h-4" />Supprimer
+          </button>
+        )}
       </motion.div>
 
       {/* Modals */}
@@ -325,6 +448,31 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
           contractHtml={contract.contract_html || ''}
           contractData={contract as any}
           onClose={() => setShowEmailModal(false)}
+        />
+      )}
+      {showRenewalModal && contract && (
+        <ContractRenewalModal
+          contractId={id}
+          contractType={contractType}
+          currentEndDate={contractType === 'cdd' ? (contract as any).contract_end_date : contractType === 'other' ? (contract as any).end_date : undefined}
+          contractNumber={contract.contract_number}
+          onClose={() => setShowRenewalModal(false)}
+          onRenewed={(newContractId) => {
+            setShowRenewalModal(false);
+            router.push(`/contracts/${newContractId}?type=${contractType}`);
+          }}
+        />
+      )}
+      {showAmendmentModal && contract && (
+        <ContractAmendmentModal
+          contractId={id}
+          contractType={contractType}
+          contractData={contract}
+          onClose={() => setShowAmendmentModal(false)}
+          onAmendmentCreated={() => {
+            setShowAmendmentModal(false);
+            loadContract(); // Reload to show amendments
+          }}
         />
       )}
       <ContractVersionHistory isOpen={showVersionHistory} onClose={() => setShowVersionHistory(false)} contractId={id} contractType={contractType} />

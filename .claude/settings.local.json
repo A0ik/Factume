@@ -134,7 +134,8 @@
       "WebFetch(domain:www.net-entreprises.fr)",
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/create)",
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/\\\\[token\\\\]/sign)",
-      "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/sign/\\\\[token\\\\])"
+      "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/sign/\\\\[token\\\\])",
+      "Bash(pnpm tsc *)"
     ]
   },
   "enableAllProjectMcpServers": true,

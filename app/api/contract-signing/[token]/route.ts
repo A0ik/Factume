@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -8,7 +9,7 @@ const TABLE_MAP: Record<string, string> = {
 };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
@@ -35,6 +36,37 @@ export async function GET(
     if (tokenRecord.signed_at) {
       return NextResponse.json({ error: 'already_signed', signedAt: tokenRecord.signed_at }, { status: 200 });
     }
+
+    // Incrémenter le compteur de vues et mettre à jour last_viewed_at
+    await admin
+      .from('contract_signing_tokens')
+      .update({
+        view_count: (tokenRecord.view_count || 0) + 1,
+        last_viewed_at: new Date().toISOString(),
+      })
+      .eq('id', tokenRecord.id);
+
+    // Logger la vue (si c'est une nouvelle vue, pas un rechargement)
+    // On peut le faire de manière asynchrone sans bloquer la réponse
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown';
+    // Fire and forget - ignorer les erreurs de log
+    (async () => {
+      try {
+        await admin.from('contract_signature_logs').insert({
+          contract_id: tokenRecord.contract_id,
+          contract_type: tokenRecord.contract_type,
+          token_id: tokenRecord.id,
+          event_type: 'link_opened',
+          ip_address: ipAddress,
+          user_agent: req.headers.get('user-agent') || null,
+          metadata: { view_count: (tokenRecord.view_count || 0) + 1 },
+        });
+      } catch {
+        // Ignorer les erreurs de log
+      }
+    })();
 
     // Recuperer le contrat
     const tableName = TABLE_MAP[tokenRecord.contract_type];
@@ -68,6 +100,7 @@ export async function GET(
         employee_email: tokenRecord.employee_email,
         expires_at: tokenRecord.expires_at,
         signed_at: tokenRecord.signed_at,
+        view_count: (tokenRecord.view_count || 0) + 1,
       },
     });
   } catch (error: unknown) {

@@ -4,9 +4,10 @@ import React, { useEffect, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ContractForm } from '@/components/contracts/ContractForm';
 import { useContractStore } from '@/stores/contractStore';
-import { ContractType, ContractFormData } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { ContractType, ContractFormData, ContractStatus } from '@/types';
+import { Loader2, AlertTriangle, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function ContractEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -15,6 +16,7 @@ export default function ContractEditPage({ params }: { params: Promise<{ id: str
   const { getContractDetail } = useContractStore();
 
   const [initialData, setInitialData] = useState<Partial<ContractFormData> | null>(null);
+  const [documentStatus, setDocumentStatus] = useState<ContractStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -99,6 +101,7 @@ export default function ContractEditPage({ params }: { params: Promise<{ id: str
       }
 
       setInitialData(data);
+      setDocumentStatus(contract.document_status);
     } catch {
       toast.error('Contrat introuvable');
     } finally {
@@ -115,6 +118,29 @@ export default function ContractEditPage({ params }: { params: Promise<{ id: str
   }
 
   if (!initialData) return null;
+
+  // Bloquer la modification si le contrat est signé, actif, terminé ou annulé
+  if (documentStatus && ['signed', 'active', 'ended', 'terminated', 'cancelled'].includes(documentStatus)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Contrat verrouillé</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Ce contrat est {documentStatus === 'signed' ? 'signé' : documentStatus === 'active' ? 'actif' : documentStatus === 'ended' ? 'terminé' : 'annulé'} et ne peut plus être modifié pour préserver l&apos;intégrité de la signature électronique.
+          </p>
+          <Link
+            href={`/contracts/${id}?type=${contractType}`}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Retour au contrat
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ContractForm

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, Mail, FileText, AlertCircle, Check, PenTool, ArrowLeft } from 'lucide-react';
+import { X, Send, Loader2, Mail, FileText, AlertCircle, Check, PenTool, ArrowLeft, Copy, Link as LinkIcon, Calendar, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabaseClient } from '@/lib/supabase';
 
@@ -55,6 +55,7 @@ export function ContractEmailModal({
   const [signEmail, setSignEmail] = useState(defaultEmail);
   const [signLoading, setSignLoading] = useState(false);
   const [signSent, setSignSent] = useState(false);
+  const [signData, setSignData] = useState<{ token: string; signingUrl: string; expiresAt: string; alreadyExists: boolean } | null>(null);
 
   const handleSendEmail = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -141,15 +142,44 @@ export function ContractEmailModal({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
 
+      if (!res.ok && data.code === 'EMPLOYER_SIGNATURE_REQUIRED') {
+        toast.error('Veuillez d\'abord signer le contrat vous-même (employeur) avant de l\'envoyer au salarié.');
+        setSignLoading(false);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur');
+      }
+
+      setSignData({
+        token: data.token,
+        signingUrl: data.signingUrl,
+        expiresAt: data.expiresAt,
+        alreadyExists: data.alreadyExists || false,
+      });
       setSignSent(true);
-      toast.success('Demande de signature envoyée');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {
       setSignLoading(false);
     }
+  };
+
+  const copySigningLink = async () => {
+    if (!signData?.signingUrl) return;
+    try {
+      await navigator.clipboard.writeText(signData.signingUrl);
+      toast.success('Lien copié !');
+    } catch {
+      toast.error('Erreur lors de la copie');
+    }
+  };
+
+  const fmtDate = (d: string) => {
+    const date = new Date(d);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -220,7 +250,7 @@ export function ContractEmailModal({
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Envoyer pour signature</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Le salarié reçoit un lien sécurisé pour signer électroniquement en ligne.</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Le salarié signe électroniquement via un lien sécurisé.</p>
                     </div>
                   </div>
                 </button>
@@ -320,14 +350,48 @@ export function ContractEmailModal({
               </>
             )}
 
-            {mode === 'sign' && signSent && (
-              <div className="flex flex-col items-center py-8 gap-4">
-                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+            {mode === 'sign' && signSent && signData && (
+              <div className="space-y-4">
+                {/* Success state */}
+                <div className="flex flex-col items-center py-6 gap-3">
+                  <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <p className="font-semibold text-gray-900 dark:text-white text-center">
+                    {signData.alreadyExists ? 'Demande de signature déjà en cours' : 'Demande de signature envoyée !'}
+                  </p>
+                  <p className="text-sm text-gray-500 text-center">Le salarié a reçu un email avec le lien de signature.</p>
                 </div>
-                <p className="font-semibold text-gray-900 dark:text-white">Demande de signature envoyée !</p>
-                <p className="text-sm text-gray-500">Un email avec le lien de signature a été envoyé à {signEmail}</p>
-                <p className="text-xs text-gray-400">Vous serez notifié dès que le salarié aura signé.</p>
+
+                {/* Link details */}
+                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Lien de signature</span>
+                    </div>
+                    <button
+                      onClick={copySigningLink}
+                      className="text-xs flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Copy className="w-3 h-3" /> Copier
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 break-all">{signData.signingUrl}</p>
+
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Calendar className="w-3 h-3" />
+                    <span>Expire le {fmtDate(signData.expiresAt)}</span>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Le salarié pourra signer ce contrat jusqu&apos;à la date d&apos;expiration. Vous serez notifié automatiquement dès sa signature.
+                  </p>
+                </div>
               </div>
             )}
           </div>

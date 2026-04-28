@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef, use } from 'react';
-import { Loader2, FileText, CheckCircle, AlertTriangle, Download, PenTool, Building2, User, Calendar, Euro } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, AlertTriangle, Download, PenTool, Building2, User, Calendar, Euro, ExternalLink, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 const CONTRACT_LABELS: Record<string, string> = {
   cdi: 'CDI',
@@ -22,9 +23,12 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
   const [signed, setSigned] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signerName, setSignerName] = useState('');
+  const [consent, setConsent] = useState(false);
   const [contract, setContract] = useState<any>(null);
   const [contractType, setContractType] = useState('');
   const [profile, setProfile] = useState<any>(null);
+  const [tokenRecord, setTokenRecord] = useState<any>(null);
+  const [viewCount, setViewCount] = useState(0);
 
   useEffect(() => {
     loadContract();
@@ -49,6 +53,8 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
       setContract(data.contract);
       setContractType(data.contractType);
       setProfile(data.profile);
+      setTokenRecord(data.tokenRecord);
+      setViewCount(data.tokenRecord?.view_count || 0);
       setSignerName(`${data.contract.employee_first_name} ${data.contract.employee_last_name}`);
     } catch {
       setError('Erreur lors du chargement.');
@@ -110,9 +116,38 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
     hasDrawnRef.current = false;
   };
 
+  const handlePreviewPDF = async () => {
+    if (!contract) return;
+    try {
+      const res = await fetch('/api/contracts/html-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contract: { ...contract, contractType } }),
+      });
+      if (!res.ok) throw new Error('Erreur');
+      const htmlContent = await res.text();
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) throw new Error('Popups bloqués');
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch {
+      toast.error('Erreur lors de la génération du PDF');
+    }
+  };
+
   const handleSign = async () => {
-    if (!hasDrawnRef.current) return;
-    if (!signerName.trim()) return;
+    if (!hasDrawnRef.current) {
+      toast.error('Veuillez signer dans le cadre');
+      return;
+    }
+    if (!consent) {
+      toast.error('Veuillez cocher la case de consentement');
+      return;
+    }
+    if (!signerName.trim()) {
+      toast.error('Veuillez entrer votre nom');
+      return;
+    }
 
     setSigning(true);
     try {
@@ -130,7 +165,7 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
 
       setSigned(true);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur lors de la signature');
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la signature');
     } finally {
       setSigning(false);
     }
@@ -197,7 +232,16 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
         {/* Contract summary */}
         {contract && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900">Résumé du contrat</h3>
+              <button
+                onClick={handlePreviewPDF}
+                className="text-sm flex items-center gap-1 text-primary hover:underline"
+              >
+                <ExternalLink className="w-4 h-4" /> Voir le PDF complet
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-start gap-2">
                 <User className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                 <div>
@@ -262,46 +306,63 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
           </div>
 
           <button onClick={clearCanvas} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Effacer la signature
+            Effacer et recommencer
           </button>
 
           {/* Signer name */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Nom du signataire</label>
+            <label className="text-sm font-medium text-gray-700">Nom complet du signataire</label>
             <input
               type="text"
               value={signerName}
               onChange={(e) => setSignerName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none text-sm"
-              placeholder="Votre nom complet"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+              placeholder="Votre nom et prénom"
             />
           </div>
 
+          {/* eIDAS consent checkbox */}
+          <label className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 w-5 h-5 text-primary rounded focus:ring-primary"
+            />
+            <div className="text-sm">
+              <p className="font-medium text-gray-900 dark:text-white">J'accepte de signer ce contrat électroniquement</p>
+              <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+                En cochant cette case, je reconnais que ma signature électronique a la même valeur légale qu'une signature manuscrite conformément au règlement eIDAS n°910/2014. J'atteste avoir lu et accepté l'intégralité du contrat.
+              </p>
+            </div>
+          </label>
+
           {/* Legal */}
           <p className="text-xs text-gray-400 leading-relaxed">
-            En signant ce document, vous reconnaissez avoir lu et accepté les termes du contrat.
-            Votre signature électronique a la même valeur légale qu&apos;une signature manuscrite (règlement eIDAS).
+            Cette signature est sécurisée et horodatée. Toute tentative de fraude sera poursuivie.
           </p>
         </div>
 
         {/* Sign button */}
         <button
           onClick={handleSign}
-          disabled={signing}
-          className="w-full py-4 rounded-2xl text-white font-bold text-lg transition-all disabled:opacity-50 shadow-lg hover:shadow-xl"
+          disabled={signing || !consent || !hasDrawnRef.current}
+          className="w-full py-4 rounded-2xl text-white font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
           style={{ backgroundColor: accent }}
         >
           {signing ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" /> Validation...
+              <Loader2 className="w-5 h-5 animate-spin" /> Validation en cours...
             </span>
           ) : (
-            'Valider ma signature'
+            <span className="flex items-center justify-center gap-2">
+              <Check className="w-5 h-5" /> Valider ma signature électronique
+            </span>
           )}
         </button>
 
         <p className="text-center text-xs text-gray-400">
-          Signature sécurisée via Factu.me
+          Signature sécurisée via Factu.me • Lien valable 7 jours
         </p>
       </div>
     </div>
