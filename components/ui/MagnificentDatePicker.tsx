@@ -175,26 +175,33 @@ export function MagnificentDatePicker({
     return `${d}/${m}/${y}`;
   };
 
-  // Gestion de la saisie directe
+  // Gestion de la saisie directe avec auto-formatage JJ/MM/AAAA
   const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    setTextInput(input);
+    const raw = e.target.value;
     setInputError('');
 
-    // Détecter le format JJ/MM/AAAA
-    if (input.length >= 8) {
-      const parsedDate = parseDateInput(input);
+    // Extraire uniquement les chiffres
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
 
+    // Reconstruire le format JJ/MM/AAAA automatiquement
+    let formatted = digits;
+    if (digits.length > 4) {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    } else if (digits.length > 2) {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+    }
+
+    setTextInput(formatted);
+
+    // Auto-sélectionner quand les 8 chiffres sont saisis (JJ/MM/AAAA)
+    if (digits.length === 8) {
+      const parsedDate = parseDateInput(formatted);
       if (parsedDate) {
-        // Vérifier si la date est dans les limites
         if (!isDateEnabled(parsedDate)) {
           setInputError('Date non autorisée');
           return;
         }
-
-        // Mettre à jour la date sélectionnée
         onChange(formatDateToLocalISO(parsedDate));
-        setTextInput(formatDateForInput(parsedDate));
         setIsOpen(false);
       } else {
         setInputError('Format invalide (JJ/MM/AAAA)');

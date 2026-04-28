@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ImportClientsModal } from '@/components/ui/ImportClientsModal';
+import DocPickerModal from '@/components/clients/DocPickerModal';
 import {
   getInitials, downloadCSV, validateSiret, validateVatNumber, formatCurrency,
 } from '@/lib/utils';
@@ -99,6 +100,7 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
   viewMode: 'grid' | 'list';
 }) => {
   const [from, to] = GRADIENT_PAIRS[idx % GRADIENT_PAIRS.length];
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
 
   if (viewMode === 'list') {
     return (
@@ -156,6 +158,13 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
         <td className="px-4 py-4">
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
             <button
+              onClick={(e) => { e.stopPropagation(); setDocPickerOpen(true); }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all"
+            >
+              <FileText size={12} />
+              <span>+ Doc</span>
+            </button>
+            <button
               onClick={(e) => { e.stopPropagation(); onDelete(e); }}
               className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
             >
@@ -164,6 +173,12 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
             <ChevronRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
           </div>
         </td>
+        <DocPickerModal
+          open={docPickerOpen}
+          onClose={() => setDocPickerOpen(false)}
+          clientId={client.id}
+          clientName={client.name}
+        />
       </motion.tr>
     );
   }
@@ -237,19 +252,13 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-1.5">
-              {stats.count > 0 ? (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold"
-                >
-                  <Star size={8} fill="currentColor" /> Client actif
-                </motion.span>
-              ) : (
-                <span className="text-[10px] text-gray-400 px-2.5 py-1">Nouveau client</span>
-              )}
-            </div>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDocPickerOpen(true); }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all"
+            >
+              <FileText size={12} />
+              <span>+ Doc</span>
+            </button>
             <motion.div
               animate={{ x: [0, 4, 0] }}
               transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
@@ -258,6 +267,12 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
               <ArrowUpRight size={16} />
             </motion.div>
           </div>
+          <DocPickerModal
+            open={docPickerOpen}
+            onClose={() => setDocPickerOpen(false)}
+            clientId={client.id}
+            clientName={client.name}
+          />
         </GlassCard>
       </motion.div>
     </Link>

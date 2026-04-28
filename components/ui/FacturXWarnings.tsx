@@ -174,100 +174,6 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
     );
   }
 
-  // Variant card - complet avec check
-  return (
-    <div className="p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/20">
-          <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white">
-            Compatibilité Factur-X
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Vérifiez que toutes les informations requises sont présentes.
-          </p>
-        </div>
-      </div>
-
-      {/* Vendeur */}
-      <div className="space-y-2 mb-4">
-        <p className="text-[10px] font-bold text-gray-500 uppercase">Vos informations</p>
-        <div className="grid grid-cols-2 gap-2">
-          <FieldStatus
-            label="Entreprise"
-            present={!!profile?.company_name?.trim()}
-          />
-          <FieldStatus
-            label="SIRET"
-            present={!!profile?.siret?.trim()}
-          />
-          <FieldStatus
-            label="TVA"
-            present={!!profile?.vat_number?.trim()}
-          />
-          <FieldStatus
-            label="Adresse complète"
-            present={!!profile?.address?.trim() && !!profile?.city?.trim() && !!profile?.postal_code?.trim()}
-          />
-        </div>
-      </div>
-
-      {/* Client */}
-      <div className="space-y-2 mb-4">
-        <p className="text-[10px] font-bold text-gray-500 uppercase">Client</p>
-        <div className="grid grid-cols-2 gap-2">
-          <FieldStatus
-            label="Nom"
-            present={!!clientName?.trim()}
-          />
-          <FieldStatus
-            label="SIRET"
-            present={!!clientSiret?.trim()}
-          />
-          <FieldStatus
-            label="TVA"
-            present={!!clientVat?.trim()}
-          />
-          <FieldStatus
-            label="Adresse complète"
-            present={!!clientAddress?.trim() && !!clientCity?.trim() && !!clientPostalCode?.trim()}
-          />
-        </div>
-      </div>
-
-      {/* Facture */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold text-gray-500 uppercase">Facture</p>
-        <div className="grid grid-cols-2 gap-2">
-          <FieldStatus
-            label="Numéro"
-            present={!!invoice.number?.trim()}
-          />
-          <FieldStatus
-            label="Date d'émission"
-            present={!!invoice.issue_date}
-          />
-          <FieldStatus
-            label="Lignes valides"
-            present={!!invoice.items && invoice.items.length > 0 && invoice.items.every(i => i.description?.trim() && i.quantity && i.unit_price)}
-          />
-        </div>
-      </div>
-
-      {(criticalFields.length > 0 || missingFields.length > 0) && (
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10">
-          <p className="text-[10px] text-gray-500">
-            {criticalFields.length > 0 && <span className="text-red-600 font-bold">{criticalFields.length} obligatoire{criticalFields.length > 1 ? 's' : ''}</span>}
-            {criticalFields.length > 0 && missingFields.length > 0 && <span> • </span>}
-            {missingFields.length > 0 && <span className="text-amber-600 font-bold">{missingFields.length} recommandé{missingFields.length > 1 ? 's' : ''}</span>}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-
   // Variant accordion - replié par défaut
   if (variant === 'accordion') {
     return (
@@ -341,6 +247,76 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
       </div>
     );
   }
+
+  // Variant card - complet avec check (default)
+  return (
+    <div className="p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/20">
+          <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+            Compatibilité Factur-X
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Vérifiez que toutes les informations requises sont présentes.
+          </p>
+        </div>
+      </div>
+
+      {/* Vendeur */}
+      <div className="space-y-2 mb-4">
+        <p className="text-[10px] font-bold text-gray-500 uppercase">Vos informations</p>
+        <div className="grid grid-cols-2 gap-2">
+          <FieldStatus label="Entreprise" present={!!profile?.company_name?.trim()} />
+          <FieldStatus label="SIRET" present={!!profile?.siret?.trim()} />
+          <FieldStatus label="TVA" present={!!profile?.vat_number?.trim()} />
+          <FieldStatus
+            label="Adresse complète"
+            present={!!profile?.address?.trim() && !!profile?.city?.trim() && !!profile?.postal_code?.trim()}
+          />
+        </div>
+      </div>
+
+      {/* Client */}
+      <div className="space-y-2 mb-4">
+        <p className="text-[10px] font-bold text-gray-500 uppercase">Client</p>
+        <div className="grid grid-cols-2 gap-2">
+          <FieldStatus label="Nom" present={!!clientName?.trim()} />
+          <FieldStatus label="SIRET" present={!!clientSiret?.trim()} />
+          <FieldStatus label="TVA" present={!!clientVat?.trim()} />
+          <FieldStatus
+            label="Adresse complète"
+            present={!!clientAddress?.trim() && !!clientCity?.trim() && !!clientPostalCode?.trim()}
+          />
+        </div>
+      </div>
+
+      {/* Facture */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold text-gray-500 uppercase">Facture</p>
+        <div className="grid grid-cols-2 gap-2">
+          <FieldStatus label="Numéro" present={!!invoice.number?.trim()} />
+          <FieldStatus label="Date d'émission" present={!!invoice.issue_date} />
+          <FieldStatus
+            label="Lignes valides"
+            present={!!invoice.items && invoice.items.length > 0 && invoice.items.every(i => i.description?.trim() && i.quantity && i.unit_price)}
+          />
+        </div>
+      </div>
+
+      {(criticalFields.length > 0 || missingFields.length > 0) && (
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10">
+          <p className="text-[10px] text-gray-500">
+            {criticalFields.length > 0 && <span className="text-red-600 font-bold">{criticalFields.length} obligatoire{criticalFields.length > 1 ? 's' : ''}</span>}
+            {criticalFields.length > 0 && missingFields.length > 0 && <span> • </span>}
+            {missingFields.length > 0 && <span className="text-amber-600 font-bold">{missingFields.length} recommandé{missingFields.length > 1 ? 's' : ''}</span>}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function FieldStatus({ label, present }: { label: string; present: boolean }) {

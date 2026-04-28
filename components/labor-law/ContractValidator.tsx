@@ -309,14 +309,6 @@ export function ContractValidator({
                 </motion.div>
               )}
 
-              {/* Mention légale importante */}
-              <div className="mt-3 p-3 bg-gray-100 dark:bg-slate-800 rounded-xl">
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  <strong>⚠️ Important :</strong> Ce contrôle est basé sur les règles du Code du travail français.
-                  Pour une validation juridique définitive, faites relire ce contrat par un avocat ou juriste spécialisé
-                  en droit du travail. Les taux de cotisation sont mis à jour en 2024 mais peuvent varier selon votre convention collective.
-                </p>
-              </div>
             </div>
           </motion.div>
         )}
