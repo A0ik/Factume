@@ -6,7 +6,7 @@
 import {
   Document, Packer, Paragraph, TextRun, AlignmentType,
   convertInchesToTwip, BorderStyle, TableCell, TableRow, Table, WidthType,
-  PageNumber, Footer, Header, ShadingType, UnderlineType, PageBreak,
+  PageNumber, Footer, Header, ShadingType, UnderlineType, PageBreak, ImageRun,
 } from 'docx';
 import { getContractArticles } from './contract-templates';
 
@@ -277,30 +277,59 @@ function infoTable(rows: [string, string][]): Table {
 
 // ── Signature blocks ──────────────────────────────────────────────────────────
 
+function sigImageParagraph(dataUrl: string): Paragraph | null {
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const type = dataUrl.startsWith('data:image/jpeg') ? 'jpg' : 'png';
+    const buffer = Buffer.from(base64, 'base64');
+    return new Paragraph({
+      children: [
+        new ImageRun({
+          data: buffer,
+          transformation: { width: 140, height: 55 },
+          type,
+        } as any),
+      ],
+      spacing: sp(40, 40),
+    });
+  } catch {
+    return null;
+  }
+}
+
 function signatureTable(data: ContractData): Table {
   const sigDate = data.signatureDate ? fmtDate(data.signatureDate) : fmtDate(new Date().toISOString().split('T')[0]);
   const city = data.signatureCity || data.companyCity || '_____________';
 
-  const makeBlock = (title: string, name: string) => new TableCell({
-    width: { size: 50, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-    },
-    children: [
-      new Paragraph({ children: [new TextRun({ text: title, bold: true, size: 22 })], spacing: sp(0, 80) }),
-      new Paragraph({ children: [new TextRun({ text: name, size: 20 })], spacing: sp(0, 120) }),
-      new Paragraph({ children: [new TextRun({ text: `À ${city}, le ${sigDate}`, size: 18, italics: true, color: '666666' })], spacing: sp(0, 200) }),
-      new Paragraph({
-        border: { bottom: { style: BorderStyle.SINGLE, color: '333333', size: 6 } },
-        spacing: sp(280, 40),
-        children: [],
-      }),
-      new Paragraph({ children: [new TextRun({ text: 'Signature (précédée de la mention "Lu et approuvé")', size: 16, color: '888888', italics: true })], spacing: sp(40, 0) }),
-    ],
-  });
+  const makeBlock = (title: string, name: string, signatureDataUrl?: string) => {
+    const sigSrc = signatureDataUrl
+      ? (signatureDataUrl.startsWith('data:') ? signatureDataUrl : `data:image/png;base64,${signatureDataUrl}`)
+      : undefined;
+    const imgPara = sigSrc ? sigImageParagraph(sigSrc) : null;
+
+    return new TableCell({
+      width: { size: 50, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+      },
+      children: [
+        new Paragraph({ children: [new TextRun({ text: title, bold: true, size: 22 })], spacing: sp(0, 80) }),
+        new Paragraph({ children: [new TextRun({ text: name, size: 20 })], spacing: sp(0, 80) }),
+        new Paragraph({ children: [new TextRun({ text: `À ${city}, le ${sigDate}`, size: 18, italics: true, color: '666666' })], spacing: sp(0, 160) }),
+        ...(imgPara ? [imgPara] : [
+          new Paragraph({
+            border: { bottom: { style: BorderStyle.SINGLE, color: '333333', size: 6 } },
+            spacing: sp(280, 40),
+            children: [],
+          }),
+        ]),
+        new Paragraph({ children: [new TextRun({ text: 'Signature (précédée de la mention "Lu et approuvé")', size: 16, color: '888888', italics: true })], spacing: sp(40, 0) }),
+      ],
+    });
+  };
 
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -312,8 +341,8 @@ function signatureTable(data: ContractData): Table {
     rows: [
       new TableRow({
         children: [
-          makeBlock("Pour l'employeur :", `${data.companyName}\nReprésenté(e) par ${data.employerName}, ${data.employerTitle}`),
-          makeBlock('Pour le/la salarié(e) :', `${data.employeeFirstName} ${data.employeeLastName}`),
+          makeBlock("Pour l'employeur :", `${data.companyName}\nReprésenté(e) par ${data.employerName}, ${data.employerTitle}`, data.employerSignature),
+          makeBlock('Pour le/la salarié(e) :', `${data.employeeFirstName} ${data.employeeLastName}`, data.employeeSignature),
         ],
       }),
     ],

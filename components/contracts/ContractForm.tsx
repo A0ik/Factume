@@ -508,19 +508,25 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     try {
       validateRequired();
       setLoading(true);
-      const res = await fetch('/api/contracts/html-pdf', {
+      const res = await fetch('/api/contracts/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contract: toCamelCase(formData) }),
       });
-      if (!res.ok) throw new Error('Erreur génération');
-      const htmlContent = await res.text();
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) throw new Error('Popups bloqués — autorisez les popups pour votre navigateur');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.onload = () => setTimeout(() => printWindow.print(), 400);
-      toast.success('Aperçu ouvert — utilisez « Enregistrer en PDF » dans la boîte d\'impression');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur génération PDF');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Contrat_${(formData.contract_type || 'contrat').toUpperCase()}_${formData.employee_last_name || 'salarie'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('PDF téléchargé !');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally { setLoading(false); }
