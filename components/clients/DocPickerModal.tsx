@@ -1,4 +1,6 @@
 'use client';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Receipt, FileCheck, ShoppingBag, Truck, Percent, RotateCcw } from 'lucide-react';
@@ -69,6 +71,9 @@ interface Props {
 
 export default function DocPickerModal({ open, onClose, clientId, clientName }: Props) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const handleSelect = (path: string) => {
     const params = new URLSearchParams({ clientId, clientName });
@@ -76,10 +81,10 @@ export default function DocPickerModal({ open, onClose, clientId, clientName }: 
     onClose();
   };
 
-  return (
+  const modal = (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -146,4 +151,7 @@ export default function DocPickerModal({ open, onClose, clientId, clientName }: 
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+  return createPortal(modal, document.body);
 }

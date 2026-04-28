@@ -210,7 +210,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       if (error) throw new Error(error.message);
       setNotes((prev) => [data, ...prev]);
       setNoteInput('');
-    } catch (e: any) { toast.error(e.message); }
+      toast.success('Note ajoutée');
+    } catch (e: any) { toast.error(e.message || 'Erreur lors de l\'ajout de la note'); }
     finally { setAddingNote(false); }
   };
 
