@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { toast } from 'sonner';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -34,7 +35,7 @@ export default function CalendarPage() {
   // Calendar navigation state
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   // Data state
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -50,32 +51,30 @@ export default function CalendarPage() {
   // Build calendar cells
   const cells = useMemo(() => buildCalendarCells(currentYear, currentMonth), [currentYear, currentMonth]);
 
-  // Group appointments by day
+  // Group appointments by day — parse as local date to avoid UTC shift
   const appointmentsByDay = useMemo(() => {
     const map: Record<number, Appointment[]> = {};
     appointments.forEach((appt) => {
-      const d = new Date(appt.appointment_date);
-      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
-        const day = d.getDate();
-        if (!map[day]) map[day] = [];
-        map[day].push(appt);
+      const [y, m, dd] = appt.appointment_date.split('-').map(Number);
+      if (y === currentYear && m - 1 === currentMonth) {
+        if (!map[dd]) map[dd] = [];
+        map[dd].push(appt);
       }
     });
     return map;
   }, [appointments, currentYear, currentMonth]);
 
-  // Group invoices by day (only actionable: sent or overdue)
+  // Group invoices by day — parse as local date to avoid UTC shift
   const invoicesByDay = useMemo(() => {
     const map: Record<number, Invoice[]> = {};
     invoices
       .filter((inv) => inv.status === 'sent' || inv.status === 'overdue')
       .forEach((inv) => {
         if (!inv.due_date) return;
-        const d = new Date(inv.due_date);
-        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
-          const day = d.getDate();
-          if (!map[day]) map[day] = [];
-          map[day].push(inv);
+        const [y, m, dd] = inv.due_date.split('-').map(Number);
+        if (y === currentYear && m - 1 === currentMonth) {
+          if (!map[dd]) map[dd] = [];
+          map[dd].push(inv);
         }
       });
     return map;
@@ -259,6 +258,24 @@ export default function CalendarPage() {
     return `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
   };
 
+  // Bottom sheet drag controls (handle only — prevents scroll conflict)
+  const sheetDragControls = useDragControls();
+
+  // Swipe tracking for month navigation
+  const swipeStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (dx < -60) nextMonth();
+    else if (dx > 60) prevMonth();
+  };
+
   return (
     <div className="relative min-h-screen">
       {/* Animated background blobs */}
@@ -269,9 +286,13 @@ export default function CalendarPage() {
       </div>
 
       {/* Main layout */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-4 lg:p-6">
-        {/* Left column: Header + Calendar Grid */}
-        <div className="flex-1 flex flex-col gap-4">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-3 sm:p-4 lg:p-6">
+        {/* Left column: Header + Calendar Grid (swipeable on mobile) */}
+        <div
+          className="flex-1 flex flex-col gap-3 sm:gap-4"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <MagnificentCalendarHeader
             currentMonth={currentMonth}
             currentYear={currentYear}
@@ -281,31 +302,109 @@ export default function CalendarPage() {
             onNewAppointment={openCreateModal}
           />
 
-          <MagnificentCalendarGrid
-            cells={cells}
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            selectedDay={selectedDay}
-            appointmentsByDay={appointmentsByDay}
-            invoicesByDay={invoicesByDay}
-            onSelectDay={setSelectedDay}
-          />
+          <div className="relative">
+            <MagnificentCalendarGrid
+              cells={cells}
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              selectedDay={selectedDay}
+              appointmentsByDay={appointmentsByDay}
+              invoicesByDay={invoicesByDay}
+              onSelectDay={setSelectedDay}
+            />
+            {/* Loading overlay */}
+            {loadingAppts && (
+              <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right column: Day Detail Panel */}
-        <MagnificentDayDetailPanel
-          selectedDay={selectedDay}
-          currentMonth={currentMonth}
-          currentYear={currentYear}
-          appointments={dayAppointments}
-          invoices={dayInvoices}
-          onAppointmentClick={(apt: Appointment) => {
-            setSelectedAppointment(apt);
-            setShowDetailModal(true);
-          }}
-          onNewAppointment={openCreateModal}
-        />
+        {/* Right column: Day Detail Panel (desktop only, inline) */}
+        <div className="hidden lg:block">
+          <MagnificentDayDetailPanel
+            selectedDay={selectedDay}
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            appointments={dayAppointments}
+            invoices={dayInvoices}
+            onAppointmentClick={(apt: Appointment) => {
+              setSelectedAppointment(apt);
+              setShowDetailModal(true);
+            }}
+            onNewAppointment={openCreateModal}
+          />
+        </div>
       </div>
+
+      {/* Mobile: hint to tap a day */}
+      {selectedDay === null && (
+        <p className="lg:hidden text-center text-xs text-gray-400 dark:text-gray-500 pb-4 -mt-1 px-4">
+          Touchez un jour pour voir vos rendez-vous
+        </p>
+      )}
+
+      {/* Mobile: Bottom sheet for day detail */}
+      <AnimatePresence>
+        {selectedDay !== null && (
+          <div className="lg:hidden fixed inset-0 z-40 flex flex-col justify-end">
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedDay(null)}
+            />
+            {/* Sheet — drag only from handle via dragControls */}
+            <motion.div
+              className="relative bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl max-h-[78vh] flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+              drag="y"
+              dragControls={sheetDragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_, info) => { if (info.offset.y > 80) setSelectedDay(null); }}
+            >
+              {/* Drag handle — only this area initiates drag */}
+              <div
+                className="flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab active:cursor-grabbing"
+                style={{ touchAction: 'none' }}
+                onPointerDown={(e) => sheetDragControls.start(e)}
+              >
+                <div className="w-10 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
+
+              {/* Scrollable content — won't trigger drag */}
+              <div className="overflow-y-auto flex-1 overscroll-contain"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+              >
+                <MagnificentDayDetailPanel
+                  selectedDay={selectedDay}
+                  currentMonth={currentMonth}
+                  currentYear={currentYear}
+                  appointments={dayAppointments}
+                  invoices={dayInvoices}
+                  onAppointmentClick={(apt: Appointment) => {
+                    setSelectedAppointment(apt);
+                    setShowDetailModal(true);
+                  }}
+                  onNewAppointment={() => {
+                    setSelectedDay(null);
+                    openCreateModal();
+                  }}
+                  className="rounded-none border-0 shadow-none bg-transparent backdrop-blur-none"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modals */}
       {/* Create modal */}

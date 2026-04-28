@@ -1,8 +1,7 @@
 'use client';
 
 import { motion, Variants } from 'framer-motion';
-import { cn, formatFrenchDate } from '@/lib/utils';
-import { Calendar, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Appointment, Invoice } from '@/types';
 
 // Helper function to check if date is today
@@ -35,136 +34,74 @@ export function MagnificentCalendarDayCell({
   className,
 }: MagnificentCalendarDayCellProps) {
   if (day === null) {
-    return <div className="aspect-square" />;
+    return <div className="aspect-square sm:aspect-auto sm:min-h-[52px]" />;
   }
 
   const date = new Date(currentYear, currentMonth, day);
-  const today = isToday(date);
+  const todayFlag = isToday(date);
+  const hasAppts = appointments.length > 0;
+  const hasInvoices = invoices.length > 0;
   const totalEvents = appointments.length + invoices.length;
 
   const cellVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.2,
-        ease: "easeOut"
-      }
-    },
+    hidden: { opacity: 0, scale: 0.85 },
+    visible: { opacity: 1, scale: 1, transition: { duration: 0.15, ease: 'easeOut' } },
   };
 
   return (
     <motion.div
       variants={cellVariants}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.04 }}
+      whileTap={{ scale: 0.93 }}
       onClick={onClick}
       className={cn(
-        'relative aspect-square rounded-2xl cursor-pointer transition-all duration-300',
-        'group overflow-hidden',
+        'relative aspect-square sm:aspect-auto sm:min-h-[52px] rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-200',
+        'group overflow-hidden flex flex-col items-center justify-between py-1.5 px-1',
         // Background
-        today
+        todayFlag && !isSelected
           ? 'bg-gradient-to-br from-primary/20 to-emerald-500/20 dark:from-primary/30 dark:to-emerald-500/30'
-          : 'bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800/80',
+          : !isSelected ? 'bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800/80' : '',
         isSelected && 'bg-gradient-to-br from-primary to-emerald-600 shadow-lg shadow-primary/30',
         // Border
         isSelected
-          ? 'border-2 border-primary dark:border-primary'
-          : 'border-2 border-transparent hover:border-primary/30 dark:hover:border-primary/30',
+          ? 'border-2 border-primary'
+          : 'border-2 border-transparent hover:border-primary/30',
         className
       )}
     >
       {/* Day number */}
-      <div className="absolute top-2 left-2 z-10">
-        <span
-          className={cn(
-            'text-sm font-bold tabular-nums',
-            today && 'text-primary',
-            isSelected && 'text-white',
-            !today && !isSelected && 'text-gray-700 dark:text-gray-300'
-          )}
-        >
-          {day}
-        </span>
-      </div>
+      <span
+        className={cn(
+          'text-xs sm:text-sm font-bold tabular-nums leading-none',
+          todayFlag && !isSelected && 'text-primary',
+          isSelected && 'text-white',
+          !todayFlag && !isSelected && 'text-gray-700 dark:text-gray-300'
+        )}
+      >
+        {day}
+      </span>
 
-      {/* Today indicator */}
-      {today && !isSelected && (
-        <motion.div
-          layoutId="today-indicator"
-          className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary shadow-lg shadow-primary/50"
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        />
-      )}
-
-      {/* Events dots */}
-      {totalEvents > 0 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-          {/* Appointments */}
-          {appointments.length > 0 && (
-            <div
-              className={cn(
-                'w-2 h-2 rounded-full shadow-md',
-                isSelected ? 'bg-white/90' : 'bg-primary'
-              )}
-              title={`${appointments.length} rendez-vous`}
-            />
+      {/* Event dots */}
+      {totalEvents > 0 ? (
+        <div className="flex gap-0.5 sm:gap-1 items-center justify-center">
+          {hasAppts && (
+            <div className={cn('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white/90' : 'bg-primary')} />
           )}
-          {/* Invoices */}
-          {invoices.length > 0 && (
-            <div
-              className={cn(
-                'w-2 h-2 rounded-full shadow-md',
-                isSelected ? 'bg-white/90' : 'bg-accent'
-              )}
-              title={`${invoices.length} facture(s)`}
-            />
+          {hasInvoices && (
+            <div className={cn('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white/70' : 'bg-amber-500')} />
           )}
         </div>
+      ) : (
+        <div className="h-1.5" />
       )}
 
-      {/* Hover overlay effect */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        initial={false}
-      />
-
-      {/* Events preview on hover */}
-      {totalEvents > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 0, y: 10 }}
-          whileHover={{ opacity: 1, y: 0 }}
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:block w-48"
-        >
-          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/20 dark:border-white/10 p-3">
-            <div className="space-y-2">
-              {appointments.slice(0, 2).map((apt) => (
-                <div key={apt.id} className="flex items-center gap-2 text-xs">
-                  <Calendar size={10} className="text-primary flex-shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-300 truncate">
-                    {apt.title}
-                  </span>
-                </div>
-              ))}
-              {invoices.slice(0, 1).map((inv) => (
-                <div key={inv.id} className="flex items-center gap-2 text-xs">
-                  <FileText size={10} className="text-accent flex-shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-300 truncate">
-                    Facture {inv.number}
-                  </span>
-                </div>
-              ))}
-              {totalEvents > 3 && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium pt-1 border-t border-gray-200 dark:border-white/10">
-                  +{totalEvents - 3} autres
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
+      {/* Today ring */}
+      {todayFlag && !isSelected && (
+        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-primary/50 pointer-events-none" />
       )}
+
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none rounded-xl sm:rounded-2xl" />
     </motion.div>
   );
 }

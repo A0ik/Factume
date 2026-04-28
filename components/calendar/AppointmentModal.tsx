@@ -14,7 +14,7 @@ interface AppointmentModalProps {
   onSave: (data: AppointmentFormData) => Promise<void>;
   editingAppointment?: Appointment | null;
   clients: Client[];
-  selectedDate?: string; // YYYY-MM-DD format
+  selectedDate?: string;
   googleConnected: boolean;
   className?: string;
 }
@@ -60,7 +60,6 @@ export function AppointmentModal({
     sync_with_google: googleConnected,
   });
 
-  // Reset form when opening or editing
   useEffect(() => {
     if (isOpen) {
       if (editingAppointment) {
@@ -94,12 +93,7 @@ export function AppointmentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
-
-    // Validate end time is after start time
-    if (formData.end_time <= formData.start_time) {
-      return; // TODO: show error
-    }
-
+    if (formData.end_time <= formData.start_time) return;
     setSaving(true);
     try {
       await onSave(formData);
@@ -111,265 +105,247 @@ export function AppointmentModal({
     }
   };
 
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { opacity: 1, scale: 1, y: 0 },
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
         <>
           {/* Backdrop */}
           <motion.div
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md"
             onClick={onClose}
           />
 
-          {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Mobile: bottom sheet | Desktop: centered */}
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center sm:p-4">
             <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              transition={{ duration: 0.2 }}
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
               className={cn(
-                'relative w-full max-w-lg max-h-[90vh] overflow-hidden',
-                'bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl',
-                'rounded-3xl border border-white/30 dark:border-white/10 shadow-2xl',
+                'relative w-full sm:max-w-lg max-h-[94vh] sm:max-h-[90vh] overflow-hidden',
+                'bg-white dark:bg-slate-900 sm:bg-white/90 sm:dark:bg-slate-900/90 sm:backdrop-blur-2xl',
+                'rounded-t-3xl sm:rounded-3xl',
+                'border-0 sm:border border-white/30 dark:border-white/10 shadow-2xl',
                 'flex flex-col',
                 className
               )}
             >
-              {/* Header with color bar */}
-              <div
-                className={cn(
-                  'h-2 bg-gradient-to-r',
-                  getColorConfig(formData.color).gradient
-                )}
-              />
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 dark:border-white/5">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              {/* Mobile drag handle */}
+              <div className="sm:hidden flex justify-center pt-3 pb-0 flex-shrink-0">
+                <div className="w-10 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
+
+              {/* Color bar */}
+              <div className={cn('h-1.5 sm:h-2 bg-gradient-to-r flex-shrink-0', getColorConfig(formData.color).gradient)} />
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/10 flex-shrink-0">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">
                   {editingAppointment ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-white/20 dark:hover:bg-white/5 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-                {/* Title */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Titre *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Ex: Réunion client"
-                    className={cn(
-                      'w-full px-4 py-2.5 rounded-xl',
-                      'bg-white/50 dark:bg-slate-800/50',
-                      'border border-white/20 dark:border-white/10',
-                      'focus:border-primary/40 focus:ring-2 focus:ring-primary/20',
-                      'text-gray-900 dark:text-white placeholder-gray-400',
-                      'transition-all'
-                    )}
-                    required
-                  />
-                </div>
-
-                {/* Client selector */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <User className="w-4 h-4" />
-                    Client
-                  </label>
-                  <CustomSelect
-                    value={formData.client_id}
-                    onChange={(value) => setFormData({ ...formData, client_id: value })}
-                    options={[
-                      { value: '', label: 'Aucun client' },
-                      ...clients.map((c) => ({ value: c.id, label: c.name })),
-                    ]}
-                    placeholder="Sélectionner un client"
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Date and time row */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Date */}
+              {/* Form — scrollable, won't trigger drag */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex-1 overflow-y-auto overscroll-contain"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              >
+                <div className="p-5 space-y-4">
+                  {/* Title */}
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date</label>
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Titre *</label>
                     <input
-                      type="date"
-                      value={formData.appointment_date}
-                      onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Ex: Réunion client"
                       className={cn(
                         'w-full px-4 py-2.5 rounded-xl',
-                        'bg-white/50 dark:bg-slate-800/50',
-                        'border border-white/20 dark:border-white/10',
-                        'focus:border-primary/40 focus:ring-2 focus:ring-primary/20',
-                        'text-gray-900 dark:text-white',
-                        'transition-all'
+                        'bg-gray-50 dark:bg-slate-800',
+                        'border border-gray-200 dark:border-white/10',
+                        'focus:border-primary/40 focus:ring-2 focus:ring-primary/20 outline-none',
+                        'text-gray-900 dark:text-white placeholder-gray-400 text-sm',
                       )}
                       required
+                      autoFocus={false}
                     />
                   </div>
 
-                  {/* Color picker */}
+                  {/* Client */}
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Couleur</label>
-                    <div className="flex gap-1.5">
-                      {APPOINTMENT_COLORS.map((color) => (
-                        <button
-                          key={color.value}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, color: color.value })}
-                          className={cn(
-                            'w-8 h-8 rounded-full transition-all',
-                            color.bg,
-                            formData.color === color.value && 'ring-2 ring-offset-2 ring-gray-400 dark:ring-gray-600'
-                          )}
-                          title={color.label}
-                        />
-                      ))}
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" />Client
+                    </label>
+                    <CustomSelect
+                      value={formData.client_id}
+                      onChange={(value) => setFormData({ ...formData, client_id: value })}
+                      options={[
+                        { value: '', label: 'Aucun client' },
+                        ...clients.map((c) => ({ value: c.id, label: c.name })),
+                      ]}
+                      placeholder="Sélectionner un client"
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Date + Color */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date</label>
+                      <input
+                        type="date"
+                        value={formData.appointment_date}
+                        onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
+                        className={cn(
+                          'w-full px-3 py-2.5 rounded-xl text-sm',
+                          'bg-gray-50 dark:bg-slate-800',
+                          'border border-gray-200 dark:border-white/10',
+                          'focus:border-primary/40 focus:ring-2 focus:ring-primary/20 outline-none',
+                          'text-gray-900 dark:text-white',
+                        )}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Couleur</label>
+                      <div className="flex gap-2 flex-wrap pt-1">
+                        {APPOINTMENT_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, color: color.value })}
+                            className={cn(
+                              'w-7 h-7 rounded-full transition-all',
+                              color.bg,
+                              formData.color === color.value && 'ring-2 ring-offset-2 ring-gray-400 dark:ring-gray-600 scale-110'
+                            )}
+                            title={color.label}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Start and End time */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Début</label>
-                    <CustomSelect
-                      value={formData.start_time}
-                      onChange={(value) => setFormData({ ...formData, start_time: value })}
-                      options={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}
-                      className="w-full"
-                    />
+                  {/* Start + End time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Début</label>
+                      <CustomSelect
+                        value={formData.start_time}
+                        onChange={(value) => setFormData({ ...formData, start_time: value })}
+                        options={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Fin</label>
+                      <CustomSelect
+                        value={formData.end_time}
+                        onChange={(value) => setFormData({ ...formData, end_time: value })}
+                        options={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
+                  {formData.end_time <= formData.start_time && (
+                    <p className="text-xs text-red-500 -mt-2">L'heure de fin doit être après l'heure de début</p>
+                  )}
+
+                  {/* Location */}
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Fin</label>
-                    <CustomSelect
-                      value={formData.end_time}
-                      onChange={(value) => setFormData({ ...formData, end_time: value })}
-                      options={TIME_OPTIONS.map((t) => ({ value: t, label: t }))}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4" />
-                    Lieu
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Ex: 123 Rue Example, Paris"
-                    className={cn(
-                      'w-full px-4 py-2.5 rounded-xl',
-                      'bg-white/50 dark:bg-slate-800/50',
-                      'border border-white/20 dark:border-white/10',
-                      'focus:border-primary/40 focus:ring-2 focus:ring-primary/20',
-                      'text-gray-900 dark:text-white placeholder-gray-400',
-                      'transition-all'
-                    )}
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <StickyNote className="w-4 h-4" />
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Notes ou détails du rendez-vous..."
-                    rows={3}
-                    className={cn(
-                      'w-full px-4 py-2.5 rounded-xl resize-none',
-                      'bg-white/50 dark:bg-slate-800/50',
-                      'border border-white/20 dark:border-white/10',
-                      'focus:border-primary/40 focus:ring-2 focus:ring-primary/20',
-                      'text-gray-900 dark:text-white placeholder-gray-400',
-                      'transition-all'
-                    )}
-                  />
-                </div>
-
-                {/* Google sync toggle */}
-                {googleConnected && (
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/30 dark:border-blue-800/30 cursor-pointer">
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" />Lieu
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={formData.sync_with_google}
-                      onChange={(e) => setFormData({ ...formData, sync_with_google: e.target.checked })}
-                      className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="Ex: 123 Rue Example, Paris"
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-xl text-sm',
+                        'bg-gray-50 dark:bg-slate-800',
+                        'border border-gray-200 dark:border-white/10',
+                        'focus:border-primary/40 focus:ring-2 focus:ring-primary/20 outline-none',
+                        'text-gray-900 dark:text-white placeholder-gray-400',
+                      )}
                     />
-                    <Cloud className="w-5 h-5 text-blue-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Synchroniser avec Google Calendar
-                    </span>
-                  </label>
-                )}
-              </form>
+                  </div>
 
-              {/* Footer buttons */}
-              <div className="flex items-center gap-3 px-6 py-4 border-t border-white/10 dark:border-white/5">
-                <motion.button
-                  type="button"
-                  onClick={onClose}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl font-semibold',
-                    glassTokens.btnSecondary
+                  {/* Description */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <StickyNote className="w-3.5 h-3.5" />Notes
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Notes ou détails du rendez-vous..."
+                      rows={3}
+                      className={cn(
+                        'w-full px-4 py-2.5 rounded-xl resize-none text-sm',
+                        'bg-gray-50 dark:bg-slate-800',
+                        'border border-gray-200 dark:border-white/10',
+                        'focus:border-primary/40 focus:ring-2 focus:ring-primary/20 outline-none',
+                        'text-gray-900 dark:text-white placeholder-gray-400',
+                      )}
+                    />
+                  </div>
+
+                  {/* Google sync */}
+                  {googleConnected && (
+                    <label className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-800/30 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.sync_with_google}
+                        onChange={(e) => setFormData({ ...formData, sync_with_google: e.target.checked })}
+                        className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Cloud className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Synchroniser avec Google Calendar
+                      </span>
+                    </label>
                   )}
-                >
-                  Annuler
-                </motion.button>
-                <motion.button
-                  type="submit"
-                  onClick={handleSubmit}
-                  disabled={saving || !formData.title.trim()}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    'flex-1 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2',
-                    glassTokens.btnPrimary
-                  )}
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    editingAppointment ? 'Modifier' : 'Créer'
-                  )}
-                </motion.button>
-              </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center gap-3 px-5 py-4 border-t border-gray-100 dark:border-white/5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className={cn('flex-1 py-3 rounded-xl font-semibold text-sm', glassTokens.btnSecondary)}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || !formData.title.trim() || formData.end_time <= formData.start_time}
+                    className={cn(
+                      'flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2',
+                      'bg-gradient-to-r from-primary to-emerald-600 text-white',
+                      'disabled:opacity-50 disabled:cursor-not-allowed',
+                      'transition-all'
+                    )}
+                  >
+                    {saving ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />Enregistrement...</>
+                    ) : (
+                      editingAppointment ? 'Modifier' : 'Créer'
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         </>
@@ -378,7 +354,6 @@ export function AppointmentModal({
   );
 }
 
-// Helper to get color config inside modal
 function getColorConfig(color: string) {
   return APPOINTMENT_COLORS.find(c => c.value === color) || APPOINTMENT_COLORS[0];
 }

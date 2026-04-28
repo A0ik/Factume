@@ -135,7 +135,8 @@
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/create)",
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/\\\\[token\\\\]/sign)",
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/sign/\\\\[token\\\\])",
-      "Bash(pnpm tsc *)"
+      "Bash(pnpm tsc *)",
+      "mcp__supabase__get_advisors"
     ]
   },
   "enableAllProjectMcpServers": true,

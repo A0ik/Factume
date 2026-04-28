@@ -5,6 +5,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
+import MobileDrawer from '@/components/layout/MobileDrawer';
 import { Logo } from '@/components/ui/Logo';
 import { ServiceWorkerRegistration } from '@/components/ui/ServiceWorkerRegistration';
 import CommandPalette from '@/components/ui/CommandPalette';
@@ -14,6 +15,7 @@ import { UpgradeBanner } from '@/components/ui/upgrade-banner';
 import { Toaster } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Menu } from 'lucide-react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [showInvoiceCounter, setShowInvoiceCounter] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!initialized) return;
@@ -90,10 +93,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar />
         <main className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
-          {/* Mobile top bar — logo visible only on mobile */}
-          <div className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          {/* Mobile top bar */}
+          <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors -ml-1"
+              aria-label="Menu navigation"
+            >
+              <Menu size={20} />
+            </button>
             <Logo size="sm" variant="full" />
+            <div className="w-10" />
           </div>
+
           <div className={cn(
             "flex-1 w-full mx-auto px-4 lg:px-8 py-5 lg:py-6",
             pathname === '/paywall' || pathname === '/calendar'
@@ -105,6 +117,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+
+        {/* Mobile slide-out drawer */}
+        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
         <BottomNav />
       </div>
     </>

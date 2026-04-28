@@ -94,12 +94,13 @@ export default function DocPickerModal({ open, onClose, clientId, clientName }: 
             onClick={onClose}
           />
 
-          {/* Panel */}
+          {/* Panel — stopPropagation prevents React portal events from bubbling to parent <Link> */}
           <motion.div
             initial={{ opacity: 0, y: 40, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            onClick={(e) => e.stopPropagation()}
             className="relative w-full sm:max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
           >
             {/* Header */}

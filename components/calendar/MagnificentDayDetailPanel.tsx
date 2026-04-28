@@ -56,7 +56,7 @@ export function MagnificentDayDetailPanel({
             'backdrop-blur-2xl bg-white/30 dark:bg-slate-900/30',
             'border border-white/20 dark:border-white/10 shadow-xl',
             'rounded-[2rem]',
-            'p-6 flex flex-col items-center justify-center gap-4 min-h-[320px]',
+            'p-5 lg:p-6 flex flex-col items-center justify-center gap-4 min-h-[280px] lg:min-h-[320px]',
             className
           )}
         >
@@ -91,12 +91,11 @@ export function MagnificentDayDetailPanel({
           className={cn(
             'lg:w-[400px] xl:w-[440px]',
             'relative',
-            // Glass card effect
             'before:absolute before:inset-0 before:rounded-[2rem] before:bg-gradient-to-br before:from-white/80 before:to-white/60 before:dark:from-slate-900/80 before:dark:to-slate-900/60 before:blur-2xl before:-z-10',
             'backdrop-blur-2xl bg-white/40 dark:bg-slate-900/40',
             'border border-white/30 dark:border-white/10 shadow-2xl',
             'rounded-[2rem]',
-            'p-6 flex flex-col gap-5',
+            'p-5 lg:p-6 flex flex-col gap-4 lg:gap-5',
             className
           )}
         >
@@ -208,7 +207,7 @@ export function MagnificentDayDetailPanel({
                 </motion.button>
               </motion.div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 max-h-[180px] sm:max-h-[240px] overflow-y-auto pr-1">
                 {appointments.map((apt, idx) => (
                   <motion.div
                     key={apt.id}
@@ -245,7 +244,7 @@ export function MagnificentDayDetailPanel({
                 <p className="text-xs text-gray-500 dark:text-gray-400">Aucune facture due</p>
               </motion.div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 max-h-[180px] sm:max-h-[240px] overflow-y-auto pr-1">
                 {actionableInvoices.map((inv, idx) => (
                   <motion.div
                     key={inv.id}

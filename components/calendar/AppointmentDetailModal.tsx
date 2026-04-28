@@ -57,53 +57,41 @@ export function AppointmentDetailModal({
     }
   };
 
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { opacity: 1, scale: 1, y: 0 },
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
         <>
           {/* Backdrop */}
           <motion.div
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md"
             onClick={onClose}
           />
 
-          {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Mobile: bottom sheet | Desktop: centered */}
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center sm:p-4">
             <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              transition={{ duration: 0.2 }}
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
               className={cn(
-                'relative w-full max-w-lg max-h-[90vh] overflow-hidden',
-                'bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl',
-                'rounded-3xl border border-white/30 dark:border-white/10 shadow-2xl',
+                'relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-hidden',
+                'bg-white dark:bg-slate-900 sm:bg-white/90 sm:dark:bg-slate-900/90 sm:backdrop-blur-2xl',
+                'rounded-t-3xl sm:rounded-3xl',
+                'border-0 sm:border border-white/30 dark:border-white/10 shadow-2xl',
                 'flex flex-col',
                 className
               )}
             >
+              {/* Mobile drag handle */}
+              <div className="sm:hidden flex justify-center pt-3 pb-0 flex-shrink-0">
+                <div className="w-10 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
               {/* Gradient header */}
-              <div
-                className={cn(
-                  'relative px-6 py-5',
-                  'bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300'
-                )}
-              >
+              <div className="relative px-5 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-slate-800 dark:to-slate-700">
                 <button
                   onClick={onClose}
                   className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
@@ -131,7 +119,7 @@ export function AppointmentDetailModal({
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-3">
                 {/* Date */}
                 <div
                   className={cn(
@@ -143,13 +131,13 @@ export function AppointmentDetailModal({
                   <CalendarIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">Date</div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {new Date(appointment.appointment_date).toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
+                      {(() => {
+                        const [y, m, d] = appointment.appointment_date.split('-').map(Number);
+                        return new Date(y, m - 1, d).toLocaleDateString('fr-FR', {
+                          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                        });
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -250,7 +238,9 @@ export function AppointmentDetailModal({
               </div>
 
               {/* Footer actions */}
-              <div className="px-6 py-4 border-t border-white/10 dark:border-white/5">
+              <div className="px-5 sm:px-6 py-4 border-t border-gray-100 dark:border-white/5"
+                style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
+              >
                 <div className="grid grid-cols-2 gap-3">
                   {/* Edit */}
                   <motion.button

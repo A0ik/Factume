@@ -19,6 +19,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
+  setProfile: (profile: Profile) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -96,11 +97,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  setProfile: (profile) => set({ profile }),
+
   fetchProfile: async (userId) => {
     const { data, error } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
     if (error && error.code !== 'PGRST116') return;
     if (data) {
-      set({ profile: data });
+      // Expire trial if end date has passed (runs silently, no pg_cron needed)
+      if (data.is_trial_active && data.trial_end_date && new Date(data.trial_end_date) < new Date()) {
+        (async () => { try { await getSupabaseClient().rpc('expire_trials'); } catch {} })();
+        set({ profile: { ...data, is_trial_active: false, subscription_tier: 'free' } });
+      } else {
+        set({ profile: data });
+      }
       if (data.language) changeLanguage(data.language).catch(() => {});
       registerWebPush(userId).catch(() => {});
     }

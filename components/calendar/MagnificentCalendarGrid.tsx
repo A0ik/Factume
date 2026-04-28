@@ -61,16 +61,19 @@ export function MagnificentCalendarGrid({
       </div>
 
       {/* Day headers */}
-      <div className="relative grid grid-cols-7 gap-1 md:gap-2 mb-4">
+      <div className="relative grid grid-cols-7 gap-1 md:gap-2 mb-2 sm:mb-4">
         {DAYS.map((day, idx) => (
           <motion.div
             key={day}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
-            className="text-center py-3"
+            className="text-center py-1.5 sm:py-3"
           >
-            <span className="text-xs font-bold text-primary/80 dark:text-primary/60 uppercase tracking-wider">
+            <span className="sm:hidden text-xs font-bold text-primary/80 dark:text-primary/60 uppercase tracking-wider">
+              {day.substring(0, 1)}
+            </span>
+            <span className="hidden sm:inline text-xs font-bold text-primary/80 dark:text-primary/60 uppercase tracking-wider">
               {day.substring(0, 3)}
             </span>
           </motion.div>
