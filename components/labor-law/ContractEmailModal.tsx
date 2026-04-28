@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, Mail, FileText, AlertCircle, Check } from 'lucide-react';
+import { X, Send, Loader2, Mail, FileText, AlertCircle, Check, PenTool, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSupabaseClient } from '@/lib/supabase';
 
 interface ContractEmailModalProps {
+  contractId: string;
   contractType: string;
   employeeName: string;
   defaultEmail?: string;
@@ -25,7 +27,10 @@ const CONTRACT_LABELS: Record<string, string> = {
   freelance: 'Contrat de prestation de services',
 };
 
+type ModalMode = 'choose' | 'email' | 'sign';
+
 export function ContractEmailModal({
+  contractId,
   contractType,
   employeeName,
   defaultEmail = '',
@@ -34,7 +39,9 @@ export function ContractEmailModal({
   onClose,
 }: ContractEmailModalProps) {
   const label = CONTRACT_LABELS[contractType.toLowerCase()] || contractType;
+  const [mode, setMode] = useState<ModalMode>('choose');
 
+  // Email state
   const [email, setEmail] = useState(defaultEmail);
   const [subject, setSubject] = useState(`Votre ${label} — ${employeeName}`);
   const [message, setMessage] = useState(
@@ -44,16 +51,16 @@ export function ContractEmailModal({
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSend = async () => {
-    if (!email.trim()) {
-      setError('Veuillez saisir une adresse email.');
-      return;
-    }
-    if (!email.includes('@')) {
+  // Signing state
+  const [signEmail, setSignEmail] = useState(defaultEmail);
+  const [signLoading, setSignLoading] = useState(false);
+  const [signSent, setSignSent] = useState(false);
+
+  const handleSendEmail = async () => {
+    if (!email.trim() || !email.includes('@')) {
       setError('Adresse email invalide.');
       return;
     }
-
     setLoading(true);
     setError('');
 
@@ -79,7 +86,7 @@ export function ContractEmailModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: email.trim(),
-          contractType, // send raw ID like 'cdi', 'cdd', 'stage'
+          contractType,
           employeeName,
           subject: subject.trim(),
           html: fullHtml,
@@ -104,6 +111,47 @@ export function ContractEmailModal({
     }
   };
 
+  const handleSendSigning = async () => {
+    if (!signEmail.trim() || !signEmail.includes('@')) {
+      toast.error('Adresse email invalide');
+      return;
+    }
+
+    setSignLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Non authentifié');
+        return;
+      }
+
+      const res = await fetch('/api/contract-signing/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          contractId,
+          contractType,
+          employeeEmail: signEmail.trim(),
+          employeeName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+
+      setSignSent(true);
+      toast.success('Demande de signature envoyée');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setSignLoading(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -123,11 +171,18 @@ export function ContractEmailModal({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10 bg-gradient-to-r from-primary/5 to-blue-500/5">
             <div className="flex items-center gap-3">
+              {mode !== 'choose' && (
+                <button onClick={() => setMode('choose')} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                  <ArrowLeft className="w-4 h-4 text-gray-500" />
+                </button>
+              )}
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Mail className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Envoyer le contrat</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {mode === 'choose' ? 'Envoyer le contrat' : mode === 'email' ? 'Envoyer par email' : 'Demande de signature'}
+                </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{label} — {employeeName}</p>
               </div>
             </div>
@@ -137,17 +192,44 @@ export function ContractEmailModal({
           </div>
 
           <div className="p-6 space-y-4">
-            {sent ? (
-              <div className="flex flex-col items-center py-8 gap-4">
-                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <p className="font-semibold text-gray-900 dark:text-white">Email envoyé avec succès !</p>
-                <p className="text-sm text-gray-500">Le contrat a été envoyé à {email}</p>
+            {/* ===== CHOOSE MODE ===== */}
+            {mode === 'choose' && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setMode('email')}
+                  className="w-full text-left p-4 bg-white dark:bg-slate-800/50 rounded-2xl border-2 border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                      <Mail className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Envoyer par email</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Envoyez le contrat en pièce jointe avec un message personnalisé.</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setMode('sign')}
+                  className="w-full text-left p-4 bg-white dark:bg-slate-800/50 rounded-2xl border-2 border-gray-200 dark:border-white/10 hover:border-primary/50 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                      <PenTool className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">Envoyer pour signature</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Le salarié reçoit un lien sécurisé pour signer électroniquement en ligne.</p>
+                    </div>
+                  </div>
+                </button>
               </div>
-            ) : (
+            )}
+
+            {/* ===== EMAIL MODE ===== */}
+            {mode === 'email' && !sent && (
               <>
-                {/* Contract summary */}
                 <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
                   <FileText className="w-5 h-5 text-primary flex-shrink-0" />
                   <div>
@@ -156,7 +238,6 @@ export function ContractEmailModal({
                   </div>
                 </div>
 
-                {/* Email field */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Destinataire</label>
                   <input
@@ -168,7 +249,6 @@ export function ContractEmailModal({
                   />
                 </div>
 
-                {/* Subject field */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Objet</label>
                   <input
@@ -179,7 +259,6 @@ export function ContractEmailModal({
                   />
                 </div>
 
-                {/* Message field */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
                   <textarea
@@ -198,9 +277,63 @@ export function ContractEmailModal({
                 )}
               </>
             )}
+
+            {mode === 'email' && sent && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <p className="font-semibold text-gray-900 dark:text-white">Email envoyé avec succès !</p>
+                <p className="text-sm text-gray-500">Le contrat a été envoyé à {email}</p>
+              </div>
+            )}
+
+            {/* ===== SIGN MODE ===== */}
+            {mode === 'sign' && !signSent && (
+              <>
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                  <PenTool className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm text-green-800 dark:text-green-200">Signature électronique</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">Le salarié recevra un lien sécurisé valide 7 jours pour signer en ligne.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email du salarié</label>
+                  <input
+                    type="email"
+                    value={signEmail}
+                    onChange={(e) => setSignEmail(e.target.value)}
+                    placeholder="email@exemple.com"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
+                  <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm text-gray-900 dark:text-white">{label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Le contrat sera joint à l&apos;email</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {mode === 'sign' && signSent && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <p className="font-semibold text-gray-900 dark:text-white">Demande de signature envoyée !</p>
+                <p className="text-sm text-gray-500">Un email avec le lien de signature a été envoyé à {signEmail}</p>
+                <p className="text-xs text-gray-400">Vous serez notifié dès que le salarié aura signé.</p>
+              </div>
+            )}
           </div>
 
-          {!sent && (
+          {/* Footer buttons */}
+          {mode === 'email' && !sent && (
             <div className="flex justify-end gap-3 px-6 pb-6">
               <button
                 onClick={onClose}
@@ -209,7 +342,7 @@ export function ContractEmailModal({
                 Annuler
               </button>
               <button
-                onClick={handleSend}
+                onClick={handleSendEmail}
                 disabled={loading}
                 className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
               >
@@ -217,6 +350,28 @@ export function ContractEmailModal({
                   <><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</>
                 ) : (
                   <><Send className="w-4 h-4" /> Envoyer</>
+                )}
+              </button>
+            </div>
+          )}
+
+          {mode === 'sign' && !signSent && (
+            <div className="flex justify-end gap-3 px-6 pb-6">
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSendSigning}
+                disabled={signLoading}
+                className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {signLoading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</>
+                ) : (
+                  <><PenTool className="w-4 h-4" /> Envoyer pour signature</>
                 )}
               </button>
             </div>

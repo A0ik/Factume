@@ -295,9 +295,11 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
         <button onClick={() => setShowEmailModal(true)} className="px-5 py-2.5 bg-accent text-white rounded-xl font-semibold hover:bg-accent/90 transition-colors flex items-center gap-2 text-sm">
           <Send className="w-4 h-4" />Email
         </button>
+        {/* Bulletin de paie — temporairement désactivé
         <button onClick={handleGeneratePayslip} className="px-5 py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2 text-sm">
           <Calculator className="w-4 h-4" />Bulletin de paie
         </button>
+        */}
         <button onClick={() => setShowAISuggestions(true)} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2 text-sm">
           <Sparkles className="w-4 h-4" />IA
         </button>
@@ -316,6 +318,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
       <ExportFormatModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} onExportPDF={handleDownloadPDF} onExportDOCX={handleDownloadDOCX} loading={exportLoading} />
       {showEmailModal && contract && (
         <ContractEmailModal
+          contractId={id}
           contractType={contractType}
           employeeName={`${contract.employee_first_name} ${contract.employee_last_name}`}
           defaultEmail={contract.employee_email || ''}
@@ -326,7 +329,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
       )}
       <ContractVersionHistory isOpen={showVersionHistory} onClose={() => setShowVersionHistory(false)} contractId={id} contractType={contractType} />
       <AISuggestionsModal isOpen={showAISuggestions} onClose={() => setShowAISuggestions(false)} onApplyClause={(clause) => toast.success(`Clause "${clause.title}" suggérée`)} contractType={contractType} />
-      {showPayslipEditor && payslipData && <PayslipEditor initialData={payslipData} onClose={() => setShowPayslipEditor(false)} />}
+      {/* {showPayslipEditor && payslipData && <PayslipEditor initialData={payslipData} onClose={() => setShowPayslipEditor(false)} />} */}
     </div>
   );
 }

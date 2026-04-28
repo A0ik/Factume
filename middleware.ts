@@ -14,8 +14,10 @@ const PUBLIC_PREFIXES = [
   '/api/stripe/webhook',
   '/api/share/',
   '/api/client-portal/',
+  '/api/contract-signing/',
   '/share/',
   '/client/',
+  '/sign/',
   '/workspace/join',
 ];
 

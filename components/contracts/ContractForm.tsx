@@ -799,7 +799,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
 
       {/* Modals */}
       <AnimatePresence>{showPayslipEditor && payslipData && <PayslipEditor initialData={payslipData} onClose={() => setShowPayslipEditor(false)} />}</AnimatePresence>
-      {showEmailModal && <ContractEmailModal contractType={contractType} employeeName={`${formData.employee_first_name} ${formData.employee_last_name}`} defaultEmail={formData.employee_email} contractHtml={contractHtml} contractData={formData as any} onClose={() => setShowEmailModal(false)} />}
+      {showEmailModal && <ContractEmailModal contractId={savedContractId || ''} contractType={contractType} employeeName={`${formData.employee_first_name} ${formData.employee_last_name}`} defaultEmail={formData.employee_email} contractHtml={contractHtml} contractData={formData as any} onClose={() => setShowEmailModal(false)} />}
       <ExportFormatModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} onExportPDF={downloadPDF} onExportDOCX={downloadDOCX} loading={loading} />
       {savedContractId && <ContractVersionHistory isOpen={showVersionHistory} onClose={() => setShowVersionHistory(false)} contractId={savedContractId} contractType={contractType} />}
       <AISuggestionsModal isOpen={showAISuggestions} onClose={() => setShowAISuggestions(false)} onApplyClause={(clause) => { setCustomClauses(prev => [...prev, { title: clause.title, content: clause.content }]); toast.success(`Clause "${clause.title}" ajoutée !`); }} contractType={contractType} />

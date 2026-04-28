@@ -131,7 +131,10 @@
       "Bash(node -e \"const pkg = require\\('./node_modules/@react-pdf/renderer/package.json'\\); console.log\\(pkg.version\\)\")",
       "WebFetch(domain:www.agirc-arrco.fr)",
       "WebFetch(domain:www.urssaf.fr)",
-      "WebFetch(domain:www.net-entreprises.fr)"
+      "WebFetch(domain:www.net-entreprises.fr)",
+      "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/create)",
+      "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/\\\\[token\\\\]/sign)",
+      "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/sign/\\\\[token\\\\])"
     ]
   },
   "enableAllProjectMcpServers": true,
