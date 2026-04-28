@@ -62,43 +62,61 @@ const TAUX_2026 = {
   patronales: {
     maladie: 13.00, // Maladie-Maternité-Invalidité-Décès
     vieillesse: 10.55, // Vieillesse plafonnée (8.55%) + déplafonnée (2.00%)
-    allocations_familiales: 3.45, // Allocations familiales (taux 2025-2026)
+    allocations_familiales_reduit: 3.45, // AF taux réduit (salaire ≤ 3.5 SMIC)
+    allocations_familiales_plein: 5.25, // AF taux plein (salaire > 3.5 SMIC)
     accident_du_travail: 0.70, // Taux moyen (variable selon risque, 0.4% à 3.2%)
     solidarite_autonomie: 0.30,
     fnal: 0.10, // Fond National d'Aide au Logement (< 50 salariés) ou 0.50% (≥ 50)
     chomage: 4.05, // Assurance chômage (taux 2025-2026)
-    retraite_cadres: 1.29, // AGIRC-ARRCO pour cadres (tranche 1)
-    ags: 0.15, // Association pour la Gestion du Structure des Finances
-    formation: 0.55, // Taxe d'apprentissage etc. (taux minimum)
+    // AGIRC-ARRCO taux appelés (taux contractuels × 127%) — Source : AGIRC-ARRCO 2026
+    agirc_arrco_t1: 4.72, // Tranche 1 patronal (tous salariés, jusqu'au PASS)
+    agirc_arrco_t2: 12.95, // Tranche 2 patronal (cadres, entre 1x et 8x PASS)
+    // CEG (Contribution d'Équilibre Général) — s'ajoute aux taux appelés
+    ceg_t1: 1.29, // CEG Tranche 1 patronal
+    ceg_t2: 1.62, // CEG Tranche 2 patronal
+    // CET (Contribution d'Équilibre Technique) — uniquement si salaire > PASS
+    cet: 0.21, // CET patronal
+    // APEC — cadres uniquement
+    apec: 0.036,
+    ags: 0.15,
+    formation: 0.55,
     prevoyance: 1.50, // Prévoyance obligatoire pour cadres
-    supplementaire_sante: 0.60, // Complémentaire santé (minimum)
-    penibilite: 0.10, // Pour les salariés exposés (2ème-4ème facteurs)
+    supplementaire_sante: 0.60,
+    penibilite: 0.10,
   },
   salariales: {
     maladie: 0.00, // Supprimée depuis 1998
-    vieillesse: 6.93, // Vieillesse plafonnée (6.93%)
-    vieillesse_deplafonnee: 0.40, // Vieillesse déplafonnée (0.40%)
-    retraite_cadres: 0.86, // AGIRC-ARRCO cadres tranche 1
-    chomage: 0.00, // Cotisation salariale chômage supprimée depuis 2019
-    ags: 0.00, // AGS est exclusivement patronale
-    csg: 9.20, // CSG totale (6.80% déductible + 2.40% non déductible)
-    crds: 0.50, // CRDS (0.50% non déductible)
+    vieillesse: 6.93, // Vieillesse plafonnée
+    vieillesse_deplafonnee: 0.40,
+    // AGIRC-ARRCO taux appelés
+    agirc_arrco_t1: 3.15, // Tranche 1 salarial (tous salariés)
+    agirc_arrco_t2: 8.64, // Tranche 2 salarial (cadres)
+    // CEG
+    ceg_t1: 0.86, // CEG Tranche 1 salarial
+    ceg_t2: 1.08, // CEG Tranche 2 salarial
+    // CET — si salaire > PASS
+    cet: 0.14,
+    // APEC — cadres uniquement
+    apec: 0.024,
+    chomage: 0.00, // Supprimée depuis 2019
+    ags: 0.00,
+    csg: 9.20, // 6.80% déductible + 2.40% non déductible
+    crds: 0.50,
   },
   plafonds: {
-    mensuel_ss: 3666, // Plafond SS mensuel 2026 (estimation basée sur 2025)
-    annuel_ss: 43992, // Plafond SS annuel 2026
-    cadre: 8 * 3666, // 8x le plafond SS pour les cadres
-    tranche2: 8 * 3666, // Tranche 2 AGIRC-ARRCO
+    mensuel_ss: 4005, // PASS mensuel 2026 — Arrêté du 22 décembre 2025
+    annuel_ss: 48060, // PASS annuel 2026
+    cadre: 8 * 4005, // 8x PASS (tranche 2 AGIRC-ARRCO)
+    tranche2: 8 * 4005,
   }
 };
 
 // SMIC 2026 - Taux horaire officiel (au 1er janvier 2026)
-const SMIC_HORAIRE_2026 = 12.02; // €/heure (taux officiel 2026)
 const SMIC_MENSUEL_2026 = 1823.03; // €/mois pour 35h (base 151.67h) - SMIC brut 2026
 
 // Calcul des cotisations
 export function calculerCotisations(data: CotisationData): CotisationResult {
-  const { salaireBrut, salaireBrutAnnuel, statut, tauxAccidentTravail, separationFillonUrssafRetraite } = data;
+  const { salaireBrut, statut, tauxAccidentTravail, separationFillonUrssafRetraite } = data;
   const plafondMensuel = TAUX_2026.plafonds.mensuel_ss;
 
   // === COTISATIONS PATRONALES ===
@@ -109,8 +127,12 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   // Vieillesse (sur salaire brut, dans la limite du plafond)
   const vieillessePatronale = Math.min(salaireBrut, plafondMensuel) * (TAUX_2026.patronales.vieillesse / 100);
 
-  // Allocations familiales (sur salaire brut)
-  const allocationsFamiliales = salaireBrut * (TAUX_2026.patronales.allocations_familiales / 100);
+  // Allocations familiales : taux réduit ≤ 3.5 SMIC, taux plein au-delà
+  const seuilAfPlein = SMIC_MENSUEL_2026 * 3.5;
+  const tauxAF = salaireBrut <= seuilAfPlein
+    ? TAUX_2026.patronales.allocations_familiales_reduit
+    : TAUX_2026.patronales.allocations_familiales_plein;
+  const allocationsFamiliales = salaireBrut * (tauxAF / 100);
 
   // Accident du travail (taux personnalisé ou défaut)
   const tauxAT = tauxAccidentTravail ?? TAUX_2026.patronales.accident_du_travail;
@@ -126,14 +148,18 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   const plafondChomage = 4 * plafondMensuel;
   const chomage = Math.min(salaireBrut, plafondChomage) * (TAUX_2026.patronales.chomage / 100);
 
-  // Retraite cadres (AGIRC)
-  let retraiteCadres = 0;
+  // AGIRC-ARRCO + CEG — T1 s'applique à TOUS les salariés
+  const t1Assiette = Math.min(salaireBrut, plafondMensuel);
+  let retraiteCadres = t1Assiette * ((TAUX_2026.patronales.agirc_arrco_t1 + TAUX_2026.patronales.ceg_t1) / 100);
   if (statut === 'cadre') {
-    // Sur la tranche 1 (jusqu'au plafond SS)
-    retraiteCadres += Math.min(salaireBrut, plafondMensuel) * 1.29 / 100;
-    // Sur la tranche 2 (entre 1 et 8x le plafond SS)
     const tranche2 = Math.max(0, Math.min(salaireBrut, 8 * plafondMensuel) - plafondMensuel);
-    retraiteCadres += tranche2 * 11.49 / 100;
+    retraiteCadres += tranche2 * ((TAUX_2026.patronales.agirc_arrco_t2 + TAUX_2026.patronales.ceg_t2) / 100);
+    // CET : uniquement si salaire dépasse le plafond SS
+    if (salaireBrut > plafondMensuel) {
+      retraiteCadres += salaireBrut * (TAUX_2026.patronales.cet / 100);
+    }
+    // APEC
+    retraiteCadres += t1Assiette * (TAUX_2026.patronales.apec / 100);
   }
 
   // AGS
@@ -168,10 +194,15 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   const vieillesseSalariale = Math.min(salaireBrut, plafondMensuel) * (TAUX_2026.salariales.vieillesse / 100);
   const vieillesseDeplafonneeSalariale = salaireBrut * (TAUX_2026.salariales.vieillesse_deplafonnee / 100);
 
-  // Retraite cadres (AGIRC)
-  let retraiteCadresSalariale = 0;
+  // AGIRC-ARRCO + CEG salarial — T1 pour tous, T2 + CET + APEC pour cadres
+  let retraiteCadresSalariale = t1Assiette * ((TAUX_2026.salariales.agirc_arrco_t1 + TAUX_2026.salariales.ceg_t1) / 100);
   if (statut === 'cadre') {
-    retraiteCadresSalariale = Math.min(salaireBrut, plafondMensuel) * (TAUX_2026.salariales.retraite_cadres / 100);
+    const tranche2Sal = Math.max(0, Math.min(salaireBrut, 8 * plafondMensuel) - plafondMensuel);
+    retraiteCadresSalariale += tranche2Sal * ((TAUX_2026.salariales.agirc_arrco_t2 + TAUX_2026.salariales.ceg_t2) / 100);
+    if (salaireBrut > plafondMensuel) {
+      retraiteCadresSalariale += salaireBrut * (TAUX_2026.salariales.cet / 100);
+    }
+    retraiteCadresSalariale += t1Assiette * (TAUX_2026.salariales.apec / 100);
   }
 
   // Chômage (Maintenant à 0.00% pour la part salariale)
@@ -201,20 +232,17 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   // Coût employeur (avant réduction Fillon)
   const coutEmployerAvantReduction = salaireBrut + totalPatronal;
 
-  // === RÉDUCTION FILLON 2026 (RGDU - Réduction Générale Dégressive Unique) ===
-  // Réforme 2026 : Extension à 3 SMIC (contre 1.6 auparavant)
+  // === RÉDUCTION GÉNÉRALE (ex-Fillon) ===
   const calculerReductionFillon = (salaireBrut: number, nombreSalaries: number = 1): { montant: number; coefficient: number } => {
-    if (salaireBrut >= SMIC_MENSUEL_2026 * 3.0) return { montant: 0, coefficient: 0 }; // Pas de réduction au-dessus de 3 SMIC (nouveau plafond 2026)
+    if (salaireBrut >= SMIC_MENSUEL_2026 * 1.6) return { montant: 0, coefficient: 0 }; // Pas de réduction au-dessus de 1.6 SMIC
 
     const smicMensuel = SMIC_MENSUEL_2026;
 
-    // Formule 2026 : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
-    const coefficientCalc = Math.max(0, (0.6 / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
-
-    // Taux maximum de réduction 2026
+    // Taux maximum selon effectif
     const tauxMax = nombreSalaries < 50 ? 0.3956 : 0.3996; // 39,56% ou 39,96% selon effectif
 
-    // La réduction est plafonnée au taux max
+    // Formule officielle : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
+    const coefficientCalc = Math.max(0, (tauxMax / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
     const coefficient = Math.min(coefficientCalc, tauxMax);
     const reduction = salaireBrut * coefficient;
 
@@ -356,17 +384,17 @@ export function calculerReductionFillon(
     smicMensuel = smicMensuel * (heuresHebdo / 35);
   }
 
-  // Vérifier si éligible (< 3 SMIC - nouveau plafond 2026)
-  if (salaireBrut >= smicMensuel * 3.0) {
-    return { montant: 0, coefficient: 0, details: 'Salaire ≥ 3 SMIC (non éligible - nouveau plafond 2026)' };
+  // Éligible uniquement si salaire < 1.6 SMIC
+  if (salaireBrut >= smicMensuel * 1.6) {
+    return { montant: 0, coefficient: 0, details: 'Salaire ≥ 1.6 SMIC (non éligible)' };
   }
 
-  // Formule 2026 : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
-  const ratio = salaireBrut / smicMensuel;
-  const coefficient = Math.max(0, (0.6 / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
-
-  // Taux maximum 2026 selon effectif
+  // Taux maximum selon effectif
   const tauxMax = nombreSalaries < 50 ? 0.3956 : 0.3996; // 39,56% ou 39,96%
+
+  // Formule officielle : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
+  const ratio = salaireBrut / smicMensuel;
+  const coefficient = Math.max(0, (tauxMax / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
 
   // Montant de la réduction (plafonné au taux max)
   const montant = salaireBrut * Math.min(coefficient, tauxMax);
@@ -409,7 +437,7 @@ export function getCotisationsDisplay(result: CotisationResult) {
   const patronales = [
     { label: 'Maladie', value: result.patronales.maladie, taux: TAUX_2026.patronales.maladie },
     { label: 'Vieillesse', value: result.patronales.vieillesse, taux: TAUX_2026.patronales.vieillesse },
-    { label: 'Allocations familiales', value: result.patronales.allocations_familiales, taux: TAUX_2026.patronales.allocations_familiales },
+    { label: 'Allocations familiales', value: result.patronales.allocations_familiales, taux: TAUX_2026.patronales.allocations_familiales_reduit },
     { label: 'Accident du travail', value: result.patronales.accident_du_travail, taux: TAUX_2026.patronales.accident_du_travail },
     { label: 'Chômage', value: result.patronales.chomage, taux: TAUX_2026.patronales.chomage },
     { label: 'Retraite cadres', value: result.patronales.retraite_cadres, taux: 'Variable' },

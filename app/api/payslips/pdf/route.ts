@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { generatePayslipPdfBuffer } from '@/lib/bulletin-paie-pdf-server';
+import { generatePayslipReactPdfBuffer as generatePayslipPdfBuffer } from '@/lib/labor-law/bulletin-paie-react-pdf';
 import type { BulletinPaieData } from '@/lib/labor-law/bulletin-paie';
 
 // Mapping des champs vers des labels lisibles en français

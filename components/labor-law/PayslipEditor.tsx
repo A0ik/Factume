@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import type { BulletinPaieData } from '@/lib/labor-law/bulletin-paie';
 import { genererBulletinPaieHTML } from '@/lib/labor-law/bulletin-paie';
+import { calculerCotisations } from '@/lib/labor-law/cotisations';
 import { getConventionConfig, CONVENTION_LABELS, type ConventionType, getTauxATOptions } from '@/lib/labor-law/conventions-collectives';
 
 // ─── Module-level components (prevent remount on parent re-render = fixes focus bug) ───
@@ -137,6 +138,38 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
   const handleToggle = useCallback((id: string) => {
     setOpenSection(prev => prev === id ? '' : id);
   }, []);
+
+  // Live calculation derived from current data (no server round-trip needed)
+  const liveCalc = React.useMemo(() => {
+    try {
+      const tauxH = data.tauxHoraire ?? (data.salaireBrut / (data.heuresMensuelles || 151.67));
+      const joursOuvres = data.nombreJoursOuvres || 22;
+      const montantSupp25 = (data.heuresSupp25 ?? 0) * tauxH * 1.25;
+      const montantSupp50 = (data.heuresSupp50 ?? 0) * tauxH * 1.50;
+      const retenueMaladie = data.joursMaladie ? (data.salaireBrut / joursOuvres) * data.joursMaladie : 0;
+      const retenueAbsence = data.joursAbsenceNonJustifiee ? (data.salaireBrut / joursOuvres) * data.joursAbsenceNonJustifiee : 0;
+      const totalBrut = data.salaireBrut + montantSupp25 + montantSupp50
+        + (data.primeExceptionnelle ?? 0) + (data.prime13Mois ?? 0)
+        + (data.primePerformance ?? 0) + (data.primeAnciennete ?? 0)
+        + (data.autresPrimes ?? 0) + (data.indemniteCongesPayes ?? 0)
+        - retenueMaladie - retenueAbsence;
+      const cot = calculerCotisations({
+        salaireBrut: totalBrut, salaireBrutAnnuel: data.salaireBrutAnnuel,
+        statut: data.statut === 'alternance' ? 'non_cadre' : data.statut,
+        tempsPartiel: data.tempsPartiel,
+        tauxAccidentTravail: (data as any).tauxAccidentTravail,
+        conventionCollectiveId: (data as any).conventionCollectiveId,
+      });
+      const net = Math.max(0, totalBrut - cot.salariales.total
+        + (data.indemnitesTransport ?? 0) + (data.autresIndemnites ?? 0)
+        - (data.mutuellePartSalarie ?? 0) - (data.prevoyancePartSalarie ?? 0)
+        + (data.ticketRestaurantNombre ?? 0) * (data.ticketRestaurantMontantEmployeur ?? 0));
+      const coutTotal = cot.coutEmployer + (data.mutuellePartEmployeur ?? 0) + (data.prevoyancePartEmployeur ?? 0);
+      return { totalBrut, cotSalariales: cot.salariales.total, net, coutTotal };
+    } catch {
+      return null;
+    }
+  }, [data]);
 
   const handleAiModify = async () => {
     if (!aiPrompt.trim()) return;
@@ -324,6 +357,31 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
               </div>
             </div>
           </div>
+
+          {/* ── Récapitulatif live ── */}
+          {liveCalc && (
+            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-2xl p-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">Récapitulatif calculé en temps réel</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Brut total</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{liveCalc.totalBrut.toFixed(2)} €</p>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                  <p className="text-xs text-red-600 dark:text-red-400 mb-1">Cotisations sal.</p>
+                  <p className="font-bold text-red-700 dark:text-red-300 text-sm">− {liveCalc.cotSalariales.toFixed(2)} €</p>
+                </div>
+                <div className="bg-primary/10 rounded-xl p-3 text-center">
+                  <p className="text-xs text-primary mb-1 font-semibold">Net à payer</p>
+                  <p className="font-bold text-primary text-base">{liveCalc.net.toFixed(2)} €</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Coût employeur</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{liveCalc.coutTotal.toFixed(2)} €</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Sections */}
           <PayslipSection id="salarie" title="Salarié" icon={User} openSection={openSection} onToggle={handleToggle}>

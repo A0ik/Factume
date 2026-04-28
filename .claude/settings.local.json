@@ -128,7 +128,10 @@
       "Bash(node -e \"const p = require\\('puppeteer'\\); p.launch\\(\\).then\\(b => { console.log\\('OK', b.version\\(\\)\\); b.close\\(\\); }\\).catch\\(e => console.error\\('FAIL:', e.message\\)\\)\")",
       "Bash(node -e \"const d = require\\('docx'\\); console.log\\('UnderlineType:', !!d.UnderlineType, 'PageBreak:', !!d.PageBreak, 'ShadingType:', !!d.ShadingType\\)\")",
       "Bash(node -e \"const {Table} = require\\('docx'\\); console.log\\('ok'\\)\")",
-      "Bash(node -e \"const pkg = require\\('./node_modules/@react-pdf/renderer/package.json'\\); console.log\\(pkg.version\\)\")"
+      "Bash(node -e \"const pkg = require\\('./node_modules/@react-pdf/renderer/package.json'\\); console.log\\(pkg.version\\)\")",
+      "WebFetch(domain:www.agirc-arrco.fr)",
+      "WebFetch(domain:www.urssaf.fr)",
+      "WebFetch(domain:www.net-entreprises.fr)"
     ]
   },
   "enableAllProjectMcpServers": true,
