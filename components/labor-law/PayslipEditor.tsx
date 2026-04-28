@@ -15,36 +15,52 @@ import { getConventionConfig, CONVENTION_LABELS, type ConventionType, getTauxATO
 // ─── Module-level components (prevent remount on parent re-render = fixes focus bug) ───
 
 const PayslipField = React.memo(function PayslipField({
-  label, value, onChange, type = 'text', readOnly = false, step,
+  label, value, onChange, type = 'text', readOnly = false,
 }: {
   label: string; value: string | number; onChange?: (v: string) => void; type?: string; readOnly?: boolean; step?: string;
 }) {
-  // Local string state so intermediate input (e.g. "2000.", "-", "") isn't clobbered by parent re-render
+  const isNumeric = type === 'number';
+
   const toString = (v: string | number) =>
     (v === undefined || v === null || (typeof v === 'number' && isNaN(v))) ? '' : String(v);
 
   const [local, setLocal] = React.useState(() => toString(value));
   const [focused, setFocused] = React.useState(false);
 
-  // Sync from parent only when not actively editing (e.g. AI modify)
   React.useEffect(() => {
     if (!focused) setLocal(toString(value));
   }, [value, focused]);
+
+  const handleChange = (raw: string) => {
+    setLocal(raw);
+    if (!onChange) return;
+    if (isNumeric) {
+      // Accept French comma as decimal separator
+      onChange(raw.replace(',', '.'));
+    } else {
+      onChange(raw);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
       <input
-        type={type}
+        // Use text+inputMode so commas are accepted; avoids browser stripping mid-entry values
+        type={isNumeric ? 'text' : type}
+        inputMode={isNumeric ? 'decimal' : undefined}
         value={readOnly ? toString(value) : local}
-        onChange={onChange && !readOnly ? (e) => {
-          setLocal(e.target.value);
-          onChange(e.target.value);
-        } : undefined}
+        onChange={onChange && !readOnly ? (e) => handleChange(e.target.value) : undefined}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          // On blur normalise display (comma→dot already sent to parent, keep local clean)
+          if (isNumeric && local) {
+            const n = parseFloat(local.replace(',', '.'));
+            if (!isNaN(n)) setLocal(String(n));
+          }
+        }}
         readOnly={readOnly}
-        step={step ?? (type === 'number' ? 'any' : undefined)}
         className={`w-full px-3 py-2 text-sm rounded-xl border-2 outline-none transition-all
           ${readOnly
             ? 'bg-gray-50 dark:bg-slate-800/50 border-gray-100 dark:border-white/5 text-gray-500 cursor-not-allowed'
@@ -198,13 +214,17 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
     }
   };
 
+  // Track where mousedown started — prevents drag-to-select from closing the modal
+  const mouseDownOnBackdrop = React.useRef(false);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[9999] flex items-start justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) onClose(); }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
