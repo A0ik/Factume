@@ -141,7 +141,7 @@ export async function POST(
         const label = CONTRACT_LABELS[tokenRecord.contract_type] || 'Contrat';
         const BREVO_API_KEY = process.env.BREVO_API_KEY;
         if (BREVO_API_KEY) {
-          const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@factu.me';
+          const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
           await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },

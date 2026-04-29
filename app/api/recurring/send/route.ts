@@ -310,7 +310,7 @@ async function sendRecurringEmail(payload: EmailPayload): Promise<void> {
   const { Resend } = await import('resend');
   const resend = new Resend(resendApiKey);
 
-  const senderEmail = process.env.RESEND_FROM_EMAIL || 'noreply@factu.me';
+  const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
   const senderName = process.env.RESEND_FROM_NAME || 'Facturme';
 
   const { error } = await resend.emails.send({

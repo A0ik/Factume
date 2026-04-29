@@ -116,7 +116,7 @@ export async function sendContractExpirationEmail(
   if (!profile?.email) return;
 
   const BREVO_API_KEY = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@factu.me';
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
   const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
 
   const contractList = contracts

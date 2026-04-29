@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // Préparer l'email avec Brevo
     const senderName = profile.company_name || 'FacturMe';
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@factur.me';
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
     const replyToEmail = profile.email || senderEmail;
 
     const emailSubject = `Facture ${invoice.number} - ${senderName}`;

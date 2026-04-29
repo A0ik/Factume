@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     // Send email via Brevo SMTP
     const brevoKey = process.env.BREVO_SMTP_KEY;
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'no-reply@facturme.app';
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
     const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
 
     if (brevoKey) {

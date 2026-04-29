@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Service email non configuré' }, { status: 500 });
     }
 
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@factu.me';
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
     const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
 
     const htmlContent = `
