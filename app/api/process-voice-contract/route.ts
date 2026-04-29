@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
-import OpenAI from 'openai';
 import { processVoiceTranscript } from '@/lib/groq-translator';
 
 export const maxDuration = 60;
@@ -10,15 +9,8 @@ export async function POST(req: NextRequest) {
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
     }
-    if (!process.env.OPENROUTER_API_KEY) {
-      return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
-    }
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const openrouter = new OpenAI({
-      baseURL: 'https://openrouter.ai/api/v1',
-      apiKey: process.env.OPENROUTER_API_KEY
-    });
 
     const formData = await req.formData();
     const audio = formData.get('audio') as File;
@@ -160,11 +152,8 @@ Détection automatique de contractCategory :
 
     const systemPrompt = systemPrompts[contract_type] || systemPrompts.other;
 
-    const completion = await openrouter.chat.completions.create({
-      // Modèle performant et moins cher sur OpenRouter : Gemma 3 27B
-      // Coût: ~0.10€/M tokens vs ~0.30€/M pour Mistral Small
-      // Performance: Excellente pour le français et les tâches structurées
-      model: 'google/gemma-3-27b-it',
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -195,7 +184,7 @@ Détection automatique de contractCategory :
     const message = error.message || 'Erreur lors du traitement vocal';
 
     if (error.status === 401 || error.status === 403) {
-      return NextResponse.json({ error: 'Clé API invalide. Vérifiez GROQ_API_KEY et OPENROUTER_API_KEY.' }, { status: 500 });
+      return NextResponse.json({ error: 'Clé API invalide. Vérifiez GROQ_API_KEY.' }, { status: 500 });
     }
     if (error.status === 429) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });

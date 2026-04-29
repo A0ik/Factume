@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
-import OpenAI from 'openai';
 import { processVoiceTranscript } from '@/lib/groq-translator';
 
 export const maxDuration = 60;
@@ -10,12 +9,8 @@ export async function POST(req: NextRequest) {
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
     }
-    if (!process.env.OPENROUTER_API_KEY) {
-      return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
-    }
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const openrouter = new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey: process.env.OPENROUTER_API_KEY });
     const formData = await req.formData();
     const audio = formData.get('audio') as File;
     const sector = formData.get('sector') as string || '';
@@ -123,8 +118,8 @@ Règles ABSOLUES pour les descriptions :
 - Si le montant est TTC, calcule le HT en divisant par (1 + vat_rate/100)`;
     }
 
-    const completion = await openrouter.chat.completions.create({
-      model: 'mistralai/mistral-small-24b-instruct-2501',
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -154,7 +149,7 @@ Règles ABSOLUES pour les descriptions :
     console.error('[Process Voice] Error:', error);
     const message = error.message || 'Erreur lors du traitement vocal';
     if (error.status === 401 || error.status === 403) {
-      return NextResponse.json({ error: 'Clé API invalide. Vérifiez GROQ_API_KEY et OPENROUTER_API_KEY.' }, { status: 500 });
+      return NextResponse.json({ error: 'Clé API invalide. Vérifiez GROQ_API_KEY.' }, { status: 500 });
     }
     if (error.status === 429) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
