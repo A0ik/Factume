@@ -82,18 +82,26 @@ export function ContractEmailModal({
     `;
 
     try {
-      const response = await fetch('/api/send-contract-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: email.trim(),
-          contractType,
-          employeeName,
-          subject: subject.trim(),
-          html: fullHtml,
-          contractData,
+      // Ajouter un timeout de 25 secondes pour l'envoi
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Délai d\'attente dépassé. Veuillez réessayer ou contacter le support.')), 25000)
+      );
+
+      const response = await Promise.race([
+        fetch('/api/send-contract-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: email.trim(),
+            contractType,
+            employeeName,
+            subject: subject.trim(),
+            html: fullHtml,
+            contractData,
+          }),
         }),
-      });
+        timeoutPromise
+      ]) as Response;
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
@@ -127,19 +135,27 @@ export function ContractEmailModal({
         return;
       }
 
-      const res = await fetch('/api/contract-signing/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          contractId,
-          contractType,
-          employeeEmail: signEmail.trim(),
-          employeeName,
+      // Ajouter un timeout de 25 secondes
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Délai d\'attente dépassé. Veuillez réessayer.')), 25000)
+      );
+
+      const res = await Promise.race([
+        fetch('/api/contract-signing/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            contractId,
+            contractType,
+            employeeEmail: signEmail.trim(),
+            employeeName,
+          }),
         }),
-      });
+        timeoutPromise
+      ]) as Response;
 
       const data = await res.json();
 
@@ -160,6 +176,7 @@ export function ContractEmailModal({
         alreadyExists: data.alreadyExists || false,
       });
       setSignSent(true);
+      toast.success('Demande de signature envoyée !');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur');
     } finally {

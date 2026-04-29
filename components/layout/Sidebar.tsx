@@ -64,18 +64,18 @@ const NAV_CORE = [
   { href: '/documents',  icon: FileText,         label: 'Documents',       badge: 'overdue' as null|'overdue'|'notif', hasSubmenu: true },
   { href: '/crm',        icon: Target,           label: 'Pipeline CRM',    badge: null },
   { href: '/clients',    icon: Users,            label: 'Clients',         badge: null },
-  { href: '/contracts',  icon: FileText,         label: 'Contrats',        badge: null },
   { href: '/products',   icon: Package,          label: 'Articles',        badge: null },
   { href: '/calendar',   icon: Calendar,         label: 'Agenda',          badge: null },
 ];
 
 const DOCUMENTS_SUBMENU = [
-  { href: '/invoices',   icon: Receipt,    label: 'Factures' },
-  { href: '/quotes',     icon: FileText,   label: 'Devis' },
-  { href: '/orders',     icon: Package,    label: 'Commandes' },
-  { href: '/deliveries', icon: Truck,      label: 'Livraisons' },
-  { href: '/deposits',   icon: Calculator, label: 'Acomptes' },
-  { href: '/avoirs',     icon: Receipt,    label: 'Avoirs' },
+  { href: '/documents/factures', icon: Receipt,    label: 'Factures' },
+  { href: '/documents/devis',     icon: FileText,   label: 'Devis' },
+  { href: '/documents/avoirs',    icon: Receipt,    label: 'Avoirs' },
+  { href: '/documents/commandes', icon: Package,    label: 'Commandes' },
+  { href: '/documents/livraisons',icon: Truck,      label: 'Livraisons' },
+  { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
+  { href: '/contracts',           icon: FileText,   label: 'Contrats' },
 ];
 
 const NAV_TOOLS = [
@@ -129,31 +129,43 @@ export default function Sidebar() {
     if (hasSubmenu && submenu) {
       return (
         <div>
-          <button
-            onClick={() => setOpen(!open)}
-            className={cn(
-              'group w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
-              active || subActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
-            )}
-          >
-            <span className={cn(
-              'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
-              active || subActive
-                ? 'bg-primary text-white shadow-md shadow-primary/30'
-                : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
-            )}>
-              <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
-            </span>
-            <span className="flex-1 text-left font-semibold">{label}</span>
-            {count > 0 && (
-              <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
-                {count > 9 ? '9+' : count}
+          <div className="flex items-center gap-1">
+            <Link
+              href={href}
+              className={cn(
+                'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
+                active || subActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+              )}
+            >
+              <span className={cn(
+                'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
+                active || subActive
+                  ? 'bg-primary text-white shadow-md shadow-primary/30'
+                  : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
+              )}>
+                <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
               </span>
-            )}
-            <ChevronDown size={14} className={cn('opacity-50 transition-transform duration-200', open && 'rotate-180')} />
-          </button>
+              <span className="flex-1 font-semibold">{label}</span>
+              {count > 0 && (
+                <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                  {count > 9 ? '9+' : count}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={() => setOpen(!open)}
+              className={cn(
+                'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                active || subActive
+                  ? 'text-primary hover:bg-primary/20'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+              )}
+            >
+              <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
+            </button>
+          </div>
           <AnimatePresence>
             {open && (
               <motion.div
@@ -163,20 +175,40 @@ export default function Sidebar() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden ml-5 mt-1 space-y-0.5"
               >
-                {submenu.map((item) => {
+                {submenu.map((item, index) => {
                   const sa = pathname.startsWith(item.href);
+                  const isLastBeforeContracts = index === submenu.length - 2; // Avant "Contrats"
                   return (
-                    <Link key={item.href} href={item.href}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                        sa ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800',
+                    <div key={item.href}>
+                      <Link href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
+                          sa
+                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800',
+                        )}
+                      >
+                        <span className={cn(
+                          'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
+                          sa
+                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                        )}>
+                          <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
+                        </span>
+                        <span className={cn('flex-1', sa && 'font-semibold')}>{item.label}</span>
+                        {sa && (
+                          <motion.span
+                            layoutId="activeIndicator"
+                            className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
+                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                      </Link>
+                      {isLastBeforeContracts && (
+                        <div className="mx-3 my-2 h-px bg-gradient-to-r from-gray-200 to-transparent" />
                       )}
-                    >
-                      <span className={cn('flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0', sa ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-400')}>
-                        <item.icon size={13} />
-                      </span>
-                      {item.label}
-                    </Link>
+                    </div>
                   );
                 })}
               </motion.div>

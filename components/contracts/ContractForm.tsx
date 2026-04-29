@@ -487,29 +487,44 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     setError('');
     try {
       validateRequired();
+
+      // Ajouter un timeout pour les requêtes
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Délai d\'attente dépassé (30s). Veuillez réessayer.')), 30000)
+      );
+
       if (mode === 'edit' && contractId) {
-        await updateContract(contractId, contractType, formData);
-        // Create version
-        try {
-          await fetch('/api/contracts/version', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId, contractType, contractData: formData, comment: 'Mise à jour' }),
-          });
-        } catch {}
+        // Update contract avec timeout
+        await Promise.race([
+          updateContract(contractId, contractType, formData),
+          timeoutPromise
+        ]);
+
+        // Create version en arrière-plan (non bloquant)
+        fetch('/api/contracts/version', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contractId, contractType, contractData: formData, comment: 'Mise à jour' }),
+        }).catch(() => {}); // Ignorer les erreurs de version
+
         toast.success('Contrat mis à jour !');
         onSaved?.(contractId, formData.contract_number || '');
       } else {
-        const result = await createContract(formData, profile);
+        // Create contract avec timeout
+        const result = await Promise.race([
+          createContract(formData, profile),
+          timeoutPromise
+        ]) as { id: string; contract_number: string };
+
         setSavedContractId(result.id);
-        // Create initial version
-        try {
-          await fetch('/api/contracts/version', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId: result.id, contractType, contractData: formData, comment: 'Version initiale' }),
-          });
-        } catch {}
+
+        // Create initial version en arrière-plan (non bloquant)
+        fetch('/api/contracts/version', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contractId: result.id, contractType, contractData: formData, comment: 'Version initiale' }),
+        }).catch(() => {}); // Ignorer les erreurs de version
+
         toast.success('Contrat sauvegardé !');
         setStep('success');
         onSaved?.(result.id, result.contract_number);
@@ -756,13 +771,29 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
                   if (signed.signatures?.length) {
                     const sigs = signed.signatures;
                     const today = new Date().toISOString().split('T')[0];
-                    handleFormDataChange({
-                      employer_signature: sigs[0]?.data || formData.employer_signature || '',
-                      employee_signature: sigs[1]?.data || formData.employee_signature || '',
-                      // Ne mettre à jour la date que si la signature correspondante est nouvelle
-                      employer_signature_date: sigs[0]?.data ? today : (formData.employer_signature_date || ''),
-                      employee_signature_date: sigs[1]?.data ? today : (formData.employee_signature_date || ''),
-                    });
+
+                    // Trouver les signatures par nom
+                    const employerSig = sigs.find(s => s.name.includes('Employeur'));
+                    const employeeSig = sigs.find(s => s.name.includes('Salarie'));
+
+                    // Mettre à jour le formData avec les signatures
+                    const updates: Partial<ContractFormData> = {};
+
+                    if (employerSig?.data) {
+                      updates.employer_signature = employerSig.data;
+                      updates.employer_signature_date = today;
+                      toast.success('Signature employeur enregistrée');
+                    }
+
+                    if (employeeSig?.data) {
+                      updates.employee_signature = employeeSig.data;
+                      updates.employee_signature_date = today;
+                      toast.success('Signature salarié enregistrée');
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                      handleFormDataChange(updates);
+                    }
                   }
                 }}
               />

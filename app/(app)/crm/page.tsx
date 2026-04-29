@@ -14,29 +14,31 @@ import {
   GripVertical, CheckSquare, Square, Trash2, ChevronRight, Edit2,
   TrendingUp, Calendar, Mail, Phone, User, Tag, ArrowRight,
   MessageSquare, Clock, Star, Filter, BarChart3, CheckCircle2,
-  Circle, AlertCircle, Zap, ExternalLink, MoreHorizontal,
+  Circle, AlertCircle, Zap, ExternalLink, MoreHorizontal, ChevronDown,
+  LayoutGrid, ArrowUpDown, Download, RefreshCw, Maximize2, Minimize2,
+  Video, Link2, FileText, Building2, MapPin, Copy, Eye, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const STAGES: {
-  key: OpportunityStage; label: string; emoji: string;
+  key: OpportunityStage; label: string; icon: any;
   color: string; bg: string; border: string; bar: string;
   prob: number;
 }[] = [
-  { key:'prospect',    label:'Prospect',    emoji:'👁️', color:'text-slate-600',   bg:'bg-slate-50',   border:'border-slate-200', bar:'bg-slate-400',   prob:10  },
-  { key:'qualified',   label:'Qualifié',    emoji:'✅', color:'text-blue-600',    bg:'bg-blue-50',    border:'border-blue-200',  bar:'bg-blue-500',    prob:25  },
-  { key:'proposal',    label:'Proposition', emoji:'📄', color:'text-violet-600',  bg:'bg-violet-50',  border:'border-violet-200',bar:'bg-violet-500',  prob:50  },
-  { key:'negotiation', label:'Négociation', emoji:'🤝', color:'text-amber-700',   bg:'bg-amber-50',   border:'border-amber-200', bar:'bg-amber-500',   prob:75  },
-  { key:'won',         label:'Gagné',       emoji:'🏆', color:'text-emerald-700', bg:'bg-emerald-50', border:'border-emerald-200',bar:'bg-emerald-500', prob:100 },
-  { key:'lost',        label:'Perdu',       emoji:'❌', color:'text-red-600',     bg:'bg-red-50',     border:'border-red-200',   bar:'bg-red-400',     prob:0   },
+  { key:'prospect',    label:'Prospect',    icon:Target,     color:'text-slate-600',   bg:'bg-slate-50',   border:'border-slate-200', bar:'bg-slate-400',   prob:10  },
+  { key:'qualified',   label:'Qualifié',    icon:CheckCircle2,color:'text-blue-600',    bg:'bg-blue-50',    border:'border-blue-200',  bar:'bg-blue-500',    prob:25  },
+  { key:'proposal',    label:'Proposition', icon:FileText,    color:'text-violet-600',  bg:'bg-violet-50',  border:'border-violet-200',bar:'bg-violet-500',  prob:50  },
+  { key:'negotiation', label:'Négociation', icon:MessageSquare,color:'text-amber-700',   bg:'bg-amber-50',   border:'border-amber-200', bar:'bg-amber-500',   prob:75  },
+  { key:'won',         label:'Gagné',       icon:Trophy,      color:'text-emerald-700', bg:'bg-emerald-50', border:'border-emerald-200',bar:'bg-emerald-500', prob:100 },
+  { key:'lost',        label:'Perdu',       icon:X,           color:'text-red-600',     bg:'bg-red-50',     border:'border-red-200',   bar:'bg-red-400',     prob:0   },
 ];
 
-const PRIORITIES: { key: OpportunityPriority; label: string; color: string; dot: string }[] = [
-  { key:'low',    label:'Faible',  color:'text-gray-400',  dot:'bg-gray-300'  },
-  { key:'medium', label:'Moyen',   color:'text-blue-500',  dot:'bg-blue-400'  },
-  { key:'high',   label:'Élevé',   color:'text-orange-500',dot:'bg-orange-400'},
-  { key:'urgent', label:'Urgent',  color:'text-red-500',   dot:'bg-red-500'   },
+const PRIORITIES: { key: OpportunityPriority; label: string; color: string; dot: string; icon: any; bg: string }[] = [
+  { key:'low',    label:'Faible',  color:'text-gray-400',  dot:'bg-gray-300',  icon:ArrowDown, bg:'bg-gray-50' },
+  { key:'medium', label:'Moyen',   color:'text-blue-500',  dot:'bg-blue-400',  icon:Minus,     bg:'bg-blue-50' },
+  { key:'high',   label:'Élevé',   color:'text-orange-500',dot:'bg-orange-400',icon:ArrowUp,   bg:'bg-orange-50' },
+  { key:'urgent', label:'Urgent',  color:'text-red-500',   dot:'bg-red-500',   icon:Zap,        bg:'bg-red-50' },
 ];
 
 const SOURCES = ['Inbound', 'Referral', 'LinkedIn', 'Cold outreach', 'Site web', 'Salon', 'Autre'];
@@ -54,9 +56,10 @@ function priorityOf(key: OpportunityPriority) { return PRIORITIES.find(p => p.ke
 
 function PriorityBadge({ priority }: { priority: OpportunityPriority }) {
   const p = priorityOf(priority);
+  const Icon = p.icon;
   return (
-    <span className={cn('flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider', p.color)}>
-      <span className={cn('w-1.5 h-1.5 rounded-full', p.dot)} />
+    <span className={cn('flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg', p.color, p.bg.replace('bg-', 'bg-opacity-10 '))}>
+      <Icon size={10} strokeWidth={2.5} className={p.color} />
       {p.label}
     </span>
   );
@@ -108,38 +111,51 @@ function KanbanCard({ opp, taskCount, doneCount, onSelect, onDragStart }: {
       draggable
       onDragStart={onDragStart}
       onClick={onSelect}
-      className="bg-white rounded-2xl border border-gray-100 p-3.5 cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-200 group select-none"
+      className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-gray-100 dark:border-white/10 p-4 cursor-pointer hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 group select-none overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2 mb-2.5">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 truncate group-hover:text-primary transition-colors">{opp.client_name}</p>
-          <p className="text-xs text-gray-400 truncate mt-0.5">{opp.title}</p>
+      {/* Gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+      <div className="relative">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 size={12} className="text-gray-400 flex-shrink-0" />
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">{opp.client_name}</p>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{opp.title}</p>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <GripVertical size={12} className="text-gray-300 dark:text-gray-600 group-hover:text-gray-500 transition-colors" />
+          </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <GripVertical size={12} className="text-gray-200 group-hover:text-gray-400" />
+
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xl font-black text-gray-900 dark:text-white tabular-nums">{formatCurrency(opp.value)}</p>
+          <div className={cn('px-2 py-1 rounded-lg text-[10px] font-bold border', s.bg, s.color, s.border)}>
+            {s.prob}%
+          </div>
         </div>
+
+        <ProbBar value={opp.probability} color={s.bar} />
+
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+          <PriorityBadge priority={opp.priority} />
+          <CloseDateChip date={opp.expected_close_date} />
+        </div>
+
+        {taskCount > 0 && (
+          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+            {allDone
+              ? <CheckCircle2 size={11} className="text-emerald-500" />
+              : <Circle size={11} className="text-gray-300 dark:text-gray-600" />
+            }
+            <span className={cn('text-[10px] font-semibold', allDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500')}>
+              {doneCount}/{taskCount} tâches
+            </span>
+          </div>
+        )}
       </div>
-
-      <p className="text-lg font-black text-gray-900 tabular-nums mb-2">{formatCurrency(opp.value)}</p>
-
-      <ProbBar value={opp.probability} color={s.bar} />
-
-      <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-gray-50">
-        <PriorityBadge priority={opp.priority} />
-        <CloseDateChip date={opp.expected_close_date} />
-      </div>
-
-      {taskCount > 0 && (
-        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-50">
-          {allDone
-            ? <CheckCircle2 size={11} className="text-emerald-500" />
-            : <Circle size={11} className="text-gray-300" />
-          }
-          <span className={cn('text-[10px] font-semibold', allDone ? 'text-emerald-600' : 'text-gray-400')}>
-            {doneCount}/{taskCount} tâches
-          </span>
-        </div>
-      )}
     </motion.div>
   );
 }
@@ -178,7 +194,7 @@ function DetailPanel({ opp, onClose, onEdit }: { opp: Opportunity; onClose: () =
 
   const handleQuickStage = async (stage: OpportunityStage) => {
     const prob = STAGES.find(s => s.key === stage)!.prob;
-    const label = stage === 'won' ? '🏆 Marqué comme Gagné' : stage === 'lost' ? '❌ Marqué comme Perdu' : `→ ${stageOf(stage).label}`;
+    const label = stage === 'won' ? 'Marqué comme Gagné' : stage === 'lost' ? 'Marqué comme Perdu' : `→ ${stageOf(stage).label}`;
     await updateOpportunity(opp.id, { stage, probability: prob }, label);
     toast.success(label);
   };
@@ -195,13 +211,13 @@ function DetailPanel({ opp, onClose, onEdit }: { opp: Opportunity; onClose: () =
       className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] bg-white border-l border-gray-100 shadow-2xl z-40 flex flex-col overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-gray-100 dark:border-white/10 flex-shrink-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl">
         <span className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0', s.bg)}>
-          {s.emoji}
+          <s.icon size={18} className={s.color} strokeWidth={2.5} />
         </span>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-base truncate">{opp.client_name}</h3>
-          <p className="text-sm text-gray-400 truncate">{opp.title}</p>
+          <h3 className="font-bold text-gray-900 dark:text-white text-base truncate">{opp.client_name}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{opp.title}</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button onClick={onEdit} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-primary transition-colors">
@@ -226,7 +242,10 @@ function DetailPanel({ opp, onClose, onEdit }: { opp: Opportunity; onClose: () =
           </div>
           <div className={cn('rounded-2xl p-4', s.bg)}>
             <p className={cn('text-[10px] font-bold uppercase tracking-wider mb-1', s.color)}>Étape</p>
-            <p className={cn('text-base font-black', s.color)}>{s.emoji} {s.label}</p>
+            <p className={cn('text-base font-black flex items-center gap-1.5', s.color)}>
+              <s.icon size={16} strokeWidth={2.5} />
+              {s.label}
+            </p>
             <ProbBar value={opp.probability} color={s.bar} />
           </div>
         </div>
@@ -622,15 +641,17 @@ export default function CrmPage() {
                   onDrop={(e) => { e.preventDefault(); handleDrop(stage.key); }}
                 >
                   {/* Column header */}
-                  <div className={cn('flex items-center justify-between px-3 py-2.5 rounded-xl border mb-3', stage.bg, stage.border)}>
+                  <div className={cn('flex items-center justify-between px-4 py-3 rounded-xl border mb-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl', stage.border)}>
                     <div className="flex items-center gap-2">
-                      <span>{stage.emoji}</span>
+                      <div className={cn('p-1.5 rounded-lg', stage.bg)}>
+                        <stage.icon size={14} className={stage.color} strokeWidth={2.5} />
+                      </div>
                       <span className={cn('text-xs font-bold', stage.color)}>{stage.label}</span>
-                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold border', stage.bg, stage.color, stage.border)}>
+                      <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold border', stage.bg, stage.color, stage.border)}>
                         {stageOpps.length}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400 font-semibold tabular-nums">{formatCurrency(stageTotal)}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 font-semibold tabular-nums">{formatCurrency(stageTotal)}</span>
                   </div>
 
                   {/* Drop zone */}
@@ -694,8 +715,9 @@ export default function CrmPage() {
                         <p className="text-[10px] text-gray-400">{formatCurrency(opp.value * opp.probability / 100)} attendu</p>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border', s.bg, s.color, s.border)}>
-                          {s.emoji} {s.label}
+                        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border', s.bg, s.color, s.border)}>
+                          <s.icon size={11} strokeWidth={2.5} />
+                          {s.label}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">

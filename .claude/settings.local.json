@@ -136,7 +136,9 @@
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/api/contract-signing/\\\\[token\\\\]/sign)",
       "Bash(mkdir -p c:/Users/salma/Desktop/FACTU.ME/app/sign/\\\\[token\\\\])",
       "Bash(pnpm tsc *)",
-      "mcp__supabase__get_advisors"
+      "mcp__supabase__get_advisors",
+      "Bash(python3 scripts/search.py \"magnificent dropdown menus with icons only no emojis for pipeline page\" --domain ux -n 10)",
+      "Bash(python3 scripts/search.py \"magnificent dropdown menus with icons only no emojis\" --domain ux -n 10)"
     ]
   },
   "enableAllProjectMcpServers": true,

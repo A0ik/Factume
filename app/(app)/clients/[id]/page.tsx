@@ -629,13 +629,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       <GlassCard delay={0.7} className="overflow-hidden p-0">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
           <h3 className="font-bold text-gray-900 dark:text-white text-lg">Documents</h3>
-          <button
+          <motion.button
             onClick={() => setShowNewDocument(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-sm font-semibold hover:shadow-lg transition-all hover:scale-105"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-sm font-semibold hover:shadow-lg transition-all cursor-pointer relative z-10"
           >
-            <Plus size={16} />
-            Nouveau document
-          </button>
+            <Plus size={16} strokeWidth={2.5} />
+            <span className="relative">Nouveau document</span>
+          </motion.button>
         </div>
         {clientInvoices.length === 0 ? (
           <div className="text-center py-12">
