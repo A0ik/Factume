@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       html: emailHtml,
       attachments: [{
         filename: `Facture_${invoice.number}_Factur-X.pdf`,
-        content: facturXPdf,
+        content: Buffer.from(facturXPdf),
       }],
     });
 
