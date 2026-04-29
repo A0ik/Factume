@@ -291,8 +291,18 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       const fd = new FormData();
       fd.append('audio', blob, `recording.${ext}`);
       fd.append('contract_type', contractType);
-      const res = await fetch('/api/process-voice-contract', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Erreur voix');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      let res: Response;
+      try {
+        res = await fetch('/api/process-voice-contract', { method: 'POST', body: fd, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erreur de traitement vocal');
+      }
       const result = await res.json();
       if (result.parsed) {
         setFormData(prev => ({ ...prev, ...mapAIParsed(result.parsed) }));

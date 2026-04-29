@@ -3,6 +3,8 @@ import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { processVoiceTranscript } from '@/lib/groq-translator';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     if (!process.env.GROQ_API_KEY) {

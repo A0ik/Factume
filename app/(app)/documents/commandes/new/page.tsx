@@ -250,8 +250,18 @@ export default function NewCommandePage() {
         fd.append('isEdit', 'true');
         fd.append('existingItems', JSON.stringify(items));
       }
-      const res = await fetch('/api/process-voice', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Erreur de traitement');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      let res: Response;
+      try {
+        res = await fetch('/api/process-voice', { method: 'POST', body: fd, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erreur de traitement vocal');
+      }
       const result = await res.json();
       setTranscript(result.transcript || '');
       const parsed = result.parsed;

@@ -333,8 +333,18 @@ export default function RecurringInvoicesPage() {
       fd.append('audio', blob, 'recording.webm');
       if (user?.id) fd.append('user_id', user.id);
 
-      const res = await fetch('/api/process-voice-recurring', { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Erreur de traitement');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      let res: Response;
+      try {
+        res = await fetch('/api/process-voice-recurring', { method: 'POST', body: fd, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erreur de traitement vocal');
+      }
       const result = await res.json();
       setTranscript(result.transcript || '');
       const parsed = result.parsed;
