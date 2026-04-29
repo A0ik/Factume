@@ -39,6 +39,9 @@ next-env.d.ts
 # uploads temp folder
 uploads/
 
+# claude settings (may contain sensitive data)
+.claude/settings.local.json
+
 .vercel
 .env*.local
 node_modules
