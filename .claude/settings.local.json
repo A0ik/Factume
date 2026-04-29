@@ -143,7 +143,8 @@
       "Bash(cat next.config.mjs)",
       "Bash(cat next.config.ts)",
       "Bash(ls \"app/api/invoices/[invoiceId]/\")",
-      "Bash(ls \"app/api/invoices/\")"
+      "Bash(ls \"app/api/invoices/\")",
+      "mcp__supabase__get_logs"
     ]
   },
   "enableAllProjectMcpServers": true,

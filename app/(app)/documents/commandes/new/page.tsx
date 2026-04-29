@@ -66,6 +66,7 @@ export default function NewCommandePage() {
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const pendingIdRef = useRef<string | null>(null);
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -393,31 +394,40 @@ export default function NewCommandePage() {
       return;
     }
 
+    if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
     setSaving(true);
     setError('');
     try {
-      const newInvoice = await createInvoice({
-        client_id: clientId || undefined,
-        client_name_override: clientId ? undefined : clientName || undefined,
-        document_type: docType,
-        issue_date: issueDate,
-        due_date: dueDate || undefined,
-        items: items,
-        notes: notes || undefined,
-        discount_percent: discountPercent > 0 ? discountPercent : undefined,
-        client_email: clientId ? undefined : clientEmail || undefined,
-        client_phone: clientId ? undefined : clientPhone || undefined,
-        client_address: clientId ? undefined : clientAddress || undefined,
-        client_city: clientId ? undefined : clientCity || undefined,
-        client_postal_code: clientId ? undefined : clientPostalCode || undefined,
-        client_siret: clientId ? undefined : clientSiret || undefined,
-        client_vat_number: clientId ? undefined : clientVatNumber || undefined,
-      }, profile);
+      const newInvoice = await Promise.race([
+        createInvoice({
+          client_id: clientId || undefined,
+          client_name_override: clientId ? undefined : clientName || undefined,
+          document_type: docType,
+          issue_date: issueDate,
+          due_date: dueDate || undefined,
+          items: items,
+          notes: notes || undefined,
+          discount_percent: discountPercent > 0 ? discountPercent : undefined,
+          client_email: clientId ? undefined : clientEmail || undefined,
+          client_phone: clientId ? undefined : clientPhone || undefined,
+          client_address: clientId ? undefined : clientAddress || undefined,
+          client_city: clientId ? undefined : clientCity || undefined,
+          client_postal_code: clientId ? undefined : clientPostalCode || undefined,
+          client_siret: clientId ? undefined : clientSiret || undefined,
+          client_vat_number: clientId ? undefined : clientVatNumber || undefined,
+        }, profile, pendingIdRef.current),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),
+      ]);
+      pendingIdRef.current = null;
       toast.success('Document créé avec succès !');
       router.push(`/invoices/${newInvoice.id}`);
     } catch (e: any) {
-      console.error('[new purchase order] createInvoice error:', e);
-      setError(e.message || 'Erreur lors de la création.');
+      if ((e as Error).message === '__timeout__') {
+        toast.error('Délai dépassé — réessayez');
+      } else {
+        console.error('[new purchase order] createInvoice error:', e);
+        setError(e.message || 'Erreur lors de la création.');
+      }
     } finally {
       setSaving(false);
     }

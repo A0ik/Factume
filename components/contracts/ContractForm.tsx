@@ -86,6 +86,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
   const [payslipData, setPayslipData] = useState<any>(null);
   const [savedContractId, setSavedContractId] = useState<string | null>(contractId || null);
   const [customClauses, setCustomClauses] = useState<Array<{ title: string; content: string }>>([]);
+  const pendingIdRef = useRef<string | null>(null);
 
   const [formData, setFormData] = useState<ContractFormData>({
     contract_type: contractType,
@@ -488,51 +489,53 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     try {
       validateRequired();
 
-      // Ajouter un timeout pour les requêtes
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Délai d\'attente dépassé (30s). Veuillez réessayer.')), 30000)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('__timeout__')), 7000)
       );
 
       if (mode === 'edit' && contractId) {
-        // Update contract avec timeout
         await Promise.race([
           updateContract(contractId, contractType, formData),
-          timeoutPromise
+          timeoutPromise,
         ]);
 
-        // Create version en arrière-plan (non bloquant)
         fetch('/api/contracts/version', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contractId, contractType, contractData: formData, comment: 'Mise à jour' }),
-        }).catch(() => {}); // Ignorer les erreurs de version
+        }).catch(() => {});
 
         toast.success('Contrat mis à jour !');
         onSaved?.(contractId, formData.contract_number || '');
       } else {
-        // Create contract avec timeout
+        if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
+
         const result = await Promise.race([
-          createContract(formData, profile),
-          timeoutPromise
+          createContract(formData, profile, pendingIdRef.current),
+          timeoutPromise,
         ]) as { id: string; contract_number: string };
 
+        pendingIdRef.current = null;
         setSavedContractId(result.id);
 
-        // Create initial version en arrière-plan (non bloquant)
         fetch('/api/contracts/version', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contractId: result.id, contractType, contractData: formData, comment: 'Version initiale' }),
-        }).catch(() => {}); // Ignorer les erreurs de version
+        }).catch(() => {});
 
         toast.success('Contrat sauvegardé !');
         setStep('success');
         onSaved?.(result.id, result.contract_number);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
-      setError(msg);
-      toast.error(msg);
+      if (err instanceof Error && err.message === '__timeout__') {
+        toast.error('Délai dépassé — réessayez');
+      } else {
+        const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -704,7 +707,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           </div>
 
           {/* Validation */}
-          <ContractValidator contractType={contractType as any} contractData={formData as any} onValidationChange={() => {}} />
+          <ContractValidator contractType={contractType as any} contractData={toCamelCase(formData)} onValidationChange={() => {}} />
 
           {/* Error block */}
           {error && (
@@ -741,7 +744,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           {/* Validation */}
           <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-lg p-6">
             <div className="flex items-center gap-3 mb-4"><Shield className="w-6 h-6 text-primary" /><h3 className="text-lg font-bold">Validation légale</h3></div>
-            <ContractValidator contractType={contractType as any} contractData={formData as any} compact={false} />
+            <ContractValidator contractType={contractType as any} contractData={toCamelCase(formData)} compact={false} />
           </div>
 
           {/* Preview */}

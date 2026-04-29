@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Service email non configuré (RESEND_API_KEY manquante)' }, { status: 500 });
     }
 
-    const senderEmail = process.env.RESEND_FROM_EMAIL || 'noreply@factu.me';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
     const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
 
     const contractLabels: Record<string, string> = {

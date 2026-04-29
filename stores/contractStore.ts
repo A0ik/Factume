@@ -11,7 +11,7 @@ interface ContractState {
   loading: boolean;
   stats: ContractDashboardStats | null;
   fetchContracts: () => Promise<void>;
-  createContract: (data: ContractFormData, profile: any) => Promise<{ id: string; contract_number: string }>;
+  createContract: (data: ContractFormData, profile: any, idempotencyId?: string) => Promise<{ id: string; contract_number: string }>;
   updateContract: (id: string, contractType: ContractType, data: Partial<ContractFormData>) => Promise<void>;
   updateContractStatus: (id: string, contractType: ContractType, status: ContractStatus) => Promise<void>;
   deleteContract: (id: string, contractType: ContractType) => Promise<void>;
@@ -143,11 +143,20 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
   },
 
-  createContract: async (formData, profile) => {
+  createContract: async (formData, profile, idempotencyId?: string) => {
     const supabase = getSupabaseClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Non authentifié');
     if (!profile) throw new Error('Profil introuvable');
+
+    if (idempotencyId) {
+      const { data: existing } = await supabase
+        .from(TABLE_MAP[formData.contract_type])
+        .select('id, contract_number')
+        .eq('id', idempotencyId)
+        .single();
+      if (existing) return { id: existing.id, contract_number: existing.contract_number };
+    }
 
     // Incrément atomique via RPC — élimine la race condition sur contract_count
     const { data: contractCount, error: rpcError } = await supabase
@@ -160,6 +169,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
     const now = new Date().toISOString();
 
     const row: Record<string, any> = {
+      ...(idempotencyId ? { id: idempotencyId } : {}),
       user_id: session.user.id,
       contract_number: number,
       document_status: 'draft',

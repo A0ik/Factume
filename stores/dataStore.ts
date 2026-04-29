@@ -7,7 +7,7 @@ import { generateId } from '@/lib/utils';
 interface DataState {
   clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null;
   fetchClients: () => Promise<void>; createClient: (data: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<Client>; bulkCreateClients: (items: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>[]) => Promise<Client[]>; updateClient: (id: string, data: Partial<Client>) => Promise<void>; deleteClient: (id: string) => Promise<void>;
-  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: any) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: any) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
+  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: any, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: any) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
   fetchRecurringInvoices: () => Promise<void>; createRecurringInvoice: (data: Omit<RecurringInvoice, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<RecurringInvoice>; updateRecurringInvoice: (id: string, data: Partial<RecurringInvoice>) => Promise<void>; deleteRecurringInvoice: (id: string) => Promise<void>;
   computeStats: () => void; clearData: () => void;
 }
@@ -56,7 +56,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     } finally { set({ loading: false }); }
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
-  createInvoice: async (formData, profile) => {
+  createInvoice: async (formData, profile, idempotencyId?: string) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user;
     if (!user) throw new Error('Non authentifié');
@@ -64,6 +64,15 @@ export const useDataStore = create<DataState>((set, get) => ({
     // Validate profile
     if (!profile) {
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
+    }
+
+    if (idempotencyId) {
+      const { data: existing } = await getSupabaseClient()
+        .from('invoices')
+        .select('*, client:clients(*)')
+        .eq('id', idempotencyId)
+        .single();
+      if (existing) return existing;
     }
 
     const items = formData.items.map((item) => ({ ...item, id: generateId(), total: item.quantity * item.unit_price }));
@@ -86,6 +95,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     // Insert invoice
     const { data, error } = await getSupabaseClient().from('invoices').insert({
+      ...(idempotencyId ? { id: idempotencyId } : {}),
       user_id: user.id,
       client_id: formData.client_id || null,
       client_name_override: formData.client_name_override || null,

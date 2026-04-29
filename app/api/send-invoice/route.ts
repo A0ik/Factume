@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     }
 
     const senderName = profile?.company_name || 'Factu.me';
-    const senderEmail = process.env.RESEND_FROM_EMAIL || 'noreply@factu.me';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
     const replyToEmail = profile?.email || senderEmail;
 
     console.log('[send-invoice] Génération PDF...');
