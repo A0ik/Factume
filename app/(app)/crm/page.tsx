@@ -22,16 +22,16 @@ import {
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const STAGES: {
-  key: OpportunityStage; label: string; icon: any;
+  key: OpportunityStage; label: string; icon: any; emoji: string;
   color: string; bg: string; border: string; bar: string;
   prob: number;
 }[] = [
-  { key:'prospect',    label:'Prospect',    icon:Target,     color:'text-slate-600',   bg:'bg-slate-50',   border:'border-slate-200', bar:'bg-slate-400',   prob:10  },
-  { key:'qualified',   label:'Qualifié',    icon:CheckCircle2,color:'text-blue-600',    bg:'bg-blue-50',    border:'border-blue-200',  bar:'bg-blue-500',    prob:25  },
-  { key:'proposal',    label:'Proposition', icon:FileText,    color:'text-violet-600',  bg:'bg-violet-50',  border:'border-violet-200',bar:'bg-violet-500',  prob:50  },
-  { key:'negotiation', label:'Négociation', icon:MessageSquare,color:'text-amber-700',   bg:'bg-amber-50',   border:'border-amber-200', bar:'bg-amber-500',   prob:75  },
-  { key:'won',         label:'Gagné',       icon:Trophy,      color:'text-emerald-700', bg:'bg-emerald-50', border:'border-emerald-200',bar:'bg-emerald-500', prob:100 },
-  { key:'lost',        label:'Perdu',       icon:X,           color:'text-red-600',     bg:'bg-red-50',     border:'border-red-200',   bar:'bg-red-400',     prob:0   },
+  { key:'prospect',    label:'Prospect',    icon:Target,      emoji:'🎯', color:'text-slate-600',   bg:'bg-slate-50',   border:'border-slate-200', bar:'bg-slate-400',   prob:10  },
+  { key:'qualified',   label:'Qualifié',    icon:CheckCircle2,emoji:'✅', color:'text-blue-600',    bg:'bg-blue-50',    border:'border-blue-200',  bar:'bg-blue-500',    prob:25  },
+  { key:'proposal',    label:'Proposition', icon:FileText,    emoji:'📄', color:'text-violet-600',  bg:'bg-violet-50',  border:'border-violet-200',bar:'bg-violet-500',  prob:50  },
+  { key:'negotiation', label:'Négociation', icon:MessageSquare,emoji:'🤝',color:'text-amber-700',   bg:'bg-amber-50',   border:'border-amber-200', bar:'bg-amber-500',   prob:75  },
+  { key:'won',         label:'Gagné',       icon:Trophy,      emoji:'🏆', color:'text-emerald-700', bg:'bg-emerald-50', border:'border-emerald-200',bar:'bg-emerald-500', prob:100 },
+  { key:'lost',        label:'Perdu',       icon:X,           emoji:'❌', color:'text-red-600',     bg:'bg-red-50',     border:'border-red-200',   bar:'bg-red-400',     prob:0   },
 ];
 
 const PRIORITIES: { key: OpportunityPriority; label: string; color: string; dot: string; icon: any; bg: string }[] = [
