@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 import { Profile } from '@/types';
 import { changeLanguage } from '@/i18n';
 
@@ -9,6 +9,7 @@ let _authUnsubscribe: (() => void) | null = null;
 
 interface AuthState {
   user: User | null;
+  session: Session | null;
   profile: Profile | null;
   loading: boolean;
   initialized: boolean;
@@ -20,24 +21,25 @@ interface AuthState {
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   setProfile: (profile: Profile) => void;
+  completeOnboarding: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null, profile: null, loading: false, initialized: false,
+  user: null, session: null, profile: null, loading: false, initialized: false,
 
   initialize: async () => {
     if (_authUnsubscribe) { _authUnsubscribe(); _authUnsubscribe = null; }
     try {
       const { data: { session }, error } = await getSupabaseClient().auth.getSession();
       if (error) { await getSupabaseClient().auth.signOut(); }
-      else if (session?.user) { set({ user: session.user }); await get().fetchProfile(session.user.id); }
+      else if (session?.user) { set({ user: session.user, session }); await get().fetchProfile(session.user.id); }
     } catch (e: any) {
       if (e?.message?.includes('Refresh Token')) await getSupabaseClient().auth.signOut();
     } finally { set({ initialized: true }); }
 
     const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) { set({ user: session.user }); await get().fetchProfile(session.user.id); }
-      else if (event === 'SIGNED_OUT') set({ user: null, profile: null });
+      if (session?.user) { set({ user: session.user, session }); await get().fetchProfile(session.user.id); }
+      else if (event === 'SIGNED_OUT') set({ user: null, session: null, profile: null });
     });
     _authUnsubscribe = () => subscription.unsubscribe();
   },
@@ -47,7 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data, error } = await getSupabaseClient().auth.signInWithPassword({ email, password });
       if (error) throw error;
-      if (data.user) { set({ user: data.user }); await get().fetchProfile(data.user.id); }
+      if (data.user) { set({ user: data.user, session: data.session }); await get().fetchProfile(data.user.id); }
     } finally { set({ loading: false }); }
   },
 
@@ -57,7 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data, error } = await getSupabaseClient().auth.signUp({ email, password });
       if (error) throw error;
       if (!data.user) throw new Error('Erreur lors de la création du compte');
-      set({ user: data.user });
+      set({ user: data.user, session: data.session });
       if (!data.session) throw new Error('CONFIRM_EMAIL');
       // Create initial profile row immediately so onboarding updateProfile works
       const { error: profileError } = await getSupabaseClient().from('profiles').upsert({
@@ -90,7 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Session may already be invalid — ignore errors
     }
-    set({ user: null, profile: null });
+    set({ user: null, session: null, profile: null });
     if (typeof window !== 'undefined') {
       localStorage.clear();
       window.location.href = '/login';
@@ -98,6 +100,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setProfile: (profile) => set({ profile }),
+
+  completeOnboarding: () => set((state) => ({
+    profile: state.profile ? { ...state.profile, onboarding_done: true } : null,
+  })),
 
   fetchProfile: async (userId) => {
     const { data, error } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();

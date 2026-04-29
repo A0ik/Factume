@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 
+interface TokenRecord {
+  id: string;
+  token: string;
+  quote_id: string;
+  expires_at: string;
+  signed_at: string | null;
+  view_count: number;
+  quote: {
+    id: string;
+    number: string;
+    issue_date: string;
+    due_date: string;
+    total: number;
+    status: string;
+    notes: string | null;
+    client_id: string;
+    user_id: string;
+  };
+  client: {
+    name: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    city: string | null;
+    postal_code: string | null;
+  };
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -40,7 +68,7 @@ export async function GET(
         )
       `)
       .eq('token', token)
-      .single();
+      .single() as { data: TokenRecord | null; error: any };
 
     if (tokenError || !tokenRecord) {
       return NextResponse.json({ error: 'Token invalide' }, { status: 404 });

@@ -85,7 +85,7 @@ export default function FacturesPage() {
     }
 
     if (advancedFilters.clientIds && advancedFilters.clientIds.length > 0) {
-      matchesAdvanced = matchesAdvanced && facture.client_id && advancedFilters.clientIds.includes(facture.client_id);
+      matchesAdvanced = matchesAdvanced && !!facture.client_id && advancedFilters.clientIds.includes(facture.client_id);
     }
 
     if (advancedFilters.statuses && advancedFilters.statuses.length > 0) {
