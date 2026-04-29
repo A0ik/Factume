@@ -204,10 +204,11 @@ export async function POST(req: NextRequest) {
         emailSent = true;
         await logSignatureEvent(admin, contractId, contractType, 'email_sent', tokenData.id, { recipient: employeeEmail.trim() }, req);
       } else {
-        let errBody: { message?: string } = {};
+        let errBody: { message?: string; code?: string } = {};
         try { errBody = await brevoRes.json(); } catch { /* empty */ }
-        emailError = errBody.message || 'Erreur Brevo';
-        await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError }, req);
+        const statusCode = brevoRes.status;
+        emailError = `Brevo ${statusCode}: ${errBody.message || errBody.code || 'Erreur inconnue'}`;
+        await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError, statusCode, body: errBody }, req);
       }
     } catch (emailErr) {
       emailError = emailErr instanceof Error ? emailErr.message : 'Erreur inconnue';

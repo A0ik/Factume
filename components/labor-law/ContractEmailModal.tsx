@@ -169,6 +169,11 @@ export function ContractEmailModal({
         throw new Error(data.error || 'Erreur');
       }
 
+      // Vérifier explicitement si l'opération a réussi
+      if (data.success === false) {
+        throw new Error(data.error || 'Erreur lors de l\'envoi de l\'email');
+      }
+
       setSignData({
         token: data.token,
         signingUrl: data.signingUrl,
