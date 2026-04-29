@@ -4,14 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText, Plus, Search, Filter, FileCheck, Clock, AlertCircle,
-  CheckCircle, FileEdit, ArrowRight, Trash2, Copy, Loader2, BarChart3, X
+  CheckCircle, FileEdit, ArrowRight, Trash2, Copy, Loader2, BarChart3, X, Crown
 } from 'lucide-react';
 import { useContractStore } from '@/stores/contractStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { ContractSummary, ContractType, ContractStatus } from '@/types';
 import { ContractCard } from '@/components/contracts/ContractCard';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'Tous' },
@@ -30,8 +32,42 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
 ];
 
 export default function ContractsPage() {
+  const router = useRouter();
   const { profile } = useAuthStore();
+  const { canUseContracts } = useSubscription();
   const { contracts, stats, loading, fetchContracts, deleteContract, duplicateContract } = useContractStore();
+
+  // Vérifier les droits d'accès aux contrats
+  useEffect(() => {
+    if (!canUseContracts) {
+      router.push('/paywall');
+    }
+  }, [canUseContracts, router]);
+
+  // Afficher un message si pas accès
+  if (!canUseContracts) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Crown className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Fonctionnalité Pro</h2>
+          <p className="text-gray-600 mb-6">
+            Les contrats de travail avec signatures électroniques sont disponibles avec les abonnements Pro et Business.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/paywall" className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors">
+              Voir les offres
+            </Link>
+            <Link href="/dashboard" className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+              Retour au tableau de bord
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');

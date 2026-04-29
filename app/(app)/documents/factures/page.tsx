@@ -18,19 +18,30 @@ import {
   XCircle,
   Calendar,
   RefreshCw,
+  Bell,
+  Send,
+  Loader2,
+  Mail,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDataStore } from '@/stores/dataStore';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
+import { BulkActions } from '@/components/invoices/BulkActions';
+import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
 
 type StatusFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue';
 
 export default function FacturesPage() {
   const router = useRouter();
   const { invoices, fetchInvoices, clients } = useDataStore();
+  const { session } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedFactures, setSelectedFactures] = useState<Set<string>>(new Set());
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [advancedFilters, setAdvancedFilters] = useState<InvoiceFilters>({});
 
   useEffect(() => {
     fetchInvoices();
@@ -50,7 +61,38 @@ export default function FacturesPage() {
 
     const matchesStatus = statusFilter === 'all' || facture.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Filtres avancés
+    let matchesAdvanced = true;
+
+    if (advancedFilters.dateFrom) {
+      const factureDate = new Date(facture.issue_date || facture.created_at);
+      const fromDate = new Date(advancedFilters.dateFrom);
+      matchesAdvanced = matchesAdvanced && factureDate >= fromDate;
+    }
+
+    if (advancedFilters.dateTo) {
+      const factureDate = new Date(facture.issue_date || facture.created_at);
+      const toDate = new Date(advancedFilters.dateTo);
+      matchesAdvanced = matchesAdvanced && factureDate <= toDate;
+    }
+
+    if (advancedFilters.amountMin !== undefined) {
+      matchesAdvanced = matchesAdvanced && (facture.total || 0) >= advancedFilters.amountMin;
+    }
+
+    if (advancedFilters.amountMax !== undefined) {
+      matchesAdvanced = matchesAdvanced && (facture.total || 0) <= advancedFilters.amountMax;
+    }
+
+    if (advancedFilters.clientIds && advancedFilters.clientIds.length > 0) {
+      matchesAdvanced = matchesAdvanced && facture.client_id && advancedFilters.clientIds.includes(facture.client_id);
+    }
+
+    if (advancedFilters.statuses && advancedFilters.statuses.length > 0) {
+      matchesAdvanced = matchesAdvanced && facture.status && advancedFilters.statuses.includes(facture.status);
+    }
+
+    return matchesSearch && matchesStatus && matchesAdvanced;
   });
 
   // Calculer les statistiques
@@ -81,6 +123,35 @@ export default function FacturesPage() {
     setSelectedFactures(newSelected);
   };
 
+  const handleSendReminder = async (invoiceId: string, reminderLevel = 1) => {
+    if (!session) return;
+
+    setSendingReminder(invoiceId);
+    try {
+      const res = await fetch('/api/reminders/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ invoiceId, reminderLevel }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur lors de l\'envoi de la relance');
+      }
+
+      toast.success('Relance envoyée avec succès !');
+      fetchInvoices();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi de la relance');
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; label: string; icon: any }> = {
       draft: { color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', label: 'Brouillon', icon: FileText },
@@ -102,6 +173,12 @@ export default function FacturesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 p-4 md:p-8">
+      <BulkActions
+        selectedIds={Array.from(selectedFactures)}
+        onClear={() => setSelectedFactures(new Set())}
+        onActionComplete={() => fetchInvoices()}
+      />
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -204,7 +281,13 @@ export default function FacturesPage() {
             </div>
 
             {/* Status filter */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              <AdvancedFilters
+                filters={advancedFilters}
+                onFiltersChange={setAdvancedFilters}
+                clients={clients.map(c => ({ id: c.id, name: c.name }))}
+                onReset={() => setAdvancedFilters({})}
+              />
               <button
                 onClick={() => setStatusFilter('all')}
                 className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -366,13 +449,29 @@ export default function FacturesPage() {
               {filteredFactures.map((facture) => (
                 <div key={facture.id} className="md:hidden p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between mb-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedFactures.has(facture.id)}
-                      onChange={() => handleSelectOne(facture.id)}
-                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-                    />
-                    {getStatusBadge(facture.status || 'draft')}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedFactures.has(facture.id)}
+                        onChange={() => handleSelectOne(facture.id)}
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+                      />
+                      {getStatusBadge(facture.status || 'draft')}
+                    </div>
+                    {(facture.status === 'sent' || facture.status === 'overdue') && (
+                      <button
+                        onClick={() => handleSendReminder(facture.id)}
+                        disabled={sendingReminder === facture.id}
+                        className="p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        title="Envoyer une relance"
+                      >
+                        {sendingReminder === facture.id ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Bell size={16} />
+                        )}
+                      </button>
+                    )}
                   </div>
                   <Link
                     href={`/invoices/${facture.id}`}

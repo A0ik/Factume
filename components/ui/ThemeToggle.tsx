@@ -4,15 +4,11 @@ import { Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 
 export function ThemeToggle() {
-  const { theme, toggle, setTheme } = useThemeStore();
+  const { theme, toggle } = useThemeStore();
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
-      if (saved === 'dark' || saved === 'light') {
-        setTheme(saved);
-      }
-    } catch (e) {}
+    // Initialiser le thème au montage
+    useThemeStore.getState().initTheme();
   }, []);
 
   return (

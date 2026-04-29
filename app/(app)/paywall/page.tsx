@@ -27,7 +27,7 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'solo', name: 'Solo', price: '9,99€', tagline: 'Idéal pour démarrer',
+    id: 'solo', name: 'Solo', price: '14,99€', tagline: 'Idéal pour démarrer',
     icon: Zap, iconColor: 'text-white', iconBg: 'from-emerald-500 to-emerald-600',
     gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
     gradientFrom: 'from-emerald-500', gradientTo: 'to-emerald-700',
@@ -39,22 +39,27 @@ const PLANS: Plan[] = [
       { label: 'Paiement en ligne', included: true },
       { label: '6 templates PDF', included: true },
       { label: 'Logo & couleurs', included: true },
+      { label: 'Contrats de travail', included: false },
       { label: 'IA & Automatisation', included: false },
+      { label: 'Pipeline CRM', included: false },
       { label: 'FEC & Comptabilité', included: false },
     ]
   },
   {
-    id: 'pro', name: 'Pro', price: '19,99€', tagline: 'Pour grandir',
+    id: 'pro', name: 'Pro', price: '29,99€', tagline: 'Pour grandir',
     icon: Rocket, iconColor: 'text-white', iconBg: 'from-blue-800 to-indigo-900',
     gradient: 'from-blue-800 via-blue-900 to-indigo-900',
     gradientFrom: 'from-blue-800', gradientTo: 'to-indigo-900',
     borderColor: 'blue-800', glowColor: 'shadow-blue-800',
     cta: 'Choisir Pro', badge: 'Populaire', popular: true, features: [
       { label: 'Tout dans Solo', included: true },
+      { label: 'Contrats avec signatures électroniques', included: true, highlight: true },
+      { label: 'Factures électroniques', included: true },
       { label: 'IA & Relances', included: true },
       { label: 'Export FEC', included: true },
-      { label: 'Factur-X (Conforme 2026)', included: true, highlight: true },
+      { label: 'Factur-X (Conforme 2026)', included: true },
       { label: 'Pipeline CRM', included: true },
+      { label: 'Notes de frais', included: true },
       { label: 'Factures récurrentes', included: true },
       { label: 'Signature client', included: true },
       { label: 'Multi-espaces', included: false },
@@ -62,14 +67,15 @@ const PLANS: Plan[] = [
     ]
   },
   {
-    id: 'business', name: 'Business', price: '39,99€', tagline: 'Pour les équipes',
+    id: 'business', name: 'Business', price: '59,99€', tagline: 'Accès total + Outils avancés',
     icon: Crown, iconColor: 'text-white', iconBg: 'from-purple-600 to-violet-700',
     gradient: 'from-purple-600 via-violet-700 to-purple-800',
     gradientFrom: 'from-purple-600', gradientTo: 'to-purple-800',
     borderColor: 'purple-600', glowColor: 'shadow-purple-600',
     cta: 'Choisir Business', badge: 'Recommandé', features: [
       { label: 'Tout dans Pro', included: true },
-      { label: 'Factur-X + Transmission PDP', included: true, highlight: true },
+      { label: 'Outils avancés (OCR, Analyse IA)', included: true, highlight: true },
+      { label: 'Factur-X + Transmission PDP', included: true },
       { label: '10 espaces de travail', included: true },
       { label: 'API & Webhooks', included: true },
       { label: 'Multi-utilisateurs', included: true },

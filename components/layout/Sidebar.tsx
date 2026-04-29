@@ -18,6 +18,7 @@ import { cn, getInitials } from '@/lib/utils';
 import { UserDropdown } from '@/components/ui/user-dropdown';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
 import { toast } from 'sonner';
 
 const TIER_CONFIG = {
@@ -62,7 +63,7 @@ const TIER_CONFIG = {
 const NAV_CORE = [
   { href: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', badge: null as null|'overdue'|'notif' },
   { href: '/documents',  icon: FileText,         label: 'Documents',       badge: 'overdue' as null|'overdue'|'notif', hasSubmenu: true },
-  { href: '/crm',        icon: Target,           label: 'Pipeline CRM',    badge: null },
+  { href: '/expenses',   icon: Receipt,          label: 'Notes de frais', badge: null },
   { href: '/clients',    icon: Users,            label: 'Clients',         badge: null },
   { href: '/products',   icon: Package,          label: 'Articles',        badge: null },
   { href: '/calendar',   icon: Calendar,         label: 'Agenda',          badge: null },
@@ -86,8 +87,8 @@ const NAV_TOOLS = [
 ];
 
 const NAV_ADVANCED = [
-  { href: '/crm',         icon: Kanban,   label: 'Pipeline CRM',  enabled: true },
-  { href: '/expenses',    icon: Receipt,  label: 'Notes de frais', enabled: false },
+  { href: '/crm',         icon: Target,    label: 'Pipeline CRM',  enabled: true },
+  { href: '/ocr',         icon: Search,    label: 'Analyse OCR',   enabled: true },
   { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false },
   { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false },
   { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false },
@@ -427,7 +428,10 @@ export default function Sidebar() {
             </p>
             <p className="text-[11px] text-gray-400 capitalize font-medium mt-0.5">{tierConfig.name}</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <KeyboardShortcutsHelp />
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </aside>

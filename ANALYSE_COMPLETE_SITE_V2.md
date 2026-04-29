@@ -1,9 +1,9 @@
 # FacturmeWeb - Analyse Complète du Site Internet
 
-**Date**: 29 Avril 2026
-**Type de projet**: SaaS de Facturation / Gestion CRM / Gestion de Contrats
-**Technologies**: Next.js 15, Supabase, Resend, Tailwind CSS, TypeScript
-**Design System**: Glassmorphism avec effets 3D et animations Framer Motion
+**Date**: 29 Avril 2026  
+**Type de projet**: SaaS de Facturation / Gestion CRM / Gestion de Contrats  
+**Technologies**: Next.js 15, Supabase, Resend, Tailwind CSS, TypeScript  
+**Design System**: Glassmorphism avec effets 3D et animations Framer Motion  
 
 ---
 
@@ -277,8 +277,8 @@ const progressWidth = useTransform(progressValue, (v) => `${v}%`);
 **Incrément atomique**:
 ```typescript
 // RPC call pour éviter les race conditions
-const { data: invoiceCount } = await supabase.rpc('increment_invoice_count', {
-  p_user_id: user.id
+const { data: invoiceCount } = await supabase.rpc('increment_invoice_count', { 
+  p_user_id: user.id 
 });
 ```
 
@@ -407,9 +407,9 @@ const CATEGORIES = [
 // Upload → Analyse → Remplissage
 const formData = new FormData();
 formData.append('file', file);
-const res = await fetch('/api/ai/ocr-receipt', {
-  method: 'POST',
-  body: formData
+const res = await fetch('/api/ai/ocr-receipt', { 
+  method: 'POST', 
+  body: formData 
 });
 // Extraction: vendor, amount, vat_amount, date, description, category
 ```
@@ -557,7 +557,7 @@ const GlassCard = ({ children, className, delay = 0 }) => (
       className
     )}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent 
                 opacity-0 hover:opacity-100 transition-opacity duration-500" />
     {children}
   </motion.div>
@@ -1150,6 +1150,6 @@ Icons:      Lucide React (professionnels, pas d'emojis)
 
 ---
 
-*Analyse complète réalisée par Claude Code*
-*Date: 29 Avril 2026*
+*Analyse complète réalisée par Claude Code*  
+*Date: 29 Avril 2026*  
 *Version: 4.0.0*

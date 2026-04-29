@@ -1022,12 +1022,13 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-gray-900">Mon abonnement</h3>
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+            sub.tier === 'business' ? 'bg-purple-50 text-purple-600' :
             sub.tier === 'pro' ? 'bg-amber-50 text-amber-600' :
             sub.tier === 'solo' ? 'bg-primary/10 text-primary' :
             'bg-gray-100 text-gray-500'
           }`}>
-            {sub.tier === 'pro' ? <Crown size={11} /> : sub.tier === 'solo' ? <Zap size={11} /> : null}
-            {sub.tier === 'free' ? 'Plan Gratuit' : sub.tier === 'solo' ? 'Plan Solo' : 'Plan Pro'}
+            {sub.tier === 'business' ? <Sparkles size={11} /> : sub.tier === 'pro' ? <Crown size={11} /> : sub.tier === 'solo' ? <Zap size={11} /> : null}
+            {sub.tier === 'free' ? 'Plan Gratuit' : sub.tier === 'solo' ? 'Plan Solo' : sub.tier === 'pro' ? 'Plan Pro' : 'Plan Business'}
           </div>
         </div>
 

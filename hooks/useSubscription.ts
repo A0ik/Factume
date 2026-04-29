@@ -28,7 +28,7 @@ export function useSubscription() {
 
   const isFree     = tier === 'free' && !isTrialActive;
   const isTrial    = tier === 'trial' || isTrialActive;
-  const isSolo     = tier === 'solo' || tier === 'pro' || tier === 'business';
+  const isSolo     = tier === 'solo';
   const isPro      = tier === 'pro'  || tier === 'business';
   const isBusiness = tier === 'business';
 
@@ -55,6 +55,8 @@ export function useSubscription() {
     canUseRecurring:      effectiveIsPro || effectiveIsBusiness,
     canEditInvoice:       effectiveIsPro || effectiveIsBusiness,
     canDeleteInvoice:     effectiveIsPro || effectiveIsBusiness,
+    canUseContracts:      effectiveIsPro || effectiveIsBusiness, // Pro et Business uniquement
+    canUseCRM:            effectiveIsPro || effectiveIsBusiness, // Pro et Business uniquement
     maxInvoices:          isFree ? 5 : Infinity,
     invoiceCount:         profile?.invoice_count || 0,
     invoicesRemaining:    isFree ? Math.max(0, 5 - (profile?.invoice_count || 0)) : null,

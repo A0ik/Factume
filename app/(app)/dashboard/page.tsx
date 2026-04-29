@@ -84,6 +84,22 @@ export default function DashboardPage() {
   const topClients = Object.values(clientMap).sort((a, b) => b.paid - a.paid).slice(0, 5);
   const maxPaid = topClients[0]?.paid || 1;
 
+  // Comparaison avec le mois dernier
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+  const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 999);
+
+  const lastMonthMRR = invoices.filter((inv) => {
+    if (!inv.paid_at) return false;
+    const paidDate = new Date(inv.paid_at);
+    return paidDate >= lastMonthStart && paidDate <= lastMonthEnd;
+  }).reduce((sum, inv) => sum + inv.total, 0);
+
+  const monthOverMonthGrowth = lastMonthMRR > 0
+    ? ((stats?.mrr || 0) - lastMonthMRR) / lastMonthMRR * 100
+    : 0;
+
   // Recovery rate
   const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
   const totalOverdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date()).reduce((s, i) => s + i.total, 0);
@@ -257,7 +273,9 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 text-xs text-white/60 mt-3">
               <div className="flex items-center gap-1">
                 <Award size={11} />
-                <span>+12.5% vs mois dernier</span>
+                <span>
+                  {monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}% vs mois dernier
+                </span>
               </div>
             </div>
           </div>

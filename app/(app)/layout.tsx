@@ -12,6 +12,7 @@ import CommandPalette from '@/components/ui/CommandPalette';
 import { TrialCountdown } from '@/components/ui/trial-countdown';
 import { InvoiceCounter } from '@/components/ui/invoice-counter';
 import { UpgradeBanner } from '@/components/ui/upgrade-banner';
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator';
 import { Toaster } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Toaster position="top-right" richColors closeButton />
       <ServiceWorkerRegistration />
       <CommandPalette />
+      <AutoSaveIndicator />
 
       {/* Trial Countdown Banner - shows for active trial users */}
       {isTrialActive && showTrialBanner && !hideBanners && (

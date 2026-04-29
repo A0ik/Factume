@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import '@/i18n';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -13,5 +14,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return <>{children}</>;
+  return (
+    <ThemeProvider>
+      {children}
+    </ThemeProvider>
+  );
 }

@@ -15,7 +15,7 @@ import { cn, getInitials } from '@/lib/utils';
 const NAV_MAIN = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
   { href: '/documents', icon: FileText,        label: 'Documents' },
-  { href: '/crm',       icon: Target,          label: 'Pipeline CRM' },
+  { href: '/expenses',  icon: Receipt,         label: 'Notes de frais' },
   { href: '/clients',   icon: Users,           label: 'Clients' },
   { href: '/contracts', icon: FileText,        label: 'Contrats' },
   { href: '/products',  icon: Package,         label: 'Articles' },
@@ -32,6 +32,7 @@ const NAV_DOCS = [
 ];
 
 const NAV_TOOLS = [
+  { href: '/crm', icon: Target, label: 'Pipeline CRM' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
   { href: '/help', icon: HelpCircle, label: 'Aide' },
   { href: '/settings', icon: Settings, label: 'Paramètres' },

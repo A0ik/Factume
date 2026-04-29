@@ -250,10 +250,32 @@ export const useDataStore = create<DataState>((set, get) => ({
     const { invoices } = get();
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const paid = invoices.filter((i) => i.status === 'paid');
-    const pending = invoices.filter((i) => i.status === 'sent');
-    const overdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < now);
-    const mrr = invoices.filter((i) => i.status === 'paid' && new Date(i.created_at) >= startOfMonth).reduce((s, i) => s + i.total, 0);
-    set({ stats: { mrr, pendingCount: pending.length, paidCount: paid.length, overdueCount: overdue.length, totalRevenue: paid.reduce((s, i) => s + i.total, 0), pendingRevenue: pending.reduce((s, i) => s + i.total, 0) } });
+
+    // Filtrer uniquement les factures (pas les devis, avoirs, etc.)
+    const actualInvoices = invoices.filter((i) =>
+      !i.document_type || i.document_type === 'invoice'
+    );
+
+    const paid = actualInvoices.filter((i) => i.status === 'paid');
+    const pending = actualInvoices.filter((i) => i.status === 'sent');
+    const overdue = actualInvoices.filter((i) =>
+      i.status === 'sent' && i.due_date && new Date(i.due_date) < now
+    );
+
+    // MRR basé sur la date de paiement (paid_at) et non la date de création
+    const mrr = paid
+      .filter((i) => i.paid_at && new Date(i.paid_at) >= startOfMonth)
+      .reduce((s, i) => s + i.total, 0);
+
+    set({
+      stats: {
+        mrr,
+        pendingCount: pending.length,
+        paidCount: paid.length,
+        overdueCount: overdue.length,
+        totalRevenue: paid.reduce((s, i) => s + i.total, 0),
+        pendingRevenue: pending.reduce((s, i) => s + i.total, 0),
+      },
+    });
   },
 }));

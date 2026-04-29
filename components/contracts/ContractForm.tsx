@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Mic, Send, Download, Eye, Loader2, Check, AlertCircle,
   User, Building2, FileCheck, X, Euro, Calendar, Shield, Sparkles, History,
-  Calculator
+  Calculator, Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useContractStore } from '@/stores/contractStore';
+import { useRouter } from 'next/navigation';
 import { MagicSelect } from '@/components/ui/MagicSelect';
 import { MagnificentDatePicker } from '@/components/ui/MagnificentDatePicker';
 import { ContractValidator } from '@/components/labor-law/ContractValidator';
@@ -61,8 +63,42 @@ interface Props {
 }
 
 export function ContractForm({ contractType, mode, initialData, contractId, onSaved }: Props) {
+  const router = useRouter();
   const { profile } = useAuthStore();
+  const { canUseContracts } = useSubscription();
   const { createContract, updateContract } = useContractStore();
+
+  // Vérifier les droits d'accès aux contrats
+  useEffect(() => {
+    if (!canUseContracts) {
+      router.push('/paywall');
+    }
+  }, [canUseContracts, router]);
+
+  // Afficher un message si pas accès
+  if (!canUseContracts) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Crown className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Fonctionnalité Pro</h2>
+          <p className="text-gray-600 mb-6">
+            Les contrats de travail avec signatures électroniques sont disponibles avec les abonnements Pro et Business.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button onClick={() => router.push('/paywall')} className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors">
+              Voir les offres
+            </button>
+            <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+              Retour au tableau de bord
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<'upload' | 'edit' | 'preview' | 'success'>(mode === 'edit' ? 'edit' : 'upload');
