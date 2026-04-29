@@ -146,7 +146,8 @@
       "Bash(ls \"app/api/invoices/\")",
       "mcp__supabase__get_logs",
       "Bash(git commit *)",
-      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"expense tracking fintech SaaS glassmorphism\" --design-system -p \"FacturmeWeb\")"
+      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"expense tracking fintech SaaS glassmorphism\" --design-system -p \"FacturmeWeb\")",
+      "Bash(rtf ls *)"
     ]
   },
   "enableAllProjectMcpServers": true,
