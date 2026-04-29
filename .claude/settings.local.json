@@ -144,7 +144,8 @@
       "Bash(cat next.config.ts)",
       "Bash(ls \"app/api/invoices/[invoiceId]/\")",
       "Bash(ls \"app/api/invoices/\")",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "Bash(git commit *)"
     ]
   },
   "enableAllProjectMcpServers": true,
