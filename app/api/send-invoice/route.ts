@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { renderToBuffer } from '@react-pdf/renderer';
+import { Resend } from 'resend';
 import React from 'react';
 import { PdfDocument } from '@/components/pdf-document';
 
@@ -62,7 +63,6 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
           ${customMessage
             ? `<p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6;white-space:pre-wrap">${customMessage.replace(/\n/g, '<br/>')}</p>`
             : `
-          <!-- Greeting -->
           <p style="font-size:15px;color:#374151;margin:0 0 8px">Bonjour ${clientName},</p>
           <p style="font-size:14px;color:#374151;margin:0 0 4px;line-height:1.6">
             ${isReminder
@@ -113,10 +113,8 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
 
           ${payBtn}
 
-          <!-- Notes -->
           ${invoice.notes ? `<div style="background:#f8f8fc;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Notes</div><p style="font-size:13px;color:#374151;margin:0;line-height:1.6">${invoice.notes}</p></div>` : ''}
 
-          <!-- Bank info -->
           ${profile?.iban ? `<div style="background:#f0fdf4;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Coordonnées bancaires</div><div style="font-size:13px;color:#374151;line-height:1.8">${profile.bank_name ? `<div><strong>Banque :</strong> ${profile.bank_name}</div>` : ''}<div><strong>IBAN :</strong> ${profile.iban}</div>${profile.bic ? `<div><strong>BIC :</strong> ${profile.bic}</div>` : ''}</div></div>` : ''}
 
           <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6">Cordialement,<br/><strong style="color:#111827">${senderName}</strong></p>
@@ -143,17 +141,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { invoiceId, email, profile, isReminder, subject: customSubject, message: customMessage } = body;
 
-    console.log('[send-invoice] invoiceId:', invoiceId, '| email:', email);
-
     if (!invoiceId || !email) {
-      console.log('[send-invoice] Missing invoiceId or email');
       return NextResponse.json({ error: 'invoiceId and email requis' }, { status: 400 });
     }
 
-    const BREVO_API_KEY = process.env.BREVO_API_KEY;
-    if (!BREVO_API_KEY) {
-      console.log('[send-invoice] BREVO_API_KEY manquante');
-      return NextResponse.json({ error: 'Service email non configuré (BREVO_API_KEY manquante)' }, { status: 500 });
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      return NextResponse.json({ error: 'Service email non configuré (RESEND_API_KEY manquante)' }, { status: 500 });
     }
 
     const supabase = createAdminClient();
@@ -164,93 +158,55 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !invoice) {
-      console.log('[send-invoice] Facture introuvable:', error?.message);
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    console.log('[send-invoice] Facture trouvée:', invoice.number);
-
     const senderName = profile?.company_name || 'Factu.me';
-    // IMPORTANT: toujours utiliser BREVO_SENDER_EMAIL comme expéditeur (email vérifié dans Brevo)
-    // L'email du profil va en replyTo pour que les réponses arrivent au bon endroit
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@factu.me';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'noreply@factu.me';
     const replyToEmail = profile?.email || senderEmail;
 
     console.log('[send-invoice] Génération PDF...');
-    let pdfBase64: string;
+    let pdfBuffer: Buffer;
     try {
       const element = React.createElement(PdfDocument, { invoice, profile });
       const pdfBytes = await renderToBuffer(element as any);
-      pdfBase64 = Buffer.from(pdfBytes).toString('base64');
-      console.log('[send-invoice] PDF généré via @react-pdf/renderer, taille:', pdfBytes.length, 'bytes');
+      pdfBuffer = Buffer.from(pdfBytes);
+      console.log('[send-invoice] PDF généré, taille:', pdfBuffer.length, 'bytes');
     } catch (pdfErr: any) {
-      console.log('[send-invoice] ERREUR génération PDF:', pdfErr.message, pdfErr.stack);
+      console.error('[send-invoice] ERREUR génération PDF:', pdfErr.message);
       return NextResponse.json({ error: `Erreur génération PDF: ${pdfErr.message}` }, { status: 500 });
     }
 
-    // Use custom subject if provided, otherwise generate default
     const firstItem = invoice.items?.[0]?.description || 'prestation';
     const emailSubject = customSubject || (isReminder
       ? `[Rappel] Facture ${invoice.number} de ${senderName}`
       : `Votre facture pour ${firstItem} — ${senderName}`);
 
-    console.log('[send-invoice] Appel Brevo → to:', email, '| from:', senderEmail, '| replyTo:', replyToEmail);
+    console.log('[send-invoice] Envoi via Resend → to:', email);
 
-    // Timeout de 15 secondes sur l'appel Brevo pour éviter le hang infini
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const resend = new Resend(RESEND_API_KEY);
+    const { data: resendData, error: resendError } = await resend.emails.send({
+      from: `${senderName} <${senderEmail}>`,
+      to: [email],
+      replyTo: replyToEmail,
+      subject: emailSubject,
+      html: buildEmailHtml(invoice, profile, senderName, isReminder, customMessage),
+      attachments: [{
+        filename: `${safe(invoice.number)}.pdf`,
+        content: pdfBuffer,
+      }],
+    });
 
-    let brevoRes: Response;
-    try {
-      brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },
-        body: JSON.stringify({
-          sender: { name: senderName, email: senderEmail },
-          to: [{ email }],
-          replyTo: { name: senderName, email: replyToEmail },
-          subject: emailSubject,
-          htmlContent: buildEmailHtml(invoice, profile, senderName, isReminder, customMessage),
-          attachment: [{ name: `${safe(invoice.number)}.pdf`, content: pdfBase64 }],
-        }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr: any) {
-      clearTimeout(timeoutId);
-      if (fetchErr.name === 'AbortError') {
-        console.log('[send-invoice] Timeout Brevo après 15s — IP probablement bloquée');
-        return NextResponse.json({
-          error: 'Timeout Brevo (15s). L\'IP Vercel est probablement bloquée. Allez sur app.brevo.com/security/authorised_ips et activez "Allow all IPs".',
-        }, { status: 504 });
-      }
-      console.log('[send-invoice] Erreur réseau Brevo:', fetchErr.message);
-      return NextResponse.json({ error: `Erreur réseau: ${fetchErr.message}` }, { status: 502 });
-    }
-    clearTimeout(timeoutId);
-
-    console.log('[send-invoice] Réponse Brevo status:', brevoRes.status);
-
-    if (!brevoRes.ok) {
-      let errBody: any = {};
-      try { errBody = await brevoRes.json(); } catch {}
-      const msg: string = errBody.message || `Erreur Brevo (HTTP ${brevoRes.status})`;
-      console.log('[send-invoice] Erreur Brevo:', msg);
-
-      if (msg.toLowerCase().includes('unrecognised ip') || msg.toLowerCase().includes('ip address')) {
-        const ip = msg.match(/\d+\.\d+\.\d+\.\d+/)?.[0] || 'IP inconnue';
-        return NextResponse.json({
-          error: `IP Vercel non autorisée dans Brevo (${ip}). Allez sur app.brevo.com/security/authorised_ips et activez "Allow all IPs".`,
-        }, { status: 403 });
-      }
-
-      return NextResponse.json({ error: msg }, { status: brevoRes.status });
+    if (resendError) {
+      console.error('[send-invoice] Erreur Resend:', resendError);
+      return NextResponse.json({ error: resendError.message }, { status: 500 });
     }
 
-    console.log('[send-invoice] Email envoyé avec succès');
-    return NextResponse.json({ success: true });
+    console.log('[send-invoice] Email envoyé avec succès, id:', resendData?.id);
+    return NextResponse.json({ success: true, messageId: resendData?.id });
 
   } catch (error: any) {
-    console.log('[send-invoice] Erreur inattendue:', error.message);
+    console.error('[send-invoice] Erreur inattendue:', error.message);
     return NextResponse.json({ error: error.message || 'Erreur interne' }, { status: 500 });
   }
 }

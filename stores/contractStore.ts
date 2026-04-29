@@ -149,7 +149,13 @@ export const useContractStore = create<ContractState>((set, get) => ({
     if (!session?.user) throw new Error('Non authentifié');
     if (!profile) throw new Error('Profil introuvable');
 
-    const contractCount = (profile.contract_count || 0) + 1;
+    // Incrément atomique via RPC — élimine la race condition sur contract_count
+    const { data: contractCount, error: rpcError } = await supabase
+      .rpc('increment_contract_count', { p_user_id: session.user.id });
+    if (rpcError || contractCount == null) {
+      console.error('[createContract] RPC increment error:', rpcError);
+      throw new Error('Impossible de générer le numéro de contrat');
+    }
     const number = get().getNextContractNumber(formData.contract_type, contractCount);
     const now = new Date().toISOString();
 
@@ -241,11 +247,10 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
     if (error) throw error;
 
-    // Update profile count in background
+    // Mise à jour stats mensuelles + refresh profil en background (contract_count déjà incrémenté par la RPC)
     (async () => {
       try {
         await supabase.from('profiles').update({
-          contract_count: contractCount,
           monthly_contract_count: (profile.monthly_contract_count || 0) + 1,
           contract_month: new Date().toISOString().slice(0, 7),
         }).eq('id', session.user.id);

@@ -141,7 +141,9 @@
       "Bash(python3 scripts/search.py \"magnificent dropdown menus with icons only no emojis\" --domain ux -n 10)",
       "Bash(cat next.config.js)",
       "Bash(cat next.config.mjs)",
-      "Bash(cat next.config.ts)"
+      "Bash(cat next.config.ts)",
+      "Bash(ls \"app/api/invoices/[invoiceId]/\")",
+      "Bash(ls \"app/api/invoices/\")"
     ]
   },
   "enableAllProjectMcpServers": true,

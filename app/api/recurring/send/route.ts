@@ -231,17 +231,11 @@ async function generateInvoiceNumber(supabase: any, userId: string): Promise<str
   return `FAC-${year}-${sequence}`;
 }
 
-/**
- * Envoie l'email de facture récurrente via Brevo (anciennement Sendinblue)
- *
- * Note: Cette fonction utilise Brevo pour l'envoi d'emails
- * Vous devez configurer BREVO_API_KEY dans vos variables d'environnement
- */
 async function sendRecurringEmail(payload: EmailPayload): Promise<void> {
-  const brevoApiKey = process.env.BREVO_API_KEY;
+  const resendApiKey = process.env.RESEND_API_KEY;
 
-  if (!brevoApiKey) {
-    console.warn('BREVO_API_KEY non configurée, email non envoyé');
+  if (!resendApiKey) {
+    console.warn('RESEND_API_KEY non configurée, email non envoyé');
     return;
   }
 
@@ -252,11 +246,9 @@ async function sendRecurringEmail(payload: EmailPayload): Promise<void> {
     .replace(/\{\{due_date\}\}/g, new Date(payload.dueDate).toLocaleDateString('fr-FR'))
     .replace(/\{\{invoice_id\}\}/g, payload.invoiceId);
 
-  // Ajouter le lien vers la facture
   const invoiceUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invoices/${payload.invoiceId}`;
   message += `\n\nConsultez votre facture ici: ${invoiceUrl}`;
 
-  // HTML version de l'email
   const htmlMessage = `
     <!DOCTYPE html>
     <html>
@@ -315,40 +307,25 @@ async function sendRecurringEmail(payload: EmailPayload): Promise<void> {
     </html>
   `;
 
-  try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': brevoApiKey,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: {
-          email: process.env.BREVO_FROM_EMAIL || 'factures@facturme.app',
-          name: process.env.BREVO_FROM_NAME || 'Facturme',
-        },
-        to: [{ email: payload.to, name: payload.clientName }],
-        subject: payload.subject,
-        htmlContent: htmlMessage,
-        textContent: message,
-        replyTo: { email: process.env.BREVO_REPLY_TO || process.env.BREVO_FROM_EMAIL },
-        tags: ['recurring-invoice', payload.invoiceId],
-      }),
-    });
+  const { Resend } = await import('resend');
+  const resend = new Resend(resendApiKey);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const error = errorData.message || await response.text();
-      throw new Error(`Brevo API error: ${error}`);
-    }
+  const senderEmail = process.env.RESEND_FROM_EMAIL || 'noreply@factu.me';
+  const senderName = process.env.RESEND_FROM_NAME || 'Facturme';
 
-    const result = await response.json();
-    console.log(`Email sent successfully to ${payload.to}`, result);
-  } catch (error) {
-    console.error('Error sending email via Brevo:', error);
-    throw error;
+  const { error } = await resend.emails.send({
+    from: `${senderName} <${senderEmail}>`,
+    to: [payload.to],
+    subject: payload.subject,
+    html: htmlMessage,
+  });
+
+  if (error) {
+    console.error(`Erreur Resend pour ${payload.to}:`, error);
+    throw new Error(error.message);
   }
+
+  console.log(`Email envoyé à ${payload.to}`);
 }
 
 /**

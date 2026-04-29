@@ -71,11 +71,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     const vatAmount = items.reduce((s, i) => s + i.total * (i.vat_rate / 100), 0);
     const docType = formData.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
-
-    // Simple number generation - avoid RPC timeout
-    const invoiceCount = (profile.invoice_count || 0) + 1;
-    const number = get().getNextInvoiceNumber(prefix, invoiceCount);
     const currentMonth = new Date().toISOString().slice(0, 7);
+
+    // Incrément atomique via RPC — élimine la race condition sur invoice_count
+    const { data: invoiceCount, error: rpcError } = await getSupabaseClient()
+      .rpc('increment_invoice_count', { p_user_id: user.id });
+    if (rpcError || invoiceCount == null) {
+      console.error('[createInvoice] RPC increment error:', rpcError);
+      throw new Error('Impossible de générer le numéro de document');
+    }
+    const number = get().getNextInvoiceNumber(prefix, invoiceCount);
 
     const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
 
@@ -111,28 +116,25 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw error;
     }
 
-    // Update profile count in background (don't wait for it)
+    // Mise à jour des stats mensuelles en background (non critique)
     (async () => {
       try {
         await getSupabaseClient().from('profiles').update({
-          invoice_count: invoiceCount,
           monthly_invoice_count: (profile.monthly_invoice_count || 0) + 1,
           invoice_month: currentMonth
         }).eq('id', user.id);
 
-        // Refresh profile from server
-        const { data } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
-        if (data) {
-          // Update local auth store if available
+        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
+        if (freshProfile) {
           try {
             const { useAuthStore } = require('@/stores/authStore');
-            useAuthStore.getState().setProfile(data);
+            useAuthStore.getState().setProfile(freshProfile);
           } catch (e) {
             console.warn('[createInvoice] Could not update auth store:', e);
           }
         }
       } catch (e) {
-        console.warn('[createInvoice] Profile update failed (non-critical):', e);
+        console.warn('[createInvoice] Stats update failed (non-critical):', e);
       }
     })();
 
