@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { validateBody, sanitizeString, checkRateLimit } from '@/lib/api-validation';
+import { Resend } from 'resend';
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,23 +77,24 @@ export async function POST(req: NextRequest) {
       .single();
 
     const inviterName = profile?.company_name || profile?.first_name || profile?.email || 'Un utilisateur';
-    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://facturme.app'}/workspace/join?token=${token}`;
+    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me'}/workspace/join?token=${token}`;
 
     const ROLE_LABELS: Record<string, string> = {
       admin: 'Administrateur', member: 'Membre', viewer: 'Lecteur',
     };
 
-    // Send email via Brevo SMTP
-    const brevoKey = process.env.BREVO_SMTP_KEY;
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
-    const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
+    // Send email via Resend
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (RESEND_API_KEY) {
+      const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+      const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
 
-    if (brevoKey) {
-      const emailBody = {
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email }],
+      const resend = new Resend(RESEND_API_KEY);
+      await resend.emails.send({
+        from: `${senderName} <${senderEmail}>`,
+        to: [email],
         subject: `${inviterName} vous invite à rejoindre ${sanitizedWorkspaceName} sur Factu.me`,
-        htmlContent: `<!DOCTYPE html>
+        html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif">
@@ -141,15 +143,6 @@ export async function POST(req: NextRequest) {
   </table>
 </body>
 </html>`,
-      };
-
-      await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': brevoKey,
-        },
-        body: JSON.stringify(emailBody),
       });
     }
 

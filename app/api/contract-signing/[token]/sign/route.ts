@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase-server';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 import { sendContractNotification } from '@/lib/services/contract-notification-service';
+import { Resend } from 'resend';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -126,48 +127,47 @@ export async function POST(
           .eq('id', tokenRecord.contract_id)
           .single();
 
-        let attachment = undefined;
+        let attachments: Array<{ filename: string; content: Buffer }> = [];
         if (fullContract) {
           try {
             const templateData = dbToContractTemplate(fullContract, tokenRecord.contract_type);
             const pdfBytes = await generateContractPdfBuffer(templateData);
-            attachment = [{
-              content: Buffer.from(pdfBytes).toString('base64'),
-              name: `Contrat_signe_${CONTRACT_LABELS[tokenRecord.contract_type]}.pdf`,
+            attachments = [{
+              filename: `Contrat_signe_${CONTRACT_LABELS[tokenRecord.contract_type]}.pdf`,
+              content: Buffer.from(pdfBytes),
             }];
           } catch { /* PDF generation failed, send without attachment */ }
         }
 
         const label = CONTRACT_LABELS[tokenRecord.contract_type] || 'Contrat';
-        const BREVO_API_KEY = process.env.BREVO_API_KEY;
-        if (BREVO_API_KEY) {
-          const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
-          await fetch('https://api.brevo.com/v3/smtp/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },
-            body: JSON.stringify({
-              sender: { name: 'Factu.me', email: senderEmail },
-              to: [{ email: profile.email }],
-              subject: `${label} signé par ${signerName}`,
-              htmlContent: `
-                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-                  <div style="background:#1D9E75;padding:20px 24px;border-radius:8px 8px 0 0;">
-                    <h2 style="color:#fff;margin:0;font-size:18px;">Contrat signé</h2>
-                  </div>
-                  <div style="background:#fff;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
-                    <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">
-                      <strong>${signerName}</strong> a signé le ${label} électroniquement.
-                    </p>
-                    <p style="font-size:13px;color:#666;margin:0;">
-                      Le contrat signé est joint à cet email. Vous pouvez aussi le retrouver dans votre espace Factu.me.
-                    </p>
-                    <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
-                    <p style="font-size:11px;color:#aaa;margin:0;">Notification automatique — Factu.me</p>
-                  </div>
+        const RESEND_API_KEY = process.env.RESEND_API_KEY;
+        if (RESEND_API_KEY) {
+          const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+          const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
+
+          const resend = new Resend(RESEND_API_KEY);
+          await resend.emails.send({
+            from: `${senderName} <${senderEmail}>`,
+            to: [profile.email],
+            subject: `${label} signé par ${signerName}`,
+            html: `
+              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
+                <div style="background:#1D9E75;padding:20px 24px;border-radius:8px 8px 0 0;">
+                  <h2 style="color:#fff;margin:0;font-size:18px;">Contrat signé</h2>
                 </div>
-              `,
-              attachment,
-            }),
+                <div style="background:#fff;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+                  <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">
+                    <strong>${signerName}</strong> a signé le ${label} électroniquement.
+                  </p>
+                  <p style="font-size:13px;color:#666;margin:0;">
+                    Le contrat signé est joint à cet email. Vous pouvez aussi le retrouver dans votre espace Factu.me.
+                  </p>
+                  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+                  <p style="font-size:11px;color:#aaa;margin:0;">Notification automatique — Factu.me</p>
+                </div>
+              </div>
+            `,
+            attachments: attachments.length > 0 ? attachments : undefined,
           });
         }
       }

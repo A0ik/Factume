@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
+import { Resend } from 'resend';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -140,13 +141,13 @@ export async function POST(req: NextRequest) {
     await logSignatureEvent(admin, contractId, contractType, 'token_created', tokenData.id, { token: tokenData.token }, req);
 
     // Generer le PDF du contrat
-    let attachment = undefined;
+    let attachment: Array<{ filename: string; content: Buffer }> = [];
     try {
       const templateData = dbToContractTemplate(contract, contractType);
       const pdfBytes = await generateContractPdfBuffer(templateData);
       attachment = [{
-        content: Buffer.from(pdfBytes).toString('base64'),
-        name: `Contrat_${CONTRACT_LABELS[contractType]}_${employeeName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+        filename: `Contrat_${CONTRACT_LABELS[contractType]}_${employeeName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+        content: Buffer.from(pdfBytes),
       }];
     } catch (err) {
       console.error('Erreur generation PDF:', err);
@@ -157,14 +158,14 @@ export async function POST(req: NextRequest) {
     const signingUrl = `${appUrl}/sign/${tokenData.token}`;
     const label = CONTRACT_LABELS[contractType] || 'Contrat';
 
-    // Envoyer l'email via Brevo
-    const BREVO_API_KEY = process.env.BREVO_API_KEY;
-    if (!BREVO_API_KEY) {
+    // Envoyer l'email via Resend
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
       return NextResponse.json({ error: 'Service email non configuré' }, { status: 500 });
     }
 
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
-    const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+    const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
 
     const htmlContent = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
@@ -188,27 +189,21 @@ export async function POST(req: NextRequest) {
     let emailError = null;
 
     try {
-      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'api-key': BREVO_API_KEY },
-        body: JSON.stringify({
-          sender: { name: senderName, email: senderEmail },
-          to: [{ email: employeeEmail.trim(), name: employeeName }],
-          subject: `Demande de signature — Votre ${label}`,
-          htmlContent,
-          attachment,
-        }),
+      const resend = new Resend(RESEND_API_KEY);
+      const { data, error: resendError } = await resend.emails.send({
+        from: `${senderName} <${senderEmail}>`,
+        to: [employeeEmail.trim()],
+        subject: `Demande de signature — Votre ${label}`,
+        html: htmlContent,
+        attachments: attachment.length > 0 ? attachment : undefined,
       });
 
-      if (brevoRes.ok) {
-        emailSent = true;
-        await logSignatureEvent(admin, contractId, contractType, 'email_sent', tokenData.id, { recipient: employeeEmail.trim() }, req);
+      if (resendError) {
+        emailError = resendError.message || 'Erreur Resend';
+        await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError }, req);
       } else {
-        let errBody: { message?: string; code?: string } = {};
-        try { errBody = await brevoRes.json(); } catch { /* empty */ }
-        const statusCode = brevoRes.status;
-        emailError = `Brevo ${statusCode}: ${errBody.message || errBody.code || 'Erreur inconnue'}`;
-        await logSignatureEvent(admin, contractId, contractType, 'email_failed', tokenData.id, { error: emailError, statusCode, body: errBody }, req);
+        emailSent = true;
+        await logSignatureEvent(admin, contractId, contractType, 'email_sent', tokenData.id, { recipient: employeeEmail.trim(), messageId: data?.id }, req);
       }
     } catch (emailErr) {
       emailError = emailErr instanceof Error ? emailErr.message : 'Erreur inconnue';

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
+import { Resend } from 'resend';
 
 export type ContractNotificationType =
   | 'contract_signed'
@@ -115,9 +116,14 @@ export async function sendContractExpirationEmail(
   const { data: profile } = await supabase.from('profiles').select('email, first_name, company_name').eq('id', userId).single();
   if (!profile?.email) return;
 
-  const BREVO_API_KEY = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
-  const senderName = process.env.BREVO_SENDER_NAME || 'Factu.me';
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+  const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
+
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY non configurée, email d\'expiration non envoyé');
+    return;
+  }
 
   const contractList = contracts
     .map(
@@ -149,18 +155,12 @@ export async function sendContractExpirationEmail(
   `;
 
   try {
-    await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': BREVO_API_KEY || '',
-      },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email: profile.email, name: profile.first_name || profile.company_name || '' }],
-        subject: `[Factu.me] Contrats qui expirent bientôt`,
-        htmlContent,
-      }),
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: `${senderName} <${senderEmail}>`,
+      to: [profile.email],
+      subject: `[Factu.me] Contrats qui expirent bientôt`,
+      html: htmlContent,
     });
   } catch (err) {
     console.error('Failed to send expiration email:', err);
@@ -181,12 +181,4 @@ export async function getContractNotifications(userId: string): Promise<any[]> {
     .limit(50);
 
   return data || [];
-}
-
-/**
- * Marque une notification de contrat comme lue
- */
-export async function markContractNotificationRead(notificationId: string): Promise<void> {
-  const supabase = getSupabaseClient();
-  await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
 }

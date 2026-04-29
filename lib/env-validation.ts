@@ -19,9 +19,8 @@ const requiredEnvVars = {
   // OpenRouter (required for AI parsing)
   OPENROUTER_API_KEY: 'OpenRouter API key',
 
-  // Brevo (required for emails)
-  BREVO_API_KEY: 'Brevo API key',
-  BREVO_SENDER_EMAIL: 'Brevo sender email',
+  // Resend (required for emails)
+  RESEND_API_KEY: 'Resend API key',
 
   // App URL
   NEXT_PUBLIC_APP_URL: 'App URL',
@@ -33,6 +32,10 @@ const requiredEnvVars = {
 } as const;
 
 const optionalEnvVars = {
+  // Optional: Resend sender configuration
+  RESEND_FROM_EMAIL: 'Resend sender email',
+  RESEND_FROM_NAME: 'Resend sender name',
+
   // Optional: Stripe Price IDs (can be set dynamically)
   STRIPE_SOLO_MONTHLY_PRICE_ID: 'Stripe Solo Monthly Price ID',
   STRIPE_SOLO_YEARLY_PRICE_ID: 'Stripe Solo Yearly Price ID',

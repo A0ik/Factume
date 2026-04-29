@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { generatePdfBuffer } from '@/lib/pdf';
 import { createFacturXPdf } from '@/lib/facturx';
+import { Resend } from 'resend';
 
 /**
  * API PDP - Envoi de facture par email avec Factur-X
@@ -51,10 +52,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profil non trouvé' }, { status: 404 });
     }
 
-    const BREVO_API_KEY = process.env.BREVO_API_KEY;
-    if (!BREVO_API_KEY) {
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
       return NextResponse.json(
-        { error: 'Service email non configuré (BREVO_API_KEY manquante)' },
+        { error: 'Service email non configuré (RESEND_API_KEY manquante)' },
         { status: 500 }
       );
     }
@@ -72,59 +73,30 @@ export async function POST(req: NextRequest) {
     // Générer le Factur-X
     const pdfBuffer = await generatePdfBuffer(invoice, profile);
     const facturXPdf = await createFacturXPdf(pdfBuffer, invoice, profile);
-    const pdfBase64 = Buffer.from(facturXPdf).toString('base64');
 
-    // Préparer l'email avec Brevo
-    const senderName = profile.company_name || 'FacturMe';
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'contact@factu.me';
+    // Préparer l'email avec Resend
+    const senderName = profile.company_name || 'Factu.me';
+    const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
     const replyToEmail = profile.email || senderEmail;
 
     const emailSubject = `Facture ${invoice.number} - ${senderName}`;
     const emailHtml = generateInvoiceEmail(invoice, profile, message);
 
-    // Timeout de 15 secondes sur l'appel Brevo
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const resend = new Resend(RESEND_API_KEY);
+    const { error: resendError } = await resend.emails.send({
+      from: `${senderName} <${senderEmail}>`,
+      to: [recipientEmail],
+      replyTo: replyToEmail,
+      subject: emailSubject,
+      html: emailHtml,
+      attachments: [{
+        filename: `Facture_${invoice.number}_Factur-X.pdf`,
+        content: facturXPdf,
+      }],
+    });
 
-    let brevoRes: Response;
-    try {
-      brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': BREVO_API_KEY
-        },
-        body: JSON.stringify({
-          sender: { name: senderName, email: senderEmail },
-          to: [{ email: recipientEmail }],
-          replyTo: { name: senderName, email: replyToEmail },
-          subject: emailSubject,
-          htmlContent: emailHtml,
-          attachment: [{
-            name: `Facture_${invoice.number}_Factur-X.pdf`,
-            content: pdfBase64
-          }],
-        }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr: any) {
-      clearTimeout(timeoutId);
-      if (fetchErr.name === 'AbortError') {
-        return NextResponse.json({
-          error: 'Timeout Brevo (15s). L\'IP Vercel est probablement bloquée.',
-        }, { status: 504 });
-      }
-      return NextResponse.json(
-        { error: `Erreur réseau: ${fetchErr.message}` },
-        { status: 502 }
-      );
-    }
-    clearTimeout(timeoutId);
-
-    if (!brevoRes.ok) {
-      let errBody: any = {};
-      try { errBody = await brevoRes.json(); } catch {}
-      const msg: string = errBody.message || `Erreur Brevo (HTTP ${brevoRes.status})`;
+    if (resendError) {
+      const msg = resendError.message || 'Erreur Resend';
 
       // Logger l'erreur
       await supabase.from('facturx_audit_logs').insert({
@@ -137,7 +109,7 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString()
       });
 
-      return NextResponse.json({ error: msg }, { status: brevoRes.status });
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
 
     // Logger le succès
@@ -253,7 +225,7 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
         <!-- Footer -->
         <tr><td style="background:#f9fafb;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb">
           <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0;line-height:1.7">
-            Ce document vous est transmis par <strong>${profile.company_name}</strong> via FacturMe<br/>
+            Ce document vous est transmis par <strong>${profile.company_name}</strong> via Factu.me<br/>
             ${profile.siret ? `SIRET : ${profile.siret} · ` : ''}${profile.legal_status === 'auto-entrepreneur' ? 'TVA non applicable, art. 293 B du CGI' : ''}
           </p>
         </td></tr>
