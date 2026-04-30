@@ -1,15 +1,17 @@
 'use client';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Truck, Calculator, HelpCircle,
   Bell, Building2, Crown, Sparkles, Rocket, Zap, Target,
+  Moon, Sun,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useThemeStore } from '@/stores/themeStore';
 import { cn, getInitials } from '@/lib/utils';
 
 const NAV_MAIN = [
@@ -48,9 +50,9 @@ interface Props {
 
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const { profile } = useAuthStore();
   const { tier } = useSubscription();
+  const { theme, toggle } = useThemeStore();
 
   // Close on route change
   useEffect(() => { onClose(); }, [pathname]);
@@ -73,12 +75,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
           'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
           active
             ? 'bg-primary/10 text-primary'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
         )}
       >
         <span className={cn(
           'flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0',
-          active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500',
+          active ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
         )}>
           <Icon size={16} />
         </span>
@@ -107,30 +109,39 @@ export default function MobileDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-white flex flex-col shadow-2xl"
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-white dark:bg-gray-900 flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-black text-sm">
                   {getInitials(profile?.company_name || profile?.first_name || 'U')}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-900 truncate max-w-[140px]">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[140px]">
                     {profile?.company_name || profile?.first_name || 'Mon compte'}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <TierIcon size={10} className="text-primary" />
-                    <span className="text-[10px] text-gray-500 font-medium">{TIER_LABEL[tier] || 'Gratuit'}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{TIER_LABEL[tier] || 'Gratuit'}</span>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggle}
+                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
+                >
+                  {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Nav content */}
@@ -142,7 +153,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
 
               {/* Documents hub */}
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-1">Types de documents</p>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-4 mb-1">Types de documents</p>
                 <div className="space-y-0.5">
                   {NAV_DOCS.map((item) => <NavItem key={item.href} {...item} />)}
                 </div>
@@ -150,7 +161,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
 
               {/* Tools */}
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-1">Outils</p>
+                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-4 mb-1">Outils</p>
                 <div className="space-y-0.5">
                   {NAV_TOOLS.map((item) => <NavItem key={item.href} {...item} />)}
                 </div>
@@ -159,7 +170,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
 
             {/* Footer CTA */}
             {tier === 'free' && (
-              <div className="px-3 pb-4 border-t border-gray-100 pt-3">
+              <div className="px-3 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
                 <Link
                   href="/trial"
                   className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white"

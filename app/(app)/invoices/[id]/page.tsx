@@ -54,7 +54,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profile } = useAuthStore();
+  const { profile, session } = useAuthStore();
   const { invoices, updateInvoiceStatus, deleteInvoice, duplicateInvoice } = useDataStore();
   const { isFree, isPro, isBusiness, isTrialActive, tier } = useSubscription();
 
@@ -109,7 +109,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         toast.success('Paiement reçu ! La facture a été marquée comme payée.', { duration: 5000 });
       });
     }
-  }, [searchParams, invoice?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, invoice?.id, id]);
 
   if (!invoice) {
     return (

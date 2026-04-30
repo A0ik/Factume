@@ -149,7 +149,12 @@
       "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"expense tracking fintech SaaS glassmorphism\" --design-system -p \"FacturmeWeb\")",
       "Bash(rtf ls *)",
       "Bash(rtk rmdir *)",
-      "mcp__claude_ai_Vercel__get_project"
+      "mcp__claude_ai_Vercel__get_project",
+      "mcp__claude_ai_Vercel__get_deployment",
+      "Bash(grep -r \"any as\\\\|<any>\\\\|: any\" /c/Users/salma/Desktop/FACTU.ME --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -r \"\\\\: any\" /c/Users/salma/Desktop/FACTU.ME --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -r \"getServerSession\\\\|getSession\\\\|getUser\" /c/Users/salma/Desktop/FACTU.ME --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "Bash(grep -E \"^-.*\\\\.\\(json|js|ts\\)$\")"
     ]
   },
   "enableAllProjectMcpServers": true,
