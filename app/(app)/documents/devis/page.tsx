@@ -126,17 +126,13 @@ export default function DevisPage() {
   };
 
   const handleRequestSignature = async (quote: any) => {
-    if (!quote.client?.email) {
-      toast.error('Ce devis n\'a pas d\'email client associé');
-      return;
-    }
-
     setSelectedQuote(quote);
+    setEmailAddress(quote.client?.email || '');
     setSignModalOpen(true);
   };
 
   const confirmRequestSignature = async () => {
-    if (!selectedQuote || !session) return;
+    if (!selectedQuote || !session || !emailAddress.trim()) return;
 
     setSigning(true);
     try {
@@ -148,8 +144,8 @@ export default function DevisPage() {
         },
         body: JSON.stringify({
           quoteId: selectedQuote.id,
-          clientEmail: selectedQuote.client.email,
-          clientName: selectedQuote.client.name,
+          clientEmail: emailAddress.trim(),
+          clientName: selectedQuote.client?.name || selectedQuote.client_name_override || 'Client',
         }),
       });
 
@@ -171,6 +167,7 @@ export default function DevisPage() {
 
       setSignModalOpen(false);
       setSelectedQuote(null);
+      setEmailAddress('');
       fetchInvoices();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la demande de signature');
@@ -630,11 +627,19 @@ export default function DevisPage() {
               <div className="space-y-3 mb-6">
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
                   <p className="text-sm text-gray-600 dark:text-gray-400">Client</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">{selectedQuote.client?.name}</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{selectedQuote.client?.name || selectedQuote.client_name_override || '-'}</p>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">{selectedQuote.client?.email}</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Adresse e-mail du destinataire
+                  </label>
+                  <input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="client@exemple.com"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                  />
                 </div>
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                   <p className="text-sm text-blue-800 dark:text-blue-300">
@@ -648,6 +653,7 @@ export default function DevisPage() {
                   onClick={() => {
                     setSignModalOpen(false);
                     setSelectedQuote(null);
+                    setEmailAddress('');
                   }}
                   disabled={signing}
                   className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 font-medium"
@@ -656,7 +662,7 @@ export default function DevisPage() {
                 </button>
                 <button
                   onClick={confirmRequestSignature}
-                  disabled={signing}
+                  disabled={signing || !emailAddress.trim()}
                   className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
                 >
                   {signing ? (
