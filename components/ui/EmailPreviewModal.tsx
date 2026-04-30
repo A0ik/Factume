@@ -72,10 +72,17 @@ export default function EmailPreviewModal({
     try {
       await onSend(email.trim(), subject, message);
       setSent(true);
-      setTimeout(() => onClose(), 1500);
+      // Fermer la modale après un court délai pour montrer le succès
+      setTimeout(() => {
+        onClose();
+        // Reset l'état pour la prochaine ouverture
+        setTimeout(() => {
+          setSent(false);
+          setIsSending(false);
+        }, 300);
+      }, 1200);
     } catch (e: any) {
       console.error('Error sending email:', e);
-    } finally {
       setIsSending(false);
     }
   };

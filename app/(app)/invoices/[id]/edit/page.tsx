@@ -144,6 +144,11 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const [orderNumber, setOrderNumber] = useState((invoice as any)?.order_number || '');
   const [legalMentions, setLegalMentions] = useState((invoice as any)?.legal_mentions || '');
 
+  // Client contact fields (modifiables même si client lié)
+  const [clientEmail, setClientEmail] = useState((invoice as any)?.client_email || invoice?.client?.email || '');
+  const [clientPhone, setClientPhone] = useState((invoice as any)?.client_phone || invoice?.client?.phone || '');
+  const [clientAddress, setClientAddress] = useState((invoice as any)?.client_address || invoice?.client?.address || '');
+
   // Calendar visibility
   const [showCalendar, setShowCalendar] = useState(false);
   const [showDueCalendar, setShowDueCalendar] = useState(false);
@@ -338,6 +343,10 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         order_reference: orderReference || undefined,
         order_number: orderNumber || undefined,
         legal_mentions: legalMentions || undefined,
+        // Nouveaux champs modifiables
+        client_email: clientEmail || undefined,
+        client_phone: clientPhone || undefined,
+        client_address: clientAddress || undefined,
       });
       toast.success('Facture modifiée avec succès !');
       setSuccess(true);
@@ -637,7 +646,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 <User size={14} className="text-gray-400" />
                 <h3 className="text-sm font-bold text-gray-700">Client</h3>
               </div>
-              <div className="p-4">
+              <div className="p-4 space-y-3">
                 <div className="relative">
                   <Input
                     placeholder="Nom du client ou de l'entreprise"
@@ -647,7 +656,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                       {suggestions.map((c) => (
                         <button
                           key={c.id}
@@ -666,9 +675,42 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                     </div>
                   )}
                 </div>
+
+                {/* Email et adresse du client - modifiables */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-gray-400 font-medium block mb-1.5">Email du client</label>
+                    <Input
+                      type="email"
+                      placeholder="client@entreprise.com"
+                      value={clientEmail}
+                      onChange={(e) => setClientEmail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-400 font-medium block mb-1.5">Téléphone</label>
+                    <Input
+                      type="tel"
+                      placeholder="+33 6 00 00 00 00"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-gray-400 font-medium block mb-1.5">Adresse complète</label>
+                  <Textarea
+                    placeholder="123 Rue Example\n75000 Paris\nFrance"
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
                 {clientId && (
-                  <p className="text-xs text-primary flex items-center gap-1 mt-2">
-                    <CheckCircle2 size={11} /> Client associe — infos bancaires incluses automatiquement
+                  <p className="text-xs text-primary flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Client associé — vous pouvez modifier les infos ci-dessus
                   </p>
                 )}
               </div>

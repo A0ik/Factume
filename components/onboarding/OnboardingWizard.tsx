@@ -63,10 +63,15 @@ export function OnboardingWizard() {
 
   useEffect(() => {
     // Check if user has already seen onboarding or has created content
-    const hasSeenOnboarding = localStorage.getItem('onboarding_completed');
+    const hasSeenOnboarding = localStorage.getItem('onboarding_completed') === 'true';
+    const hasCompletedInProfile = profile?.onboarding_done === true;
     const hasContent = clients.length > 0 || invoices.length > 0;
 
-    if (!hasSeenOnboarding && !hasContent && profile) {
+    // Ne montrer le tutoriel que si :
+    // 1. L'utilisateur n'a PAS déjà vu le tutoriel (localStorage OU profil)
+    // 2. L'utilisateur n'a PAS de contenu (pas de clients, pas de factures)
+    // 3. Le profil est chargé
+    if (!hasSeenOnboarding && !hasCompletedInProfile && !hasContent && profile) {
       setIsOpen(true);
     }
   }, [profile, clients, invoices]);

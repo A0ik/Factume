@@ -163,6 +163,14 @@ export interface Invoice {
   order_number?: string;
   internal_notes?: string;
   legal_mentions?: string;
+  // Contact client (modifiables même si client lié)
+  client_email?: string;
+  client_phone?: string;
+  client_address?: string;
+  client_city?: string;
+  client_postal_code?: string;
+  client_siret?: string;
+  client_vat_number?: string;
   payment_terms_id?: string;
   client_email?: string;
   client_phone?: string;

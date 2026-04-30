@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmailPreviewModal from '@/components/ui/EmailPreviewModal';
+import QuoteActionModal from '@/components/ui/QuoteActionModal';
 import PdfPreviewModal from '@/components/ui/PdfPreviewModal';
 import PaymentProviderModal from '@/components/ui/PaymentProviderModal';
 import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton';
@@ -62,6 +63,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showQuoteActionModal, setShowQuoteActionModal] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -156,12 +158,48 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) throw new Error(data.error);
       if (invoice.status === 'draft') await updateInvoiceStatus(id, 'sent');
       toast.success(`Facture envoyée à ${email} !`);
-      setShowEmailModal(false);
+      // Ne fermons pas la modale ici - laisser EmailPreviewModal gérer la fermeture avec l'état de succès
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'envoi.");
       throw e;
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  const handleRequestSignature = async () => {
+    if (!session || !invoice) return;
+
+    try {
+      const res = await fetch('/api/quote-signing/create', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quoteId: invoice.id,
+          clientEmail: invoice.client?.email || '',
+          clientName: invoice.client?.name || invoice.client_name_override || 'Client',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.alreadyExists) {
+        toast.info('Une demande de signature est déjà en cours. Un nouvel email a été envoyé au client.');
+      } else {
+        toast.success('Demande de signature envoyée ! Le client recevra un email avec le lien de signature.');
+      }
+
+      // Marquer le devis comme envoyé
+      if (invoice.status === 'draft') {
+        await updateInvoiceStatus(id, 'sent');
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de la demande de signature.");
+      throw e;
     }
   };
 
@@ -537,7 +575,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </button>
 
             <button
-              onClick={() => { setIsReminder(false); setShowEmailModal(true); }}
+              onClick={() => {
+                if (invoice.document_type === 'quote') {
+                  setShowQuoteActionModal(true);
+                } else {
+                  setIsReminder(false);
+                  setShowEmailModal(true);
+                }
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold transition-colors"
             >
               <Mail size={16} />
@@ -708,6 +753,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           onSend={handleSendEmail}
           defaultEmail={invoice.client?.email || ''}
           isReminder={isReminder}
+        />
+      )}
+
+      {/* Quote action modal - choix entre envoi email et signature */}
+      {invoice && profile && (
+        <QuoteActionModal
+          invoice={invoice}
+          isOpen={showQuoteActionModal}
+          onClose={() => setShowQuoteActionModal(false)}
+          onSendEmail={() => {
+            setShowQuoteActionModal(false);
+            setIsReminder(false);
+            setShowEmailModal(true);
+          }}
+          onRequestSignature={handleRequestSignature}
         />
       )}
 
