@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import {
-  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet, Moon, Sun
+  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet
 } from 'lucide-react';
 
 /* ─── Particles Canvas ─── */
@@ -126,13 +125,13 @@ function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-        <span className="font-semibold text-base pr-4 text-slate-900 dark:text-slate-100">{question}</span>
-        <ChevronDown className={`w-5 h-5 text-slate-400 dark:text-slate-500 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors">
+        <span className="font-semibold text-base pr-4 text-slate-900">{question}</span>
+        <ChevronDown className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
       <div className={`overflow-hidden transition-all duration-400 ease-in-out ${open ? 'max-h-40 px-5 pb-5' : 'max-h-0'}`}>
-        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{answer}</p>
+        <p className="text-sm text-slate-500 leading-relaxed">{answer}</p>
       </div>
     </div>
   );
@@ -194,7 +193,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased overflow-x-hidden min-h-screen">
+    <div className="font-sans bg-white text-slate-900 antialiased overflow-x-hidden min-h-screen">
 
       {/* Progress bar */}
       <div className="fixed top-0 left-0 h-1 bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 z-[100] origin-left" style={{ width: scrolled ? '100%' : '0%', transition: 'width 0.3s' }} />
@@ -207,7 +206,7 @@ export default function LandingPage() {
       </div>
 
       {/* ═══════════ NAVBAR ═══════════ */}
-      <nav className={`fixed top-2 sm:top-3 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto z-50 backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90 rounded-full border transition-all duration-300 sm:max-w-[680px] lg:max-w-[800px] xl:max-w-[900px] px-3 sm:px-5 py-2 sm:py-2.5 ${scrolled ? 'border-brand-200/60 dark:border-brand-900/50 shadow-lg shadow-brand-500/8 dark:shadow-black/50' : 'border-brand-100/30 dark:border-slate-700/50 shadow-md shadow-black/[0.03]'}`}>
+      <nav className={`fixed top-2 sm:top-3 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto z-50 backdrop-blur-2xl bg-white/90 rounded-full border transition-all duration-300 sm:max-w-[680px] lg:max-w-[800px] xl:max-w-[900px] px-3 sm:px-5 py-2 sm:py-2.5 ${scrolled ? 'border-brand-200/60 shadow-lg shadow-brand-500/8' : 'border-brand-100/30 shadow-md shadow-black/[0.03]'}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -217,22 +216,21 @@ export default function LandingPage() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6 lg:gap-8">
-            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Fonctionnalités</a>
-            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">IA</a>
-            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Tarifs</a>
+            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">Fonctionnalités</a>
+            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">IA</a>
+            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">Tarifs</a>
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors px-2.5 py-1.5 rounded-full hover:bg-brand-50 dark:hover:bg-brand-950/50">
+            <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-medium text-slate-600 hover:text-brand-600 transition-colors px-2.5 py-1.5 rounded-full hover:bg-brand-50">
               <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>Connexion</span>
             </Link>
             <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3.5 py-1.5 rounded-full transition-all shadow-md shadow-brand-500/20 active:scale-[0.97]">
               <span className="hidden sm:inline">Essai gratuit</span><span className="sm:hidden">Essai</span><ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-1.5 rounded-full hover:bg-brand-50 dark:hover:bg-slate-800 transition-colors">
-              <Menu className="w-4.5 h-4.5 text-slate-600 dark:text-slate-300" />
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-1.5 rounded-full hover:bg-brand-50 transition-colors">
+              <Menu className="w-4.5 h-4.5 text-slate-600" />
             </button>
           </div>
         </div>
@@ -240,17 +238,13 @@ export default function LandingPage() {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="fixed top-14 sm:top-16 left-2 right-2 sm:left-4 sm:right-4 z-50 md:hidden backdrop-blur-2xl bg-white/95 dark:bg-slate-900/95 rounded-2xl border border-brand-100/30 dark:border-slate-700/50 shadow-xl shadow-black/[0.06] dark:shadow-black/50 overflow-hidden">
+        <div className="fixed top-14 sm:top-16 left-2 right-2 sm:left-4 sm:right-4 z-50 md:hidden backdrop-blur-2xl bg-white/95 rounded-2xl border border-brand-100/30 shadow-xl shadow-black/[0.06] overflow-hidden">
           <div className="px-4 py-3 space-y-1">
-            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="block text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/50 py-2.5 px-3 rounded-xl transition-colors">Fonctionnalités</a>
-            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="block text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/50 py-2.5 px-3 rounded-xl transition-colors">Intelligence Artificielle</a>
-            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="block text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/50 py-2.5 px-3 rounded-xl transition-colors">Tarifs</a>
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
-              <div className="flex items-center justify-between py-2.5 px-3">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Mode sombre</span>
-                <ThemeToggle />
-              </div>
-              <Link href="/login" className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/50 py-2.5 px-3 rounded-xl transition-colors">
+            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Fonctionnalités</a>
+            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Intelligence Artificielle</a>
+            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Tarifs</a>
+            <div className="pt-2 border-t border-slate-100 mt-1">
+              <Link href="/login" className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">
                 <LogIn className="w-4 h-4" />Se connecter
               </Link>
             </div>
