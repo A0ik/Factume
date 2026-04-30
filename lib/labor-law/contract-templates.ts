@@ -972,7 +972,7 @@ function generateArticles(data: ContractTemplateData): string {
 // ─────────────────────────────────────────────
 
 function buildContractHTML(data: ContractTemplateData): string {
-  const accent = data.accentColor || '#2563eb';
+  const accent = data.accentColor || '#1a1a1a';
   const [role1, role2] = getRoleNames(data.contractType);
   const title = getContractTitle(data.contractType);
   const summaryRows = getSummaryRows(data);

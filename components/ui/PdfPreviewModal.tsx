@@ -2,6 +2,7 @@
 
 import { X, Loader2, Download, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Invoice, Profile } from '@/types';
 import { generateInvoiceHtml } from '@/lib/pdf';
 
@@ -11,48 +12,83 @@ interface PdfPreviewModalProps {
   onClose: () => void;
 }
 
-/**
- * PdfPreviewModal - Modal de prévisualisation PDF
- *
- * Affiche un aperçu du PDF avant envoi par email
- */
 export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalProps) {
+  const [pdfUrl, setPdfUrl] = useState<string>('');
   const [html, setHtml] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [useHtmlFallback, setUseHtmlFallback] = useState(false);
+  const urlRef = useRef<string>('');
 
   useEffect(() => {
-    // Générer le HTML du PDF
-    try {
-      const generatedHtml = generateInvoiceHtml(invoice, profile);
-      setHtml(generatedHtml);
-      setLoading(false);
-    } catch (error) {
-      console.error('[PdfPreviewModal] Erreur génération HTML:', error);
-      setLoading(false);
-    }
+    let cancelled = false;
+
+    const generate = async () => {
+      // Custom templates can't be rendered by React-PDF → use HTML
+      if (profile?.custom_template_html) {
+        setHtml(generateInvoiceHtml(invoice, profile));
+        setUseHtmlFallback(true);
+        setLoading(false);
+        return;
+      }
+
+      // Use same React-PDF renderer as the email attachment
+      try {
+        const { pdf } = await import('@react-pdf/renderer');
+        const { PdfDocument } = await import('@/components/pdf-document');
+        const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
+        const blob = await (pdf as any)(element).toBlob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+        setPdfUrl(url);
+        setLoading(false);
+      } catch {
+        // Fallback to HTML if React-PDF fails
+        if (!cancelled) {
+          setHtml(generateInvoiceHtml(invoice, profile));
+          setUseHtmlFallback(true);
+          setLoading(false);
+        }
+      }
+    };
+
+    generate();
+    return () => {
+      cancelled = true;
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    };
   }, [invoice, profile]);
 
   const handleDownload = () => {
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${invoice.number.replace(/\//g, '-')}.html`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
+    if (useHtmlFallback) {
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoice.number.replace(/\//g, '-')}.html`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    } else if (pdfUrl) {
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
+    }
   };
 
   const handleOpenNewTab = () => {
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    if (useHtmlFallback) {
+      const blob = new Blob([html], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } else if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
   };
+
+  const isReady = !loading && (pdfUrl || html);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -74,7 +110,7 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              disabled={loading || !html}
+              disabled={!isReady}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
             >
               <Download size={16} />
@@ -82,11 +118,11 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
             </button>
             <button
               onClick={handleOpenNewTab}
-              disabled={loading || !html}
+              disabled={!isReady}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
               <ExternalLink size={16} />
-              Ouvrir dans un nouvel onglet
+              Ouvrir dans un onglet
             </button>
             <button
               onClick={onClose}
@@ -106,13 +142,18 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
                 <p className="text-sm text-gray-500">Génération de l'aperçu...</p>
               </div>
             </div>
-          ) : (
+          ) : useHtmlFallback ? (
             <iframe
-              ref={iframeRef}
               srcDoc={html}
               className="w-full h-full rounded-xl border-0 shadow-lg bg-white"
               title="PDF Preview"
               sandbox="allow-same-origin"
+            />
+          ) : (
+            <iframe
+              src={pdfUrl}
+              className="w-full h-full rounded-xl border-0 shadow-lg bg-white"
+              title="PDF Preview"
             />
           )}
         </div>

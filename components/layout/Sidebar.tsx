@@ -137,14 +137,14 @@ export default function Sidebar() {
                 'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
                 active || subActive
                   ? 'bg-primary/10 text-primary'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
               )}
             >
               <span className={cn(
                 'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
                 active || subActive
                   ? 'bg-primary text-white shadow-md shadow-primary/30'
-                  : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
+                  : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
               )}>
                 <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
               </span>
@@ -161,7 +161,7 @@ export default function Sidebar() {
                 'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
                 active || subActive
                   ? 'text-primary hover:bg-primary/20'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
               )}
             >
               <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
@@ -186,14 +186,14 @@ export default function Sidebar() {
                           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
                           sa
                             ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800',
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200',
                         )}
                       >
                         <span className={cn(
                           'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
                           sa
                             ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-white/10'
                         )}>
                           <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
                         </span>
@@ -225,14 +225,14 @@ export default function Sidebar() {
           'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
           active
             ? 'bg-primary/10 text-primary'
-            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
         )}
       >
         <span className={cn(
           'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
           active
             ? 'bg-primary text-white shadow-md shadow-primary/30'
-            : 'bg-gray-100 text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
+            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
         )}>
           <Icon size={17} strokeWidth={active ? 2.5 : 1.8} />
         </span>
@@ -275,7 +275,7 @@ export default function Sidebar() {
       <div className="relative px-4 py-3 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
         <button
           onClick={() => { const e = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }); window.dispatchEvent(e); }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-400 hover:text-gray-600 transition-all text-sm group"
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-100 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all text-sm group"
         >
           <Search size={15} className="group-hover:scale-110 transition-transform" />
           <span className="flex-1 text-left font-medium">Rechercher...</span>
@@ -298,7 +298,7 @@ export default function Sidebar() {
         {/* Divider + quick stats */}
         <div className="pt-4 pb-2">
           <div className="h-px bg-gray-100 dark:bg-white/5 mx-1 mb-4" />
-          <div className="mx-1 px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
+          <div className="mx-1 px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/10">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp size={12} className="text-primary" />
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aperçu rapide</p>
@@ -309,7 +309,7 @@ export default function Sidebar() {
                 { label: 'Attente', value: invoices.filter(i => i.status === 'sent').length,  color: 'text-amber-500' },
                 { label: 'Retard',  value: overdueCount,                                        color: overdueCount > 0 ? 'text-red-500' : 'text-gray-300' },
               ].map(({ label, value, color }) => (
-                <div key={label} className="text-center p-2 rounded-xl hover:bg-white dark:hover:bg-white/10 transition-colors cursor-default">
+                <div key={label} className="text-center p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-colors cursor-default">
                   <p className={cn('text-xl font-black', color)}>{value}</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">{label}</p>
                 </div>

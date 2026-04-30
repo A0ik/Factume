@@ -113,12 +113,12 @@ export const UserDropdown = ({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="w-72 rounded-2xl bg-white border border-gray-100 p-0 shadow-2xl shadow-black/10"
+        className="w-72 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-0 shadow-2xl shadow-black/10"
         align="end"
         sideOffset={12}
       >
         {/* ── Header with avatar ── */}
-        <div className="p-4 bg-gradient-to-br from-gray-50 to-white rounded-t-2xl border-b border-gray-100">
+        <div className="p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-2xl border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="relative">
               <Avatar className="size-12 border-2 border-white shadow-sm">
@@ -133,8 +133,8 @@ export const UserDropdown = ({
               )} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-gray-900 truncate leading-tight">{user.name}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+              <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate leading-tight">{user.name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
               {user.tier && (
                 <div className="flex items-center gap-1 mt-1">
                   <Crown size={9} className={user.tier === 'free' ? 'text-gray-400' : 'text-amber-500'} />
@@ -198,7 +198,7 @@ export const UserDropdown = ({
                 <span>Changer de compte</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent className="bg-white border border-gray-100 rounded-xl shadow-xl p-1.5 min-w-[230px]">
+                <DropdownMenuSubContent className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl p-1.5 min-w-[230px]">
                   {savedAccounts.length > 0 && (
                     <>
                       <p className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">

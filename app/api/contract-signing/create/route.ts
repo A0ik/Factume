@@ -4,6 +4,8 @@ import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 import { Resend } from 'resend';
 
+export const maxDuration = 60;
+
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
   cdd: 'contracts_cdd',

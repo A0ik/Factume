@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
+import React from 'react';
+import { PdfDocument } from '@/components/pdf-document';
+
+export const maxDuration = 60;
 
 // Helper pour logger les événements de signature de devis
 async function logQuoteSignatureEvent(
@@ -122,23 +127,21 @@ export async function POST(req: NextRequest) {
     // Log la création du token
     await logQuoteSignatureEvent(admin, quoteId, 'token_created', tokenData.id, { token: tokenData.token }, req);
 
-    // Générer le PDF du devis
+    // Générer le PDF du devis directement (sans appel HTTP interne)
     let attachment: Array<{ filename: string; content: Buffer }> = [];
     try {
-      // Utiliser l'endpoint existant pour générer le PDF
-      const pdfRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/invoices/pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-        body: JSON.stringify({ invoiceId: quoteId }),
-      });
+      const { data: userProfile } = await admin
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (pdfRes.ok) {
-        const pdfBuffer = await pdfRes.arrayBuffer();
-        attachment = [{
-          filename: `Devis_${quote.number}_${clientName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-          content: Buffer.from(pdfBuffer),
-        }];
-      }
+      const element = React.createElement(PdfDocument, { invoice: quote, profile: userProfile });
+      const pdfBytes = await renderToBuffer(element as any);
+      attachment = [{
+        filename: `Devis_${quote.number}_${clientName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+        content: Buffer.from(pdfBytes),
+      }];
     } catch (err) {
       console.error('Erreur génération PDF devis:', err);
     }

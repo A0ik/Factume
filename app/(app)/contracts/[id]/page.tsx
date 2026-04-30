@@ -37,7 +37,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const searchParams = useSearchParams();
   const contractType = (searchParams.get('type') || 'cdi') as ContractType;
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const { getContractDetail, deleteContract, duplicateContract, updateContractStatus, renewContract } = useContractStore();
 
   const [contract, setContract] = useState<Contract | null>(null);
@@ -56,8 +56,8 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const [attachments, setAttachments] = useState<ContractAttachment[]>([]);
 
   useEffect(() => {
-    loadContract();
-  }, [id, contractType]);
+    if (initialized) loadContract();
+  }, [id, contractType, initialized]);
 
   const loadContract = async () => {
     setLoading(true);

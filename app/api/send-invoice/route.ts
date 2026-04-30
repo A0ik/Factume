@@ -5,6 +5,8 @@ import { Resend } from 'resend';
 import React from 'react';
 import { PdfDocument } from '@/components/pdf-document';
 
+export const maxDuration = 60;
+
 const safe = (s: unknown) => String(s ?? '').replace(/[^\x00-\xFF]/g, '?');
 
 function buildEmailHtml(invoice: any, profile: any, senderName: string, isReminder = false, customMessage?: string): string {

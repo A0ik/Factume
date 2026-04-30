@@ -4,10 +4,10 @@ import { createAdminClient } from '@/lib/supabase-server';
 // PATCH - Modifier un commentaire
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string; commentId: string }> }
+  { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   try {
-    const { invoiceId, commentId } = await params;
+    const { id, commentId } = await params;
     const { content } = await req.json();
 
     if (!content || !content.trim()) {
@@ -71,10 +71,10 @@ export async function PATCH(
 // DELETE - Supprimer un commentaire
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string; commentId: string }> }
+  { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   try {
-    const { invoiceId, commentId } = await params;
+    const { id, commentId } = await params;
     const admin = createAdminClient();
 
     // Vérifier l'authentification

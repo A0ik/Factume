@@ -85,6 +85,15 @@
   background-color: #0f172a;
   color: #f1f5f9;
 }
+
+/* Dark mode mobile menu variables */
+.dark {
+  --component-inactive-color: #94a3b8;
+  --component-bg: #0f172a;
+  --component-shadow: #1e293b;
+  --component-active-bg: #1e293b;
+  --component-line-inactive-color: #334155;
+}
 .dark .bg-white { background-color: #1e293b !important; }
 .dark .bg-gray-50 { background-color: #0f172a !important; }
 .dark .bg-gray-100 { background-color: #1e293b !important; }

@@ -19,6 +19,7 @@ import {
   Calendar,
   PenTool,
   Mail,
+  Send,
   Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -37,8 +38,11 @@ export default function DevisPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedDevis, setSelectedDevis] = useState<Set<string>>(new Set());
   const [signModalOpen, setSignModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
   const [signing, setSigning] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
 
   useEffect(() => {
     fetchInvoices();
@@ -87,6 +91,38 @@ export default function DevisPage() {
       newSelected.add(id);
     }
     setSelectedDevis(newSelected);
+  };
+
+  const handleSendEmail = (quote: any) => {
+    setSelectedQuote(quote);
+    setEmailAddress(quote.client?.email || '');
+    setEmailModalOpen(true);
+  };
+
+  const confirmSendEmail = async () => {
+    if (!selectedQuote || !emailAddress.trim()) return;
+    setSendingEmail(true);
+    try {
+      const res = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceId: selectedQuote.id,
+          email: emailAddress.trim(),
+          profile: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur envoi');
+      toast.success(`Devis envoyé à ${emailAddress.trim()} !`);
+      setEmailModalOpen(false);
+      setSelectedQuote(null);
+      fetchInvoices();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handleRequestSignature = async (quote: any) => {
@@ -351,6 +387,13 @@ export default function DevisPage() {
                           <Eye size={18} />
                         </Link>
                         <button
+                          onClick={() => handleSendEmail(devi)}
+                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                          title="Envoyer par e-mail"
+                        >
+                          <Send size={18} />
+                        </button>
+                        <button
                           onClick={() => handleRequestSignature(devi)}
                           className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                           title="Demander la signature"
@@ -457,6 +500,13 @@ export default function DevisPage() {
                               <Eye size={18} />
                             </Link>
                             <button
+                              onClick={() => handleSendEmail(devi)}
+                              className="p-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                              title="Envoyer par e-mail"
+                            >
+                              <Send size={18} />
+                            </button>
+                            <button
                               onClick={() => handleRequestSignature(devi)}
                               className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Demander la signature"
@@ -469,7 +519,7 @@ export default function DevisPage() {
                             >
                               <Edit size={18} />
                             </Link>
-                            <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
+                            <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                               <Copy size={18} />
                             </button>
                           </div>
@@ -482,6 +532,78 @@ export default function DevisPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* Email Send Modal */}
+        {emailModalOpen && selectedQuote && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Send className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Envoyer par e-mail
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Devis n° {selectedQuote.number || `DEV-${selectedQuote.id?.slice(0, 8)}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Adresse e-mail du destinataire
+                  </label>
+                  <input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="client@exemple.com"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                  <p className="text-sm text-green-800 dark:text-green-300">
+                    Le devis sera envoyé en pièce jointe PDF avec un récapitulatif.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setEmailModalOpen(false); setSelectedQuote(null); }}
+                  disabled={sendingEmail}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmSendEmail}
+                  disabled={sendingEmail || !emailAddress.trim()}
+                  className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                >
+                  {sendingEmail ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Envoi...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      Envoyer
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         {/* Signature Request Modal */}
         {signModalOpen && selectedQuote && (

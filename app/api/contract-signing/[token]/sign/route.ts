@@ -5,6 +5,8 @@ import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 import { sendContractNotification } from '@/lib/services/contract-notification-service';
 import { Resend } from 'resend';
 
+export const maxDuration = 60;
+
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
   cdd: 'contracts_cdd',
@@ -130,7 +132,16 @@ export async function POST(
         let attachments: Array<{ filename: string; content: Buffer }> = [];
         if (fullContract) {
           try {
+            const { data: userProfile } = await admin
+              .from('profiles')
+              .select('accent_color')
+              .eq('id', tokenRecord.user_id)
+              .single();
+
             const templateData = dbToContractTemplate(fullContract, tokenRecord.contract_type);
+            if (userProfile?.accent_color) {
+              templateData.accentColor = userProfile.accent_color;
+            }
             const pdfBytes = await generateContractPdfBuffer(templateData);
             attachments = [{
               filename: `Contrat_signe_${CONTRACT_LABELS[tokenRecord.contract_type]}.pdf`,

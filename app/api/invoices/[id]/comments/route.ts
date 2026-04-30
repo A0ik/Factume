@@ -4,10 +4,10 @@ import { createAdminClient } from '@/lib/supabase-server';
 // GET - Récupérer les commentaires d'une facture
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { invoiceId } = await params;
+    const { id } = await params;
     const admin = createAdminClient();
 
     // Vérifier l'authentification
@@ -33,7 +33,7 @@ export async function GET(
           avatar_url
         )
       `)
-      .eq('invoice_id', invoiceId)
+      .eq('invoice_id', id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -50,10 +50,10 @@ export async function GET(
 // POST - Ajouter un commentaire
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { invoiceId } = await params;
+    const { id } = await params;
     const admin = createAdminClient();
 
     // Vérifier l'authentification
@@ -77,7 +77,7 @@ export async function POST(
     const { data: comment, error } = await admin
       .from('invoice_comments')
       .insert({
-        invoice_id: invoiceId,
+        invoice_id: id,
         user_id: user.id,
         content: content.trim(),
       })

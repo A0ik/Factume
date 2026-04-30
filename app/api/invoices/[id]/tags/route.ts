@@ -4,10 +4,10 @@ import { createAdminClient } from '@/lib/supabase-server';
 // GET - Récupérer les tags d'une facture
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { invoiceId } = await params;
+    const { id } = await params;
     const admin = createAdminClient();
 
     // Vérifier l'authentification
@@ -28,7 +28,7 @@ export async function GET(
         tag_id,
         tags(*)
       `)
-      .eq('invoice_id', invoiceId);
+      .eq('invoice_id', id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -44,10 +44,10 @@ export async function GET(
 // POST - Associer un tag à une facture
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { invoiceId } = await params;
+    const { id } = await params;
     const admin = createAdminClient();
 
     // Vérifier l'authentification
@@ -82,7 +82,7 @@ export async function POST(
     const { data: invoiceTag, error } = await admin
       .from('invoice_tags')
       .insert({
-        invoice_id: invoiceId,
+        invoice_id: id,
         tag_id: tagId,
       })
       .select(`
@@ -105,10 +105,10 @@ export async function POST(
 // DELETE - Dissocier un tag d'une facture
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { invoiceId } = await params;
+    const { id } = await params;
     const { searchParams } = new URL(req.url);
     const tagId = searchParams.get('tagId');
 

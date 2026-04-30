@@ -3,11 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ invoiceId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { signatureDataUrl, signerName } = await req.json();
-    const { invoiceId } = await params;
+    const { id } = await params;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +19,7 @@ export async function POST(
     try {
       const base64Data = signatureDataUrl.replace(/^data:image\/png;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
-      const path = `signatures/${invoiceId}/sig_${Date.now()}.png`;
+      const path = `signatures/${id}/sig_${Date.now()}.png`;
       const { error: uploadError } = await supabase.storage
         .from('assets')
         .upload(path, buffer, { contentType: 'image/png', upsert: true });
@@ -46,7 +46,7 @@ export async function POST(
         status: 'accepted',
         updated_at: new Date().toISOString(),
       })
-      .eq('id', invoiceId);
+      .eq('id', id);
 
     if (error) throw error;
 

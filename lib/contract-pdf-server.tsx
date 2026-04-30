@@ -137,7 +137,7 @@ function makeStyles(accent: string) {
 // ── React PDF Component ───────────────────────────────────────────────────────
 
 const ContractPDF: React.FC<{ data: ContractTemplateData }> = ({ data }) => {
-  const accent = data.accentColor || '#2563eb';
+  const accent = data.accentColor || '#1a1a1a';
   const S = makeStyles(accent);
   const title = getTitle(data.contractType);
   const legalRef = getLegal(data.contractType);
