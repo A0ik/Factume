@@ -17,6 +17,7 @@ interface DocMeta {
   tableTitle: string;
   showVat: boolean;
   showBankInfo: boolean;
+  showItemTTC?: boolean;
   validityNote?: string;
 }
 
@@ -29,7 +30,7 @@ const DOC_META: Record<string, DocMeta> = {
   quote: {
     label: 'DEVIS', issuedLabel: 'Établi le', billedLabel: 'Adressé à',
     totalLabel: "MONTANT DE L'OFFRE TTC", tableTitle: 'PRESTATION',
-    showVat: true, showBankInfo: false,
+    showVat: true, showBankInfo: false, showItemTTC: true,
     validityNote: "Ce devis est valable 30 jours à compter de sa date d'émission.",
   },
   credit_note: {
@@ -330,30 +331,38 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             {meta.showVat && (
               <Text style={{ width: 34, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'center', letterSpacing: 0.8 }}>TVA</Text>
             )}
-            <Text style={{ width: 72, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', paddingRight: 14, letterSpacing: 0.8 }}>TOTAL HT</Text>
+            <Text style={{ width: 72, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', paddingRight: 14, letterSpacing: 0.8 }}>
+              {meta.showItemTTC ? 'TOTAL TTC' : 'TOTAL HT'}
+            </Text>
           </View>
 
           {/* Rows */}
-          {invoice.items.map((item, i) => (
-            <View
-              key={item.id || i}
-              style={{
-                flexDirection: 'row',
-                backgroundColor: i % 2 !== 0 ? tpl.rowOdd : tpl.bodyBg,
-                paddingVertical: 10,
-                borderBottomWidth: 0.5,
-                borderBottomColor: tpl.borderColor,
-              }}
-            >
-              <Text style={{ flex: 5, fontSize: 9.5, color: '#111827', paddingLeft: 14, paddingRight: 8 }}>{item.description || ''}</Text>
-              <Text style={{ width: 34, fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{item.quantity}</Text>
-              <Text style={{ width: 68, fontSize: 9.5, color: '#374151', textAlign: 'right' }}>{f(item.unit_price)}</Text>
-              {meta.showVat && (
-                <Text style={{ width: 34, fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{item.vat_rate}%</Text>
-              )}
-              <Text style={{ width: 72, fontSize: 9.5, fontFamily: bold, color: '#111827', textAlign: 'right', paddingRight: 14 }}>{f(item.total ?? item.quantity * item.unit_price)}</Text>
-            </View>
-          ))}
+          {invoice.items.map((item, i) => {
+            const htTotal = item.total ?? item.quantity * item.unit_price;
+            const ttcTotal = htTotal * (1 + (item.vat_rate || 0) / 100);
+            return (
+              <View
+                key={item.id || i}
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: i % 2 !== 0 ? tpl.rowOdd : tpl.bodyBg,
+                  paddingVertical: 10,
+                  borderBottomWidth: 0.5,
+                  borderBottomColor: tpl.borderColor,
+                }}
+              >
+                <Text style={{ flex: 5, fontSize: 9.5, color: '#111827', paddingLeft: 14, paddingRight: 8 }}>{item.description || ''}</Text>
+                <Text style={{ width: 34, fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{item.quantity}</Text>
+                <Text style={{ width: 68, fontSize: 9.5, color: '#374151', textAlign: 'right' }}>{f(item.unit_price)}</Text>
+                {meta.showVat && (
+                  <Text style={{ width: 34, fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{item.vat_rate}%</Text>
+                )}
+                <Text style={{ width: 72, fontSize: 9.5, fontFamily: bold, color: '#111827', textAlign: 'right', paddingRight: 14 }}>
+                  {f(meta.showItemTTC ? ttcTotal : htTotal)}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
@@ -380,10 +389,10 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             )}
             <View style={{ height: 1, backgroundColor: tpl.borderColor, marginVertical: 5 }} />
             <View style={{ backgroundColor: tpl.totalBg, padding: '12 16', borderRadius: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 8, fontFamily: bold, color: tpl.totalTextColor === '#ffffff' ? 'rgba(255,255,255,0.6)' : '#9ca3af', letterSpacing: 1 }}>
+              <Text style={{ fontSize: 8, fontFamily: bold, color: 'rgba(255,255,255,0.7)', letterSpacing: 1 }}>
                 {meta.totalLabel}
               </Text>
-              <Text style={{ fontSize: 18, fontFamily: bold, color: tpl.totalTextColor }}>
+              <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff' }}>
                 {f(invoice.total)}
               </Text>
             </View>
