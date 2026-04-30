@@ -8,6 +8,8 @@ interface TokenRecord {
   expires_at: string;
   signed_at: string | null;
   view_count: number;
+  client_name: string;
+  client_email: string;
   quote: {
     id: string;
     number: string;
@@ -16,16 +18,8 @@ interface TokenRecord {
     total: number;
     status: string;
     notes: string | null;
-    client_id: string;
+    client_id: string | null;
     user_id: string;
-  };
-  client: {
-    name: string;
-    email: string;
-    phone: string | null;
-    address: string | null;
-    city: string | null;
-    postal_code: string | null;
   };
 }
 
