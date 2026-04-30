@@ -148,7 +148,8 @@
       "Bash(git commit *)",
       "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"expense tracking fintech SaaS glassmorphism\" --design-system -p \"FacturmeWeb\")",
       "Bash(rtf ls *)",
-      "Bash(rtk rmdir *)"
+      "Bash(rtk rmdir *)",
+      "mcp__claude_ai_Vercel__get_project"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -133,7 +133,7 @@ export async function DELETE(
     const { error } = await admin
       .from('invoice_tags')
       .delete()
-      .eq('invoice_id', invoiceId)
+      .eq('invoice_id', id)
       .eq('tag_id', tagId);
 
     if (error) {
