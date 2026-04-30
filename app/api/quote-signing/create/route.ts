@@ -121,11 +121,14 @@ export async function POST(req: NextRequest) {
       .lt('expires_at', new Date().toISOString());
 
     // Créer un nouveau token
+    const newToken = crypto.randomUUID();
+
     const { data: tokenData, error: tokenError } = await admin
       .from('quote_signing_tokens')
       .insert({
         quote_id: quoteId,
         user_id: user.id,
+        token: newToken,
         client_email: clientEmail.trim(),
         client_name: clientName.trim(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 jours
