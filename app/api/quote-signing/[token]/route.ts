@@ -41,7 +41,7 @@ export async function GET(
       .from('quote_signing_tokens')
       .select(`
         *,
-        quote:quote_id(
+        quote:invoices(
           id,
           number,
           issue_date,
