@@ -168,7 +168,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleRequestSignature = async () => {
+  const handleRequestSignature = async (clientEmail: string) => {
     if (!session || !invoice) return;
 
     try {
@@ -180,7 +180,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         },
         body: JSON.stringify({
           quoteId: invoice.id,
-          clientEmail: invoice.client?.email || '',
+          clientEmail: clientEmail.trim(),
           clientName: invoice.client?.name || invoice.client_name_override || 'Client',
         }),
       });

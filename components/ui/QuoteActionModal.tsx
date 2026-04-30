@@ -10,7 +10,7 @@ interface QuoteActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSendEmail: () => void;
-  onRequestSignature: () => void;
+  onRequestSignature: (email: string) => void;
 }
 
 export default function QuoteActionModal({
@@ -21,20 +21,24 @@ export default function QuoteActionModal({
   onRequestSignature,
 }: QuoteActionModalProps) {
   const [selected, setSelected] = useState<'email' | 'signature' | null>(null);
+  const [email, setEmail] = useState(invoice.client?.email || '');
 
   if (!isOpen) return null;
 
   const handleSelect = (action: 'email' | 'signature') => {
     setSelected(action);
-    setTimeout(() => {
-      if (action === 'email') {
-        onSendEmail();
-      } else {
-        onRequestSignature();
-      }
-      onClose();
-      setSelected(null);
-    }, 300);
+  };
+
+  const handleConfirm = () => {
+    if (!selected) return;
+
+    if (selected === 'email') {
+      onSendEmail();
+    } else if (selected === 'signature') {
+      onRequestSignature(email.trim());
+    }
+    onClose();
+    setSelected(null);
   };
 
   return (
@@ -128,16 +132,51 @@ export default function QuoteActionModal({
               </div>
             )}
           </button>
+
+          {/* Email input field - only show when signature is selected */}
+          {selected === 'signature' && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Adresse e-mail du client
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="client@exemple.com"
+                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-gray-900 dark:text-white"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-5 py-4 bg-gray-50/50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700">
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            Annuler
-          </button>
+          {selected ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelected(null)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Retour
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={selected === 'signature' && !email.trim()}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirmer
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Annuler
+            </button>
+          )}
         </div>
       </div>
     </div>

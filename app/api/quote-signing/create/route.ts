@@ -35,8 +35,15 @@ export async function POST(req: NextRequest) {
   try {
     const { quoteId, clientEmail, clientName } = await req.json();
 
-    if (!quoteId || !clientEmail || !clientName) {
-      return NextResponse.json({ error: 'Données manquantes' }, { status: 400 });
+    // Validation des champs requis
+    if (!quoteId) {
+      return NextResponse.json({ error: 'L\'ID du devis est requis' }, { status: 400 });
+    }
+    if (!clientEmail || !clientEmail.trim()) {
+      return NextResponse.json({ error: 'L\'email du client est requis' }, { status: 400 });
+    }
+    if (!clientName || !clientName.trim()) {
+      return NextResponse.json({ error: 'Le nom du client est requis' }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -70,8 +77,15 @@ export async function POST(req: NextRequest) {
       .eq('document_type', 'quote')
       .single();
 
-    if (quoteError || !quote || quote.user_id !== user.id) {
+    if (quoteError) {
+      console.error('Erreur récupération devis:', quoteError);
+      return NextResponse.json({ error: 'Erreur lors de la récupération du devis' }, { status: 500 });
+    }
+    if (!quote) {
       return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 });
+    }
+    if (quote.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     // Vérifier qu'il n'y a pas déjà une demande en cours (token non expiré)
@@ -119,9 +133,14 @@ export async function POST(req: NextRequest) {
       .select('token, id, expires_at')
       .single();
 
-    if (tokenError || !tokenData) {
-      await logQuoteSignatureEvent(admin, quoteId, 'token_creation_failed', null, { error: tokenError?.message }, req);
-      return NextResponse.json({ error: 'Erreur lors de la création du token' }, { status: 500 });
+    if (tokenError) {
+      console.error('Erreur création token:', tokenError);
+      await logQuoteSignatureEvent(admin, quoteId, 'token_creation_failed', null, { error: tokenError.message }, req);
+      return NextResponse.json({ error: 'Erreur lors de la création du token de signature' }, { status: 500 });
+    }
+    if (!tokenData) {
+      await logQuoteSignatureEvent(admin, quoteId, 'token_creation_failed', null, { error: 'Token data is null' }, req);
+      return NextResponse.json({ error: 'Erreur lors de la création du token de signature' }, { status: 500 });
     }
 
     // Log la création du token
@@ -198,23 +217,30 @@ export async function POST(req: NextRequest) {
       });
 
       if (resendError) {
-        emailError = resendError.message || 'Erreur Resend';
+        console.error('Erreur Resend:', resendError);
+        emailError = resendError.message || 'Erreur lors de l\'envoi de l\'email';
         await logQuoteSignatureEvent(admin, quoteId, 'email_failed', tokenData.id, { error: emailError }, req);
       } else {
         emailSent = true;
         await logQuoteSignatureEvent(admin, quoteId, 'email_sent', tokenData.id, { recipient: clientEmail.trim(), messageId: data?.id }, req);
       }
     } catch (emailErr) {
-      emailError = emailErr instanceof Error ? emailErr.message : 'Erreur inconnue';
+      console.error('Exception envoi email:', emailErr);
+      emailError = emailErr instanceof Error ? emailErr.message : 'Erreur inconnue lors de l\'envoi de l\'email';
       await logQuoteSignatureEvent(admin, quoteId, 'email_failed', tokenData.id, { error: emailError }, req);
     }
 
     // Mettre à jour le statut du devis uniquement si l'email a été envoyé
     if (emailSent) {
-      await admin
+      const { error: updateError } = await admin
         .from('invoices')
         .update({ status: 'sent', updated_at: new Date().toISOString() })
         .eq('id', quoteId);
+
+      if (updateError) {
+        console.error('Erreur mise à jour statut:', updateError);
+        // On ne échoue pas la requête si la mise à jour du statut échoue
+      }
 
       return NextResponse.json({
         success: true,
@@ -230,11 +256,12 @@ export async function POST(req: NextRequest) {
         token: tokenData.token,
         error: emailError,
         retryable: true,
-        message: 'Le token a été créé mais l\'email n\'a pas pu être envoyé. Vous pouvez réessayer.'
+        message: `Le token a été créé mais l'email n'a pas pu être envoyé. Erreur: ${emailError}`
       }, { status: 202 }); // Accepted but with warning
     }
   } catch (error: unknown) {
+    console.error('Erreur serveur lors de la création de la demande de signature:', error);
     const err = error as Error;
-    return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Erreur serveur lors de la création de la demande de signature' }, { status: 500 });
   }
 }
