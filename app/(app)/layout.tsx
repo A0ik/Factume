@@ -40,10 +40,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Chargement...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Chargement...</p>
         </div>
       </div>
     );
@@ -92,14 +92,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
         <Sidebar />
         <main className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
           {/* Mobile top bar */}
-          <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div className="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
             <button
               onClick={() => setDrawerOpen(true)}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors -ml-1"
+              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors -ml-1"
               aria-label="Menu navigation"
             >
               <Menu size={20} />

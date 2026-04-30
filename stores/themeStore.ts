@@ -40,11 +40,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       applyTheme(stored);
       set({ theme: stored });
     } else {
-      // Utiliser les préférences système
-      const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const systemTheme: Theme = prefersDark ? 'dark' : 'light';
-      applyTheme(systemTheme);
-      set({ theme: systemTheme });
+      // Par défaut: thème clair (pas de préférences système)
+      applyTheme('light');
+      set({ theme: 'light' });
     }
   },
 }));
