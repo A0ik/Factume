@@ -57,20 +57,13 @@ export async function GET(
           notes,
           client_id,
           user_id
-        ),
-        client:quote.client_id(
-          name,
-          email,
-          phone,
-          address,
-          city,
-          postal_code
         )
       `)
       .eq('token', token)
       .single() as { data: TokenRecord | null; error: any };
 
     if (tokenError || !tokenRecord) {
+      console.error('Erreur récupération token:', tokenError);
       return NextResponse.json({ error: 'Token invalide' }, { status: 404 });
     }
 
@@ -82,6 +75,27 @@ export async function GET(
     // Vérifier si le devis a déjà été signé
     if (tokenRecord.signed_at) {
       return NextResponse.json({ error: 'already_signed' }, { status: 400 });
+    }
+
+    // Récupérer le client si client_id existe
+    let client = null;
+    if (tokenRecord.quote.client_id) {
+      const { data: clientData } = await admin
+        .from('clients')
+        .select('name, email, phone, address, city, postal_code')
+        .eq('id', tokenRecord.quote.client_id)
+        .single();
+      client = clientData;
+    } else {
+      // Si pas de client_id, utiliser les données stockées dans le token
+      client = {
+        name: tokenRecord.client_name,
+        email: tokenRecord.client_email,
+        phone: null,
+        address: null,
+        city: null,
+        postal_code: null,
+      };
     }
 
     // Incrémenter le compteur de vues
@@ -99,7 +113,7 @@ export async function GET(
 
     return NextResponse.json({
       contract: tokenRecord.quote,
-      client: tokenRecord.client,
+      client,
       profile,
       tokenRecord: {
         id: tokenRecord.id,
