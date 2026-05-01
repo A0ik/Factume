@@ -1,12 +1,12 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Sparkles, Shield, ArrowRight, CheckCircle2, Circle, Infinity, Lock, HeadphonesIcon as Headphones } from 'lucide-react';
+import { Check, Sparkles, Shield, ArrowRight, CheckCircle2, Circle, Infinity, Lock, HeadphonesIcon as Headphones, BadgePercent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
-  id: string; name: string; price: string; tagline: string;
+  id: string; name: string; price: string; yearlyPrice: string; yearlySavings: string; tagline: string;
   icon: React.ElementType; iconColor: string; iconBg: string;
   gradient: string; gradientFrom: string; gradientTo: string;
   features: PlanFeature[]; cta: string; badge?: string;
@@ -21,14 +21,14 @@ interface OptimizedPricingCardProps {
   isDowngrade: boolean;
   onClick: () => void;
   delay: number;
+  billing: 'monthly' | 'yearly';
   userCount?: string;
-  // Prorata props
   prorataAmount?: number;
   prorataPercent?: number;
   currentPlan?: string;
 }
 
-const PlanFeature = ({ feature, delay }: { feature: PlanFeature; delay: number }) => (
+const PlanFeatureItem = ({ feature, delay }: { feature: PlanFeature; delay: number }) => (
   <motion.li
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
@@ -70,16 +70,6 @@ const PlanFeature = ({ feature, delay }: { feature: PlanFeature; delay: number }
   </motion.li>
 );
 
-/**
- * OptimizedPricingCard - Carte de prix avec glassmorphism moderne
- *
- * Meilleures pratiques appliquées :
- * - Effet glassmorphism avec backdrop-blur
- * - Animations fluides avec Framer Motion
- * - Micro-interactions au hover
- * - Palette de couleurs conservée (emerald, blue, purple/violet)
- * - Design bento grid moderne
- */
 export function OptimizedPricingCard({
   plan,
   isHighlighted,
@@ -88,16 +78,15 @@ export function OptimizedPricingCard({
   isDowngrade,
   onClick,
   delay,
+  billing,
   userCount = '+2,500',
   prorataAmount = 0,
   prorataPercent = 0,
   currentPlan,
 }: OptimizedPricingCardProps) {
   const Icon = plan.icon;
-
-  // Calculer le prix affiché - TOUJOURS afficher le prix normal, pas le prorata
-  const displayPrice = plan.price;
-
+  const isYearly = billing === 'yearly';
+  const displayPrice = isYearly ? plan.yearlyPrice : plan.price;
   const hasProrata = prorataAmount > 0 && !isCurrent && !isDowngrade;
 
   return (
@@ -107,7 +96,6 @@ export function OptimizedPricingCard({
       transition={{ duration: 0.5, delay }}
       className="relative group"
     >
-      {/* Card Container avec Glassmorphism */}
       <motion.div
         whileHover={{ y: -8 }}
         className={cn(
@@ -126,7 +114,7 @@ export function OptimizedPricingCard({
             : undefined
         }}
       >
-        {/* Animated gradient background overlay */}
+        {/* Background */}
         <div className={cn(
           "absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-30",
           "bg-gradient-to-br",
@@ -134,7 +122,7 @@ export function OptimizedPricingCard({
           plan.gradientTo
         )} />
 
-        {/* Animated particles */}
+        {/* Particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(3)].map((_, i) => (
             <motion.div
@@ -159,7 +147,7 @@ export function OptimizedPricingCard({
           ))}
         </div>
 
-        {/* Highlighted top border */}
+        {/* Top border highlight */}
         {isHighlighted && (
           <motion.div
             initial={{ scaleY: 0 }}
@@ -173,23 +161,21 @@ export function OptimizedPricingCard({
           />
         )}
 
-        {/* Content */}
         <div className="relative z-10 flex flex-col h-full">
-          {/* Header Section */}
+          {/* Header */}
           <div className={cn(
             'relative p-6 pb-8 rounded-t-3xl',
             'bg-gradient-to-br',
             plan.gradientFrom,
             plan.gradientTo
           )}>
-            {/* Animated background pattern */}
             <div className="absolute inset-0 opacity-[0.15]">
               <div className="absolute inset-0" style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
               }} />
             </div>
 
-            {/* Top Badges */}
+            {/* Badges */}
             <div className="relative flex justify-between items-start mb-4">
               {plan.badge && isHighlighted && (
                 <motion.div
@@ -209,6 +195,19 @@ export function OptimizedPricingCard({
                   Actuel
                 </div>
               )}
+
+              {/* Yearly savings badge */}
+              {isYearly && !isCurrent && (
+                <motion.div
+                  initial={{ scale: 0, rotate: 10 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', bounce: 0.6 }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-400/30 backdrop-blur-md text-white text-[10px] font-bold border border-white/20"
+                >
+                  <BadgePercent size={10} />
+                  -20%
+                </motion.div>
+              )}
             </div>
 
             {/* Icon & Title */}
@@ -224,14 +223,39 @@ export function OptimizedPricingCard({
               <p className="text-sm text-white/90 mt-1">{plan.tagline}</p>
             </div>
 
-            {/* Pricing Anchor */}
+            {/* Animated Price */}
             <div className="relative mt-6">
               <div className="flex items-end gap-1">
-                <span className="text-5xl font-black text-white">{displayPrice}</span>
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={isYearly ? 'yearly' : 'monthly'}
+                    initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
+                    animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                    exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className="text-5xl font-black text-white"
+                  >
+                    {displayPrice}
+                  </motion.span>
+                </AnimatePresence>
                 <span className="text-lg text-white/70 mb-2">
-                  {hasProrata ? 'à payer' : '/ mois'}
+                  {hasProrata ? 'à payer' : isYearly ? '/ mois' : '/ mois'}
                 </span>
               </div>
+
+              {/* Strikethrough old price for yearly */}
+              {isYearly && !hasProrata && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-2 mt-1"
+                >
+                  <span className="text-sm text-white/50 line-through">{plan.price}/mois</span>
+                  <span className="text-xs text-emerald-300 font-semibold">
+                    Économisez {plan.yearlySavings}/an
+                  </span>
+                </motion.div>
+              )}
 
               {hasProrata && (
                 <motion.div
@@ -249,7 +273,9 @@ export function OptimizedPricingCard({
                 </motion.div>
               )}
 
-              <p className="text-xs text-white/90 mt-2">Sans engagement • Résiliable à tout moment</p>
+              <p className="text-xs text-white/90 mt-2">
+                {isYearly ? 'Facturé annuellement • Sans engagement' : 'Sans engagement • Résiliable à tout moment'}
+              </p>
 
               {isHighlighted && !hasProrata && (
                 <motion.div
@@ -265,16 +291,16 @@ export function OptimizedPricingCard({
             </div>
           </div>
 
-          {/* Features List avec glassmorphism */}
+          {/* Features */}
           <div className="flex-1 p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
             <ul className="space-y-1">
               {plan.features.map((feat, i) => (
-                <PlanFeature key={i} feature={feat} delay={delay} />
+                <PlanFeatureItem key={i} feature={feat} delay={delay} />
               ))}
             </ul>
           </div>
 
-          {/* Trust & Security Badges */}
+          {/* Trust badges */}
           {isHighlighted && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -299,7 +325,7 @@ export function OptimizedPricingCard({
             </motion.div>
           )}
 
-          {/* CTA Button */}
+          {/* CTA */}
           <div className="p-6 pt-2 bg-white/40 dark:bg-gray-900/40">
             <motion.button
               whileHover={{ scale: isCurrent || isDowngrade ? 1 : 1.02 }}

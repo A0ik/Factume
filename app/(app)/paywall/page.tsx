@@ -9,6 +9,7 @@ import {
   ArrowLeft, Check, X, Crown, Zap, Rocket, Building2, Shield, Loader2, ArrowRight,
   Star, CreditCard, RefreshCw, Sparkles, Award, Infinity, Users, BarChart3,
   Database, Globe, HeadphonesIcon as Headphones, Lock, CheckCircle2, Circle,
+  BadgePercent,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +19,7 @@ import { PaywallHeader } from '@/components/ui/PaywallHeader';
 
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
-  id: string; name: string; price: string; tagline: string;
+  id: string; name: string; price: string; yearlyPrice: string; yearlySavings: string; tagline: string;
   icon: React.ElementType; iconColor: string; iconBg: string;
   gradient: string; gradientFrom: string; gradientTo: string;
   features: PlanFeature[]; cta: string; badge?: string;
@@ -27,7 +28,7 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'solo', name: 'Solo', price: '14,99€', tagline: 'Idéal pour démarrer',
+    id: 'solo', name: 'Solo', price: '14,99€', yearlyPrice: '12€', yearlySavings: '36€', tagline: 'Idéal pour démarrer',
     icon: Zap, iconColor: 'text-white', iconBg: 'from-emerald-500 to-emerald-600',
     gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
     gradientFrom: 'from-emerald-500', gradientTo: 'to-emerald-700',
@@ -46,7 +47,7 @@ const PLANS: Plan[] = [
     ]
   },
   {
-    id: 'pro', name: 'Pro', price: '29,99€', tagline: 'Pour grandir',
+    id: 'pro', name: 'Pro', price: '29,99€', yearlyPrice: '24€', yearlySavings: '72€', tagline: 'Pour grandir',
     icon: Rocket, iconColor: 'text-white', iconBg: 'from-blue-800 to-indigo-900',
     gradient: 'from-blue-800 via-blue-900 to-indigo-900',
     gradientFrom: 'from-blue-800', gradientTo: 'to-indigo-900',
@@ -67,7 +68,7 @@ const PLANS: Plan[] = [
     ]
   },
   {
-    id: 'business', name: 'Business', price: '59,99€', tagline: 'Accès total + Outils avancés',
+    id: 'business', name: 'Business', price: '59,99€', yearlyPrice: '48€', yearlySavings: '144€', tagline: 'Accès total + Outils avancés',
     icon: Crown, iconColor: 'text-white', iconBg: 'from-purple-600 to-violet-700',
     gradient: 'from-purple-600 via-violet-700 to-purple-800',
     gradientFrom: 'from-purple-600', gradientTo: 'to-purple-800',
@@ -97,7 +98,9 @@ export default function PaywallPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const highlighted = getHighlightedPlan(sub.tier);
+  const isYearly = billing === 'yearly';
 
   const [checkoutData, setCheckoutData] = useState<{
     clientSecret: string;
@@ -107,49 +110,26 @@ export default function PaywallPage() {
   } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
-  // État pour stocker les informations de prorata pour chaque plan
-  const [prorataData, setProrataData] = useState<Record<string, {
-    amount: number;
-    percent: number;
-  }>>({});
+  const [prorataData, setProrataData] = useState<Record<string, { amount: number; percent: number }>>({});
 
-  // Récupérer les informations de prorata au chargement de la page
   useEffect(() => {
     const fetchProrataData = async () => {
-      if (!profile?.id || sub.isFree) return; // Pas de prorata pour les utilisateurs gratuits
-
-      // Pour chaque plan, récupérer les infos de prorata
+      if (!profile?.id || sub.isFree) return;
       const promises = PLANS.map(async (plan) => {
         try {
           const res = await fetch(`/api/stripe/change-subscription?userId=${profile.id}&plan=${plan.id}`);
           if (res.ok) {
             const data = await res.json();
-            return {
-              planId: plan.id,
-              data: {
-                amount: data.prorataAmount || 0,
-                percent: data.prorataPercent || 0,
-              }
-            };
+            return { planId: plan.id, data: { amount: data.prorataAmount || 0, percent: data.prorataPercent || 0 } };
           }
-        } catch (error) {
-          console.error(`Erreur fetching prorata for ${plan.id}:`, error);
-        }
+        } catch {}
         return null;
       });
-
       const results = await Promise.all(promises);
       const prorataMap: Record<string, { amount: number; percent: number }> = {};
-
-      results.forEach(result => {
-        if (result) {
-          prorataMap[result.planId] = result.data;
-        }
-      });
-
+      results.forEach(r => { if (r) prorataMap[r.planId] = r.data; });
       setProrataData(prorataMap);
     };
-
     fetchProrataData();
   }, [profile?.id, sub.isFree, sub.tier]);
 
@@ -163,7 +143,7 @@ export default function PaywallPage() {
       const res = await fetch('/api/stripe/trial-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, userId: profile.id }),
+        body: JSON.stringify({ plan: planId, userId: profile.id, yearly: isYearly }),
       });
       const data = await res.json();
 
@@ -171,12 +151,9 @@ export default function PaywallPage() {
         const planInfo: PlanInfo = {
           id: selectedPlan.id,
           name: selectedPlan.name,
-          price: selectedPlan.price.replace('€', ''),
-          priceNote: '/ mois (après 4 jours d\'essai)',
-          features: selectedPlan.features
-            .filter(f => f.included)
-            .slice(0, 4)
-            .map(f => f.label),
+          price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
+          priceNote: isYearly ? '/ mois (facturé annuellement, après 4 jours d\'essai)' : '/ mois (après 4 jours d\'essai)',
+          features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
 
         setCheckoutData({
@@ -197,82 +174,70 @@ export default function PaywallPage() {
     }
   };
 
-  // Vérifier les paramètres URL pour l'essai business
   useEffect(() => {
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const planParam = params.get('plan');
     const trialParam = params.get('trial');
-
     if (planParam === 'business' && trialParam === 'true' && profile?.id) {
-      // Sélectionner automatiquement le plan business et ouvrir le checkout
       const businessPlan = PLANS.find(p => p.id === 'business');
       if (businessPlan) {
         setSelectedPlan(businessPlan);
         handleSelectWithTrial('business');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
   const handleSelect = async (planId: string) => {
     if (planId === sub.tier) return;
-
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan) return;
 
     setLoading(planId);
     setSelectedPlan(selectedPlan);
     try {
-      // Pour les utilisateurs payants qui changent de plan, utiliser l'endpoint change-subscription
       if (!sub.isFree && sub.tier !== 'free') {
         const res = await fetch('/api/stripe/change-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: planId, userId: profile?.id }),
+          body: JSON.stringify({ plan: planId, userId: profile?.id, yearly: isYearly }),
         });
         const data = await res.json();
-
         if (data.url) {
-          // Redirection vers Stripe Checkout pour l'upgrade avec prorata
           window.location.href = data.url;
         } else if (data.success) {
-          // Downgrade ou upgrade sans frais immédiats - succès direct
           toast.success('Abonnement mis à jour avec succès !');
-          // Refresh de la page pour mettre à jour l'UI
           setTimeout(() => window.location.reload(), 1500);
         } else {
           toast.error(data.error || "Impossible de changer l'abonnement");
           setSelectedPlan(null);
         }
       } else {
-        // Nouvel abonnement pour les utilisateurs gratuits
         const res = await fetch('/api/stripe/subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: planId, userId: profile?.id }),
+          body: JSON.stringify({ plan: planId, userId: profile?.id, yearly: isYearly }),
         });
         const data = await res.json();
 
-      if (data.clientSecret) {
-        const planInfo: PlanInfo = {
-          id: selectedPlan.id,
-          name: selectedPlan.name,
-          price: selectedPlan.price.replace('€', ''),
-          priceNote: '/ mois',
-          features: selectedPlan.features
-            .filter(f => f.included)
-            .slice(0, 4)
-            .map(f => f.label),
-        };
+        if (data.clientSecret) {
+          const planInfo: PlanInfo = {
+            id: selectedPlan.id,
+            name: selectedPlan.name,
+            price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
+            priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
+            features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
+          };
 
-        setCheckoutData({
-          clientSecret: data.clientSecret,
-          userId: profile?.id ?? '',
-          planInfo,
-        });
-      } else {
-        toast.error(data.error || "Impossible de créer l'abonnement");
-        setSelectedPlan(null);
-      }
+          setCheckoutData({
+            clientSecret: data.clientSecret,
+            userId: profile?.id ?? '',
+            planInfo,
+          });
+        } else {
+          toast.error(data.error || "Impossible de créer l'abonnement");
+          setSelectedPlan(null);
+        }
       }
     } catch (e: any) {
       toast.error(e.message || 'Erreur');
@@ -302,13 +267,12 @@ export default function PaywallPage() {
         <ArrowLeft size={14} /> Retour
       </motion.button>
 
-      {/* Optimized Header with Social Proof */}
       <PaywallHeader onCTAClick={() => {}} />
 
-      {/* Free User Alerts - Only for truly free users (no active subscription) */}
+      {/* Free User Alerts */}
       {sub.isFree && !sub.isTrialActive && (
         <>
-          {/* Trial Banner - Only show for free users (not for Pro/Business) */}
+          {/* Trial Banner */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -317,7 +281,6 @@ export default function PaywallPage() {
           >
             <Link href="/trial" className="block group">
               <div className="relative overflow-hidden rounded-3xl border-2 border-purple-500 bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 p-6 shadow-xl shadow-purple-200/50 hover:shadow-2xl hover:shadow-purple-300/60 transition-all">
-                {/* Animated particles */}
                 <div className="absolute inset-0 overflow-hidden">
                   {[...Array(3)].map((_, i) => (
                     <motion.div
@@ -328,16 +291,11 @@ export default function PaywallPage() {
                         y: [0, Math.random() * 100 - 50],
                         opacity: [0, 1, 0],
                       }}
-                      transition={{
-                        duration: 3 + Math.random() * 2,
-                        repeat: Number.POSITIVE_INFINITY,
-                        delay: i * 0.5,
-                      }}
+                      transition={{ duration: 3 + Math.random() * 2, repeat: Number.POSITIVE_INFINITY, delay: i * 0.5 }}
                       style={{ left: `${20 + i * 30}%`, top: `${20 + i * 20}%` }}
                     />
                   ))}
                 </div>
-
                 <div className="relative flex items-center gap-5">
                   <motion.div
                     whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
@@ -347,9 +305,7 @@ export default function PaywallPage() {
                   </motion.div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-bold text-purple-700">
-                        Essai Gratuit Business 4 Jours
-                      </h3>
+                      <h3 className="text-xl font-bold text-purple-700">Essai Gratuit Business 4 Jours</h3>
                       <motion.span
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
@@ -384,35 +340,19 @@ export default function PaywallPage() {
                 ? "border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10"
                 : "border-red-300 bg-gradient-to-r from-red-50 via-orange-50 to-red-50"
             )}>
-              {/* Animated pattern */}
-              <div className="absolute inset-0 opacity-[0.05]">
-                <div className="absolute inset-0" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-                }} />
-              </div>
-
               <div className="relative flex items-start gap-5">
                 <motion.div
                   animate={remainingInvoices > 0 ? { rotate: [0, 5, -5, 0] } : {}}
                   transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                   className={cn(
                     "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl shadow-lg",
-                    remainingInvoices > 0
-                      ? "bg-gradient-to-br from-primary/20 to-primary/10"
-                      : "bg-gradient-to-br from-red-100 to-red-200"
+                    remainingInvoices > 0 ? "bg-gradient-to-br from-primary/20 to-primary/10" : "bg-gradient-to-br from-red-100 to-red-200"
                   )}
                 >
-                  {remainingInvoices > 0 ? (
-                    <Zap size={24} className="text-primary" />
-                  ) : (
-                    <Lock size={24} className="text-red-500" />
-                  )}
+                  {remainingInvoices > 0 ? <Zap size={24} className="text-primary" /> : <Lock size={24} className="text-red-500" />}
                 </motion.div>
                 <div className="flex-1">
-                  <h3 className={cn(
-                    "text-xl font-bold mb-1",
-                    remainingInvoices > 0 ? "text-primary" : "text-red-700"
-                  )}>
+                  <h3 className={cn("text-xl font-bold mb-1", remainingInvoices > 0 ? "text-primary" : "text-red-700")}>
                     {remainingInvoices > 0 ? 'Plan Gratuit' : 'Limite atteinte'}
                   </h3>
                   <p className="text-sm text-gray-700 mb-4">
@@ -420,36 +360,22 @@ export default function PaywallPage() {
                       ? `Vous pouvez créer encore ${remainingInvoices} facture${remainingInvoices > 1 ? 's' : ''} ce mois-ci.`
                       : 'Vous avez atteint votre limite de 5 factures mensuelles.'}
                   </p>
-
-                  {/* Progress bar */}
                   <div className="mb-5">
                     <div className="flex justify-between text-xs mb-2">
-                      <span className="font-medium text-gray-600">
-                        {sub.invoiceCount} / 5 factures
-                      </span>
-                      <span className={cn(
-                        "font-bold",
-                        remainingInvoices > 0 ? "text-primary" : "text-red-500"
-                      )}>
+                      <span className="font-medium text-gray-600">{sub.invoiceCount} / 5 factures</span>
+                      <span className={cn("font-bold", remainingInvoices > 0 ? "text-primary" : "text-red-500")}>
                         {remainingInvoices > 0 ? `${remainingInvoices} restantes` : 'Limite atteinte'}
                       </span>
                     </div>
                     <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
                       <motion.div
-                        className={cn(
-                          "h-full rounded-full",
-                          remainingInvoices > 0
-                            ? "bg-gradient-to-r from-primary to-primary-dark"
-                            : "bg-gradient-to-r from-red-400 to-red-500"
-                        )}
+                        className={cn("h-full rounded-full", remainingInvoices > 0 ? "bg-gradient-to-r from-primary to-primary-dark" : "bg-gradient-to-r from-red-400 to-red-500")}
                         initial={{ width: 0 }}
                         animate={{ width: `${(sub.invoiceCount / 5) * 100}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
                   </div>
-
-                  {/* Features */}
                   <div className="flex flex-wrap gap-2">
                     <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-200/50">
                       <Infinity size={15} className="text-gray-500" />
@@ -491,6 +417,56 @@ export default function PaywallPage() {
         </motion.div>
       )}
 
+      {/* ====== BILLING TOGGLE ====== */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="flex items-center justify-center mb-10"
+      >
+        <div className="relative inline-flex items-center gap-1 p-1.5 rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/60 shadow-lg">
+          {/* Sliding background */}
+          <motion.div
+            layout
+            className="absolute top-1.5 bottom-1.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark shadow-md"
+            style={{ width: 'calc(50% - 6px)' }}
+            animate={{ left: isYearly ? 'calc(50% + 3px)' : '3px' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          />
+
+          <button
+            onClick={() => setBilling('monthly')}
+            className={cn(
+              "relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-200",
+              !isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Mensuel
+          </button>
+          <button
+            onClick={() => setBilling('yearly')}
+            className={cn(
+              "relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-200 flex items-center gap-2",
+              isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Annuel
+            <motion.span
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-black rounded-full",
+                isYearly
+                  ? "bg-white/25 text-white"
+                  : "bg-emerald-100 text-emerald-700"
+              )}
+            >
+              -20%
+            </motion.span>
+          </button>
+        </div>
+      </motion.div>
+
       {/* Checkout View or Plans Grid */}
       <AnimatePresence mode="wait">
         {checkoutData && selectedPlan ? (
@@ -515,10 +491,7 @@ export default function PaywallPage() {
               </button>
 
               <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border-2 border-gray-200 shadow-xl overflow-hidden">
-                <div className={cn(
-                  "p-6 pb-8 bg-gradient-to-br",
-                  selectedPlan.gradient
-                )}>
+                <div className={cn("p-6 pb-8 bg-gradient-to-br", selectedPlan.gradient)}>
                   <div className="flex items-center gap-4 mb-4">
                     <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-sm">
                       <selectedPlan.icon size={28} className="text-white" />
@@ -531,14 +504,35 @@ export default function PaywallPage() {
                             {selectedPlan.badge}
                           </span>
                         )}
+                        {isYearly && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-400/30 text-white rounded-full">
+                            -20%
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-white/80 mt-1">{selectedPlan.tagline}</p>
                     </div>
                   </div>
                   <div className="flex items-end gap-2">
-                    <span className="text-5xl font-black text-white">{selectedPlan.price}</span>
+                    <AnimatePresence mode="popLayout">
+                      <motion.span
+                        key={isYearly ? 'y' : 'm'}
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -20, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className="text-5xl font-black text-white"
+                      >
+                        {isYearly ? selectedPlan.yearlyPrice : selectedPlan.price}
+                      </motion.span>
+                    </AnimatePresence>
                     <span className="text-lg text-white/60 mb-2">/ mois</span>
                   </div>
+                  {isYearly && (
+                    <p className="text-sm text-white/70 mt-1">
+                      {isYearly ? selectedPlan.yearlySavings : selectedPlan.yearlySavings} économisés/an • Facturé annuellement
+                    </p>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -600,8 +594,6 @@ export default function PaywallPage() {
               const isCurrent = plan.id === sub.tier;
               const isDowngrade = PLANS.findIndex(p => p.id === plan.id) < PLANS.findIndex(p => p.id === sub.tier);
               const isLoading = loading === plan.id;
-
-              // Récupérer les données de prorata pour ce plan
               const prorata = prorataData[plan.id] || { amount: 0, percent: 0 };
 
               return (
@@ -614,6 +606,7 @@ export default function PaywallPage() {
                   isDowngrade={isDowngrade}
                   onClick={() => handleSelect(plan.id)}
                   delay={index * 0.1}
+                  billing={billing}
                   userCount="+2,500"
                   prorataAmount={prorata.amount}
                   prorataPercent={prorata.percent}
