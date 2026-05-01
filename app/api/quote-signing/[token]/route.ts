@@ -1,28 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 
-interface TokenRecord {
-  id: string;
-  token: string;
-  quote_id: string;
-  expires_at: string;
-  signed_at: string | null;
-  view_count: number;
-  client_name: string;
-  client_email: string;
-  quote: {
-    id: string;
-    number: string;
-    issue_date: string;
-    due_date: string;
-    total: number;
-    status: string;
-    notes: string | null;
-    client_id: string | null;
-    user_id: string;
-  };
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -36,25 +14,12 @@ export async function GET(
 
     const admin = createAdminClient();
 
-    // Récupérer le token avec les données du devis
+    // Récupérer le token (sans jointure pour éviter les problèmes de relation)
     const { data: tokenRecord, error: tokenError } = await admin
       .from('quote_signing_tokens')
-      .select(`
-        *,
-        quote:invoices(
-          id,
-          number,
-          issue_date,
-          due_date,
-          total,
-          status,
-          notes,
-          client_id,
-          user_id
-        )
-      `)
+      .select('*')
       .eq('token', token)
-      .single() as { data: TokenRecord | null; error: any };
+      .single();
 
     if (tokenError || !tokenRecord) {
       console.error('Erreur récupération token:', tokenError);
@@ -71,13 +36,25 @@ export async function GET(
       return NextResponse.json({ error: 'already_signed' }, { status: 400 });
     }
 
+    // Récupérer le devis séparément
+    const { data: quote, error: quoteError } = await admin
+      .from('invoices')
+      .select('id, number, issue_date, due_date, total, status, notes, client_id, user_id')
+      .eq('id', tokenRecord.quote_id)
+      .single();
+
+    if (quoteError || !quote) {
+      console.error('Erreur récupération devis:', quoteError);
+      return NextResponse.json({ error: 'Devis introuvable' }, { status: 404 });
+    }
+
     // Récupérer le client si client_id existe
     let client = null;
-    if (tokenRecord.quote.client_id) {
+    if (quote.client_id) {
       const { data: clientData } = await admin
         .from('clients')
         .select('name, email, phone, address, city, postal_code')
-        .eq('id', tokenRecord.quote.client_id)
+        .eq('id', quote.client_id)
         .single();
       client = clientData;
     } else {
@@ -102,11 +79,11 @@ export async function GET(
     const { data: profile } = await admin
       .from('profiles')
       .select('accent_color, company_name')
-      .eq('id', tokenRecord.quote.user_id)
+      .eq('id', quote.user_id)
       .single();
 
     return NextResponse.json({
-      contract: tokenRecord.quote,
+      contract: quote,
       client,
       profile,
       tokenRecord: {

@@ -1,5 +1,5 @@
 import { Invoice, Profile } from '@/types';
-import { prepareTemplateData, templateMinimaliste, templateClassique, templateModerne, templateElegant, templateCorporate, templateNature, applyCustomTemplate } from './templates';
+import { prepareTemplateData, templateMinimaliste, templateClassique, templateModerne, templateElegant, templateCorporate, templateNature, templatePurchaseOrder, templateDeliveryNote, applyCustomTemplate } from './templates';
 
 export function getDocLabel(invoice: Invoice, language = 'fr'): string {
   const labels: Record<string, Record<string, string>> = {
@@ -27,6 +27,15 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
     return applyCustomTemplate(p.custom_template_html, data);
   }
 
+  // Templates spécifiques par type de document
+  if (invoice.document_type === 'purchase_order') {
+    return templatePurchaseOrder(data);
+  }
+  if (invoice.document_type === 'delivery_note') {
+    return templateDeliveryNote(data);
+  }
+
+  // Templates standards selon le choix de l'utilisateur
   const templateId = p.template_id || 1;
   switch (templateId) {
     case 2: return templateClassique(data);
