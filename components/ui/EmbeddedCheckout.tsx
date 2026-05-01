@@ -19,7 +19,7 @@ export interface PlanInfo {
 }
 
 // Composant interne pour gérer le submit
-function CheckoutForm({ userId, planInfo }: { userId: string; planInfo: PlanInfo }) {
+function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planInfo: PlanInfo; isSetupMode: boolean }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -29,12 +29,17 @@ function CheckoutForm({ userId, planInfo }: { userId: string; planInfo: PlanInfo
     if (!stripe || !elements) return;
 
     setIsLoading(true);
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/dashboard?success=true`,
-      },
-    });
+    const returnUrl = `${window.location.origin}/dashboard?success=true${isSetupMode ? '&trial=true' : ''}`;
+
+    const { error } = isSetupMode
+      ? await stripe.confirmSetup({
+          elements,
+          confirmParams: { return_url: returnUrl },
+        })
+      : await stripe.confirmPayment({
+          elements,
+          confirmParams: { return_url: returnUrl },
+        });
 
     if (error) {
       console.error(error.message);
@@ -278,7 +283,7 @@ function CheckoutForm({ userId, planInfo }: { userId: string; planInfo: PlanInfo
               ) : (
                 <>
                   <Shield size={18} />
-                  <span>Confirmer et s'abonner</span>
+                  <span>{isSetupMode ? 'Démarrer mon essai gratuit' : 'Confirmer et s\'abonner'}</span>
                   <Sparkles size={16} className="ml-1" />
                 </>
               )}
@@ -334,10 +339,12 @@ export default function EmbeddedCheckout({
   clientSecret,
   userId,
   planInfo,
+  isSetupMode = false,
 }: {
   clientSecret: string;
   userId: string;
   planInfo: PlanInfo;
+  isSetupMode?: boolean;
 }) {
   // Get plan style for Stripe Elements theme
   const getPlanColor = () => {
@@ -457,7 +464,7 @@ export default function EmbeddedCheckout({
 
   return (
     <Elements options={options} stripe={stripePromise}>
-      <CheckoutForm userId={userId} planInfo={planInfo} />
+      <CheckoutForm userId={userId} planInfo={planInfo} isSetupMode={isSetupMode} />
     </Elements>
   );
 }

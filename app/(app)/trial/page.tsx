@@ -151,7 +151,7 @@ export default function TrialPage() {
 
             <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
               Découvrez toutes les fonctionnalités Business de FacturmeWeb sans engagement.
-              Après l'essai, votre abonnement Business continuera automatiquement à 39.99€/mois.
+              Après l'essai, votre abonnement Business continuera automatiquement à 59,99€/mois.
             </p>
 
             <motion.div
@@ -191,7 +191,7 @@ export default function TrialPage() {
             </motion.div>
 
             <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-              Carte bancaire requise • Essai 4 jours puis abonnement Business à 39.99€/mois
+              Carte bancaire requise • Essai 4 jours puis abonnement Business à 59,99€/mois
             </p>
           </motion.div>
         </div>
@@ -276,7 +276,7 @@ export default function TrialPage() {
               {
                 step: "3",
                 title: "Votre abonnement Pro continue",
-                description: "Après 4 jours, votre abonnement Pro commence automatiquement à 19.99€/mois",
+                description: "Après 4 jours, votre abonnement Business continue automatiquement à 59,99€/mois",
                 icon: "💎"
               }
             ].map((item, index) => (

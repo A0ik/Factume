@@ -103,6 +103,7 @@ export default function PaywallPage() {
     clientSecret: string;
     userId: string;
     planInfo: PlanInfo;
+    isSetupMode?: boolean;
   } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
@@ -182,6 +183,7 @@ export default function PaywallPage() {
           clientSecret: data.clientSecret,
           userId: profile.id,
           planInfo,
+          isSetupMode: data.isSetupMode || false,
         });
       } else {
         toast.error(data.error || "Impossible de créer l'essai");
@@ -579,6 +581,7 @@ export default function PaywallPage() {
                   clientSecret={checkoutData.clientSecret}
                   userId={checkoutData.userId}
                   planInfo={checkoutData.planInfo}
+                  isSetupMode={checkoutData.isSetupMode || false}
                 />
               </div>
             </motion.div>

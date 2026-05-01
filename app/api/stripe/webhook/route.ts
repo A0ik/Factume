@@ -49,10 +49,36 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription;
+        // Trial → active transition: update tier to the actual plan from metadata
         const plan = sub.metadata?.plan || 'free';
-        await supabase.from('profiles')
-          .update({ subscription_tier: plan })
-          .eq('stripe_subscription_id', sub.id);
+        const previousAttributes = event.data.previous_attributes as Partial<Stripe.Subscription> | undefined;
+
+        if (previousAttributes?.status === 'trialing' && sub.status === 'active') {
+          // Trial just ended, subscription is now active
+          await supabase.from('profiles')
+            .update({
+              subscription_tier: plan,
+              is_trial_active: false,
+            })
+            .eq('stripe_subscription_id', sub.id);
+        } else {
+          await supabase.from('profiles')
+            .update({ subscription_tier: plan })
+            .eq('stripe_subscription_id', sub.id);
+        }
+        break;
+      }
+
+      case 'setup_intent.succeeded': {
+        const setupIntent = event.data.object as Stripe.SetupIntent;
+        const subscriptionId = setupIntent.metadata?.subscriptionId;
+
+        // Link the confirmed payment method to the trial subscription
+        if (subscriptionId && setupIntent.payment_method) {
+          await stripe.subscriptions.update(subscriptionId, {
+            default_payment_method: setupIntent.payment_method as string,
+          });
+        }
         break;
       }
 

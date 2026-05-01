@@ -42,36 +42,47 @@ export async function POST(req: NextRequest) {
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      trial_period_days: 4, // 4 jours d'essai gratuit
-      payment_behavior: 'default_incomplete',
+      trial_period_days: 4,
+      trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
       metadata: {
         userId,
+        plan,
         trialStart: new Date().toISOString(),
         trialEnd: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
       },
     });
 
-    // 3. Mettre à jour le profil avec les dates d'essai
+    // 3. Créer un SetupIntent pour collecter la carte pendant l'essai
+    // (Pas de PaymentIntent car la facture d'essai est $0)
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      metadata: {
+        userId,
+        subscriptionId: subscription.id,
+        plan,
+      },
+    });
+
+    // 4. Mettre à jour le profil avec les dates d'essai
     await supabase.from('profiles').update({
       trial_start_date: new Date().toISOString(),
       trial_end_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
       is_trial_active: true,
       subscription_tier: 'trial',
+      stripe_subscription_id: subscription.id,
     }).eq('id', userId);
 
-    // 4. Extraire le secret pour le formulaire de paiement
-    // @ts-ignore
-    const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
-
     return NextResponse.json({
-      clientSecret,
+      clientSecret: setupIntent.client_secret,
       subscriptionId: subscription.id,
       trialDays: 4,
+      isSetupMode: true,
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
