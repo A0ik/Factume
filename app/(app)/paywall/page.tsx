@@ -111,6 +111,7 @@ export default function PaywallPage() {
 
   const [prorataData, setProrataData] = useState<Record<string, { amount: number; percent: number }>>({});
   const [confirmChange, setConfirmChange] = useState<{ plan: Plan; prorata: { amount: number; percent: number } } | null>(null);
+  const trialTriggered = useRef(false);
 
   // Toggle refs for proper sizing
   const monthlyRef = useRef<HTMLButtonElement>(null);
@@ -198,10 +199,20 @@ export default function PaywallPage() {
   };
 
   useEffect(() => {
+    if (trialTriggered.current) return;
+    if (!profile?.id) return;
+
+    // Ne pas déclencher si l'utilisateur a déjà un abonnement actif ou un trial
+    if (sub.tier !== 'free' && sub.tier !== undefined) return;
+
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const planParam = params.get('plan');
     const trialParam = params.get('trial');
-    if (planParam === 'business' && trialParam === 'true' && profile?.id) {
+
+    if (planParam === 'business' && trialParam === 'true') {
+      trialTriggered.current = true;
+      // Nettoyer l'URL immédiatement pour éviter un re-trigger au refresh
+      window.history.replaceState({}, '', '/paywall');
       const businessPlan = PLANS.find(p => p.id === 'business');
       if (businessPlan) {
         setSelectedPlan(businessPlan);

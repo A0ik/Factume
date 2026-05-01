@@ -72,12 +72,24 @@ export async function POST(req: NextRequest) {
       case 'setup_intent.succeeded': {
         const setupIntent = event.data.object as Stripe.SetupIntent;
         const subscriptionId = setupIntent.metadata?.subscriptionId;
+        const userId = setupIntent.metadata?.userId;
+        const plan = setupIntent.metadata?.plan || 'business';
 
         // Link the confirmed payment method to the trial subscription
         if (subscriptionId && setupIntent.payment_method) {
           await stripe.subscriptions.update(subscriptionId, {
             default_payment_method: setupIntent.payment_method as string,
           });
+        }
+
+        // Activate trial in profile now that the user has completed checkout
+        if (userId) {
+          await supabase.from('profiles').update({
+            trial_start_date: new Date().toISOString(),
+            trial_end_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+            is_trial_active: true,
+            subscription_tier: 'trial',
+          }).eq('id', userId);
         }
         break;
       }
