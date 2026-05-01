@@ -21,9 +21,14 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENROUTER_API_KEY,
     });
 
-    const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
-      messages: [
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 55000);
+
+    let completion: Awaited<ReturnType<typeof openrouter.chat.completions.create>>;
+    try {
+      completion = await openrouter.chat.completions.create({
+        model: 'google/gemini-2.0-flash-exp',
+        messages: [
         {
           role: 'system',
           content: `You are an expert at analyzing invoice designs and creating pixel-perfect HTML/CSS templates.
@@ -97,9 +102,12 @@ Retourne UNIQUEMENT du JSON valide avec ces champs OBLIGATOIRES:
           ],
         },
       ],
-      response_format: { type: 'json_object' },
-      max_tokens: 12000,
-    });
+        response_format: { type: 'json_object' },
+        max_tokens: 12000,
+      }, { signal: controller.signal as any });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     let result: any = {};
     try {
@@ -134,7 +142,7 @@ Retourne UNIQUEMENT du JSON valide avec ces champs OBLIGATOIRES:
     if (error.status === 429) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
     }
-    if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+    if (error.name === 'AbortError' || error.message?.includes('abort') || error.message?.includes('timeout') || error.message?.includes('Timeout')) {
       return NextResponse.json({ error: 'Le délai d\'analyse a été dépassé. Réessayez avec un fichier plus léger.' }, { status: 504 });
     }
     return NextResponse.json({ error: message }, { status: 500 });

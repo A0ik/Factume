@@ -370,29 +370,29 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         <View style={{ paddingHorizontal: 44, alignItems: 'flex-end', marginBottom: 16 }}>
-          <View style={{ width: 220 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-              <Text style={{ fontSize: 9.5, color: '#6b7280' }}>Sous-total HT</Text>
-              <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827' }}>{f(invoice.subtotal)}</Text>
+          <View style={{ width: 280 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>Sous-total HT</Text>
+              <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827', flexShrink: 0 }}>{f(invoice.subtotal)}</Text>
             </View>
             {meta.showVat && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-                <Text style={{ fontSize: 9.5, color: '#6b7280' }}>TVA</Text>
-                <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827' }}>{f(invoice.vat_amount)}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>TVA</Text>
+                <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827', flexShrink: 0 }}>{f(invoice.vat_amount)}</Text>
               </View>
             )}
             {(invoice.discount_amount ?? 0) > 0 && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-                <Text style={{ fontSize: 9.5, color: '#ef4444' }}>Remise ({invoice.discount_percent}%)</Text>
-                <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#ef4444' }}>-{f(invoice.discount_amount ?? 0)}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 9.5, color: '#ef4444', flexShrink: 1 }}>Remise ({invoice.discount_percent}%)</Text>
+                <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#ef4444', flexShrink: 0 }}>-{f(invoice.discount_amount ?? 0)}</Text>
               </View>
             )}
             <View style={{ height: 1, backgroundColor: tpl.borderColor, marginVertical: 5 }} />
-            <View style={{ backgroundColor: tpl.totalBg, padding: '12 16', borderRadius: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 8, fontFamily: bold, color: 'rgba(255,255,255,0.7)', letterSpacing: 1 }}>
+            <View style={{ backgroundColor: tpl.totalBg, padding: '12 16', borderRadius: 6, flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <Text style={{ fontSize: 7.5, fontFamily: bold, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, textAlign: 'right' }}>
                 {meta.totalLabel}
               </Text>
-              <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff' }}>
+              <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff', textAlign: 'right' }}>
                 {f(invoice.total)}
               </Text>
             </View>

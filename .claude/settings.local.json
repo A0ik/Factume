@@ -171,7 +171,9 @@
       "Bash(cmd.exe /c \"py --version\")",
       "Bash(\"/c/Users/salma/AppData/Local/Microsoft/WindowsApps/python.exe\" .claude/skills/ui-ux-pro-max/scripts/search.py \"SaaS invoicing premium glassmorphism\" --design-system -p \"Factu.me\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
-      "Bash(curl -s http://localhost:3002)"
+      "Bash(curl -s http://localhost:3002)",
+      "Bash(grep -r \"FACTURE\\\\|DEVIS\\\\|totalLabel\" \"c:\\\\Users\\\\salma\\\\Desktop\\\\FacturmeWeb-ESPOIR\" --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -l)",
+      "Bash(grep -r \"totalLabel\\\\|totalBg\\\\|totalTextColor\" \"c:\\\\Users\\\\salma\\\\Desktop\\\\FacturmeWeb-ESPOIR\" --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -l)"
     ]
   },
   "enableAllProjectMcpServers": true,

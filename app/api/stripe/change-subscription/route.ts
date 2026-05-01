@@ -30,43 +30,36 @@ const PRICES = {
 
 /**
  * Calcule le prorata pour un changement d'abonnement
- *
- * Formule: (prix_nouveau - prix_actuel) × (jours_restants / 30)
+ * Utilise les timestamps de période Stripe pour un calcul précis.
  */
 function calculateProrata(
   currentPlan: string,
   newPlan: string,
-  subscriptionStart: string
+  periodStart: number,  // Unix timestamp (Stripe current_period_start)
+  periodEnd: number,    // Unix timestamp (Stripe current_period_end)
 ): {
   prorataAmount: number;
   prorataPercent: number;
   isUpgrade: boolean;
   remainingDays: number;
 } {
-  // Si pas de plan actuel ou même plan
   if (!currentPlan || currentPlan === 'free' || currentPlan === newPlan) {
     return { prorataAmount: 0, prorataPercent: 0, isUpgrade: true, remainingDays: 0 };
   }
 
   const currentPrice = PRICES[currentPlan as keyof typeof PRICES] || 0;
   const newPrice = PRICES[newPlan as keyof typeof PRICES] || 0;
-
-  // Calculer les jours restants dans le mois
-  const start = new Date(subscriptionStart);
-  const now = new Date();
-  const billingDate = new Date(start);
-  billingDate.setMonth(billingDate.getMonth() + 1);
-
-  const totalDaysInPeriod = 30; // Moyenne
-  const daysElapsed = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  const remainingDays = Math.max(0, totalDaysInPeriod - daysElapsed);
-
-  // Calculer le prorata
-  const priceDiff = newPrice - currentPrice;
-  const prorataAmount = (priceDiff * remainingDays) / totalDaysInPeriod;
-  const prorataPercent = (remainingDays / totalDaysInPeriod) * 100;
-
   const isUpgrade = PLAN_ORDER.indexOf(newPlan) > PLAN_ORDER.indexOf(currentPlan);
+
+  const now = Date.now();
+  const totalMs = (periodEnd - periodStart) * 1000;
+  const remainingMs = Math.max(0, periodEnd * 1000 - now);
+  const totalDays = totalMs / (1000 * 60 * 60 * 24);
+  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+  const prorataPercent = totalDays > 0 ? (remainingMs / totalMs) * 100 : 0;
+
+  const priceDiff = newPrice - currentPrice;
+  const prorataAmount = priceDiff * (remainingMs / totalMs);
 
   return {
     prorataAmount: Math.abs(prorataAmount),
@@ -115,89 +108,65 @@ export async function POST(req: NextRequest) {
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
     }
 
-    // Vérifier si l'utilisateur a déjà une souscription
-    const currentSubscriptionId = profile?.subscription_id;
-    let prorataInfo = null;
-
-    // Récupérer les prix pour calculer le prorata
+    // Champ correct en DB : stripe_subscription_id
+    const currentSubscriptionId = profile?.stripe_subscription_id;
     const currentPlan = profile?.subscription_tier;
-    const subscriptionStart = profile?.subscription_start_date || new Date().toISOString();
+    let prorataInfo = null;
 
     if (currentSubscriptionId && currentPlan && currentPlan !== 'free') {
       try {
-        // Récupérer la souscription actuelle
         const currentSubscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
 
-        // Calculer le prorata
-        prorataInfo = calculateProrata(currentPlan, plan, subscriptionStart);
+        // Prorata calculé depuis les timestamps Stripe (précis)
+        prorataInfo = calculateProrata(
+          currentPlan,
+          plan,
+          currentSubscription.current_period_start,
+          currentSubscription.current_period_end,
+        );
 
-        // Si c'est un upgrade avec prorata positif, on crée une session de paiement
-        // avec le montant ajusté
-        if (prorataInfo.isUpgrade && prorataInfo.prorataAmount > 0) {
-          // Créer une session de paiement pour le montant du prorata
-          const session = await stripe.checkout.sessions.create({
-            customer: customerId,
-            mode: 'subscription',
-            payment_method_types: ['card'],
-            line_items: [
-              {
-                price: priceId,
-                quantity: 1,
-              },
-            ],
-            subscription_data: {
-              metadata: {
-                userId,
-                upgradeFrom: currentPlan,
-                upgradeFromSub: currentSubscriptionId,
-              },
-              trial_period_days: 0, // Pas d'essai pour les upgrades
-            },
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invoices?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/paywall`,
-          });
+        const isUpgrade = prorataInfo.isUpgrade;
 
-          return NextResponse.json({
-            url: session.url,
-            prorata: prorataInfo,
-            sessionId: session.id,
-          });
-        } else {
-          // Pour les downgrades ou upgrades sans frais immédiats,
-          // on modifie la souscription existante
-          await stripe.subscriptions.update(currentSubscriptionId, {
-            items: [{
-              id: currentSubscription.items.data[0].id,
-              price: priceId,
-            }],
-            proration_behavior: 'create_prorations',
-          });
+        // Mise à jour de la souscription existante avec proration Stripe native
+        await stripe.subscriptions.update(currentSubscriptionId, {
+          items: [{
+            id: currentSubscription.items.data[0].id,
+            price: priceId,
+          }],
+          // Pour les upgrades : facturer immédiatement le différentiel
+          // Pour les downgrades : créer la proratisation sur la prochaine facture
+          proration_behavior: isUpgrade ? 'always_invoice' : 'create_prorations',
+          metadata: { plan, userId },
+        });
 
-          // Mettre à jour le profil
-          await supabase.from('profiles').update({
-            subscription_tier: plan,
-          }).eq('id', userId);
+        // Mettre à jour le profil immédiatement
+        await supabase.from('profiles').update({
+          subscription_tier: plan,
+        }).eq('id', userId);
 
-          return NextResponse.json({
-            success: true,
-            prorata: prorataInfo,
-            message: 'Abonnement mis à jour avec succès',
-          });
-        }
+        return NextResponse.json({
+          success: true,
+          prorata: prorataInfo,
+          message: isUpgrade
+            ? `Abonnement mis à niveau vers ${plan}. Le différentiel a été facturé.`
+            : `Abonnement modifié vers ${plan}. Le crédit sera appliqué à votre prochaine facture.`,
+        });
+
       } catch (stripeError: unknown) {
         const se = stripeError as Error;
         console.error('[change-subscription] Erreur Stripe:', se.message);
-        // Si la souscription n'existe plus ou est invalide, on continue avec une nouvelle souscription
+        return NextResponse.json({ error: se.message || 'Erreur Stripe lors du changement d\'abonnement' }, { status: 500 });
       }
     }
 
-    // Nouvelle souscription (pas d'upgrade)
+    // Pas d'abonnement existant → nouvelle souscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
+      metadata: { plan, userId },
     });
 
     const invoice = subscription.latest_invoice as Stripe.Invoice | null;
@@ -242,13 +211,22 @@ export async function GET(req: NextRequest) {
     }
 
     const currentPlan = profile?.subscription_tier;
-    const subscriptionStart = profile?.subscription_start_date || new Date().toISOString();
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-    const prorataInfo = calculateProrata(
-      currentPlan || 'free',
-      newPlan,
-      subscriptionStart
-    );
+    let prorataInfo = { prorataAmount: 0, prorataPercent: 0, isUpgrade: true, remainingDays: 0 };
+    if (profile?.stripe_subscription_id && currentPlan && currentPlan !== 'free') {
+      try {
+        const currentSubscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+        prorataInfo = calculateProrata(
+          currentPlan,
+          newPlan,
+          currentSubscription.current_period_start,
+          currentSubscription.current_period_end,
+        );
+      } catch {
+        // Subscription non trouvée — pas de prorata
+      }
+    }
 
     // Calculer les prix
     const currentPrice = currentPlan && currentPlan !== 'free' ? PRICES[currentPlan as keyof typeof PRICES] : 0;

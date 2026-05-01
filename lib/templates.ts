@@ -504,17 +504,17 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
         <div style="font-weight:600;color:#111827">${item.description}</div>
         ${(item as any).detail ? `<div style="font-size:12px;color:#4b5563;margin-top:2px">${(item as any).detail}</div>` : ''}
       </td>
-      <td style="padding:14px 18px;text-align:center;font-size:14px;color:#374151;border-bottom:1px solid #f0f0f0;font-weight:500">${item.quantity}</td>
-      <td style="padding:14px 18px;text-align:right;font-size:14px;color:#374151;border-bottom:1px solid #f0f0f0">${f(item.unit_price)}</td>
-      <td style="padding:14px 18px;text-align:center;border-bottom:1px solid #f0f0f0">
+      <td style="padding:14px 18px;text-align:center;font-size:14px;color:#374151;border-bottom:1px solid #f0f0f0;font-weight:500;white-space:nowrap">${item.quantity}</td>
+      <td style="padding:14px 18px;text-align:right;font-size:14px;color:#374151;border-bottom:1px solid #f0f0f0;white-space:nowrap">${f(item.unit_price)}</td>
+      <td style="padding:14px 18px;text-align:center;border-bottom:1px solid #f0f0f0;white-space:nowrap">
         <span style="background:${hexToRgba(accent, 0.1)};color:${accent};font-size:12px;font-weight:700;padding:4px 12px;border-radius:12px;display:inline-block;min-width:50px;text-align:center">${item.vat_rate}%</span>
       </td>
-      <td style="padding:14px 18px;text-align:right;font-weight:700;font-size:15px;border-bottom:1px solid #f0f0f0;color:${adjustBrightness(accent, -20)}">${f(item.total)}</td>
+      <td style="padding:14px 18px;text-align:right;font-weight:700;font-size:15px;border-bottom:1px solid #f0f0f0;color:${adjustBrightness(accent, -20)};white-space:nowrap">${f(item.total)}</td>
     </tr>`
   ).join('');
 
   const discountRow = (invoice.discount_amount ?? 0) > 0
-    ? `<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px;color:#ef4444"><span>${isFR(locale) ? 'Remise' : 'Discount'} (${invoice.discount_percent}%)</span><span>- ${f(invoice.discount_amount ?? 0)}</span></div>`
+    ? `<span style="font-weight:500">${isFR(locale) ? 'Remise' : 'Discount'} (${invoice.discount_percent}%)</span><span style="white-space:nowrap;flex-shrink:0;font-weight:600">- ${f(invoice.discount_amount ?? 0)}</span>`
     : '';
 
   const signatureBlock = labels.showSignature
@@ -814,33 +814,33 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
 
       <!-- Totals section -->
       <div class="totals-section" style="display:flex;justify-content:flex-end;margin-bottom:40px">
-        <div style="width:360px;max-width:100%">
+        <div style="width:420px;max-width:100%">
           <!-- Ligne sous-total -->
-          <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:14px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;font-size:14px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:8px">
             <span style="font-weight:500">Sous-total HT</span>
-            <span style="font-weight:600;font-variant-numeric:tabular-nums">${d.f(d.invoice.subtotal)}</span>
+            <span style="font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">${d.f(d.invoice.subtotal)}</span>
           </div>
 
           <!-- Ligne TVA -->
-          <div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:14px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;font-size:14px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:8px">
             <span style="font-weight:500">TVA</span>
-            <span style="font-weight:600;font-variant-numeric:tabular-nums">${d.f(d.invoice.vat_amount)}</span>
+            <span style="font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">${d.f(d.invoice.vat_amount)}</span>
           </div>
 
           <!-- Ligne remise (si applicable) -->
-          ${d.discountRow ? `<div style="display:flex;justify-content:space-between;padding:12px 16px;font-size:14px;color:#dc2626;background:#fef2f2;border-radius:8px;margin-bottom:8px;border:1px solid #fecaca">${d.discountRow}</div>` : ''}
+          ${d.discountRow ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;font-size:14px;color:#dc2626;background:#fef2f2;border-radius:8px;margin-bottom:8px;border:1px solid #fecaca">${d.discountRow}</div>` : ''}
 
           <!-- Séparateur -->
           <div style="height:2px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:12px 0"></div>
 
           <!-- TOTAL TTC - Mis en valeur -->
-          <div class="total-highlight" style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:linear-gradient(135deg,${hexToRgba(d.accent, 0.08)},${hexToRgba(d.accent, 0.15)});border-radius:12px;border:2px solid ${hexToRgba(d.accent, 0.2)};box-shadow:0 4px 12px ${hexToRgba(d.accent, 0.15)}">
-            <div>
+          <div class="total-highlight" style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 24px;background:linear-gradient(135deg,${hexToRgba(d.accent, 0.08)},${hexToRgba(d.accent, 0.15)});border-radius:12px;border:2px solid ${hexToRgba(d.accent, 0.2)};box-shadow:0 4px 12px ${hexToRgba(d.accent, 0.15)}">
+            <div style="min-width:0">
               <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:4px">${d.lang === 'fr' ? 'Montant total' : 'Total amount'}</div>
-              <div style="font-size:18px;font-weight:700;color:var(--text)">${d.labels.totalLabel}</div>
+              <div style="font-size:15px;font-weight:700;color:var(--text);word-break:break-word">${d.labels.totalLabel}</div>
             </div>
-            <div style="text-align:right">
-              <div class="total-amount" style="font-family:'Crimson Pro',serif;font-size:42px;font-weight:800;color:${d.accent};font-variant-numeric:tabular-nums;line-height:1">${d.f(d.invoice.total)}</div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="total-amount" style="font-family:'Crimson Pro',serif;font-size:34px;font-weight:800;color:${d.accent};font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap">${d.f(d.invoice.total)}</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-weight:500">TTC ${d.currency === 'EUR' ? '€' : d.currency}</div>
             </div>
           </div>
@@ -927,22 +927,22 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
     </div>
 
     <!-- Footer bar avec total en évidence -->
-    <div class="footer-bar" style="background:linear-gradient(135deg,var(--accent-dark),var(--accent));padding:16px 56px;display:flex;justify-content:space-between;align-items:center;border-top:3px solid var(--accent-dark)">
-      <div style="display:flex;align-items:center;gap:24px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.9);display:flex;align-items:center;gap:6px;font-weight:500">
+    <div class="footer-bar" style="background:linear-gradient(135deg,var(--accent-dark),var(--accent));padding:16px 56px;display:flex;justify-content:space-between;align-items:center;gap:24px;border-top:3px solid var(--accent-dark)">
+      <div style="display:flex;align-items:center;gap:24px;min-width:0;overflow:hidden">
+        <div style="font-size:11px;color:rgba(255,255,255,0.9);display:flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap">
           <i class="fas fa-file-invoice" style="color:rgba(255,255,255,0.7);font-size:10px"></i> ${d.docLabel} ${d.translations.common.generatedBy}
         </div>
-        <div style="display:flex;gap:18px">
-          ${d.profile.email ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px"><i class="fas fa-envelope" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.email}</div>` : ''}
-          ${d.profile.phone ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px"><i class="fas fa-phone" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.phone}</div>` : ''}
-          ${d.profile.website ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px"><i class="fas fa-globe" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.website}</div>` : ''}
+        <div style="display:flex;gap:18px;overflow:hidden">
+          ${d.profile.email ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px;white-space:nowrap"><i class="fas fa-envelope" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.email}</div>` : ''}
+          ${d.profile.phone ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px;white-space:nowrap"><i class="fas fa-phone" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.phone}</div>` : ''}
+          ${d.profile.website ? `<div style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:5px;white-space:nowrap"><i class="fas fa-globe" style="color:rgba(255,255,255,0.6);font-size:10px"></i> ${d.profile.website}</div>` : ''}
         </div>
       </div>
 
       <!-- Total en gros dans le footer pour visibilité maximale -->
-      <div class="footer-total" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.15);padding:10px 20px;border-radius:8px;backdrop-filter:blur(10px)">
+      <div class="footer-total" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.15);padding:10px 20px;border-radius:8px;backdrop-filter:blur(10px);flex-shrink:0">
         <div style="text-align:right">
-          <div style="font-size:9px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.1em;font-weight:600">${d.labels.totalLabel}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;white-space:nowrap">${d.labels.totalLabel}</div>
           <div style="font-size:24px;font-weight:800;color:#fff;font-family:'Crimson Pro',serif;letter-spacing:-0.5px;white-space:nowrap">${d.f(d.invoice.total)}</div>
         </div>
         <div style="width:1px;height:24px;background:rgba(255,255,255,0.3)"></div>
@@ -1002,41 +1002,60 @@ export function templateDeliveryNote(d: TemplateData): string {
 
 // ── Apply a custom HTML template with variable interpolation ──
 export function applyCustomTemplate(html: string, d: TemplateData): string {
+  const discountAmount = d.invoice.discount_amount ?? 0;
   const replacements: Record<string, string> = {
+    // Accent / style
     '{{accent_color}}': d.accent,
+    '{{currency}}': d.currency,
+    '{{language}}': d.lang,
+    // Company
     '{{company_name}}': d.profile.company_name || '',
     '{{company_address}}': [d.profile.address, d.profile.postal_code && d.profile.city ? `${d.profile.postal_code} ${d.profile.city}` : '', d.profile.country || ''].filter(Boolean).join(', '),
     '{{company_logo}}': d.logoHtml,
     '{{company_phone}}': d.profile.phone || '',
+    '{{company_email}}': d.profile.email || '',
     '{{company_siret}}': d.profile.siret || '',
+    '{{company_vat_number}}': d.profile.vat_number || '',
+    '{{company_legal_status}}': d.profile.legal_status || '',
+    // Document meta
     '{{doc_label}}': d.docLabel,
     '{{invoice_number}}': d.invoice.number,
     '{{issue_date}}': d.fd(d.invoice.issue_date),
     '{{due_date}}': d.labels.dueDateSection || '',
+    '{{issued_label}}': d.labels.issuedLabel,
+    '{{billed_to_label}}': d.labels.billedToLabel,
+    // Client
     '{{client_name}}': d.clientName,
     '{{client_address}}': d.clientAddr,
     '{{client_email}}': d.invoice.client?.email || '',
+    '{{client_phone}}': d.invoice.client?.phone || '',
+    '{{client_siret}}': d.invoice.client?.siret || '',
+    '{{client_logo}}': d.clientLogoHtml,
+    // Items & totals
     '{{items_table}}': d.rows,
     '{{subtotal}}': d.f(d.invoice.subtotal),
     '{{vat_amount}}': d.f(d.invoice.vat_amount),
+    '{{discount_amount}}': discountAmount > 0 ? d.f(discountAmount) : '',
+    '{{discount_percent}}': discountAmount > 0 ? `${d.invoice.discount_percent ?? 0}%` : '',
     '{{total}}': d.f(d.invoice.total),
     '{{total_label}}': d.labels.totalLabel,
+    // Notes
     '{{notes}}': d.invoice.notes || '',
     '{{notes_block}}': d.invoice.notes ? `<div style="margin-bottom:28px;padding:16px 20px;background:#f8f8fc;border-radius:10px;border-left:3px solid ${d.accent}"><div style="font-size:9px;font-weight:700;color:${d.accent};text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">${d.translations.invoice.notes}</div><div style="font-size:12px;color:#374151;line-height:1.7">${d.invoice.notes}</div></div>` : '',
+    // Blocks
     '{{bank_block}}': d.bankBlock,
     '{{payment_section}}': d.paymentSection,
+    '{{payment_terms_block}}': d.paymentTermsBlock,
     '{{legal_mention}}': d.legal,
-    '{{signature_block}}': d.signatureBlock,
-    '{{signature_image}}': d.sigBlock,
-    '{{watermark}}': d.watermarkHtml,
-    '{{issued_label}}': d.labels.issuedLabel,
-    '{{billed_to_label}}': d.labels.billedToLabel,
-    '{{client_logo}}': d.clientLogoHtml,
-    '{{currency}}': d.currency,
-    '{{language}}': d.lang,
+    '{{legal_mention_block}}': d.legalMentionBlock,
     '{{mandatory_mentions}}': d.mandatoryMentionsBlock,
     '{{insurance_mention}}': d.insuranceMention,
     '{{intellectual_property_mention}}': d.intellectualPropertyMention,
+    // Signature / watermark / QR
+    '{{signature_block}}': d.signatureBlock,
+    '{{signature_image}}': d.sigBlock,
+    '{{watermark}}': d.watermarkHtml,
+    '{{qrcode_block}}': d.qrBlock,
   };
 
   let result = html;

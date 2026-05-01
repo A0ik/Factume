@@ -50,13 +50,13 @@ export function useSubscription() {
     trialRemaining,
     trialEndDate,
     trialStartDate,
-    canUseVoice:          effectiveIsPro || effectiveIsBusiness,
+    canUseVoice:          isSolo || effectiveIsPro || effectiveIsBusiness,
     canUseCustomTemplate: effectiveIsPro || effectiveIsBusiness,
     canUseRecurring:      effectiveIsPro || effectiveIsBusiness,
-    canEditInvoice:       effectiveIsPro || effectiveIsBusiness,
-    canDeleteInvoice:     effectiveIsPro || effectiveIsBusiness,
-    canUseContracts:      effectiveIsPro || effectiveIsBusiness, // Pro et Business uniquement
-    canUseCRM:            effectiveIsPro || effectiveIsBusiness, // Pro et Business uniquement
+    canEditInvoice:       isSolo || effectiveIsPro || effectiveIsBusiness,
+    canDeleteInvoice:     isSolo || effectiveIsPro || effectiveIsBusiness,
+    canUseContracts:      effectiveIsPro || effectiveIsBusiness,
+    canUseCRM:            effectiveIsPro || effectiveIsBusiness,
     maxInvoices:          isFree ? 5 : Infinity,
     invoiceCount:         profile?.invoice_count || 0,
     invoicesRemaining:    isFree ? Math.max(0, 5 - (profile?.invoice_count || 0)) : null,

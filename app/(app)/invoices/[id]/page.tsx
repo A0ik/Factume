@@ -25,6 +25,18 @@ import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton
 import { isFacturXEligible } from '@/lib/facturx';
 import { motion, AnimatePresence } from 'framer-motion';
 
+function getDocListPath(type: string): string {
+  const map: Record<string, string> = {
+    invoice: '/documents/factures',
+    quote: '/documents/devis',
+    credit_note: '/documents/avoirs',
+    purchase_order: '/documents/commandes',
+    delivery_note: '/documents/livraisons',
+    deposit: '/documents/acomptes',
+  };
+  return map[type] ?? '/documents/factures';
+}
+
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: string; icon: any }> = {
   draft:     { label: 'Brouillon',   color: 'text-gray-500',    bg: 'bg-gray-100',    icon: FileText },
   sent:      { label: 'Envoyée',     color: 'text-blue-600',    bg: 'bg-blue-50',     icon: Send },
@@ -301,7 +313,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     try {
       await deleteInvoice(id);
       toast.success('Facture supprimée.');
-      router.push('/invoices');
+      router.push(getDocListPath(invoice?.document_type ?? 'invoice'));
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la suppression.');
       setDeleting(false);
@@ -317,7 +329,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push('/invoices')}
+            onClick={() => router.push(getDocListPath(invoice.document_type))}
             className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
           >
             <ArrowLeft size={18} />

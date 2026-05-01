@@ -22,6 +22,18 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+function getDocListPath(type: string): string {
+  const map: Record<string, string> = {
+    invoice: '/documents/factures',
+    quote: '/documents/devis',
+    credit_note: '/documents/avoirs',
+    purchase_order: '/documents/commandes',
+    delivery_note: '/documents/livraisons',
+    deposit: '/documents/acomptes',
+  };
+  return map[type] ?? '/documents/factures';
+}
+
 const DOC_TYPES = [
   {
     value: 'invoice',
@@ -402,7 +414,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     return (
       <div className="text-center py-20">
         <p className="text-gray-500">Facture introuvable</p>
-        <button onClick={() => router.push('/invoices')} className="mt-3 text-primary font-semibold text-sm hover:underline">Retour</button>
+        <button onClick={() => router.push(getDocListPath(docType))} className="mt-3 text-primary font-semibold text-sm hover:underline">Retour</button>
       </div>
     );
   }
@@ -412,7 +424,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href={`/invoices/${invoice.id}`}
+          href={getDocListPath(invoice.document_type)}
           className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 transition-all"
         >
           <ArrowLeft size={16} />

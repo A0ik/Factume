@@ -115,6 +115,65 @@ export default function SettingsPage() {
   const [templateError, setTemplateError] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
 
+  const buildPreviewHtml = (html: string): string => {
+    const p = profile;
+    const sampleRows = `
+      <tr><td style="padding:10px 14px;border-bottom:1px solid #eee">Prestation de service</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">3</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">500,00 €</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">20%</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">1 500,00 €</td></tr>
+      <tr><td style="padding:10px 14px;border-bottom:1px solid #eee">Frais de déplacement</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">1</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">200,00 €</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">20%</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">200,00 €</td></tr>
+    `;
+    const demo: Record<string, string> = {
+      '{{accent_color}}': form.accent_color || '#1D9E75',
+      '{{company_name}}': p?.company_name || 'Ma Société SAS',
+      '{{company_address}}': [p?.address, p?.postal_code && p?.city ? `${p.postal_code} ${p.city}` : '75001 Paris'].filter(Boolean).join(', ') || '12 Rue de la Paix, 75001 Paris',
+      '{{company_logo}}': '',
+      '{{company_phone}}': p?.phone || '01 23 45 67 89',
+      '{{company_email}}': p?.email || 'contact@masociete.fr',
+      '{{company_siret}}': p?.siret || '12345678900012',
+      '{{company_vat_number}}': p?.vat_number || 'FR12345678901',
+      '{{company_legal_status}}': p?.legal_status || 'SAS',
+      '{{doc_label}}': 'FACTURE',
+      '{{invoice_number}}': 'FA-2024-001',
+      '{{issue_date}}': '15 janvier 2024',
+      '{{due_date}}': 'Échéance : 14 février 2024',
+      '{{issued_label}}': 'Émise le',
+      '{{billed_to_label}}': 'Facturé à',
+      '{{client_name}}': 'Client Démo SARL',
+      '{{client_address}}': '45 Avenue des Champs-Élysées<br/>75008 Paris',
+      '{{client_email}}': 'client@demo.fr',
+      '{{client_phone}}': '06 12 34 56 78',
+      '{{client_siret}}': '98765432100021',
+      '{{client_logo}}': '',
+      '{{items_table}}': sampleRows,
+      '{{subtotal}}': '1 700,00 €',
+      '{{vat_amount}}': '340,00 €',
+      '{{discount_amount}}': '',
+      '{{discount_percent}}': '',
+      '{{total}}': '2 040,00 €',
+      '{{total_label}}': 'TOTAL TTC',
+      '{{notes}}': 'Merci pour votre confiance.',
+      '{{notes_block}}': '<div style="padding:12px 16px;background:#f8f8fc;border-radius:8px;margin-bottom:16px;font-size:12px;color:#374151">Merci pour votre confiance.</div>',
+      '{{bank_block}}': '<div style="padding:12px 16px;background:#f0fdf4;border-radius:8px;margin-bottom:16px;font-size:12px;color:#374151"><strong>Banque :</strong> BNP Paribas<br/><strong>IBAN :</strong> FR76 1234 5678 9012 3456 7890 123</div>',
+      '{{payment_section}}': '',
+      '{{payment_terms_block}}': '<div style="padding:12px 16px;background:#f8f8fc;border-radius:8px;margin-bottom:16px;font-size:12px;color:#374151">Paiement sous 30 jours. En cas de retard, une pénalité de 3× le taux légal sera appliquée.</div>',
+      '{{legal_mention}}': 'SIRET 12345678900012 · TVA FR12345678901',
+      '{{legal_mention_block}}': '<div style="padding:12px 16px;background:#f9f9f9;border-radius:8px;font-size:11px;color:#6b7280">SIRET 12345678900012 · N° TVA FR12345678901 · Pénalités de retard : 3× le taux légal</div>',
+      '{{mandatory_mentions}}': '<div style="padding:12px 16px;background:#fafafa;border-radius:8px;font-size:11px;color:#6b7280">Facture émise conformément à l\'art. L.441-9 du Code de commerce</div>',
+      '{{insurance_mention}}': '',
+      '{{intellectual_property_mention}}': '',
+      '{{signature_block}}': '',
+      '{{signature_image}}': '',
+      '{{watermark}}': '',
+      '{{qrcode_block}}': '',
+      '{{currency}}': 'EUR',
+      '{{language}}': 'fr',
+    };
+    let result = html;
+    for (const [key, val] of Object.entries(demo)) {
+      result = result.split(key).join(val);
+    }
+    return result;
+  };
+
   const handleAnalyzeTemplate = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1273,7 +1332,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div className="bg-gray-100 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
               <iframe
-                srcDoc={analyzedTemplateHtml}
+                srcDoc={buildPreviewHtml(analyzedTemplateHtml)}
                 className="w-full border-0"
                 style={{ height: '600px', minWidth: '600px', transform: 'scale(0.6)', transformOrigin: 'top left', width: '166.6%' }}
                 title="Template preview"
