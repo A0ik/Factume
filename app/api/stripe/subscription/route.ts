@@ -20,16 +20,19 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId, yearly = false } = await req.json(); // On met false par défaut
+    const { plan, userId, yearly = false } = await req.json();
     const interval = yearly ? 'yearly' : 'monthly';
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-    if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    if (!userId) return NextResponse.json({ error: 'Utilisateur non identifié. Veuillez vous reconnecter.' }, { status: 400 });
+    if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Plan invalide.' }, { status: 400 });
     const priceId = PRICE_IDS[plan][interval];
-    if (!priceId) return NextResponse.json({ error: `Missing ${interval} price for ${plan}` }, { status: 400 });
+    if (!priceId) return NextResponse.json({ error: `Ce plan (${plan} / ${interval === 'yearly' ? 'annuel' : 'mensuel'}) n'est pas encore configuré. Veuillez contacter le support.` }, { status: 400 });
 
     const supabase = createAdminClient();
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+
+    if (!profile) return NextResponse.json({ error: 'Profil introuvable. Veuillez vous reconnecter.' }, { status: 404 });
 
     // 1. Créer ou récupérer le client Stripe
     let customerId = profile?.stripe_customer_id;
@@ -39,24 +42,37 @@ export async function POST(req: NextRequest) {
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
     }
 
-    // 2. LA NOUVELLE MÉTHODE (Payment Element) au lieu de Checkout Session
+    // 2. Créer l'abonnement en attente de paiement (Payment Element)
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete', // Garde la souscription en attente de paiement
+      payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'], // Indispensable pour obtenir le client_secret
+      expand: ['latest_invoice.payment_intent'],
     });
 
-    // 3. Extraire le secret pour l'afficher dans le formulaire de carte
+    // 3. Extraire le client_secret pour le formulaire de paiement
     const invoice = subscription.latest_invoice as Stripe.Invoice | null;
     const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent | null;
     const clientSecret = paymentIntent?.client_secret ?? null;
 
+    if (!clientSecret) {
+      // Annuler l'abonnement incomplet pour éviter qu'il reste bloqué dans Stripe
+      await stripe.subscriptions.cancel(subscription.id);
+      return NextResponse.json({ error: 'Impossible d\'initialiser le formulaire de paiement. Veuillez réessayer dans quelques instants.' }, { status: 500 });
+    }
+
     return NextResponse.json({ clientSecret, subscriptionId: subscription.id });
 
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const err = error as Error & { type?: string; code?: string };
+    // Traduire les erreurs Stripe communes en français
+    if (err.type === 'StripeCardError') {
+      return NextResponse.json({ error: 'Votre carte a été refusée. Veuillez vérifier vos informations.' }, { status: 400 });
+    }
+    if (err.code === 'resource_missing') {
+      return NextResponse.json({ error: 'Configuration de paiement introuvable. Veuillez contacter le support.' }, { status: 400 });
+    }
+    return NextResponse.json({ error: err.message || 'Une erreur est survenue. Veuillez réessayer.' }, { status: 500 });
   }
 }

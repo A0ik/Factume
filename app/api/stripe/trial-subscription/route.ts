@@ -23,12 +23,15 @@ export async function POST(req: NextRequest) {
     const interval = yearly ? 'yearly' : 'monthly';
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-    if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    if (!userId) return NextResponse.json({ error: 'Utilisateur non identifié. Veuillez vous reconnecter.' }, { status: 400 });
+    if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Plan invalide.' }, { status: 400 });
     const priceId = PRICE_IDS[plan][interval];
-    if (!priceId) return NextResponse.json({ error: `Missing ${interval} price for ${plan}` }, { status: 400 });
+    if (!priceId) return NextResponse.json({ error: `Ce plan (${plan} / ${interval === 'yearly' ? 'annuel' : 'mensuel'}) n'est pas encore configuré. Veuillez contacter le support.` }, { status: 400 });
 
     const supabase = createAdminClient();
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+
+    if (!profile) return NextResponse.json({ error: 'Profil introuvable. Veuillez vous reconnecter.' }, { status: 404 });
 
     // 1. Créer ou récupérer le client Stripe
     let customerId = profile?.stripe_customer_id;
@@ -82,7 +85,10 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const err = error as Error & { type?: string; code?: string };
+    if (err.code === 'resource_missing') {
+      return NextResponse.json({ error: 'Configuration de paiement introuvable. Veuillez contacter le support.' }, { status: 400 });
+    }
+    return NextResponse.json({ error: err.message || 'Une erreur est survenue. Veuillez réessayer.' }, { status: 500 });
   }
 }

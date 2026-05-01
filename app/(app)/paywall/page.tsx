@@ -191,7 +191,7 @@ export default function PaywallPage() {
   const handleSelect = async (planId: string) => {
     if (planId === sub.tier) return;
     const selectedPlan = PLANS.find(p => p.id === planId);
-    if (!selectedPlan) return;
+    if (!selectedPlan || !profile?.id) return;
 
     setLoading(planId);
     setSelectedPlan(selectedPlan);
