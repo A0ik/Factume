@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const supabase = createAdminClient();
-    const { data: profile } = await supabase.from('profiles').select('stripe_customer_id, subscription_id, subscription_tier').eq('id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('stripe_customer_id, stripe_subscription_id, subscription_tier').eq('id', user.id).single();
 
     // Vérifier si l'utilisateur a un abonnement actif
-    if (!profile?.subscription_id || !profile?.stripe_customer_id) {
+    if (!profile?.stripe_subscription_id || !profile?.stripe_customer_id) {
       return NextResponse.json({ error: "Aucun abonnement actif trouvé. Veuillez vous abonner d'abord." }, { status: 400 });
     }
 

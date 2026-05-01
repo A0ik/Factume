@@ -35,6 +35,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fetchClients();
   }, [initialized, user]);
 
+  // Handle Stripe payment success redirect — refresh profile to pick up new tier
+  useEffect(() => {
+    if (typeof window === 'undefined' || !initialized || !user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === 'true') {
+      window.history.replaceState({}, '', window.location.pathname);
+      import('@/stores/authStore').then(({ useAuthStore }) => {
+        useAuthStore.getState().fetchProfile(user.id);
+      });
+    }
+  }, [initialized, user]);
+
   // Hide banners on paywall and trial pages
   const hideBanners = pathname === '/paywall' || pathname === '/trial';
 

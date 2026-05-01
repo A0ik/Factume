@@ -158,6 +158,11 @@ export default function PaywallPage() {
   }, [profile?.id, sub.isFree, sub.tier]);
 
   const handleSelectWithTrial = async (planId: string) => {
+    if (planId !== 'business') {
+      // Trial is only available for Business plan, use direct payment for others
+      handleSelect(planId);
+      return;
+    }
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan || !profile?.id) return;
 
@@ -203,7 +208,7 @@ export default function PaywallPage() {
     if (!profile?.id) return;
 
     // Ne pas déclencher si l'utilisateur a déjà un abonnement actif ou un trial
-    if (sub.tier !== 'free' && sub.tier !== undefined) return;
+    if (sub.tier !== 'free') return;
 
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const planParam = params.get('plan');
@@ -307,7 +312,7 @@ export default function PaywallPage() {
     setSelectedPlan(null);
   };
 
-  const remainingInvoices = 5 - sub.invoiceCount;
+  const remainingInvoices = sub.invoicesRemaining ?? 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pb-20 px-4 sm:px-6 lg:px-8 py-8">

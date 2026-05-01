@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
+      metadata: { userId, plan },
     });
 
     // 3. Extraire le client_secret pour le formulaire de paiement

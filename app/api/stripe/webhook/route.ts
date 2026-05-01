@@ -53,18 +53,26 @@ export async function POST(req: NextRequest) {
         const plan = sub.metadata?.plan || 'free';
         const previousAttributes = event.data.previous_attributes as Partial<Stripe.Subscription> | undefined;
 
-        if (previousAttributes?.status === 'trialing' && sub.status === 'active') {
-          // Trial just ended, subscription is now active
-          await supabase.from('profiles')
-            .update({
-              subscription_tier: plan,
-              is_trial_active: false,
-            })
-            .eq('stripe_subscription_id', sub.id);
-        } else {
-          await supabase.from('profiles')
-            .update({ subscription_tier: plan })
-            .eq('stripe_subscription_id', sub.id);
+        if (sub.status === 'active') {
+          if (previousAttributes?.status === 'trialing') {
+            // Trial just ended, subscription is now active
+            await supabase.from('profiles')
+              .update({
+                subscription_tier: plan,
+                is_trial_active: false,
+              })
+              .eq('stripe_subscription_id', sub.id);
+          } else if (previousAttributes?.status === 'incomplete') {
+            // New subscription payment confirmed — activate the plan
+            await supabase.from('profiles')
+              .update({ subscription_tier: plan })
+              .eq('stripe_subscription_id', sub.id);
+          } else {
+            // Plan change or other update
+            await supabase.from('profiles')
+              .update({ subscription_tier: plan })
+              .eq('stripe_subscription_id', sub.id);
+          }
         }
         break;
       }

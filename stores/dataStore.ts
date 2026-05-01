@@ -66,6 +66,18 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
 
+    // Enforce free tier invoice limit (5/month)
+    const isFree = !profile.subscription_tier || profile.subscription_tier === 'free';
+    if (isFree) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const monthlyCount = (profile.invoice_month === currentMonth)
+        ? (profile.monthly_invoice_count || 0)
+        : 0;
+      if (monthlyCount >= 5) {
+        throw new Error('Limite de 5 factures mensuelles atteinte. Passez à un plan supérieur pour des factures illimitées.');
+      }
+    }
+
     if (idempotencyId) {
       const { data: existing } = await getSupabaseClient()
         .from('invoices')
@@ -129,11 +141,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     // Mise à jour des stats mensuelles en background (non critique)
     (async () => {
       try {
-        await getSupabaseClient().from('profiles').update({
-          monthly_invoice_count: (profile.monthly_invoice_count || 0) + 1,
-          invoice_month: currentMonth
-        }).eq('id', user.id);
-
+        // RPC already updated invoice_count + monthly_invoice_count, just refresh profile
         const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
         if (freshProfile) {
           try {

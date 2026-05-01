@@ -8,6 +8,10 @@ export function useSubscription() {
   const isTrialActive = profile?.is_trial_active || false;
   const trialEndDate = profile?.trial_end_date;
   const trialStartDate = profile?.trial_start_date;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyInvoiceCount = (profile?.invoice_month === currentMonth)
+    ? (profile?.monthly_invoice_count || 0)
+    : 0;
 
   // Calculate remaining trial time
   const trialRemaining = useMemo(() => {
@@ -58,9 +62,9 @@ export function useSubscription() {
     canUseContracts:      effectiveIsPro || effectiveIsBusiness,
     canUseCRM:            effectiveIsPro || effectiveIsBusiness,
     maxInvoices:          isFree ? 5 : Infinity,
-    invoiceCount:         profile?.invoice_count || 0,
-    invoicesRemaining:    isFree ? Math.max(0, 5 - (profile?.invoice_count || 0)) : null,
-    isAtLimit:            isFree && (profile?.invoice_count || 0) >= 5,
+    invoiceCount:         monthlyInvoiceCount,
+    invoicesRemaining:    isFree ? Math.max(0, 5 - monthlyInvoiceCount) : null,
+    isAtLimit:            isFree && monthlyInvoiceCount >= 5,
     maxWorkspaces:        effectiveIsBusiness ? Infinity : (effectiveIsPro || isTrial) ? 3 : 1,
     canCreateWorkspace:   (count: number) => effectiveIsBusiness || ((effectiveIsPro || isTrial) && count < 3) || count < 1,
   };

@@ -21,15 +21,30 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
   const [isVisible, setIsVisible] = React.useState(true);
 
   React.useEffect(() => {
-    const checkTrialStatus = async () => {
+    // Fetch trial end date once from server
+    const fetchTrialEnd = async () => {
       try {
         const response = await fetch('/api/subscription/trial-status');
         if (response.ok) {
           const data = await response.json();
-          if (data.trialRemaining) {
-            setTimeRemaining(data.trialRemaining);
+          if (data.trialEndDate) {
+            const endDate = new Date(data.trialEndDate);
+            // Client-side countdown, synced to server end date
+            const tick = () => {
+              const now = Date.now();
+              const diff = endDate.getTime() - now;
+              if (diff <= 0) { setIsVisible(false); return; }
+              setTimeRemaining({
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((diff % (1000 * 60)) / 1000),
+              });
+            };
+            tick();
+            const interval = setInterval(tick, 1000);
+            return () => clearInterval(interval);
           } else {
-            // Trial expired or not active
             setIsVisible(false);
           }
         }
@@ -37,11 +52,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
         console.error('Failed to fetch trial status:', error);
       }
     };
-
-    checkTrialStatus();
-    const interval = setInterval(checkTrialStatus, 1000);
-
-    return () => clearInterval(interval);
+    fetchTrialEnd();
   }, []);
 
   if (!isVisible || !timeRemaining) return null;
@@ -81,7 +92,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
                   <span>{formatTime(timeRemaining.minutes)}m</span>
                   <span>{formatTime(timeRemaining.seconds)}s</span>
                 </div>
-                <span className="text-white/80">avant de passer à l'abonnement Pro</span>
+                <span className="text-white/80">avant de passer à l'abonnement Business</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
