@@ -280,7 +280,7 @@ function buildLegalMentions(profile: Profile, docType: string, locale: Locale = 
       parts.push('VAT not applicable, art. 293 B of the French General Tax Code');
     }
   } else if (profile.legal_status && profile.legal_status !== 'autre') {
-    if (isFr && profile.legal_status !== 'auto-entrepreneur') {
+    if (isFr) {
       parts.push(`Forme juridique : ${profile.legal_status.replace('-', ' ').toUpperCase()}`);
     }
   }
