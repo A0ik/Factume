@@ -457,6 +457,44 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* SIGNATURE SECTION (for signed quotes) */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        {(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at && invoice.client_signature_url) && (
+          <View style={{ marginHorizontal: 44, marginTop: 16, marginBottom: 12 }}>
+            <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: tpl.borderColor, borderRadius: 8, padding: '16 18', backgroundColor: tpl.sectionBg }}>
+              <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 8 }}>SIGNATURE DU CLIENT</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
+                {/* Signature image */}
+                {invoice.client_signature_url && (
+                  <View style={{ width: 120, height: 60, backgroundColor: '#ffffff', borderRadius: 6, borderWidth: 1, borderColor: tpl.borderColor, padding: 4 }}>
+                    <Image src={invoice.client_signature_url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </View>
+                )}
+                {/* Signature details */}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <View style={{ width: 16, height: 16, backgroundColor: '#10b981', borderRadius: 3, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
+                      <Text style={{ fontSize: 10, color: '#ffffff' }}>✓</Text>
+                    </View>
+                    <Text style={{ fontSize: 9, fontFamily: bold, color: '#10b981' }}>Signé électroniquement</Text>
+                  </View>
+                  {invoice.signed_by && (
+                    <Text style={{ fontSize: 9, color: '#374151', marginBottom: 2 }}>Signé par : <Text style={{ fontFamily: bold }}>{invoice.signed_by}</Text></Text>
+                  )}
+                  {invoice.signed_at && (
+                    <Text style={{ fontSize: 8, color: '#6b7280' }}>Date de signature : {fd(invoice.signed_at)}</Text>
+                  )}
+                  <Text style={{ fontSize: 7, color: '#9ca3af', marginTop: 3, fontStyle: 'italic' }}>
+                    Signature électronique conforme au règlement eIDAS n°910/2014
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
         {/* FOOTER */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 

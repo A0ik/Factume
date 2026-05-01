@@ -346,14 +346,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             />
           )}
 
-          {/* Edit */}
-          <button
-            onClick={() => router.push(`/invoices/${id}/edit`)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all shadow-sm"
-          >
-            <Edit2 size={15} />
-            Modifier
-          </button>
+          {/* Edit - only if not signed quote */}
+          {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
+            <button
+              onClick={() => router.push(`/invoices/${id}/edit`)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all shadow-sm"
+            >
+              <Edit2 size={15} />
+              Modifier
+            </button>
+          )}
 
           {/* More actions */}
           <div className="relative">
@@ -619,13 +621,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </button>
             )}
 
-            <button
-              onClick={() => router.push(`/invoices/${id}/edit`)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-primary/20 text-primary hover:bg-primary-light text-sm font-semibold transition-colors"
-            >
-              <Edit2 size={16} />
-              Modifier la facture
-            </button>
+            {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
+              <button
+                onClick={() => router.push(`/invoices/${id}/edit`)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-primary/20 text-primary hover:bg-primary-light text-sm font-semibold transition-colors"
+              >
+                <Edit2 size={16} />
+                Modifier la facture
+              </button>
+            )}
           </div>
 
           {/* Factur-X Info - Menu déroulant animé */}

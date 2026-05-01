@@ -380,6 +380,24 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  // Check if quote is signed (cannot modify signed quotes)
+  if (invoice?.status === 'accepted' && invoice?.signed_at && invoice?.document_type === 'quote') {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+        <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+          <Lock size={32} className="text-red-500" />
+        </div>
+        <h1 className="text-2xl font-black text-gray-900 mb-2">Devis signé</h1>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          Ce devis a été signé par le client et ne peut plus être modifié. La signature électronique a valeur légale.
+        </p>
+        <Button onClick={() => router.push(`/invoices/${invoice.id}`)} icon={<ArrowLeft size={16} />}>
+          Retour au devis
+        </Button>
+      </div>
+    );
+  }
+
   if (!invoice) {
     return (
       <div className="text-center py-20">
