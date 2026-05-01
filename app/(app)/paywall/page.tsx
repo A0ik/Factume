@@ -2,14 +2,13 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import {
-  ArrowLeft, Check, X, Crown, Zap, Rocket, Building2, Shield, Loader2, ArrowRight,
-  Star, CreditCard, RefreshCw, Sparkles, Award, Infinity, Users, BarChart3,
-  Database, Globe, HeadphonesIcon as Headphones, Lock, CheckCircle2, Circle,
-  BadgePercent,
+  ArrowLeft, Check, Crown, Zap, Rocket, Shield, Loader2, ArrowRight,
+  CreditCard, RefreshCw, Sparkles, Award, Infinity, Lock, CheckCircle2, Circle,
+  BadgePercent, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -111,6 +110,30 @@ export default function PaywallPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
   const [prorataData, setProrataData] = useState<Record<string, { amount: number; percent: number }>>({});
+  const [confirmChange, setConfirmChange] = useState<{ plan: Plan; prorata: { amount: number; percent: number } } | null>(null);
+
+  // Toggle refs for proper sizing
+  const monthlyRef = useRef<HTMLButtonElement>(null);
+  const yearlyRef = useRef<HTMLButtonElement>(null);
+  const [togglePos, setTogglePos] = useState({ left: 2, width: 0 });
+
+  useEffect(() => {
+    if (monthlyRef.current && yearlyRef.current) {
+      const parent = monthlyRef.current.parentElement;
+      if (!parent) return;
+      if (!isYearly) {
+        setTogglePos({
+          left: monthlyRef.current.offsetLeft,
+          width: monthlyRef.current.offsetWidth,
+        });
+      } else {
+        setTogglePos({
+          left: yearlyRef.current.offsetLeft,
+          width: yearlyRef.current.offsetWidth,
+        });
+      }
+    }
+  }, [isYearly]);
 
   useEffect(() => {
     const fetchProrataData = async () => {
@@ -193,51 +216,72 @@ export default function PaywallPage() {
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan || !profile?.id) return;
 
+    // Si l'utilisateur a déjà un abonnement payant, afficher la confirmation avant de changer
+    if (!sub.isFree && sub.tier !== 'free') {
+      const prorata = prorataData[planId] || { amount: 0, percent: 0 };
+      setConfirmChange({ plan: selectedPlan, prorata });
+      return;
+    }
+
+    // Utilisateur gratuit : afficher le checkout Stripe
     setLoading(planId);
     setSelectedPlan(selectedPlan);
     try {
-      if (!sub.isFree && sub.tier !== 'free') {
-        const res = await fetch('/api/stripe/change-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: planId, userId: profile?.id, yearly: isYearly }),
+      const res = await fetch('/api/stripe/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId, userId: profile?.id, yearly: isYearly }),
+      });
+      const data = await res.json();
+
+      if (data.clientSecret) {
+        const planInfo: PlanInfo = {
+          id: selectedPlan.id,
+          name: selectedPlan.name,
+          price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
+          priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
+          features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
+        };
+
+        setCheckoutData({
+          clientSecret: data.clientSecret,
+          userId: profile?.id ?? '',
+          planInfo,
         });
-        const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
-        } else if (data.success) {
-          toast.success('Abonnement mis à jour avec succès !');
-          setTimeout(() => window.location.reload(), 1500);
-        } else {
-          toast.error(data.error || "Impossible de changer l'abonnement");
-          setSelectedPlan(null);
-        }
       } else {
-        const res = await fetch('/api/stripe/subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: planId, userId: profile?.id, yearly: isYearly }),
-        });
-        const data = await res.json();
+        toast.error(data.error || "Impossible de créer l'abonnement");
+        setSelectedPlan(null);
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur');
+      setSelectedPlan(null);
+    } finally {
+      setLoading(null);
+    }
+  };
 
-        if (data.clientSecret) {
-          const planInfo: PlanInfo = {
-            id: selectedPlan.id,
-            name: selectedPlan.name,
-            price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
-            priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
-            features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
-          };
+  const confirmPlanChange = async () => {
+    if (!confirmChange || !profile?.id) return;
+    const { plan } = confirmChange;
+    setConfirmChange(null);
+    setLoading(plan.id);
+    setSelectedPlan(plan);
 
-          setCheckoutData({
-            clientSecret: data.clientSecret,
-            userId: profile?.id ?? '',
-            planInfo,
-          });
-        } else {
-          toast.error(data.error || "Impossible de créer l'abonnement");
-          setSelectedPlan(null);
-        }
+    try {
+      const res = await fetch('/api/stripe/change-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: plan.id, userId: profile.id, yearly: isYearly }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else if (data.success) {
+        toast.success('Abonnement mis à jour avec succès !');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast.error(data.error || "Impossible de changer l'abonnement");
+        setSelectedPlan(null);
       }
     } catch (e: any) {
       toast.error(e.message || 'Erreur');
@@ -424,39 +468,40 @@ export default function PaywallPage() {
         transition={{ delay: 0.15 }}
         className="flex flex-col items-center gap-3 mb-10"
       >
-        <div className="relative inline-flex items-center p-1 rounded-full bg-gray-100/80 backdrop-blur-xl border border-gray-200/60 shadow-lg shadow-gray-200/50">
+        <div className="relative inline-flex items-center p-1 rounded-full bg-gray-100 border border-gray-200/60 shadow-md">
           <motion.div
-            layout
-            className="absolute top-1 bottom-1 rounded-full shadow-lg"
-            style={{ width: 'calc(50% - 4px)' }}
+            className="absolute top-1 bottom-1 rounded-full shadow-md"
             animate={{
-              left: isYearly ? 'calc(50% + 2px)' : '2px',
+              left: togglePos.left - 1,
+              width: togglePos.width + 2,
               background: isYearly
                 ? 'linear-gradient(135deg, #059669, #047857)'
                 : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
             }}
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           />
 
           <button
+            ref={monthlyRef}
             onClick={() => setBilling('monthly')}
             className={cn(
-              "relative z-10 px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-200",
+              "relative z-10 px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200",
               !isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Mensuel
           </button>
           <button
+            ref={yearlyRef}
             onClick={() => setBilling('yearly')}
             className={cn(
-              "relative z-10 px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center gap-2.5",
+              "relative z-10 px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center gap-2",
               isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Annuel
             <span className={cn(
-              "px-2.5 py-0.5 text-[10px] font-black rounded-full tracking-wide transition-all duration-200",
+              "px-2 py-0.5 text-[10px] font-black rounded-full tracking-wide transition-all duration-200",
               isYearly
                 ? "bg-white/25 text-white"
                 : "bg-emerald-100 text-emerald-700"
@@ -483,6 +528,88 @@ export default function PaywallPage() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Confirmation Modal for Plan Change */}
+      <AnimatePresence>
+        {confirmChange && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setConfirmChange(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className={cn(
+                  "h-12 w-12 rounded-xl flex items-center justify-center text-white bg-gradient-to-br",
+                  confirmChange.plan.gradient
+                )}>
+                  <confirmChange.plan.icon size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Changer vers {confirmChange.plan.name} ?</h3>
+                  <p className="text-sm text-gray-500">Confirmez le changement de plan</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-600">Nouveau prix</span>
+                  <span className="text-sm font-bold">{isYearly ? confirmChange.plan.yearlyPrice : confirmChange.plan.price}/mois</span>
+                </div>
+                {confirmChange.prorata.amount > 0 && (
+                  <>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-600">Prorata</span>
+                      <span className="text-sm font-bold text-emerald-600">{confirmChange.prorata.amount.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Période restante</span>
+                      <span className="text-sm font-bold">{confirmChange.prorata.percent}%</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-5">
+                <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">
+                  Le changement sera facturé immédiatement par prorata sur votre méthode de paiement actuelle.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmChange(null)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmPlanChange}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r {confirmChange.plan.gradient} hover:opacity-90 transition-opacity"
+                  style={{
+                    background: confirmChange.plan.id === 'solo'
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : confirmChange.plan.id === 'pro'
+                        ? 'linear-gradient(135deg, #1e40af, #3730a3)'
+                        : 'linear-gradient(135deg, #9333ea, #6d28d9)'
+                  }}
+                >
+                  Confirmer le changement
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Checkout View or Plans Grid */}
       <AnimatePresence mode="wait">
@@ -547,7 +674,7 @@ export default function PaywallPage() {
                   </div>
                   {isYearly && (
                     <p className="text-sm text-white/70 mt-1">
-                      {isYearly ? selectedPlan.yearlySavings : selectedPlan.yearlySavings} économisés/an • Facturé annuellement
+                      {selectedPlan.yearlySavings} économisés/an • Facturé annuellement
                     </p>
                   )}
                 </div>

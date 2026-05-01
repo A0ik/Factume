@@ -1,8 +1,9 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Sparkles, Shield, ArrowRight, CheckCircle2, Circle, Infinity, Lock, HeadphonesIcon as Headphones, BadgePercent } from 'lucide-react';
+import { Check, Sparkles, Shield, ArrowRight, CheckCircle2, Circle, Lock, HeadphonesIcon as Headphones, BadgePercent } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef, useState } from 'react';
 
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
@@ -26,6 +27,120 @@ interface OptimizedPricingCardProps {
   prorataAmount?: number;
   prorataPercent?: number;
   currentPlan?: string;
+}
+
+// Animated background particles per plan
+const PLAN_COLORS: Record<string, { dot: string; glow: string; meteor: string }> = {
+  solo: { dot: 'rgba(16, 185, 129, 0.5)', glow: 'rgba(16, 185, 129, 0.15)', meteor: '#10b981' },
+  pro: { dot: 'rgba(59, 130, 246, 0.5)', glow: 'rgba(59, 130, 246, 0.15)', meteor: '#3b82f6' },
+  business: { dot: 'rgba(147, 51, 234, 0.5)', glow: 'rgba(147, 51, 234, 0.15)', meteor: '#9333ea' },
+};
+
+const PLAN_BUTTON: Record<string, string> = {
+  solo: 'linear-gradient(135deg, #10b981, #059669)',
+  pro: 'linear-gradient(135deg, #1e40af, #3730a3)',
+  business: 'linear-gradient(135deg, #9333ea, #6d28d9)',
+};
+
+const PLAN_HEADER: Record<string, string> = {
+  solo: 'linear-gradient(135deg, #10b981, #059669)',
+  pro: 'linear-gradient(135deg, #1e40af, #312e81)',
+  business: 'linear-gradient(135deg, #9333ea, #6d28d9)',
+};
+
+function FloatingOrbs({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(4)].map((_, i) => (
+        <motion.div
+          key={`orb-${i}`}
+          className="absolute rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${color}, transparent 70%)`,
+            width: 40 + i * 20,
+            height: 40 + i * 20,
+            left: `${15 + i * 22}%`,
+            top: `${10 + i * 18}%`,
+          }}
+          animate={{
+            x: [0, 30 + i * 10, -20, 0],
+            y: [0, -25, 15 + i * 5, 0],
+            opacity: [0.3, 0.6, 0.4, 0.3],
+            scale: [1, 1.2, 0.9, 1],
+          }}
+          transition={{
+            duration: 6 + i * 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.8,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MeteorShower({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={`meteor-${i}`}
+          className="absolute"
+          style={{
+            width: 2,
+            height: 20 + i * 10,
+            background: `linear-gradient(to bottom, ${color}, transparent)`,
+            borderRadius: 999,
+            left: `${20 + i * 30}%`,
+            top: '-10%',
+          }}
+          animate={{
+            y: ['0%', '120%'],
+            x: [0, -30 + i * 15],
+            opacity: [0, 1, 0],
+          }}
+          transition={{
+            duration: 2.5 + i * 0.8,
+            repeat: Infinity,
+            ease: 'linear',
+            delay: i * 1.2 + Math.random() * 2,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FloatingDots({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(8)].map((_, i) => (
+        <motion.div
+          key={`dot-${i}`}
+          className="absolute rounded-full"
+          style={{
+            width: 2 + (i % 3),
+            height: 2 + (i % 3),
+            backgroundColor: color,
+            left: `${10 + i * 12}%`,
+            top: `${15 + (i * 17) % 70}%`,
+          }}
+          animate={{
+            y: [0, -15 - i * 3, 10, 0],
+            x: [0, 8 - i * 2, -5, 0],
+            opacity: [0, 0.8, 0.4, 0],
+          }}
+          transition={{
+            duration: 3 + i * 0.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.4,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 const PlanFeatureItem = ({ feature, delay }: { feature: PlanFeature; delay: number }) => (
@@ -80,14 +195,8 @@ export function OptimizedPricingCard({
   const isYearly = billing === 'yearly';
   const displayPrice = isYearly ? plan.yearlyPrice : plan.price;
   const hasProrata = prorataAmount > 0 && !isCurrent && !isDowngrade;
-
-  const planColors = {
-    solo: { ring: 'ring-emerald-500/30', bg: 'from-emerald-500 to-emerald-600', shadow: 'rgba(16, 185, 129, 0.2)', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    pro: { ring: 'ring-blue-500/30', bg: 'from-blue-600 to-indigo-700', shadow: 'rgba(59, 130, 246, 0.2)', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-    business: { ring: 'ring-purple-500/30', bg: 'from-purple-600 to-violet-700', shadow: 'rgba(147, 51, 234, 0.2)', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  };
-
-  const colors = planColors[plan.id as keyof typeof planColors] || planColors.pro;
+  const colors = PLAN_COLORS[plan.id] || PLAN_COLORS.pro;
+  const [hovered, setHovered] = useState(false);
 
   return (
     <motion.div
@@ -95,24 +204,53 @@ export function OptimizedPricingCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       className="relative group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <motion.div
-        whileHover={{ y: -6, transition: { duration: 0.2 } }}
+        animate={{ y: hovered ? -6 : 0 }}
+        transition={{ duration: 0.2 }}
         className={cn(
           'relative h-full flex flex-col rounded-2xl overflow-hidden cursor-pointer',
           'bg-white border transition-all duration-300',
           isHighlighted
-            ? `border-gray-200 shadow-xl ring-2 ${colors.ring}`
+            ? 'border-gray-200 shadow-xl ring-2'
             : 'border-gray-200/80 shadow-sm hover:shadow-lg hover:border-gray-300',
           isCurrent && !isHighlighted && 'ring-1 ring-primary/20',
         )}
+        style={{
+          ...(isHighlighted ? { ringColor: colors.dot.replace('0.5', '0.3') } : {}),
+          boxShadow: isHighlighted
+            ? `0 8px 40px -12px ${colors.glow}`
+            : hovered
+              ? `0 4px 20px -8px ${colors.glow}`
+              : undefined,
+        }}
         onClick={onClick}
-        style={isHighlighted ? { boxShadow: `0 8px 40px -12px ${colors.shadow}` } : undefined}
       >
+        {/* ===== ANIMATED BACKGROUND LAYER ===== */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+          <FloatingOrbs color={colors.glow} />
+          <MeteorShower color={colors.meteor} />
+          <FloatingDots color={colors.dot} />
+
+          {/* Subtle grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.02]"
+            style={{
+              backgroundImage: `radial-gradient(circle, ${colors.dot} 1px, transparent 1px)`,
+              backgroundSize: '20px 20px',
+            }}
+          />
+        </div>
+
         {/* Popular badge */}
         {isHighlighted && (
           <div className="absolute top-0 right-0 z-20">
-            <div className={cn('text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl bg-gradient-to-r text-white', colors.bg)}>
+            <div
+              className="text-[10px] font-bold px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-white"
+              style={{ background: PLAN_HEADER[plan.id] }}
+            >
               {plan.badge}
             </div>
           </div>
@@ -120,24 +258,35 @@ export function OptimizedPricingCard({
 
         <div className="relative z-10 flex flex-col h-full">
           {/* Header */}
-          <div className={cn(
-            'relative p-6 pb-7 rounded-t-2xl overflow-hidden',
-            'bg-gradient-to-br text-white',
-            colors.bg,
-          )}>
-            {/* Subtle pattern */}
-            <div className="absolute inset-0 opacity-[0.08]">
-              <div className="absolute inset-0" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`
-              }} />
+          <div
+            className="relative p-6 pb-7 rounded-t-2xl overflow-hidden text-white"
+            style={{ background: PLAN_HEADER[plan.id] }}
+          >
+            {/* Header particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={`hpart-${i}`}
+                  className="absolute rounded-full bg-white/20"
+                  style={{ width: 3, height: 3, left: `${i * 22}%`, top: `${20 + i * 15}%` }}
+                  animate={{
+                    y: [0, -20, 10, 0],
+                    x: [0, 10 - i * 4, -8, 0],
+                    opacity: [0, 0.8, 0.3, 0],
+                  }}
+                  transition={{ duration: 4 + i, repeat: Infinity, delay: i * 0.6 }}
+                />
+              ))}
             </div>
 
-            {/* Icon & Name */}
             <div className="relative">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3 bg-white/20 backdrop-blur-sm">
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, 0], scale: 1.05 }}
+                className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3 bg-white/20 backdrop-blur-sm"
+              >
                 <Icon size={24} className="text-white" />
-              </div>
-              <div className="flex items-center gap-2">
+              </motion.div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-xl font-bold">{plan.name}</h3>
                 {isCurrent && (
                   <span className="px-2 py-0.5 text-[9px] font-bold bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
@@ -207,8 +356,8 @@ export function OptimizedPricingCard({
           </div>
 
           {/* Features */}
-          <div className="flex-1 px-5 py-5">
-            <ul className="space-y-0.5">
+          <div className="flex-1 px-5 py-5 relative">
+            <ul className="space-y-0.5 relative z-10">
               {plan.features.map((feat, i) => (
                 <PlanFeatureItem key={i} feature={feat} delay={delay} />
               ))}
@@ -247,11 +396,9 @@ export function OptimizedPricingCard({
                   ? 'bg-gray-100 text-gray-500 cursor-default'
                   : isDowngrade
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : cn(
-                      'text-white shadow-lg hover:shadow-xl',
-                      `bg-gradient-to-r ${colors.bg}`,
-                    ),
+                    : 'text-white shadow-lg hover:shadow-xl',
               )}
+              style={(!isCurrent && !isDowngrade) ? { background: PLAN_BUTTON[plan.id] } : undefined}
             >
               {isLoading ? (
                 <>
