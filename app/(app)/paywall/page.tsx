@@ -422,22 +422,26 @@ export default function PaywallPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="flex items-center justify-center mb-10"
+        className="flex flex-col items-center gap-3 mb-10"
       >
-        <div className="relative inline-flex items-center gap-1 p-1.5 rounded-2xl bg-white/80 backdrop-blur-xl border border-gray-200/60 shadow-lg">
-          {/* Sliding background */}
+        <div className="relative inline-flex items-center p-1 rounded-full bg-gray-100/80 backdrop-blur-xl border border-gray-200/60 shadow-lg shadow-gray-200/50">
           <motion.div
             layout
-            className="absolute top-1.5 bottom-1.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark shadow-md"
-            style={{ width: 'calc(50% - 6px)' }}
-            animate={{ left: isYearly ? 'calc(50% + 3px)' : '3px' }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="absolute top-1 bottom-1 rounded-full shadow-lg"
+            style={{ width: 'calc(50% - 4px)' }}
+            animate={{
+              left: isYearly ? 'calc(50% + 2px)' : '2px',
+              background: isYearly
+                ? 'linear-gradient(135deg, #059669, #047857)'
+                : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+            }}
+            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
 
           <button
             onClick={() => setBilling('monthly')}
             className={cn(
-              "relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-200",
+              "relative z-10 px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-200",
               !isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
             )}
           >
@@ -446,25 +450,38 @@ export default function PaywallPage() {
           <button
             onClick={() => setBilling('yearly')}
             className={cn(
-              "relative z-10 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors duration-200 flex items-center gap-2",
+              "relative z-10 px-8 py-3 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center gap-2.5",
               isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Annuel
-            <motion.span
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-              className={cn(
-                "px-2 py-0.5 text-[10px] font-black rounded-full",
-                isYearly
-                  ? "bg-white/25 text-white"
-                  : "bg-emerald-100 text-emerald-700"
-              )}
-            >
+            <span className={cn(
+              "px-2.5 py-0.5 text-[10px] font-black rounded-full tracking-wide transition-all duration-200",
+              isYearly
+                ? "bg-white/25 text-white"
+                : "bg-emerald-100 text-emerald-700"
+            )}>
               -20%
-            </motion.span>
+            </span>
           </button>
         </div>
+
+        <AnimatePresence mode="wait">
+          {isYearly && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -8, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200"
+            >
+              <BadgePercent size={14} className="text-emerald-600" />
+              <span className="text-xs font-semibold text-emerald-700">
+                Économisez jusqu'à {PLANS[2].yearlySavings}/an avec le plan annuel
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Checkout View or Plans Grid */}

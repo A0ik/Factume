@@ -34,38 +34,30 @@ const PlanFeatureItem = ({ feature, delay }: { feature: PlanFeature; delay: numb
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: delay + 0.05 }}
     className={cn(
-      'flex items-start gap-3 py-2 px-3 -mx-3 rounded-xl transition-all duration-200',
-      feature.included ? 'hover:bg-white/40' : '',
-      feature.highlight && 'bg-gradient-to-r from-emerald-50/80 to-green-50/80 dark:from-emerald-500/10 dark:to-green-500/5 border border-emerald-200/50 dark:border-emerald-500/30'
+      'flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg transition-all duration-200',
+      feature.included ? 'hover:bg-gray-50' : 'opacity-50',
+      feature.highlight && 'bg-emerald-50/80 border border-emerald-200/50'
     )}
   >
     {feature.included ? (
-      <div className="flex-shrink-0 mt-0.5">
-        <CheckCircle2 size={16} className={cn(
-          'stroke-2.5',
-          feature.highlight ? 'text-emerald-600 dark:text-emerald-400' : 'text-primary'
-        )} />
-      </div>
+      <CheckCircle2 size={15} className={cn(
+        'flex-shrink-0 stroke-[2.5]',
+        feature.highlight ? 'text-emerald-600' : 'text-primary'
+      )} />
     ) : (
-      <div className="flex-shrink-0 mt-0.5">
-        <Circle size={16} className="text-gray-300 dark:text-gray-600 stroke-2" />
-      </div>
+      <Circle size={15} className="flex-shrink-0 text-gray-300 stroke-2" />
     )}
     <span className={cn(
-      'text-sm break-words flex-1',
-      feature.included ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500',
-      feature.highlight && 'font-semibold'
+      'text-[13px] flex-1',
+      feature.included ? 'text-gray-700' : 'text-gray-400',
+      feature.highlight && 'font-semibold text-emerald-800'
     )}>
       {feature.label}
     </span>
     {feature.highlight && (
-      <motion.span
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full uppercase tracking-wider ml-auto"
-      >
+      <span className="px-2 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full uppercase tracking-wider">
         Top
-      </motion.span>
+      </span>
     )}
   </motion.li>
 );
@@ -89,6 +81,14 @@ export function OptimizedPricingCard({
   const displayPrice = isYearly ? plan.yearlyPrice : plan.price;
   const hasProrata = prorataAmount > 0 && !isCurrent && !isDowngrade;
 
+  const planColors = {
+    solo: { ring: 'ring-emerald-500/30', bg: 'from-emerald-500 to-emerald-600', shadow: 'rgba(16, 185, 129, 0.2)', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    pro: { ring: 'ring-blue-500/30', bg: 'from-blue-600 to-indigo-700', shadow: 'rgba(59, 130, 246, 0.2)', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+    business: { ring: 'ring-purple-500/30', bg: 'from-purple-600 to-violet-700', shadow: 'rgba(147, 51, 234, 0.2)', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  };
+
+  const colors = planColors[plan.id as keyof typeof planColors] || planColors.pro;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -97,162 +97,92 @@ export function OptimizedPricingCard({
       className="relative group"
     >
       <motion.div
-        whileHover={{ y: -8 }}
+        whileHover={{ y: -6, transition: { duration: 0.2 } }}
         className={cn(
-          'relative h-full flex flex-col rounded-3xl border-2 transition-all duration-300 overflow-hidden backdrop-blur-xl',
-          'bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-900/80 dark:via-gray-900/60 dark:to-gray-900/40',
-          'shadow-xl hover:shadow-2xl',
-          isHighlighted && `border-${plan.borderColor}/50 shadow-${plan.glowColor}/30`,
-          !isHighlighted && 'border-gray-200/50 dark:border-gray-700/50',
-          isCurrent && !isHighlighted && 'ring-2 ring-primary/20',
-          'cursor-pointer'
+          'relative h-full flex flex-col rounded-2xl overflow-hidden cursor-pointer',
+          'bg-white border transition-all duration-300',
+          isHighlighted
+            ? `border-gray-200 shadow-xl ring-2 ${colors.ring}`
+            : 'border-gray-200/80 shadow-sm hover:shadow-lg hover:border-gray-300',
+          isCurrent && !isHighlighted && 'ring-1 ring-primary/20',
         )}
         onClick={onClick}
-        style={{
-          boxShadow: isHighlighted
-            ? `0 20px 60px -15px ${plan.id === 'solo' ? 'rgba(16, 185, 129, 0.3)' : plan.id === 'pro' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(147, 51, 234, 0.3)'}`
-            : undefined
-        }}
+        style={isHighlighted ? { boxShadow: `0 8px 40px -12px ${colors.shadow}` } : undefined}
       >
-        {/* Background */}
-        <div className={cn(
-          "absolute inset-0 opacity-20 transition-opacity duration-300 group-hover:opacity-30",
-          "bg-gradient-to-br",
-          plan.gradientFrom,
-          plan.gradientTo
-        )} />
-
-        {/* Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(3)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full"
-              style={{
-                backgroundColor: plan.id === 'solo' ? 'rgba(16, 185, 129, 0.4)' : plan.id === 'pro' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(147, 51, 234, 0.4)',
-                left: `${20 + i * 25}%`,
-                top: `${20 + i * 15}%`
-              }}
-              animate={{
-                x: [0, Math.random() * 200 - 100],
-                y: [0, Math.random() * 100 - 50],
-                opacity: [0, 1, 0],
-              }}
-              transition={{
-                duration: 4 + Math.random() * 2,
-                repeat: Number.POSITIVE_INFINITY,
-                delay: i * 0.7,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Top border highlight */}
+        {/* Popular badge */}
         {isHighlighted && (
-          <motion.div
-            initial={{ scaleY: 0 }}
-            animate={{ scaleY: 1 }}
-            transition={{ delay: delay + 0.2 }}
-            className={cn(
-              'absolute top-0 left-0 right-0 z-20 h-1 bg-gradient-to-r',
-              plan.gradientFrom,
-              plan.gradientTo
-            )}
-          />
+          <div className="absolute top-0 right-0 z-20">
+            <div className={cn('text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl bg-gradient-to-r text-white', colors.bg)}>
+              {plan.badge}
+            </div>
+          </div>
         )}
 
         <div className="relative z-10 flex flex-col h-full">
           {/* Header */}
           <div className={cn(
-            'relative p-6 pb-8 rounded-t-3xl',
-            'bg-gradient-to-br',
-            plan.gradientFrom,
-            plan.gradientTo
+            'relative p-6 pb-7 rounded-t-2xl overflow-hidden',
+            'bg-gradient-to-br text-white',
+            colors.bg,
           )}>
-            <div className="absolute inset-0 opacity-[0.15]">
+            {/* Subtle pattern */}
+            <div className="absolute inset-0 opacity-[0.08]">
               <div className="absolute inset-0" style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`
               }} />
             </div>
 
-            {/* Badges */}
-            <div className="relative flex justify-between items-start mb-4">
-              {plan.badge && isHighlighted && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -10 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: delay + 0.3, type: 'spring', bounce: 0.5 }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider border border-white/30 shadow-lg"
-                >
-                  <Sparkles size={10} />
-                  {plan.badge}
-                </motion.div>
-              )}
-
-              {isCurrent && !isHighlighted && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider border border-white/30 shadow-lg">
-                  <Check size={10} />
-                  Actuel
-                </div>
-              )}
-
-              {/* Yearly savings badge */}
-              {isYearly && !isCurrent && (
-                <motion.div
-                  initial={{ scale: 0, rotate: 10 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', bounce: 0.6 }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-400/30 backdrop-blur-md text-white text-[10px] font-bold border border-white/20"
-                >
-                  <BadgePercent size={10} />
-                  -20%
-                </motion.div>
-              )}
-            </div>
-
-            {/* Icon & Title */}
+            {/* Icon & Name */}
             <div className="relative">
-              <motion.div
-                whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.05 }}
-                transition={{ duration: 0.5 }}
-                className="inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4 bg-white/20 backdrop-blur-md shadow-xl"
-              >
-                <Icon size={28} className={plan.iconColor} />
-              </motion.div>
-              <h3 className="text-2xl font-black text-white">{plan.name}</h3>
-              <p className="text-sm text-white/90 mt-1">{plan.tagline}</p>
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl mb-3 bg-white/20 backdrop-blur-sm">
+                <Icon size={24} className="text-white" />
+              </div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-bold">{plan.name}</h3>
+                {isCurrent && (
+                  <span className="px-2 py-0.5 text-[9px] font-bold bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                    Actuel
+                  </span>
+                )}
+                {isYearly && !isCurrent && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold bg-emerald-400/30 rounded-full border border-white/20">
+                    <BadgePercent size={9} />
+                    -20%
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-white/80 mt-0.5">{plan.tagline}</p>
             </div>
 
-            {/* Animated Price */}
-            <div className="relative mt-6">
-              <div className="flex items-end gap-1">
+            {/* Price */}
+            <div className="relative mt-5">
+              <div className="flex items-baseline gap-1">
                 <AnimatePresence mode="popLayout">
                   <motion.span
                     key={isYearly ? 'yearly' : 'monthly'}
-                    initial={{ y: 20, opacity: 0, filter: 'blur(4px)' }}
-                    animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-                    exit={{ y: -20, opacity: 0, filter: 'blur(4px)' }}
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -15, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    className="text-5xl font-black text-white"
+                    className="text-4xl font-black tracking-tight"
                   >
                     {displayPrice}
                   </motion.span>
                 </AnimatePresence>
-                <span className="text-lg text-white/70 mb-2">
-                  {hasProrata ? 'à payer' : isYearly ? '/ mois' : '/ mois'}
+                <span className="text-sm text-white/70 font-medium">
+                  {hasProrata ? '' : '/ mois'}
                 </span>
               </div>
 
-              {/* Strikethrough old price for yearly */}
               {isYearly && !hasProrata && (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-2 mt-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2 mt-1.5"
                 >
-                  <span className="text-sm text-white/50 line-through">{plan.price}/mois</span>
+                  <span className="text-xs text-white/50 line-through">{plan.price}/mois</span>
                   <span className="text-xs text-emerald-300 font-semibold">
-                    Économisez {plan.yearlySavings}/an
+                    -{plan.yearlySavings}/an
                   </span>
                 </motion.div>
               )}
@@ -261,88 +191,65 @@ export function OptimizedPricingCard({
                 <motion.div
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: delay + 0.3 }}
-                  className="mt-2 flex items-center gap-2"
+                  className="mt-1.5 flex items-center gap-2"
                 >
                   <span className="px-2 py-0.5 bg-emerald-400/30 text-white text-[10px] font-bold rounded-full">
                     Prorata {prorataPercent}%
                   </span>
-                  <span className="text-xs text-white/80">
-                    Au lieu de {plan.price}
-                  </span>
+                  <span className="text-xs text-white/70">Au lieu de {plan.price}</span>
                 </motion.div>
               )}
 
-              <p className="text-xs text-white/90 mt-2">
-                {isYearly ? 'Facturé annuellement • Sans engagement' : 'Sans engagement • Résiliable à tout moment'}
+              <p className="text-[11px] text-white/70 mt-2">
+                {isYearly ? 'Facturé annuellement' : 'Sans engagement'}
               </p>
-
-              {isHighlighted && !hasProrata && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: delay + 0.4 }}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-semibold border border-white/20"
-                >
-                  <Infinity size={12} />
-                  Facturation illimitée
-                </motion.div>
-              )}
             </div>
           </div>
 
           {/* Features */}
-          <div className="flex-1 p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
-            <ul className="space-y-1">
+          <div className="flex-1 px-5 py-5">
+            <ul className="space-y-0.5">
               {plan.features.map((feat, i) => (
                 <PlanFeatureItem key={i} feature={feat} delay={delay} />
               ))}
             </ul>
           </div>
 
-          {/* Trust badges */}
+          {/* Trust badges for highlighted plan */}
           {isHighlighted && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: delay + 0.4 }}
-              className="px-6 pt-4 pb-2 bg-white/40 dark:bg-gray-900/40"
-            >
+            <div className="px-5 pb-3">
               <div className="flex items-center justify-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-gray-200/50 shadow-sm">
-                  <Shield size={12} className="text-primary" />
-                  <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">Sécurisé</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                  <Shield size={11} className="text-primary" />
+                  <span className="text-[9px] font-semibold text-gray-500">Sécurisé</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-gray-200/50 shadow-sm">
-                  <Lock size={12} className="text-primary" />
-                  <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">RGPD</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                  <Lock size={11} className="text-primary" />
+                  <span className="text-[9px] font-semibold text-gray-500">RGPD</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-sm border border-gray-200/50 shadow-sm">
-                  <Headphones size={12} className="text-primary" />
-                  <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">Support</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
+                  <Headphones size={11} className="text-primary" />
+                  <span className="text-[9px] font-semibold text-gray-500">Support</span>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* CTA */}
-          <div className="p-6 pt-2 bg-white/40 dark:bg-gray-900/40">
+          <div className="px-5 pb-5 pt-2">
             <motion.button
               whileHover={{ scale: isCurrent || isDowngrade ? 1 : 1.02 }}
               whileTap={{ scale: isCurrent || isDowngrade ? 1 : 0.98 }}
               disabled={isCurrent || isLoading || isDowngrade}
               className={cn(
-                'w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-all duration-200 shadow-lg relative overflow-hidden',
-                'before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/20 before:to-white/10 before:opacity-0 before:hover:opacity-100 before:transition-opacity',
+                'w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 relative overflow-hidden',
                 isCurrent
-                  ? 'bg-gray-200/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400 cursor-default backdrop-blur-sm'
+                  ? 'bg-gray-100 text-gray-500 cursor-default'
                   : isDowngrade
-                    ? 'bg-gray-200/60 dark:bg-gray-700/60 text-gray-400 dark:text-gray-600 cursor-not-allowed backdrop-blur-sm'
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : cn(
-                      'text-white hover:shadow-xl backdrop-blur-sm',
-                      plan.id === 'solo' && 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/30',
-                      plan.id === 'pro' && 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-800 hover:to-indigo-900 shadow-blue-600/30',
-                      plan.id === 'business' && 'bg-gradient-to-r from-purple-600 to-violet-700 hover:from-violet-700 hover:to-purple-800 shadow-purple-600/30'
+                      'text-white shadow-lg hover:shadow-xl',
+                      `bg-gradient-to-r ${colors.bg}`,
                     ),
               )}
             >
@@ -354,7 +261,7 @@ export function OptimizedPricingCard({
               ) : isCurrent ? (
                 <>
                   <Check size={14} />
-                  {plan.cta}
+                  Plan actuel
                 </>
               ) : isDowngrade ? (
                 'Plan inférieur'
@@ -367,15 +274,10 @@ export function OptimizedPricingCard({
             </motion.button>
 
             {!isCurrent && !isDowngrade && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: delay + 0.5 }}
-                className="text-[10px] text-gray-500 text-center mt-3 flex items-center justify-center gap-1"
-              >
+              <p className="text-[10px] text-gray-400 text-center mt-2.5 flex items-center justify-center gap-1">
                 <Shield size={10} />
                 Satisfait ou remboursé sous 30 jours
-              </motion.p>
+              </p>
             )}
           </div>
         </div>
