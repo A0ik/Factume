@@ -47,6 +47,7 @@ export interface Profile {
   trial_end_date?: string;
   is_trial_active?: boolean;
   auto_contract_transitions?: boolean;
+  website?: string;
   created_at: string;
 }
 
