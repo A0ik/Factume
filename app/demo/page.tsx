@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, MicOff, Sparkles, FileText, Play,
-  CheckCircle2, AlertCircle, Volume2, Loader2, Building2,
+  CheckCircle2, AlertCircle, Volume2, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -32,111 +32,127 @@ interface InvoiceData {
 
 export default function DemoPage() {
   const [isListening, setIsListening] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState('');
-  const [finalTranscript, setFinalTranscript] = useState('');
+  const [transcript, setTranscript] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState<'intro' | 'listening' | 'processing' | 'result'>('intro');
+  const [audioLevels, setAudioLevels] = useState<number[]>([0, 0, 0, 0, 0]);
   const recognitionRef = useRef<any>(null);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    // Cleanup
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
-
-  // Simulate audio level animation when listening
+  // Simuler les niveaux audio quand on écoute
   useEffect(() => {
     if (isListening) {
-      const interval = setInterval(() => {
-        setAudioLevel(Math.random() * 100);
-      }, 100);
-      return () => clearInterval(interval);
+      const updateAudioLevels = () => {
+        setAudioLevels([
+          Math.random() * 100,
+          Math.random() * 100,
+          Math.random() * 100,
+          Math.random() * 100,
+          Math.random() * 100,
+        ]);
+        animationFrameRef.current = requestAnimationFrame(updateAudioLevels);
+      };
+      updateAudioLevels();
+    } else {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      setAudioLevels([0, 0, 0, 0, 0]);
     }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [isListening]);
 
-  const startListening = () => {
-    // Check browser support
+  const startListening = async () => {
+    // Vérifier le support
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setError('Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome ou Edge.');
+      setError('La reconnaissance vocale n\'est pas supportée par ce navigateur. Utilisez Chrome ou Edge.');
       return;
     }
 
-    // Request microphone access
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(() => {
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'fr-FR';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
+    // Initialiser la reconnaissance
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-        let finalTranscriptText = '';
-        let interimTranscriptText = '';
+    let finalTranscriptText = '';
+    let interimTranscriptText = '';
 
-        recognition.onstart = () => {
-          setIsListening(true);
-          setCurrentStep('listening');
-          setError('');
-          setFinalTranscript('');
-          setInterimTranscript('');
-        };
+    recognition.onstart = () => {
+      setIsListening(true);
+      setCurrentStep('listening');
+      setError('');
+      setTranscript('');
+    };
 
-        recognition.onresult = (event: any) => {
-          interimTranscriptText = '';
-          finalTranscriptText = '';
+    recognition.onresult = (event: any) => {
+      interimTranscriptText = '';
+      finalTranscriptText = '';
 
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscriptText += transcript;
-            } else {
-              interimTranscriptText += transcript;
-            }
-          }
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscriptText += transcript + ' ';
+        } else {
+          interimTranscriptText += transcript;
+        }
+      }
 
-          setFinalTranscript(finalTranscriptText);
-          setInterimTranscript(interimTranscriptText);
-        };
+      // Afficher le texte complet (final + interim)
+      setTranscript(finalTranscriptText + interimTranscriptText);
+    };
 
-        recognition.onerror = (event: any) => {
-          console.error('Speech error:', event.error);
-          if (event.error === 'no-speech') {
-            setError('Je vous écoute... Parlez maintenant');
-          } else if (event.error === 'not-allowed') {
-            setError('Accès microphone refusé. Autorisez l\'accès dans votre navigateur.');
-          } else {
-            setError('Erreur: ' + event.error);
-          }
-        };
+    recognition.onerror = (event: any) => {
+      console.error('Erreur reconnaissance vocale:', event.error);
 
-        recognition.onend = () => {
-          setIsListening(false);
-          if (finalTranscriptText.trim().length > 10) {
-            setCurrentStep('processing');
-            setIsProcessing(true);
-            setTimeout(() => {
-              processVoiceToInvoice(finalTranscriptText);
-            }, 1500);
-          } else if (finalTranscriptText.trim()) {
-            setError('Phrase trop courte. Continuez à parler ou arrêtez pour générer.');
-          }
-        };
+      if (event.error === 'not-allowed') {
+        setError('⚠️ Accès au microphone refusé. Cliquez sur le 🔒 dans la barre d\'adresse et autorisez le microphone.');
+      } else if (event.error === 'no-speech') {
+        // Ne pas afficher d'erreur pour no-speech, c'est normal
+        setError('💬 Je vous écoute... Parlez maintenant !');
+      } else if (event.error === 'network') {
+        setError('🌐 Erreur de connexion. Vérifiez votre internet.');
+      } else {
+        setError('❌ Erreur: ' + event.error);
+      }
+    };
 
-        recognition.start();
-        recognitionRef.current = recognition;
-      })
-      .catch((err) => {
-        console.error('Microphone access error:', err);
-        setError('Impossible d\'accéder au microphone. Vérifiez vos permissions.');
-      });
+    recognition.onend = () => {
+      setIsListening(false);
+      if (finalTranscriptText.trim().length > 5) {
+        // On a assez de texte, générer la facture
+        setCurrentStep('processing');
+        setIsProcessing(true);
+        setError('');
+        setTimeout(() => {
+          processVoiceToInvoice(finalTranscriptText);
+        }, 1500);
+      } else if (finalTranscriptText.trim()) {
+        setError('⚠️ Texte trop court. Continuez à parler ou cliquez sur "Terminer" pour générer.');
+        setCurrentStep('listening');
+      } else {
+        setCurrentStep('intro');
+        setTranscript('');
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error('Erreur start:', err);
+      setError('Impossible de démarrer le microphone. Actualisez la page et réessayez.');
+    }
   };
 
   const stopListening = () => {
@@ -149,96 +165,80 @@ export default function DemoPage() {
   const processVoiceToInvoice = (text: string) => {
     const lowerText = text.toLowerCase();
 
-    // Demo scenarios based on keywords
-    const scenarios = [
-      {
-        keywords: ['site', 'web', 'ecommerce', 'agence', 'marketing', 'formation', 'maintenance'],
-        invoice: {
-          number: 'FAC-2024-DEMO-001',
-          date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          clientName: 'Agence Marketing Digital SAS',
-          clientEmail: 'contact@agence-demo.fr',
-          clientAddress: '15 Rue de la République',
-          clientPostalCode: '75001',
-          clientCity: 'Paris',
-          lines: [
-            { description: 'Création site web e-commerce avec paiement sécurisé', quantity: 1, unitPrice: 3500, total: 3500 },
-            { description: 'Formation équipe (5 jours) - Utilisation CMS', quantity: 5, unitPrice: 450, total: 2250 },
-            { description: 'Maintenance et support mensuel', quantity: 1, unitPrice: 350, total: 350 },
-            { description: 'Hébergement et nom de domaine (1 an)', quantity: 1, unitPrice: 150, total: 150 },
-          ],
-          totalHT: 6250,
-          tva: 1250,
-          totalTTC: 7500,
-        },
-      },
-      {
-        keywords: ['conseil', 'stratège', 'audit', 'startup', 'accompagnement', 'transformation'],
-        invoice: {
-          number: 'FAC-2024-DEMO-002',
-          date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          clientName: 'Startup Innovate SAS',
-          clientEmail: 'hello@startup-demo.fr',
-          clientAddress: '42 Avenue des Champs-Élysées',
-          clientPostalCode: '75008',
-          clientCity: 'Paris',
-          lines: [
-            { description: 'Mission de conseil stratégique - Digitalisation', quantity: 3, unitPrice: 850, total: 2550 },
-            { description: 'Audit complet de l\'infrastructure IT', quantity: 1, unitPrice: 1800, total: 1800 },
-            { description: 'Accompagnement transformation agile (10 jours)', quantity: 10, unitPrice: 650, total: 6500 },
-          ],
-          totalHT: 10850,
-          tva: 2170,
-          totalTTC: 13020,
-        },
-      },
-      {
-        keywords: ['développ', 'app', 'mobile', 'application', 'tech', 'solution', 'logiciel'],
-        invoice: {
-          number: 'FAC-2024-DEMO-003',
-          date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-          clientName: 'Tech Solutions SARL',
-          clientEmail: 'contact@techsolutions-demo.fr',
-          clientAddress: '8 Rue de la Loi',
-          clientPostalCode: '69001',
-          clientCity: 'Lyon',
-          lines: [
-            { description: 'Développement application mobile iOS/Android', quantity: 1, unitPrice: 12000, total: 12000 },
-            { description: 'Design UI/UX et maquettes prototypes', quantity: 1, unitPrice: 3500, total: 3500 },
-            { description: 'Tests fonctionnels et recette utilisateur', quantity: 5, unitPrice: 450, total: 2250 },
-            { description: 'Formation équipe technique (2 jours)', quantity: 2, unitPrice: 800, total: 1600 },
-          ],
-          totalHT: 19350,
-          tva: 3870,
-          totalTTC: 23220,
-        },
-      },
-    ];
+    // Déterminer le scénario basé sur les mots-clés
+    let selectedInvoice: InvoiceData;
 
-    // Select best matching scenario
-    let bestMatch = scenarios[0];
-    let maxMatches = 0;
-
-    for (const scenario of scenarios) {
-      const matches = scenario.keywords.filter(keyword => lowerText.includes(keyword)).length;
-      if (matches > maxMatches) {
-        maxMatches = matches;
-        bestMatch = scenario;
-      }
+    if (lowerText.includes('conseil') || lowerText.includes('audit') || lowerText.includes('strat') || lowerText.includes('startup')) {
+      selectedInvoice = {
+        number: 'FAC-2024-DEMO-002',
+        date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        clientName: 'Startup Innovate SAS',
+        clientEmail: 'hello@startup-demo.fr',
+        clientAddress: '42 Avenue des Champs-Élysées',
+        clientPostalCode: '75008',
+        clientCity: 'Paris',
+        lines: [
+          { description: 'Mission de conseil stratégique - Digitalisation', quantity: 3, unitPrice: 850, total: 2550 },
+          { description: 'Audit complet de l\'infrastructure IT', quantity: 1, unitPrice: 1800, total: 1800 },
+          { description: 'Accompagnement transformation agile (10 jours)', quantity: 10, unitPrice: 650, total: 6500 },
+        ],
+        totalHT: 10850,
+        tva: 2170,
+        totalTTC: 13020,
+      };
+    } else if (lowerText.includes('développ') || lowerText.includes('app') || lowerText.includes('mobile') || lowerText.includes('application') || lowerText.includes('logiciel')) {
+      selectedInvoice = {
+        number: 'FAC-2024-DEMO-003',
+        date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        clientName: 'Tech Solutions SARL',
+        clientEmail: 'contact@techsolutions-demo.fr',
+        clientAddress: '8 Rue de la Loi',
+        clientPostalCode: '69001',
+        clientCity: 'Lyon',
+        lines: [
+          { description: 'Développement application mobile iOS/Android', quantity: 1, unitPrice: 12000, total: 12000 },
+          { description: 'Design UI/UX et maquettes prototypes', quantity: 1, unitPrice: 3500, total: 3500 },
+          { description: 'Tests fonctionnels et recette utilisateur', quantity: 5, unitPrice: 450, total: 2250 },
+          { description: 'Formation équipe technique (2 jours)', quantity: 2, unitPrice: 800, total: 1600 },
+        ],
+        totalHT: 19350,
+        tva: 3870,
+        totalTTC: 23220,
+      };
+    } else {
+      // Par défaut: site web
+      selectedInvoice = {
+        number: 'FAC-2024-DEMO-001',
+        date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+        clientName: 'Agence Marketing Digital SAS',
+        clientEmail: 'contact@agence-demo.fr',
+        clientAddress: '15 Rue de la République',
+        clientPostalCode: '75001',
+        clientCity: 'Paris',
+        lines: [
+          { description: 'Création site web e-commerce avec paiement sécurisé', quantity: 1, unitPrice: 3500, total: 3500 },
+          { description: 'Formation équipe (5 jours) - Utilisation CMS', quantity: 5, unitPrice: 450, total: 2250 },
+          { description: 'Maintenance et support mensuel', quantity: 1, unitPrice: 350, total: 350 },
+          { description: 'Hébergement et nom de domaine (1 an)', quantity: 1, unitPrice: 150, total: 150 },
+        ],
+        totalHT: 6250,
+        tva: 1250,
+        totalTTC: 7500,
+      };
     }
 
-    setInvoice(bestMatch.invoice);
+    setInvoice(selectedInvoice);
     setIsProcessing(false);
     setCurrentStep('result');
+    setTranscript('');
   };
 
   const resetDemo = () => {
     setInvoice(null);
-    setFinalTranscript('');
-    setInterimTranscript('');
+    setTranscript('');
     setError('');
     setCurrentStep('intro');
   };
@@ -310,7 +310,7 @@ export default function DemoPage() {
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Prêt à écouter</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Cliquez et parlez naturellement
+                    Cliquez sur "Commencer" et parlez naturellement
                   </p>
                 </div>
               </div>
@@ -363,6 +363,10 @@ export default function DemoPage() {
                     Annuler
                   </Link>
                 </div>
+
+                <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
+                  💡 Conseil : Utilisez Chrome ou Edge pour la meilleure expérience
+                </p>
               </div>
             </motion.div>
           </div>
@@ -376,24 +380,24 @@ export default function DemoPage() {
               className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden"
             >
               {/* Active listening visualization */}
-              <div className="relative h-72 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center overflow-hidden">
-                {/* Animated sound waves */}
+              <div className="relative h-80 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center overflow-hidden">
+                {/* Animated sound bars - responding to audio */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  {audioLevels.map((level, i) => (
                     <motion.div
                       key={i}
-                      className="absolute w-1 h-1 bg-primary/30 rounded-full"
+                      className="absolute w-2 bg-primary/40 rounded-full"
                       animate={{
-                        scale: [1, 1 + audioLevel / 20, 1],
+                        height: [10, 20 + level * 0.8, 10],
                         opacity: [0.3, 0.8, 0.3],
                       }}
                       transition={{
-                        duration: 0.5,
+                        duration: 0.3,
                         repeat: Infinity,
                         delay: i * 0.05,
                       }}
                       style={{
-                        transform: `rotate(${i * 45}deg) translateX(50px)`,
+                        transform: `rotate(${i * 30}deg) translateX(60px)`,
                       }}
                     />
                   ))}
@@ -403,12 +407,25 @@ export default function DemoPage() {
                   <motion.div
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30"
+                    className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30 relative"
                   >
-                    <Mic className="w-12 h-12 text-white" />
+                    <Mic className="w-12 h-12 text-white relative z-10" />
+                    {/* Pulse effect */}
+                    <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-30" />
                   </motion.div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Je vous écoute...</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Parlez naturellement, je comprends tout</p>
+
+                  {/* Real-time transcript preview */}
+                  {transcript && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 max-w-md mx-auto p-3 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                    >
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{transcript}</p>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -416,21 +433,21 @@ export default function DemoPage() {
               <div className="p-6 lg:p-8">
                 <div className="mb-6">
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">📝 Transcription en direct</p>
-                  <div className="min-h-[120px] p-5 rounded-2xl bg-gray-50 dark:bg-slate-800 border-2 border-primary/20">
+                  <div className="min-h-[120px] p-5 rounded-2xl bg-gray-50 dark:bg-slate-800 border-2 border-primary/20 relative">
                     <p className="text-lg text-gray-900 dark:text-white leading-relaxed">
-                      {finalTranscript && <span className="font-semibold">{finalTranscript}</span>}
-                      {interimTranscript && (
-                        <span className="text-primary/70 font-medium">{interimTranscript}</span>
+                      {transcript || (
+                        <span className="text-gray-400 dark:text-gray-500 italic">
+                          En attente de votre voix... Parlez maintenant !
+                        </span>
                       )}
-                      {!finalTranscript && !interimTranscript && (
-                        <span className="text-gray-400 dark:text-gray-500 italic">En attente de votre voix...</span>
-                      )}
-                      <span className="inline-block w-0.5 h-6 bg-primary ml-1 animate-pulse" />
                     </p>
+                    {transcript && (
+                      <span className="inline-block w-0.5 h-6 bg-primary ml-1 animate-pulse" />
+                    )}
                   </div>
                 </div>
 
-                {error && (
+                {error && error !== '💬 Je vous écoute... Parlez maintenant !' && (
                   <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-600 dark:text-amber-400">{error}</p>
@@ -449,7 +466,7 @@ export default function DemoPage() {
                 </div>
 
                 <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
-                  💡 Parlez pendant au moins 5 secondes pour un meilleur résultat
+                  💡 Parlez pendant au moins 5 secondes pour un meilleur résultat • Cliquez sur "Terminer" quand vous avez fini
                 </p>
               </div>
             </motion.div>
@@ -508,11 +525,11 @@ export default function DemoPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden relative"
             >
-              {/* DEMO Watermark overlay */}
+              {/* DEMO Watermark overlay - BIG and visible */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
                 <div className="transform -rotate-45">
-                  <div className="text-[180px] font-black text-red-500/10 leading-none select-none">
-                    DÉMO
+                  <div className="text-[200px] font-black text-red-500/10 leading-none select-none whitespace-nowrap">
+                    DÉMO • FACTU.ME • DÉMO • FACTU.ME •
                   </div>
                 </div>
               </div>

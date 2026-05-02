@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet
 } from 'lucide-react';
@@ -185,10 +186,36 @@ export default function LandingPage() {
     { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. L\'export officiel pour les impôts est disponible sur les plans Pro et Business.' }
   ];
 
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
   const plans = [
-    { name: 'Solo', price: '9€', period: '/mois', features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], cta: 'Essai 4 jours', popular: false },
-    { name: 'Pro', price: '29€', period: '/mois', features: ['Tout Solo inclus', 'Notes de frais', 'Contrats de travail', 'CRM Pipeline', 'Signature électronique', '3 espaces de travail'], cta: 'Essai 4 jours', popular: true },
-    { name: 'Business', price: '79€', period: '/mois', features: ['Tout Pro inclus', 'OCR et analyse documents', 'Espaces illimités', 'API d\'intégration', 'Support prioritaire', 'Multi-utilisateurs'], cta: 'Essai 4 jours', popular: false }
+    {
+      name: 'Solo',
+      monthlyPrice: '14,99€',
+      yearlyPrice: '12€',
+      yearlySavings: '36€',
+      tagline: 'Idéal pour démarrer',
+      features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'],
+      popular: false,
+    },
+    {
+      name: 'Pro',
+      monthlyPrice: '29,99€',
+      yearlyPrice: '24€',
+      yearlySavings: '72€',
+      tagline: 'Pour grandir',
+      features: ['Tout Solo inclus', 'Notes de frais', 'Contrats de travail', 'CRM Pipeline', 'Signature électronique', '3 espaces de travail', 'Factures récurrentes'],
+      popular: true,
+    },
+    {
+      name: 'Business',
+      monthlyPrice: '59,99€',
+      yearlyPrice: '48€',
+      yearlySavings: '144€',
+      tagline: 'Accès total',
+      features: ['Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Support prioritaire', 'Multi-utilisateurs', 'Rapports avancés'],
+      popular: false,
+    },
   ];
 
   return (
@@ -1114,34 +1141,91 @@ export default function LandingPage() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight mb-3">Choisissez votre plan</h2>
               <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-slate-500 max-w-2xl mx-auto">Sans engagement. Évoluez quand vous voulez.</p>
             </ScrollReveal>
+
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={`text-sm font-semibold transition-colors ${billingPeriod === 'monthly' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                Mensuel
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
+                  className={`w-14 h-8 rounded-full transition-colors ${billingPeriod === 'yearly' ? 'bg-brand-500' : 'bg-slate-200'}`}
+                >
+                  <motion.div
+                    className="w-6 h-6 bg-white rounded-full shadow-md"
+                    animate={{ x: billingPeriod === 'yearly' ? 24 : 0 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  />
+                </button>
+              </div>
+              <button
+                onClick={() => setBillingPeriod('yearly')}
+                className={`text-sm font-semibold transition-colors ${billingPeriod === 'yearly' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                Annuel
+                <span className="ml-1 text-xs text-green-600 font-medium">(économisez)</span>
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {plans.map((plan, i) => (
-              <ScrollReveal key={i} delay={i * 0.05}>
-                <div className={`relative ${plan.popular ? 'pricing-popular' : ''}`}>
-                  <Card3D>
-                    <div className="bg-white rounded-2xl p-5 sm:p-7 lg:p-8 border border-slate-100 h-full flex flex-col hover:shadow-lg relative z-10">
-                      <div className="mb-5">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="text-base sm:text-lg lg:text-xl font-bold">{plan.name}</h3>
-                          {plan.popular && <span className="bg-brand-500 text-white text-[10px] sm:text-xs lg:text-sm font-bold px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full">Populaire</span>}
+
+          {/* Pricing Cards - CENTERED */}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-6xl">
+              {plans.map((plan, i) => (
+                <ScrollReveal key={i} delay={i * 0.05}>
+                  <div className={`relative ${plan.popular ? 'pricing-popular' : ''}`}>
+                    <Card3D>
+                      <div className={`bg-white rounded-2xl p-5 sm:p-7 lg:p-8 border h-full flex flex-col hover:shadow-lg relative z-10 ${plan.popular ? 'border-brand-300 shadow-xl' : 'border-slate-100'}`}>
+                        {plan.popular && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <span className="bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full">Populaire</span>
+                          </div>
+                        )}
+                        <div className="mb-5 mt-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold">{plan.name}</h3>
+                            {plan.popular && <span className="bg-brand-100 text-brand-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">Top</span>}
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-500 mb-3">{plan.tagline}</p>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
+                              {billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
+                            </span>
+                            <span className="text-sm sm:text-base text-slate-500">
+                              {billingPeriod === 'monthly' ? '/mois' : '/mois (annuel)'}
+                            </span>
+                          </div>
+                          {billingPeriod === 'yearly' && (
+                            <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
+                              Économisez {plan.yearlySavings} par an
+                            </p>
+                          )}
                         </div>
-                        <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">{plan.price}<span className="text-xs sm:text-sm lg:text-base text-slate-400 ml-1">{plan.period}</span></div>
-                        <div className="text-xs sm:text-sm lg:text-base text-primary font-medium mt-1">{plan.cta}</div>
+                        <ul className="space-y-2.5 mb-6 flex-grow">
+                          {plan.features.map((f, j) => (
+                            <li key={j} className="flex items-center gap-2 text-sm lg:text-base"><Check className="w-4 h-4 lg:w-5 lg:h-5 text-brand-500 flex-shrink-0" /><span className="text-slate-600">{f}</span></li>
+                          ))}
+                        </ul>
+                        <Link
+                          href={`/register?plan=${plan.name.toLowerCase()}&trial=4&billing=${billingPeriod}`}
+                          className={`block text-center font-semibold py-3 rounded-xl transition-all text-sm lg:text-base active:scale-[0.97] ${
+                            plan.popular
+                              ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25'
+                              : 'bg-slate-900 hover:bg-slate-800 text-white'
+                          }`}
+                        >
+                          Essai 4 jours gratuit
+                        </Link>
                       </div>
-                      <ul className="space-y-2.5 mb-6 flex-grow">
-                        {plan.features.map((f, j) => (
-                          <li key={j} className="flex items-center gap-2 text-sm lg:text-base"><Check className="w-4 h-4 lg:w-5 lg:h-5 text-brand-500 flex-shrink-0" /><span className="text-slate-600">{f}</span></li>
-                        ))}
-                      </ul>
-                      <Link href={`/register?plan=${plan.name.toLowerCase()}&trial=4`} className={`block text-center font-semibold py-2.5 rounded-xl transition-all text-sm lg:text-base active:scale-[0.97] ${plan.popular ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}>
-                        {plan.cta}
-                      </Link>
-                    </div>
-                  </Card3D>
-                </div>
-              </ScrollReveal>
-            ))}
+                    </Card3D>
+                  </div>
+                </ScrollReveal>
+              ))}
+            </div>
           </div>
           <div className="text-center mt-6 sm:mt-8">
             <ScrollReveal><p className="text-xs sm:text-sm lg:text-base text-slate-400 flex items-center justify-center gap-3"><ShieldCheck className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-brand-500" />Données hébergées en France · Connexion sécurisée · Annulation en un clic</p></ScrollReveal>
