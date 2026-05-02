@@ -217,12 +217,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const stripe = params.get('stripe');
-    if (stripe === 'connected') {
+    const stripeConnect = params.get('stripe-connect');
+    const stripeConnectError = params.get('stripe-connect-error');
+
+    if (stripeConnect === 'success') {
       setStripeStatus('connected');
+      toast.success('Stripe connecté avec succès !');
       fetchProfile(profile?.id ?? '');
-    } else if (stripe === 'error') {
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (stripeConnectError) {
       setStripeStatus('error');
+      toast.error(`Erreur de connexion Stripe: ${stripeConnectError}`);
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
@@ -243,7 +251,7 @@ export default function SettingsPage() {
   const handleConnectStripe = async () => {
     setStripeConnectLoading(true);
     try {
-      const res = await fetch('/api/stripe/connect', { method: 'POST' });
+      const res = await fetch('/api/stripe-connect/oauth-url', { method: 'POST' });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else toast.error(data.error || 'Impossible de lancer la connexion Stripe');
@@ -255,14 +263,20 @@ export default function SettingsPage() {
     if (!confirm('Déconnecter votre compte Stripe ? Les liens de paiement existants ne seront plus actifs.')) return;
     setStripeConnectLoading(true);
     try {
-      const res = await fetch('/api/stripe/connect', { method: 'DELETE' });
-      if (res.ok) {
-        await fetchProfile(profile?.id ?? '');
-        setStripeStatus(null);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Erreur lors de la déconnexion');
-      }
+      const supabase = getSupabaseClient();
+      await supabase
+        .from('profiles')
+        .update({
+          stripe_connect_account_id: null,
+          stripe_connect_access_token: null,
+          stripe_connect_refresh_token: null,
+          stripe_connect_token_expires_at: null,
+          stripe_connect_onboarding_completed: false,
+        })
+        .eq('id', profile?.id);
+      await fetchProfile(profile?.id ?? '');
+      setStripeStatus(null);
+      toast.success('Stripe déconnecté');
     } catch (e: any) { toast.error(e.message || 'Erreur de déconnexion'); }
     finally { setStripeConnectLoading(false); }
   };
@@ -774,7 +788,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {profile?.stripe_connect_id ? (
+          {profile?.stripe_connect_account_id ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3.5 bg-green-50 rounded-xl border border-green-100">
                 <div className="w-9 h-9 rounded-lg bg-white border border-green-200 flex items-center justify-center flex-shrink-0">
@@ -782,7 +796,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-green-800">Compte Stripe connecté</p>
-                  <p className="text-xs text-green-600 font-mono truncate">{profile.stripe_connect_id}</p>
+                  <p className="text-xs text-green-600 font-mono truncate">{profile.stripe_connect_account_id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">

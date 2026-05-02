@@ -58,17 +58,8 @@ export default function MobileDrawer({ open, onClose }: Props) {
       { href: '/documents', icon: FileText,        label: 'Documents' },
     ];
 
-    // Notes de frais - Pro/Business only
-    if (!sub.effectiveIsPro) {
-      main.push({
-        href: '/expenses',
-        icon: Receipt,
-        label: 'Notes de frais',
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
+    // Notes de frais - Pro/Business only (completely hidden for Free/Solo)
+    if (sub.effectiveIsPro) {
       main.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais' });
     }
 

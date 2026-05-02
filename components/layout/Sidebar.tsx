@@ -112,18 +112,8 @@ export default function Sidebar() {
       hasSubmenu: true,
     });
 
-    // Notes de frais - Pro/Business only
-    if (!sub.effectiveIsPro) {
-      core.push({
-        href: '/expenses',
-        icon: Receipt,
-        label: 'Notes de frais',
-        badge: null,
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
+    // Notes de frais - Pro/Business only (completely hidden for Free/Solo)
+    if (sub.effectiveIsPro) {
       core.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais', badge: null });
     }
 

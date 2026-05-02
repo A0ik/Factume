@@ -26,7 +26,12 @@ export interface Profile {
   stripe_account_id?: string;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
-  stripe_connect_id?: string;
+  // Stripe Connect fields
+  stripe_connect_account_id?: string;
+  stripe_connect_access_token?: string;
+  stripe_connect_refresh_token?: string;
+  stripe_connect_token_expires_at?: string;
+  stripe_connect_onboarding_completed?: boolean;
   sumup_access_token?: string;
   sumup_refresh_token?: string;
   sumup_token_expires_at?: string;
@@ -146,6 +151,8 @@ export interface Invoice {
   payment_link?: string;
   payment_method?: string;
   stripe_payment_url?: string;
+  stripe_payment_link_id?: string;
+  stripe_payment_link_url?: string;
   sumup_checkout_id?: string;
   partial_payments?: PartialPayment[];
   amount_paid?: number;

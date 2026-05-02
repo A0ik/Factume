@@ -217,26 +217,23 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const handleCreatePaymentLink = async () => {
-    if (!profile?.stripe_connect_id && !process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    if (!profile?.stripe_connect_account_id) {
       toast.error('Stripe non connecté. Configurez votre compte dans les paramètres.');
       return;
     }
     setGeneratingPaymentLink(true);
     try {
-      const res = await fetch('/api/stripe/payment-link', {
+      const res = await fetch('/api/stripe-connect/create-payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           invoiceId: invoice.id,
-          amount: invoice.total,
-          description: `${docCfg.label} ${invoice.number}`,
-          stripeConnectId: profile?.stripe_connect_id,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Lien de paiement Stripe créé ! Ouverture dans un nouvel onglet.');
-      window.open(data.url, '_blank');
+      window.open(data.paymentLinkUrl, '_blank');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la création du lien.');
     } finally {
@@ -802,7 +799,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onSelectProvider={handleSelectPaymentProvider}
-        hasStripe={!!(profile?.stripe_connect_id || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)}
+        hasStripe={!!(profile?.stripe_connect_account_id || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)}
         hasSumUp={!!(profile?.sumup_merchant_id && profile?.sumup_merchant_code)}
         amount={invoice.total}
       />
