@@ -36,15 +36,12 @@ export async function POST(req: NextRequest) {
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
 
-    const oauthUrl = `https://connect.stripe.com/express/oauth/authorize?` +
+    const oauthUrl = `https://connect.stripe.com/oauth/authorize?` +
       `client_id=${clientId}&` +
       `response_type=code&` +
       `scope=read_write&` +
       `redirect_uri=${encodeURIComponent(`${baseUrl}/api/stripe-connect/callback`)}&` +
-      `state=${state}&` +
-      `stripe_user[email]=${encodeURIComponent(user.email || '')}&` +
-      `stripe_user[first_name]=${encodeURIComponent(user.user_metadata?.first_name || '')}&` +
-      `stripe_user[last_name]=${encodeURIComponent(user.user_metadata?.last_name || '')}`;
+      `state=${state}`;
 
     return NextResponse.json({ url: oauthUrl });
   } catch (error: any) {

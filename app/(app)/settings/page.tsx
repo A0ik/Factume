@@ -768,11 +768,11 @@ export default function SettingsPage() {
       ),
     },
     {
-      title: 'Paiement en ligne (Stripe Connect)',
+      title: 'Paiement en ligne (Stripe)',
       fields: (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Connectez votre compte Stripe pour accepter des paiements en ligne directement sur vos factures. Les fonds arrivent directement sur votre compte Stripe.
+            Connectez votre compte Stripe professionnel pour accepter des paiements en ligne directement sur vos factures. Les fonds arrivent directement sur votre compte Stripe.
           </p>
 
           {stripeStatus === 'connected' && (
