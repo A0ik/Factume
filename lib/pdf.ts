@@ -61,7 +61,7 @@ export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | nu
 import React from 'react';
 
 /**
- * Download PDF — generates a real PDF via @react-pdf/renderer and opens it.
+ * Download PDF — generates a real PDF via @react-pdf/renderer and triggers download.
  * Falls back to HTML+print if React-PDF fails (e.g. custom template).
  */
 export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | null): Promise<void> {
@@ -76,9 +76,21 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
     const { PdfDocument } = await import('@/components/pdf-document');
     const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
     const blob = await pdf(element as any).toBlob();
+
+    // Trigger download instead of opening in new tab
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   } catch {
     // Fallback to HTML+print
     downloadHtmlPdf(invoice, profile);
