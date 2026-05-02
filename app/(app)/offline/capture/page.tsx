@@ -1445,7 +1445,7 @@ export default function CapturePage() {
                           {/* Thumbnail */}
                           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
                             {doc.file_type === 'image'
-                              ? <img src={doc.file_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                              ? <img src={doc.file_url} alt="Aperçu du document" className="w-full h-full object-cover" loading="lazy" />
                               : doc.file_type === 'pdf'
                               ? <FileText size={14} className="text-red-400" />
                               : <FileIcon size={14} className="text-gray-400" />}

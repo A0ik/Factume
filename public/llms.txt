@@ -1,0 +1,111 @@
+# Factu.me - Facturation intelligente pour les indépendants et petites entreprises
+
+Factu.me est une solution de facturation moderne et intelligente conçue pour les indépendants, freelances et petites entreprises françaises.
+
+## Description principale
+
+Factu.me permet de créer des factures, devis, avoirs et autres documents commerciaux en quelques secondes grâce à une interface intuitive et des fonctionnalités innovantes comme la dictée vocale et l'intelligence artificielle.
+
+## Fonctionnalités principales
+
+### Gestion documentaire
+- Création de factures, devis, avoirs, commandes, livraisons et acomptes
+- Personnalisation des documents avec templates
+- Envoi direct aux clients par email
+- Suivi des statuts (brouillon, envoyé, payé, en retard)
+- Gestion des factures récurrentes
+
+### Fonctionnalités innovantes
+- **Dictée vocale**: Créez des factures en parlant, grâce à la reconnaissance vocale
+- **IA intelligente**: Suggestions automatiques et analyse de documents
+- **OCR**: Analyse de reçus et notes de frais (Business)
+- **Signature électronique**: Signez vos devis et contrats en ligne
+
+### Gestion client et entreprise
+- CRM avec pipeline de vente (Pro)
+- Gestion complète des clients
+- Catalogue d'articles/produits
+- Agenda et rendez-vous
+- Contrats de travail (CDI, CDD)
+
+### Avantages par abonnement
+
+**Gratuit**
+- Jusqu'à 5 factures par mois
+- Essai 4 jours toutes les fonctionnalités
+- Documents de base (factures, devis, avoirs)
+- Gestion clients et articles
+
+**Solo (9€/mois)**
+- Factures illimitées
+- Dictée vocale
+- Templates personnalisables
+- Agenda intégré
+
+**Pro (29€/mois)**
+- Tout Solo +
+- Contrats de travail
+- Notes de frais
+- CRM avec pipeline
+- 3 espaces de travail
+- Signature électronique
+
+**Business (79€/mois)**
+- Tout Pro +
+- OCR et analyse de documents
+- Espaces de travail illimités
+- API d'intégration
+- Support prioritaire
+
+## Public cible
+
+- Freelances et indépendants
+- Petites entreprises (TPE/PME)
+- Auto-entrepreneurs
+- Consultants et prestataires de services
+- Artisans et commerçants
+
+## Valeurs et différenciation
+
+1. **Simplicité**: Interface moderne et intuitive
+2. **Innovation**: Dictée vocale et IA pour gagner du temps
+3. **Conformité**: Respect de la législation française (Factur-X, CGV)
+4. **Mobilité**: Application web progressive (PWA) fonctionnant hors ligne
+5. **Transparence**: Prix clairs, sans engagement
+
+## Conformité légale
+
+- Facturation conforme aux exigences françaises
+- Support du format Factur-X (facture électronique)
+- Mentions légales et CGV intégrées
+- Archivage légal des documents
+- Protection des données (RGPD)
+
+## Technologies
+
+- Application web moderne avec Next.js
+- Base de données sécurisée
+- Authentification avec protocole OAuth
+- Paiements sécurisés via Stripe
+- Support du mode sombre
+- Fonctionnement offline (PWA)
+
+## Contact et support
+
+- Site web: https://factu.me
+- Email de contact: contact@factu.me
+- Documentation intégrée: /help
+- Centre d'aide avec guides et tutoriels
+
+## Langues
+
+- Français (principal)
+- Interface en français
+- Documents en français
+
+## Localisation
+
+- Conçu pour le marché français
+- Conformité aux normes françaises
+- Devise en Euros (€)
+- TVA configurable (taux français)

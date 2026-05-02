@@ -332,7 +332,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-3 sm:gap-5 lg:gap-6 pt-1 justify-center lg:justify-start">
                   <div className="flex -space-x-2">
                     {[1, 2, 3, 4].map((i) => (
-                      <img key={i} src={`https://picsum.photos/seed/face${i}/36/36.jpg`} className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 object-cover" alt="" />
+                      <img key={i} src={`https://picsum.photos/seed/face${i}/36/36.jpg`} className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 object-cover" alt={`Portrait utilisateur ${i}`} />
                     ))}
                     <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 bg-brand-500/20 flex items-center justify-center text-[9px] sm:text-[10px] lg:text-[11px] font-bold text-brand-300">+2k</div>
                   </div>
@@ -957,7 +957,7 @@ export default function LandingPage() {
                   <div className="flex items-center gap-1 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />)}</div>
                   <p className="text-sm text-slate-600 leading-relaxed flex-grow mb-5">&ldquo;{t.text}&rdquo;</p>
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                    <img src={`https://picsum.photos/seed/${t.avatar}/48/48.jpg`} className="w-11 h-11 rounded-full object-cover" alt="" />
+                    <img src={`https://picsum.photos/seed/${t.avatar}/48/48.jpg`} className="w-11 h-11 rounded-full object-cover" alt={`Photo de profil de ${t.name}`} />
                     <div><div className="font-bold text-sm">{t.name}</div><div className="text-xs text-slate-400">{t.role}</div></div>
                   </div>
                 </div></Card3D>
