@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     // Create line items from invoice items for better detail
     const lineItems = await Promise.all(
       invoice.items.map(async (item: any) => {
+        // Calculate TTC price including VAT
+        const ttcPrice = item.unit_price * (1 + (item.vat_rate / 100));
+
         // Create a product for each invoice item
         const product = await stripe.products.create({
           name: item.description.substring(0, 100), // Stripe limits product name length
@@ -59,10 +62,10 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Create a price for this product
+        // Create a price for this product (TTC amount)
         const price = await stripe.prices.create({
           product: product.id,
-          unit_amount: Math.round(item.unit_price * 100), // Convert to cents
+          unit_amount: Math.round(ttcPrice * 100), // Convert to cents, use TTC price
           currency: 'eur',
         });
 

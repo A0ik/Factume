@@ -21,6 +21,7 @@ import EmailPreviewModal from '@/components/ui/EmailPreviewModal';
 import QuoteActionModal from '@/components/ui/QuoteActionModal';
 import PdfPreviewModal from '@/components/ui/PdfPreviewModal';
 import PaymentProviderModal from '@/components/ui/PaymentProviderModal';
+import PaymentLinkSuccessModal from '@/components/ui/PaymentLinkSuccessModal';
 import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton';
 import { isFacturXEligible } from '@/lib/facturx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -78,6 +79,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [showQuoteActionModal, setShowQuoteActionModal] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessUrl, setPaymentSuccessUrl] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [isReminder, setIsReminder] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
@@ -232,8 +235,19 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success('Lien de paiement Stripe créé ! Ouverture dans un nouvel onglet.');
-      window.open(data.paymentLinkUrl, '_blank');
+
+      // Rafraîchir les données de la facture pour mettre à jour stripe_payment_link_url (nécessaire pour le QR code)
+      const { getSupabaseClient } = await import('@/lib/supabase');
+      const supabase = getSupabaseClient();
+      const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
+      if (updatedInvoice) {
+        setInvoice(updatedInvoice);
+      }
+
+      // Afficher la modal de succès au lieu d'ouvrir l'onglet
+      setPaymentSuccessUrl(data.paymentLinkUrl);
+      setShowPaymentSuccessModal(true);
+      setShowPaymentModal(false);
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la création du lien.');
     } finally {
@@ -251,11 +265,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
+      // Rafraîchir les données de la facture pour mettre à jour payment_link (nécessaire pour le QR code)
+      const { getSupabaseClient } = await import('@/lib/supabase');
+      const supabase = getSupabaseClient();
+      const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
+      if (updatedInvoice) {
+        setInvoice(updatedInvoice);
+      }
+
+      // Afficher la modal de succès au lieu d'ouvrir l'onglet
+      setPaymentSuccessUrl(data.url);
+      setShowPaymentSuccessModal(true);
+      setShowPaymentModal(false);
       if (data.warning) {
-        toast.error(data.warning, { duration: 8000 });
-      } else {
-        toast.success('Lien SumUp créé !');
-        window.open(data.url, '_blank');
+        toast.info(data.warning, { duration: 4000 });
       }
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la création du lien SumUp.');
@@ -803,6 +827,17 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         hasSumUp={!!(profile?.sumup_merchant_id && profile?.sumup_merchant_code)}
         amount={invoice.total}
       />
+
+      {/* Payment link success modal */}
+      {invoice && (
+        <PaymentLinkSuccessModal
+          isOpen={showPaymentSuccessModal}
+          onClose={() => setShowPaymentSuccessModal(false)}
+          paymentLinkUrl={paymentSuccessUrl}
+          invoiceNumber={invoice.number}
+          invoiceTotal={invoice.total}
+        />
+      )}
 
       {/* Delete confirmation */}
       {showDeleteConfirm && (
