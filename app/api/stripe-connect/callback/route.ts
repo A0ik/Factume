@@ -56,9 +56,32 @@ export async function GET(req: NextRequest) {
     }
 
     const tokenData = await tokenResponse.json();
+    console.log('[Stripe Connect Token Data]', JSON.stringify({
+      has_access_token: !!tokenData.access_token,
+      has_refresh_token: !!tokenData.refresh_token,
+      stripe_user_id: tokenData.stripe_user_id,
+      expires_in: tokenData.expires_in,
+      scope: tokenData.scope
+    }));
 
-    // Get the connected account details
-    const account = await stripe.accounts.retrieve(tokenData.stripe_user_id);
+    // Get the connected account details using the connected account's token
+    // IMPORTANT: Use the access_token to create a new Stripe instance for the connected account
+    const connectedStripe = new Stripe(tokenData.access_token);
+    let accountDetails = null;
+    try {
+      const account = await connectedStripe.accounts.retrieve();
+      accountDetails = {
+        id: account.id,
+        country: account.country,
+        details_submitted: account.details_submitted,
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled
+      };
+      console.log('[Stripe Connect Account]', JSON.stringify(accountDetails));
+    } catch (accountError) {
+      console.warn('[Stripe Connect Account Warning]', 'Could not fetch account details:', accountError);
+      // Continue anyway, we have the account ID from tokenData
+    }
 
     // Store in database
     await supabase
@@ -67,8 +90,11 @@ export async function GET(req: NextRequest) {
         stripe_connect_account_id: tokenData.stripe_user_id,
         stripe_connect_access_token: tokenData.access_token,
         stripe_connect_refresh_token: tokenData.refresh_token,
-        stripe_connect_token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        stripe_connect_onboarding_completed: account.details_submitted,
+        // Stripe Standard tokens don't always have expires_in, handle it safely
+        stripe_connect_token_expires_at: tokenData.expires_in
+          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+          : null,
+        stripe_connect_onboarding_completed: accountDetails?.details_submitted || false,
       })
       .eq('id', user.id);
 
