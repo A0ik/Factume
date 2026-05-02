@@ -166,8 +166,8 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
 
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client';
   const companyName = profile.company_name || '';
-  const paymentUrl = invoice.stripe_payment_url || invoice.payment_link || '';
-  const paymentMethod = invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
+  const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
+  const paymentMethod = invoice.stripe_payment_link_url || invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
 
   // Company info lines (shown below company name)
   const senderInfo: string[] = [];
