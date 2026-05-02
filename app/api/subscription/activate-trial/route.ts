@@ -10,31 +10,41 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Call the RPC function to activate trial
-    const { data, error } = await supabase.rpc('activate_trial', {
-      p_user_id: user.id
-    });
-
-    if (error) {
-      console.error('Error activating trial:', error);
-      return NextResponse.json({ error: 'Failed to activate trial' }, { status: 500 });
-    }
-
-    if (!data) {
-      return NextResponse.json({ error: 'Trial cannot be activated' }, { status: 400 });
-    }
-
-    // Fetch updated profile
+    // Fetch user profile to check if they have a valid Stripe subscription
     const { data: profile } = await supabase
       .from('profiles')
-      .select('*')
+      .select('stripe_subscription_id, is_trial_active, subscription_tier')
       .eq('id', user.id)
       .single();
 
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    // Only allow trial activation if there's a valid Stripe subscription
+    // The trial should be activated via Stripe webhook, not this endpoint
+    if (!profile.stripe_subscription_id) {
+      return NextResponse.json({
+        error: 'Trial can only be activated after completing payment',
+        requiresPayment: true,
+        redirectTo: '/paywall?plan=business&trial=true'
+      }, { status: 402 });
+    }
+
+    // If user already has a valid subscription, check if trial is already active
+    if (profile.is_trial_active) {
+      return NextResponse.json({
+        error: 'Trial is already active',
+        trialActive: true
+      }, { status: 400 });
+    }
+
+    // If they have a subscription but trial is not active yet,
+    // it means the webhook hasn't processed yet - tell them to wait
     return NextResponse.json({
-      success: true,
-      profile
-    });
+      error: 'Payment is being processed. Your trial will activate automatically once payment is confirmed.',
+      pending: true
+    }, { status: 202 });
 
   } catch (error) {
     console.error('Error in activate-trial route:', error);

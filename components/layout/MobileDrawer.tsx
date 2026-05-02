@@ -6,42 +6,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Truck, Calculator, HelpCircle,
-  Bell, Building2, Crown, Sparkles, Rocket, Zap, Target,
+  Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight,
   Moon, Sun,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn, getInitials } from '@/lib/utils';
-
-const NAV_MAIN = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-  { href: '/documents', icon: FileText,        label: 'Documents' },
-  { href: '/expenses',  icon: Receipt,         label: 'Notes de frais' },
-  { href: '/clients',   icon: Users,           label: 'Clients' },
-  { href: '/contracts', icon: FileText,        label: 'Contrats' },
-  { href: '/products',  icon: Package,         label: 'Articles' },
-  { href: '/calendar',  icon: Calendar,        label: 'Agenda' },
-];
-
-const NAV_DOCS = [
-  { href: '/invoices', icon: Receipt, label: 'Factures' },
-  { href: '/quotes', icon: FileText, label: 'Devis' },
-  { href: '/orders', icon: Package, label: 'Commandes' },
-  { href: '/deliveries', icon: Truck, label: 'Livraisons' },
-  { href: '/deposits', icon: Calculator, label: 'Acomptes' },
-  { href: '/avoirs', icon: Receipt, label: 'Avoirs' },
-];
-
-const NAV_TOOLS = [
-  { href: '/crm', icon: Target, label: 'Pipeline CRM' },
-  { href: '/notifications', icon: Bell, label: 'Notifications' },
-  { href: '/help', icon: HelpCircle, label: 'Aide' },
-  { href: '/settings', icon: Settings, label: 'Paramètres' },
-];
+import { useRouter } from 'next/navigation';
 
 const TIER_ICON: Record<string, any> = { free: Zap, solo: Rocket, pro: Crown, business: Sparkles, trial: Sparkles };
 const TIER_LABEL: Record<string, string> = { free: 'Gratuit', solo: 'Solo', pro: 'Pro', business: 'Business', trial: 'Essai' };
+
+interface NavItem {
+  href: string;
+  icon: any;
+  label: string;
+  locked?: boolean;
+  lockReason?: string;
+  unlockTier?: string;
+}
 
 interface Props {
   open: boolean;
@@ -50,8 +34,9 @@ interface Props {
 
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const { profile } = useAuthStore();
-  const { tier } = useSubscription();
+  const sub = useSubscription();
   const { theme, toggle } = useThemeStore();
 
   // Close on route change
@@ -64,10 +49,113 @@ export default function MobileDrawer({ open, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const TierIcon = TIER_ICON[tier] || Zap;
+  const TierIcon = TIER_ICON[sub.tier] || Zap;
 
-  const NavItem = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => {
+  // Build nav items based on subscription
+  const buildMainNav = (): NavItem[] => {
+    const main: NavItem[] = [
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+      { href: '/documents', icon: FileText,        label: 'Documents' },
+    ];
+
+    // Notes de frais - Pro/Business only
+    if (!sub.effectiveIsPro) {
+      main.push({
+        href: '/expenses',
+        icon: Receipt,
+        label: 'Notes de frais',
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      main.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais' });
+    }
+
+    main.push(
+      { href: '/clients',   icon: Users,           label: 'Clients' },
+      { href: '/products',  icon: Package,         label: 'Articles' },
+      { href: '/calendar',  icon: Calendar,        label: 'Agenda' },
+    );
+
+    return main;
+  };
+
+  const buildDocsNav = (): NavItem[] => {
+    const docs: NavItem[] = [
+      { href: '/documents/factures', icon: Receipt, label: 'Factures' },
+      { href: '/documents/devis',     icon: FileText, label: 'Devis' },
+      { href: '/documents/avoirs',    icon: Receipt, label: 'Avoirs' },
+      { href: '/documents/commandes', icon: Package, label: 'Commandes' },
+      { href: '/documents/livraisons',icon: Truck,   label: 'Livraisons' },
+      { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
+    ];
+
+    // Contracts - Pro/Business only
+    if (!sub.effectiveIsPro) {
+      docs.push({
+        href: '/contracts',
+        icon: FileText,
+        label: 'Contrats',
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      docs.push({ href: '/contracts', icon: FileText, label: 'Contrats' });
+    }
+
+    return docs;
+  };
+
+  const buildToolsNav = (): NavItem[] => {
+    const tools: NavItem[] = [];
+
+    // CRM - Pro/Business only
+    if (!sub.canUseCRM) {
+      tools.push({
+        href: '/crm',
+        icon: Target,
+        label: 'Pipeline CRM',
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      tools.push({ href: '/crm', icon: Target, label: 'Pipeline CRM' });
+    }
+
+    tools.push(
+      { href: '/notifications', icon: Bell, label: 'Notifications' },
+      { href: '/help', icon: HelpCircle, label: 'Aide' },
+      { href: '/settings', icon: Settings, label: 'Paramètres' },
+    );
+
+    return tools;
+  };
+
+  const NAV_MAIN = buildMainNav();
+  const NAV_DOCS = buildDocsNav();
+  const NAV_TOOLS = buildToolsNav();
+
+  const NavItem = ({ href, icon: Icon, label, locked, lockReason, unlockTier }: NavItem) => {
     const active = pathname.startsWith(href);
+
+    if (locked) {
+      return (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
+          title={lockReason}
+        >
+          <span className="flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800">
+            <Icon size={16} />
+          </span>
+          <span className="flex-1">{label}</span>
+          <Lock size={14} />
+        </div>
+      );
+    }
+
     return (
       <Link
         href={href}
@@ -123,7 +211,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <TierIcon size={10} className="text-primary" />
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{TIER_LABEL[tier] || 'Gratuit'}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{TIER_LABEL[sub.tier] || 'Gratuit'}</span>
                   </div>
                 </div>
               </div>
@@ -169,7 +257,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
             </div>
 
             {/* Footer CTA */}
-            {tier === 'free' && (
+            {sub.tier === 'free' && (
               <div className="px-3 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
                 <Link
                   href="/trial"

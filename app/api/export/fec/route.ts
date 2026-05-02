@@ -13,6 +13,25 @@ export async function GET(req: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+  // Vérifier l'abonnement - L'export comptabilité est disponible pour Pro et Business
+  const { data: profile } = await supabase.from('profiles').select('subscription_tier, is_trial_active').eq('id', user.id).single();
+
+  if (!profile) {
+    return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
+  }
+
+  const isPro = profile.subscription_tier === 'pro' || profile.subscription_tier === 'business';
+  const isTrial = profile.is_trial_active === true;
+
+  if (!isPro && !isTrial) {
+    return NextResponse.json({
+      error: 'L\'export comptabilité FEC est disponible uniquement avec les plans Pro et Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
+      feature: 'accounting_export',
+      requiredPlan: 'pro',
+      upgradeUrl: '/paywall?plan=pro'
+    }, { status: 402 });
+  }
+
   const url = new URL(req.url);
   const year = url.searchParams.get('year') || new Date().getFullYear().toString();
 

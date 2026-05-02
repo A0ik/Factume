@@ -57,6 +57,27 @@ export async function POST(
       return NextResponse.json({ error: 'Token invalide' }, { status: 404 });
     }
 
+    // Vérifier l'abonnement du propriétaire du devis (pour éviter le bypass)
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', tokenRecord.user_id)
+      .single();
+
+    if (profile) {
+      const isPro = profile.subscription_tier === 'pro' || profile.subscription_tier === 'business';
+      const isTrial = profile.is_trial_active === true;
+
+      // Si l'utilisateur n'est plus Pro/Business, on rejette la signature
+      if (!isPro && !isTrial) {
+        return NextResponse.json({
+          error: 'La signature électronique de devis nécessite un plan Pro ou Business actif.',
+          feature: 'quote_signing',
+          requiredPlan: 'pro'
+        }, { status: 402 });
+      }
+    }
+
     // Vérifier si le token n'est pas expiré
     if (new Date(tokenRecord.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Lien expiré' }, { status: 410 });

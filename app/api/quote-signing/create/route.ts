@@ -59,6 +59,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    // Vérifier l'abonnement - Les signatures de devis sont réservées à Pro et Business
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
+    }
+
+    const isPro = profile.subscription_tier === 'pro' || profile.subscription_tier === 'business';
+    const isTrial = profile.is_trial_active === true;
+
+    if (!isPro && !isTrial) {
+      return NextResponse.json({
+        error: 'La signature électronique de devis est disponible uniquement avec les plans Pro et Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
+        feature: 'quote_signing',
+        requiredPlan: 'pro',
+        upgradeUrl: '/paywall?plan=pro'
+      }, { status: 402 });
+    }
+
     // Récupérer le devis avec les infos client
     const { data: quote, error: quoteError } = await admin
       .from('invoices')

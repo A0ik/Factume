@@ -153,13 +153,19 @@ export async function POST(req: NextRequest) {
         });
 
       } catch (stripeError: unknown) {
-        const se = stripeError as Error;
-        console.error('[change-subscription] Erreur Stripe:', se.message);
-        return NextResponse.json({ error: se.message || 'Erreur Stripe lors du changement d\'abonnement' }, { status: 500 });
+        const se = stripeError as Error & { code?: string };
+        // Si la subscription n'existe plus dans Stripe (annulée, test, etc.),
+        // on tombe sur le chemin "nouvelle souscription" au lieu de retourner une erreur.
+        const isNotFound = se.code === 'resource_missing' || se.message?.includes('No such subscription');
+        if (!isNotFound) {
+          console.error('[change-subscription] Erreur Stripe:', se.message);
+          return NextResponse.json({ error: se.message || 'Erreur Stripe lors du changement d\'abonnement' }, { status: 500 });
+        }
+        // Subscription invalide → on continue vers la création d'une nouvelle
       }
     }
 
-    // Pas d'abonnement existant → nouvelle souscription
+    // Pas d'abonnement existant (ou subscription Stripe invalide) → nouvelle souscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],

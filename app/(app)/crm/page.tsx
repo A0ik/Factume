@@ -637,6 +637,7 @@ export default function CrmPage() {
   const { opportunities, tasks, fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchTasks } = useCrmStore();
   const { clients } = useDataStore();
   const { user } = useAuthStore();
+  const sub = useSubscription(); // Get subscription info
 
   const [view,         setView]        = useState<'kanban'|'list'>('kanban');
   const [search,       setSearch]      = useState('');
@@ -649,9 +650,19 @@ export default function CrmPage() {
   const [form,         setForm]        = useState<Partial<OpportunityInput>>(EMPTY_FORM);
   const dragId = useRef<string|null>(null);
 
+  // Check CRM access - Pro/Business only
+  const [accessDenied, setAccessDenied] = useState(false);
+
   useEffect(() => {
-    if (user) fetchOpportunities();
-  }, [user]);
+    if (user) {
+      // Check if user has access to CRM
+      if (!sub.canUseCRM) {
+        setAccessDenied(true);
+      } else {
+        fetchOpportunities();
+      }
+    }
+  }, [user, sub.canUseCRM]);
 
   useEffect(() => {
     opportunities.forEach(o => { if (!tasks[o.id]) fetchTasks(o.id); });
@@ -743,8 +754,51 @@ export default function CrmPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">
+      {/* Access Denied Banner */}
+      {accessDenied && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-4xl mx-auto mb-8"
+        >
+          <div className="bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 dark:from-purple-500/10 dark:via-violet-500/10 border-2 border-purple-200 dark:border-purple-500/30 rounded-3xl p-8 md:p-12 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-purple-100 dark:bg-purple-500/20 rounded-2xl">
+                <Target size={48} className="text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-purple-900 dark:text-purple-100 mb-3">
+              Pipeline CRM
+            </h2>
+            <p className="text-lg text-purple-700 dark:text-purple-200 mb-6 max-w-2xl mx-auto leading-relaxed">
+              Le Pipeline CRM est une fonctionnalité réservée aux abonnements Pro et Business. Gérez vos opportunités commerciales et suivez votre pipeline de vente avec des outils avancés.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={() => window.location.href = '/paywall?plan=pro'}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-violet-700 hover:from-purple-700 hover:to-violet-800 text-white rounded-2xl font-bold shadow-lg shadow-purple-500/30 transition-all"
+              >
+                Découvrir les plans Pro
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </button>
+              <button
+                onClick={() => window.location.href = '/dashboard'}
+                className="px-8 py-4 bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-2xl font-bold transition-all"
+              >
+                Retour au tableau de bord
+              </button>
+            </div>
+            <p className="mt-6 text-sm text-purple-600 dark:text-purple-300">
+              Avec les plans Pro et Business : CRM illimité · Relances automatiques · Export comptable · Signature électronique
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
+      {!accessDenied && (
       <motion.div
+        initial={{ opacity: 0, y: -20 }}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
@@ -1149,6 +1203,7 @@ export default function CrmPage() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }

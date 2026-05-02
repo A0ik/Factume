@@ -816,7 +816,7 @@ export default function NewFacturePage() {
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Client</h3>
                 </div>
                 <div className="p-4">
-                  <div className="relative" style={{ zIndex: showSuggestions && suggestions.length > 0 ? 50 : 'auto' }}>
+                  <div className="relative" style={{ zIndex: showSuggestions && suggestions.length > 0 ? 100 : 'auto' }}>
                     <Input
                       placeholder="Nom du client ou de l'entreprise"
                       value={clientName}

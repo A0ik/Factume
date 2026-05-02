@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // ─── Cost Optimization Strategy ───────────────────────────────────────────────
 // Target: Process 1000+ documents for minimal cost (~$10-20 total)
@@ -129,6 +130,38 @@ function sanitize(raw: Record<string, any>) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check user subscription - AI document analysis is Business only feature
+    const { createServerSupabaseClient } = await import('@/lib/supabase-server');
+    const supabase = createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
+    }
+
+    // AI document analysis is only available for Business users or active trial users
+    const isBusiness = profile.subscription_tier === 'business';
+    const isTrial = profile.is_trial_active === true;
+
+    if (!isBusiness && !isTrial) {
+      return NextResponse.json({
+        error: 'L\'analyse IA de documents est disponible uniquement avec le plan Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
+        feature: 'ai_analysis',
+        requiredPlan: 'business',
+        upgradeUrl: '/paywall?plan=business'
+      }, { status: 402 });
+    }
+
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
     }

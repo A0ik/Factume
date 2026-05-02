@@ -24,9 +24,23 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
 
         if (session.mode === 'payment' && session.metadata?.invoiceId) {
-          await supabase.from('invoices')
+          const { data: invoice } = await supabase
+            .from('invoices')
             .update({ status: 'paid', paid_at: new Date().toISOString() })
-            .eq('id', session.metadata.invoiceId);
+            .eq('id', session.metadata.invoiceId)
+            .select('*, client:client_id(name)')
+            .single();
+
+          // Créer une notification pour l'utilisateur
+          if (invoice && session.metadata?.userId) {
+            await supabase.from('notifications').insert({
+              user_id: session.metadata.userId,
+              type: 'invoice_paid',
+              title: `Facture payée — ${invoice.number}`,
+              body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée avec succès.`,
+              link: `/invoices/${invoice.id}`,
+            });
+          }
         }
 
         if (session.mode === 'subscription' && session.metadata?.userId) {

@@ -92,6 +92,16 @@ function getHighlightedPlan(tier: string): string {
   return 'business';
 }
 
+function getPriceNote(plan: Plan, yearly: boolean, trialMode = false): string {
+  if (yearly) {
+    const monthlyNum = parseFloat(plan.yearlyPrice.replace('€', ''));
+    const total = Math.round(monthlyNum * 12);
+    const suffix = trialMode ? ` (après 4 jours d'essai)` : '';
+    return `/ mois · ${total}€ facturés annuellement${suffix}`;
+  }
+  return trialMode ? '/ mois (après 4 jours d\'essai)' : '/ mois';
+}
+
 export default function PaywallPage() {
   const router = useRouter();
   const { profile } = useAuthStore();
@@ -135,6 +145,16 @@ export default function PaywallPage() {
       }
     }
   }, [isYearly]);
+
+  // Si l'utilisateur change la facturation alors que le checkout est déjà ouvert,
+  // on reset pour qu'il reparte sur les plans avec le bon prix.
+  useEffect(() => {
+    if (checkoutData) {
+      setCheckoutData(null);
+      setSelectedPlan(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [billing]);
 
   useEffect(() => {
     const fetchProrataData = async () => {
@@ -181,7 +201,7 @@ export default function PaywallPage() {
           id: selectedPlan.id,
           name: selectedPlan.name,
           price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
-          priceNote: isYearly ? '/ mois (facturé annuellement, après 4 jours d\'essai)' : '/ mois (après 4 jours d\'essai)',
+          priceNote: getPriceNote(selectedPlan, isYearly, true),
           features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
 
@@ -232,8 +252,11 @@ export default function PaywallPage() {
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan || !profile?.id) return;
 
-    // Si l'utilisateur a déjà un abonnement payant, afficher la confirmation avant de changer
-    if (!sub.isFree && sub.tier !== 'free') {
+    // La modal prorata ne s'affiche que si l'utilisateur a une VRAIE subscription Stripe active.
+    // Si le tier a été mis manuellement (test Supabase) sans stripe_subscription_id,
+    // on passe directement au formulaire de paiement.
+    const hasRealStripeSubscription = !sub.isFree && sub.tier !== 'free' && !!profile?.stripe_subscription_id;
+    if (hasRealStripeSubscription) {
       const prorata = prorataData[planId] || { amount: 0, percent: 0 };
       setConfirmChange({ plan: selectedPlan, prorata });
       return;
@@ -255,7 +278,7 @@ export default function PaywallPage() {
           id: selectedPlan.id,
           name: selectedPlan.name,
           price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
-          priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
+          priceNote: getPriceNote(selectedPlan, isYearly),
           features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
 
@@ -301,7 +324,7 @@ export default function PaywallPage() {
           id: plan.id,
           name: plan.name,
           price: (isYearly ? plan.yearlyPrice : plan.price).replace('€', ''),
-          priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
+          priceNote: getPriceNote(plan, isYearly),
           features: plan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
         setCheckoutData({
@@ -493,12 +516,12 @@ export default function PaywallPage() {
         </motion.div>
       )}
 
-      {/* ====== BILLING TOGGLE ====== */}
+      {/* ====== BILLING TOGGLE — masqué pendant le checkout ====== */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="flex flex-col items-center gap-3 mb-10"
+        className={cn("flex flex-col items-center gap-3 mb-10", checkoutData && "invisible pointer-events-none h-0 mb-0 overflow-hidden")}
       >
         <div className="relative inline-flex items-center p-1 rounded-full bg-gray-100 border border-gray-200/60 shadow-md">
           <motion.div

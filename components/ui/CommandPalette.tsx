@@ -34,6 +34,13 @@ interface Result {
   metaColor?: string;
 }
 
+// Global state to allow external trigger
+let setOpenCommandPalette: ((open: boolean) => void) | null = null;
+
+export function openCommandPalette() {
+  setOpenCommandPalette?.(true);
+}
+
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -41,6 +48,12 @@ export default function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const { invoices, clients } = useDataStore();
+
+  // Register global open function
+  useEffect(() => {
+    setOpenCommandPalette = setOpen;
+    return () => { setOpenCommandPalette = null; };
+  }, []);
 
   // Open on Ctrl+K / Cmd+K
   useEffect(() => {
@@ -115,7 +128,7 @@ export default function CommandPalette() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, results, selected]);
+  }, [open, results, selected, router]);
 
   useEffect(() => { setSelected(0); }, [query]);
 
@@ -128,26 +141,26 @@ export default function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh] px-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4 bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
     >
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+      <div className="w-full max-w-xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Search bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-700">
           <Search size={18} className="text-gray-400 flex-shrink-0" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une facture, un client..."
-            className="flex-1 text-sm text-gray-900 placeholder-gray-400 bg-transparent focus:outline-none"
+            className="flex-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent focus:outline-none"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="text-gray-300 hover:text-gray-500 transition-colors">
+            <button onClick={() => setQuery('')} className="text-gray-300 hover:text-gray-500 dark:hover:text-gray-400 transition-colors">
               <X size={16} />
             </button>
           )}
-          <kbd className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200">
+          <kbd className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600">
             ESC
           </kbd>
         </div>
@@ -155,15 +168,15 @@ export default function CommandPalette() {
         {/* Results */}
         {query.trim() === '' ? (
           <div className="px-4 py-6 text-center">
-            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
               <Clock size={18} className="text-gray-300" />
             </div>
-            <p className="text-sm text-gray-400">Tapez pour rechercher dans vos factures et clients</p>
-            <p className="text-xs text-gray-300 mt-1">↑ ↓ pour naviguer · Entrée pour ouvrir · Échap pour fermer</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Tapez pour rechercher dans vos factures et clients</p>
+            <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">↑ ↓ pour naviguer · Entrée pour ouvrir · Échap pour fermer</p>
           </div>
         ) : results.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-sm text-gray-400">Aucun résultat pour <strong>"{query}"</strong></p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Aucun résultat pour <strong>"{query}"</strong></p>
           </div>
         ) : (
           <div className="py-1.5">
@@ -171,7 +184,7 @@ export default function CommandPalette() {
             {results.filter((r) => r.type === 'invoice').length > 0 && (
               <>
                 <div className="px-4 py-1.5">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Factures & Documents</p>
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Factures & Documents</p>
                 </div>
                 {results.filter((r) => r.type === 'invoice').map((result, i) => {
                   const globalIdx = results.indexOf(result);
@@ -183,21 +196,21 @@ export default function CommandPalette() {
                       onMouseEnter={() => setSelected(globalIdx)}
                       className={cn(
                         'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
-                        selected === globalIdx ? 'bg-primary/6' : 'hover:bg-gray-50'
+                        selected === globalIdx ? 'bg-primary/10 dark:bg-primary/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                       )}
                     >
                       <div className={cn(
                         'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                        selected === globalIdx ? 'bg-primary/10' : 'bg-gray-100'
+                        selected === globalIdx ? 'bg-primary/20 dark:bg-primary/30' : 'bg-gray-100 dark:bg-gray-800'
                       )}>
-                        <Icon size={14} className={selected === globalIdx ? 'text-primary' : 'text-gray-400'} />
+                        <Icon size={14} className={selected === globalIdx ? 'text-primary' : 'text-gray-400 dark:text-gray-500'} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{result.title}</p>
-                        <p className="text-xs text-gray-400 truncate">{result.subtitle}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{result.title}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{result.subtitle}</p>
                       </div>
                       {result.meta && (
-                        <p className={cn('text-xs font-semibold flex-shrink-0', result.metaColor || 'text-gray-400')}>
+                        <p className={cn('text-xs font-semibold flex-shrink-0', result.metaColor || 'text-gray-400 dark:text-gray-500')}>
                           {result.meta}
                         </p>
                       )}
@@ -212,7 +225,7 @@ export default function CommandPalette() {
             {results.filter((r) => r.type === 'client').length > 0 && (
               <>
                 <div className="px-4 py-1.5 mt-1">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Clients</p>
+                  <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Clients</p>
                 </div>
                 {results.filter((r) => r.type === 'client').map((result) => {
                   const globalIdx = results.indexOf(result);
@@ -223,18 +236,18 @@ export default function CommandPalette() {
                       onMouseEnter={() => setSelected(globalIdx)}
                       className={cn(
                         'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
-                        selected === globalIdx ? 'bg-primary/6' : 'hover:bg-gray-50'
+                        selected === globalIdx ? 'bg-primary/10 dark:bg-primary/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                       )}
                     >
                       <div className={cn(
                         'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black',
-                        selected === globalIdx ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'
+                        selected === globalIdx ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
                       )}>
                         {result.title[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{result.title}</p>
-                        {result.subtitle && <p className="text-xs text-gray-400 truncate">{result.subtitle}</p>}
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{result.title}</p>
+                        {result.subtitle && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{result.subtitle}</p>}
                       </div>
                       {selected === globalIdx && <ArrowRight size={14} className="text-primary flex-shrink-0" />}
                     </button>
@@ -246,11 +259,11 @@ export default function CommandPalette() {
         )}
 
         {/* Footer */}
-        <div className="px-4 py-2.5 border-t border-gray-50 flex items-center justify-between">
-          <p className="text-[10px] text-gray-300 font-medium">{results.length} résultat{results.length !== 1 ? 's' : ''}</p>
-          <div className="flex items-center gap-3 text-[10px] text-gray-300">
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-400 font-mono">↑↓</kbd> naviguer</span>
-            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 border border-gray-200 text-gray-400 font-mono">↵</kbd> ouvrir</span>
+        <div className="px-4 py-2.5 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-[10px] text-gray-300 dark:text-gray-600 font-medium">{results.length} résultat{results.length !== 1 ? 's' : ''}</p>
+          <div className="flex items-center gap-3 text-[10px] text-gray-300 dark:text-gray-600">
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-400 font-mono">↑↓</kbd> naviguer</span>
+            <span className="flex items-center gap-1"><kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-400 font-mono">↵</kbd> ouvrir</span>
           </div>
         </div>
       </div>

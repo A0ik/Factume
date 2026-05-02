@@ -924,7 +924,27 @@ export default function SettingsPage() {
       title: 'Signature électronique',
       fields: (
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
+
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center flex-shrink-0">
+                  <PenTool size={18} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">À quoi sert la signature électronique ?</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                    Votre signature manuscrite sera <strong>ajoutée automatiquement en bas de tous vos documents PDF</strong> (factures, devis, avoirs) que vous générez. Cela donne un aspect professionnel et authentique à vos documents, comme s'ils étaient signés à la main.
+                  </p>
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                    <strong className="text-blue-600 dark:text-blue-400">Note :</strong> Cette signature est différente de la signature client par email (disponible avec Pro). Ici, c'est VOTRE signature qui apparaît sur vos documents.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-start gap-4">
             <div className="w-48 h-24 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
               {profile?.signature_url ? (

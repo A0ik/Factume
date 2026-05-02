@@ -2,18 +2,38 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, FileText, Users, Calendar, Settings } from 'lucide-react';
 import { InteractiveMenu, InteractiveMenuItem } from '@/components/ui/modern-mobile-menu';
-
-const NAV: (InteractiveMenuItem & { href: string })[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
-  { href: '/documents', icon: FileText, label: 'Docs' },
-  { href: '/clients', icon: Users, label: 'Clients' },
-  { href: '/calendar', icon: Calendar, label: 'Agenda' },
-  { href: '/settings', icon: Settings, label: 'Réglages' },
-];
+import { useSubscription } from '@/hooks/useSubscription';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const sub = useSubscription();
+
+  // Build nav items based on subscription
+  const buildNav = (): (InteractiveMenuItem & { href: string })[] => {
+    const nav: (InteractiveMenuItem & { href: string })[] = [
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
+      { href: '/documents', icon: FileText, label: 'Docs' },
+      { href: '/clients', icon: Users, label: 'Clients' },
+    ];
+
+    // Notes de frais - Pro/Business only
+    if (!sub.effectiveIsPro) {
+      // Skip - not available for Solo/Free
+    } else {
+      // For Pro/Business, we could add expenses here, but let's keep it simple
+      // nav.push({ href: '/expenses', icon: Receipt, label: 'Dépenses' });
+    }
+
+    nav.push(
+      { href: '/calendar', icon: Calendar, label: 'Agenda' },
+      { href: '/settings', icon: Settings, label: 'Réglages' },
+    );
+
+    return nav;
+  };
+
+  const NAV = buildNav();
 
   const activeIndex = NAV.findIndex(({ href }) => pathname.startsWith(href));
 

@@ -8,7 +8,7 @@ import {
   RefreshCw, Settings, Zap, ChevronRight, ChevronDown,
   Building2, Bell, HelpCircle, Package, Receipt, Calendar,
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
-  Rocket, Crown, Sparkles, ArrowUpRight, Truck, Target,
+  Rocket, Crown, Sparkles, ArrowUpRight, Truck, Target, Lock,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -19,6 +19,7 @@ import { UserDropdown } from '@/components/ui/user-dropdown';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
+import { openCommandPalette } from '@/components/ui/CommandPalette';
 import { toast } from 'sonner';
 
 const TIER_CONFIG = {
@@ -37,7 +38,7 @@ const TIER_CONFIG = {
     iconBg: 'from-blue-800 to-indigo-900',
     icon: Rocket, iconColor: 'text-white',
     message: 'Passer à Pro',
-    subtext: 'IA · FEC · CRM · Relances',
+    subtext: 'Contrats · Notes de frais · Signatures',
     cta: '/paywall',
   },
   pro: {
@@ -46,7 +47,7 @@ const TIER_CONFIG = {
     iconBg: 'from-purple-600 via-violet-700 to-purple-800',
     icon: Crown, iconColor: 'text-white',
     message: 'Passer à Business',
-    subtext: 'Multi-comptes · Webhooks · API',
+    subtext: 'CRM · OCR · API · Multi-comptes',
     cta: '/paywall',
   },
   business: {
@@ -60,40 +61,25 @@ const TIER_CONFIG = {
   },
 } as const;
 
-const NAV_CORE = [
-  { href: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', badge: null as null|'overdue'|'notif' },
-  { href: '/documents',  icon: FileText,         label: 'Documents',       badge: 'overdue' as null|'overdue'|'notif', hasSubmenu: true },
-  { href: '/expenses',   icon: Receipt,          label: 'Notes de frais', badge: null },
-  { href: '/clients',    icon: Users,            label: 'Clients',         badge: null },
-  { href: '/products',   icon: Package,          label: 'Articles',        badge: null },
-  { href: '/calendar',   icon: Calendar,         label: 'Agenda',          badge: null },
-];
+interface NavItem {
+  href: string;
+  icon: any;
+  label: string;
+  badge: null | 'overdue' | 'notif';
+  hasSubmenu?: boolean;
+  locked?: boolean;
+  lockReason?: string;
+  unlockTier?: string;
+}
 
-const DOCUMENTS_SUBMENU = [
-  { href: '/documents/factures', icon: Receipt,    label: 'Factures' },
-  { href: '/documents/devis',     icon: FileText,   label: 'Devis' },
-  { href: '/documents/avoirs',    icon: Receipt,    label: 'Avoirs' },
-  { href: '/documents/commandes', icon: Package,    label: 'Commandes' },
-  { href: '/documents/livraisons',icon: Truck,      label: 'Livraisons' },
-  { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
-  { href: '/contracts',           icon: FileText,   label: 'Contrats' },
-];
-
-const NAV_TOOLS = [
-  { href: '/offline/workspace', icon: Building2, label: 'Workspace',     badge: null as null|'overdue'|'notif' },
-  { href: '/notifications',     icon: Bell,      label: 'Notifications', badge: 'notif' as null|'overdue'|'notif' },
-  { href: '/settings',          icon: Settings,  label: 'Paramètres',    badge: null },
-  { href: '/help',              icon: HelpCircle,label: 'Aide',           badge: null },
-];
-
-const NAV_ADVANCED = [
-  { href: '/crm',         icon: Target,    label: 'Pipeline CRM',  enabled: true },
-  { href: '/ocr',         icon: Search,    label: 'Analyse OCR',   enabled: true },
-  { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false },
-  { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false },
-  { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false },
-  { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false },
-];
+interface SubMenuItem {
+  href: string;
+  icon: any;
+  label: string;
+  locked?: boolean;
+  lockReason?: string;
+  unlockTier?: string;
+}
 
 export default function Sidebar() {
   const pathname  = usePathname();
@@ -101,26 +87,133 @@ export default function Sidebar() {
   const { profile, user, signOut } = useAuthStore();
   const { invoices } = useDataStore();
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
-  const { tier } = useSubscription();
+  const sub = useSubscription();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
-  const currentTier  = (['free','solo','pro','business'].includes(tier) ? tier : 'free') as keyof typeof TIER_CONFIG;
+  const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig   = TIER_CONFIG[currentTier];
-  const shouldShowUpgrade = tier !== 'business';
+  const shouldShowUpgrade = sub.tier !== 'business';
 
   useEffect(() => { if (user) fetchNotifications(user.id); }, [user]);
 
-  const getBadgeCount = (badge: null|'overdue'|'notif') => {
+  // Build nav items based on subscription
+  const buildCoreNav = (): NavItem[] => {
+    const core: NavItem[] = [
+      { href: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', badge: null },
+    ];
+
+    // Documents - always shown, submenu items filtered by tier
+    core.push({
+      href: '/documents',
+      icon: FileText,
+      label: 'Documents',
+      badge: overdueCount > 0 ? 'overdue' : null,
+      hasSubmenu: true,
+    });
+
+    // Notes de frais - Pro/Business only
+    if (!sub.effectiveIsPro) {
+      core.push({
+        href: '/expenses',
+        icon: Receipt,
+        label: 'Notes de frais',
+        badge: null,
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      core.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais', badge: null });
+    }
+
+    core.push(
+      { href: '/clients',    icon: Users,     label: 'Clients',         badge: null },
+      { href: '/products',   icon: Package,   label: 'Articles',        badge: null },
+      { href: '/calendar',   icon: Calendar,  label: 'Agenda',          badge: null },
+    );
+
+    return core;
+  };
+
+  const buildDocumentsSubmenu = (): SubMenuItem[] => {
+    const docs: SubMenuItem[] = [
+      { href: '/documents/factures', icon: Receipt,    label: 'Factures' },
+      { href: '/documents/devis',     icon: FileText,   label: 'Devis' },
+      { href: '/documents/avoirs',    icon: Receipt,    label: 'Avoirs' },
+      { href: '/documents/commandes', icon: Package,    label: 'Commandes' },
+      { href: '/documents/livraisons',icon: Truck,      label: 'Livraisons' },
+      { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
+    ];
+
+    // Contracts - Pro/Business only
+    if (!sub.effectiveIsPro) {
+      docs.push({
+        href: '/contracts',
+        icon: FileText,
+        label: 'Contrats',
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      docs.push({ href: '/contracts', icon: FileText, label: 'Contrats' });
+    }
+
+    return docs;
+  };
+
+  const buildToolsNav = (): NavItem[] => {
+    const tools: NavItem[] = [
+      { href: '/offline/workspace', icon: Building2, label: 'Workspace', badge: null },
+      { href: '/notifications',     icon: Bell,      label: 'Notifications', badge: unreadCount > 0 ? 'notif' : null },
+      { href: '/settings',          icon: Settings,  label: 'Paramètres',    badge: null },
+      { href: '/help',              icon: HelpCircle,label: 'Aide',           badge: null },
+    ];
+    return tools;
+  };
+
+  const buildAdvancedNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string }> => {
+    return [
+      {
+        href: '/crm',
+        icon: Target,
+        label: 'Pipeline CRM',
+        enabled: sub.canUseCRM,
+        lockReason: sub.canUseCRM ? undefined : 'Disponible avec Pro',
+        unlockTier: 'pro',
+      },
+      {
+        href: '/ocr',
+        icon: Search,
+        label: 'Analyse OCR',
+        enabled: sub.isBusiness || sub.isTrialActive,
+        lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
+        unlockTier: 'business',
+      },
+      { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false, lockReason: 'Bientôt disponible' },
+    ];
+  };
+
+  const NAV_CORE = buildCoreNav();
+  const DOCUMENTS_SUBMENU = buildDocumentsSubmenu();
+  const NAV_TOOLS = buildToolsNav();
+  const NAV_ADVANCED = buildAdvancedNav();
+
+  const getBadgeCount = (badge: null | 'overdue' | 'notif') => {
     if (badge === 'overdue') return overdueCount;
     if (badge === 'notif')   return unreadCount;
     return 0;
   };
 
   /* ── Nav item (link or submenu toggle) ── */
-  const NavItem = ({ href, icon: Icon, label, badge, hasSubmenu, submenu }: {
+  const NavItem = ({ href, icon: Icon, label, badge, hasSubmenu, submenu, locked, lockReason, unlockTier }: {
     href: string; icon: any; label: string;
-    badge: null|'overdue'|'notif'; hasSubmenu?: boolean; submenu?: typeof DOCUMENTS_SUBMENU;
+    badge: null | 'overdue' | 'notif'; hasSubmenu?: boolean; submenu?: typeof DOCUMENTS_SUBMENU;
+    locked?: boolean; lockReason?: string; unlockTier?: string;
   }) => {
     const [open, setOpen] = useState(false);
     const active          = pathname.startsWith(href);
@@ -131,90 +224,132 @@ export default function Sidebar() {
       return (
         <div>
           <div className="flex items-center gap-1">
-            <Link
-              href={href}
-              className={cn(
-                'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
-                active || subActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
-              )}
-            >
-              <span className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
-                active || subActive
-                  ? 'bg-primary text-white shadow-md shadow-primary/30'
-                  : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
-              )}>
-                <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
-              </span>
-              <span className="flex-1 font-semibold">{label}</span>
-              {count > 0 && (
-                <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
-                  {count > 9 ? '9+' : count}
+            {locked ? (
+              <div className="flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70">
+                <span className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-white/5">
+                  <Icon size={17} strokeWidth={1.8} />
                 </span>
-              )}
-            </Link>
-            <button
-              onClick={() => setOpen(!open)}
-              className={cn(
-                'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
-                active || subActive
-                  ? 'text-primary hover:bg-primary/20'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
-              )}
-            >
-              <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
-            </button>
-          </div>
-          <AnimatePresence>
-            {open && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden ml-5 mt-1 space-y-0.5"
-              >
-                {submenu.map((item, index) => {
-                  const sa = pathname.startsWith(item.href);
-                  const isLastBeforeContracts = index === submenu.length - 2; // Avant "Contrats"
-                  return (
-                    <div key={item.href}>
-                      <Link href={item.href}
-                        className={cn(
-                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
-                          sa
-                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200',
-                        )}
-                      >
-                        <span className={cn(
-                          'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
-                          sa
-                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-white/10'
-                        )}>
-                          <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
-                        </span>
-                        <span className={cn('flex-1', sa && 'font-semibold')}>{item.label}</span>
-                        {sa && (
-                          <motion.span
-                            layoutId="activeIndicator"
-                            className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
-                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                          />
-                        )}
-                      </Link>
-                      {isLastBeforeContracts && (
-                        <div className="mx-3 my-2 h-px bg-gradient-to-r from-gray-200 to-transparent" />
-                      )}
-                    </div>
-                  );
-                })}
-              </motion.div>
+                <span className="flex-1 font-semibold">{label}</span>
+                <Lock size={14} className="text-gray-400" />
+              </div>
+            ) : (
+              <>
+                <Link
+                  href={href}
+                  className={cn(
+                    'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
+                    active || subActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                  )}
+                >
+                  <span className={cn(
+                    'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
+                    active || subActive
+                      ? 'bg-primary text-white shadow-md shadow-primary/30'
+                      : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                  )}>
+                    <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
+                  </span>
+                  <span className="flex-1 font-semibold">{label}</span>
+                  {count > 0 && (
+                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                      {count > 9 ? '9+' : count}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  onClick={() => setOpen(!open)}
+                  className={cn(
+                    'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                    active || subActive
+                      ? 'text-primary hover:bg-primary/20'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                  )}
+                >
+                  <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
+                </button>
+              </>
             )}
-          </AnimatePresence>
+          </div>
+          {!locked && (
+            <AnimatePresence>
+              {open && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden ml-5 mt-1 space-y-0.5"
+                >
+                  {submenu.map((item, index) => {
+                    const sa = pathname.startsWith(item.href);
+                    const isLastBeforeContracts = index === submenu.length - 2;
+                    return (
+                      <div key={item.href}>
+                        {item.locked ? (
+                          <div
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60"
+                            title={item.lockReason}
+                          >
+                            <span className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 bg-gray-100 dark:bg-white/5">
+                              <item.icon size={13} strokeWidth={1.8} />
+                            </span>
+                            <span className="flex-1">{item.label}</span>
+                            <Lock size={12} />
+                          </div>
+                        ) : (
+                          <Link href={item.href}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
+                              sa
+                                ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200',
+                            )}
+                          >
+                            <span className={cn(
+                              'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
+                              sa
+                                ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                                : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10'
+                            )}>
+                              <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
+                            </span>
+                            <span className={cn('flex-1', sa && 'font-semibold')}>{item.label}</span>
+                            {sa && (
+                              <motion.span
+                                layoutId="activeIndicator"
+                                className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
+                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                              />
+                            )}
+                          </Link>
+                        )}
+                        {isLastBeforeContracts && !item.locked && (
+                          <div className="mx-3 my-2 h-px bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+        </div>
+      );
+    }
+
+    if (locked) {
+      return (
+        <div
+          className="group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
+          title={lockReason}
+        >
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-white/5">
+            <Icon size={17} strokeWidth={1.8} />
+          </span>
+          <span className="flex-1 font-semibold">{label}</span>
+          <Lock size={14} className="text-gray-400" />
         </div>
       );
     }
@@ -274,12 +409,12 @@ export default function Sidebar() {
       {/* Search */}
       <div className="relative px-4 py-3 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
         <button
-          onClick={() => { const e = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }); window.dispatchEvent(e); }}
+          onClick={() => openCommandPalette()}
           className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-100 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all text-sm group"
         >
           <Search size={15} className="group-hover:scale-110 transition-transform" />
           <span className="flex-1 text-left font-medium">Rechercher...</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white border border-gray-200 text-gray-400 font-mono">⌘K</kbd>
+          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white border border-gray-200 text-gray-400 font-mono dark:bg-gray-800 dark:border-gray-700">⌘K</kbd>
         </button>
       </div>
 
@@ -319,51 +454,62 @@ export default function Sidebar() {
         </div>
 
         {/* Advanced tools */}
-        <div className="pb-2">
-          <button
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
-          >
-            <span>Outils avancés</span>
-            <ChevronDown size={12} className={cn('transition-transform duration-200', showAdvanced && 'rotate-180')} />
-          </button>
-          <AnimatePresence>
-            {showAdvanced && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden space-y-0.5 mt-1"
-              >
-                {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled }) =>
-                  enabled ? (
-                    <Link key={href} href={href}
-                      className={cn(
-                        'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
-                        pathname.startsWith(href) ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
-                      )}
-                    >
-                      <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-                        <Icon size={17} />
-                      </span>
-                      <span className="flex-1">{label}</span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">Actif</span>
-                    </Link>
-                  ) : (
-                    <div key={href} className="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-300 cursor-not-allowed opacity-60">
-                      <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 text-gray-300 flex-shrink-0">
-                        <Icon size={17} />
-                      </span>
-                      <span className="flex-1">{label}</span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
-                    </div>
-                  )
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {NAV_ADVANCED.some(item => item.enabled || item.lockReason) && (
+          <div className="pb-2">
+            <button
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
+            >
+              <span>Outils avancés</span>
+              <ChevronDown size={12} className={cn('transition-transform duration-200', showAdvanced && 'rotate-180')} />
+            </button>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden space-y-0.5 mt-1"
+                >
+                  {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier }) =>
+                    enabled ? (
+                      <Link key={href} href={href}
+                        className={cn(
+                          'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
+                          pathname.startsWith(href) ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+                        )}
+                      >
+                        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary flex-shrink-0">
+                          <Icon size={17} />
+                        </span>
+                        <span className="flex-1">{label}</span>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">Actif</span>
+                      </Link>
+                    ) : (
+                      <div key={href} className="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-300 cursor-not-allowed opacity-60" title={lockReason}>
+                        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 text-gray-300 flex-shrink-0">
+                          <Icon size={17} />
+                        </span>
+                        <span className="flex-1">{label}</span>
+                        {unlockTier ? (
+                          <button
+                            onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+                            className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide hover:bg-gray-200 hover:text-gray-500 transition-colors"
+                          >
+                            {unlockTier === 'pro' ? 'Pro' : 'Business'}
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
+                        )}
+                      </div>
+                    )
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* Tools nav */}
         <div>

@@ -66,17 +66,8 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
 
-    // Enforce free tier invoice limit (5/month)
-    const isFree = !profile.subscription_tier || profile.subscription_tier === 'free';
-    if (isFree) {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const monthlyCount = (profile.invoice_month === currentMonth)
-        ? (profile.monthly_invoice_count || 0)
-        : 0;
-      if (monthlyCount >= 5) {
-        throw new Error('Limite de 5 factures mensuelles atteinte. Passez à un plan supérieur pour des factures illimitées.');
-      }
-    }
+    // Note: The invoice limit is now enforced at the database level by increment_invoice_count RPC
+    // This will throw an error if the free tier limit (5/month) is exceeded
 
     if (idempotencyId) {
       const { data: existing } = await getSupabaseClient()

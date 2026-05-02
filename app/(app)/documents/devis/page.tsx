@@ -27,6 +27,7 @@ import { useRouter } from 'next/navigation';
 import { useDataStore } from '@/stores/dataStore';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 
 type StatusFilter = 'all' | 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
 
@@ -34,6 +35,7 @@ export default function DevisPage() {
   const router = useRouter();
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
+  const sub = useSubscription();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedDevis, setSelectedDevis] = useState<Set<string>>(new Set());
@@ -126,6 +128,12 @@ export default function DevisPage() {
   };
 
   const handleRequestSignature = async (quote: any) => {
+    // Vérifier l'abonnement - Les signatures de devis sont réservées à Pro et Business
+    if (!sub.effectiveIsPro) {
+      router.push('/paywall?plan=pro');
+      return;
+    }
+
     setSelectedQuote(quote);
     setEmailAddress(quote.client?.email || '');
     setSignModalOpen(true);
@@ -392,10 +400,15 @@ export default function DevisPage() {
                         </button>
                         <button
                           onClick={() => handleRequestSignature(devi)}
-                          className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Demander la signature"
+                          className={`p-2 rounded-lg transition-colors ${
+                            !sub.effectiveIsPro
+                              ? 'text-gray-400 cursor-not-allowed opacity-60'
+                              : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                          }`}
+                          title={sub.effectiveIsPro ? 'Demander la signature' : 'Signature disponible avec Pro'}
                         >
                           <PenTool size={18} />
+                          {!sub.effectiveIsPro && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
                         </button>
                         <Link
                           href={`/invoices/${devi.id}/edit`}
@@ -505,10 +518,15 @@ export default function DevisPage() {
                             </button>
                             <button
                               onClick={() => handleRequestSignature(devi)}
-                              className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                              title="Demander la signature"
+                              className={`p-2 rounded-lg transition-colors relative ${
+                                !sub.effectiveIsPro
+                                  ? 'text-gray-400 cursor-not-allowed opacity-60'
+                                  : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                              }`}
+                              title={sub.effectiveIsPro ? 'Demander la signature' : 'Signature disponible avec Pro'}
                             >
                               <PenTool size={18} />
+                              {!sub.effectiveIsPro && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
                             </button>
                             <Link
                               href={`/invoices/${devi.id}/edit`}
