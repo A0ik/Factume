@@ -1143,31 +1143,29 @@ export default function LandingPage() {
             </ScrollReveal>
 
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mt-8">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mt-8">
               <button
                 onClick={() => setBillingPeriod('monthly')}
-                className={`text-sm font-semibold transition-colors ${billingPeriod === 'monthly' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all ${billingPeriod === 'monthly' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
                 Mensuel
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-                  className={`w-14 h-8 rounded-full transition-colors ${billingPeriod === 'yearly' ? 'bg-brand-500' : 'bg-slate-200'}`}
-                >
-                  <motion.div
-                    className="w-6 h-6 bg-white rounded-full shadow-md"
-                    animate={{ x: billingPeriod === 'yearly' ? 24 : 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                </button>
-              </div>
+              <button
+                onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
+                className={`relative w-16 sm:w-20 h-10 rounded-full transition-all ${billingPeriod === 'yearly' ? 'bg-brand-500' : 'bg-slate-200'}`}
+              >
+                <motion.div
+                  className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-md"
+                  animate={{ left: billingPeriod === 'yearly' ? 'calc(100% - 28px)' : '4px' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              </button>
               <button
                 onClick={() => setBillingPeriod('yearly')}
-                className={`text-sm font-semibold transition-colors ${billingPeriod === 'yearly' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all ${billingPeriod === 'yearly' ? 'bg-green-600 text-white shadow-md' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
               >
                 Annuel
-                <span className="ml-1 text-xs text-green-600 font-medium">(économisez)</span>
+                <span className="hidden sm:inline ml-1 text-xs opacity-80">(-20%)</span>
               </button>
             </div>
           </div>
