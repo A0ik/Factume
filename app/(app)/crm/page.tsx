@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useCrmStore, Opportunity, OpportunityInput, OpportunityStage, OpportunityPriority, CrmTask } from '@/stores/crmStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { formatCurrency, cn } from '@/lib/utils';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -797,8 +798,8 @@ export default function CrmPage() {
 
       {/* Header */}
       {!accessDenied && (
+      <>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
@@ -838,40 +839,40 @@ export default function CrmPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label:'Pipeline pondéré', value: formatCurrency(pipeline), sub:`${opportunities.filter(o=>o.stage!=='lost'&&o.stage!=='won').length} actifs`, icon: BarChart3, gradient: 'from-gray-600 to-gray-700' },
-          { label:'Revenue gagné',    value: formatCurrency(wonRev),   sub:`${wonCount} closé${wonCount>1?'s':''}`, icon: Trophy, gradient: 'from-emerald-500 to-emerald-600' },
-          { label:'Taux de conversion',value:`${winRate}%`,            sub:`${wonCount} gagnés / ${lostCount} perdus`, icon: Percent, gradient: 'from-blue-500 to-indigo-500', bar: winRate },
-          { label:'Deals chauds',     value: formatCurrency(hotValue), sub:`${hotCount} en négociation`, icon: Flame, gradient: 'from-amber-500 to-orange-500' },
-        ].map(({ label, value, sub, icon: Icon, gradient, bar }, i) => (
+          { label: 'Pipeline pondéré', value: formatCurrency(pipeline), sub: `${opportunities.filter(o=>o.stage!=='lost'&&o.stage!=='won').length} actifs`, icon: BarChart3, gradient: 'from-gray-600 to-gray-700' },
+          { label: 'Revenue gagné', value: formatCurrency(wonRev), sub: `${wonCount} closé${wonCount>1?'s':''}`, icon: Trophy, gradient: 'from-emerald-500 to-emerald-600' },
+          { label: 'Taux de conversion', value: `${winRate}%`, sub: `${wonCount} gagnés / ${lostCount} perdus`, icon: Percent, gradient: 'from-blue-500 to-indigo-500', bar: winRate },
+          { label: 'Deals chauds', value: formatCurrency(hotValue), sub: `${hotCount} en négociation`, icon: Flame, gradient: 'from-amber-500 to-orange-500' },
+        ].map((stat, index) => (
           <motion.div
-            key={label}
+            key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: index * 0.1 }}
             whileHover={{ y: -4 }}
             className="relative group"
           >
             <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
-              <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', gradient)} />
+              <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', stat.gradient)} />
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5" />
               <div className="relative">
-                <div className={cn('w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-3 shadow-lg', gradient)}>
-                  <Icon size={22} className="text-white" />
+                <div className={cn('w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-3 shadow-lg', stat.gradient)}>
+                  <stat.icon size={22} className="text-white" />
                 </div>
-                <p className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">{value}</p>
-                {bar !== undefined ? (
+                <p className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">{stat.value}</p>
+                {stat.bar !== undefined ? (
                   <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${bar}%` }}
+                      animate={{ width: `${stat.bar}%` }}
                       transition={{ duration: 0.8 }}
                       className="h-full bg-gradient-to-r from-primary to-primary-dark rounded-full"
                     />
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-white/70 transition-colors">{sub}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 group-hover:text-white/70 transition-colors">{stat.sub}</p>
                 )}
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">{label}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1 group-hover:text-white/70 transition-colors">{stat.label}</p>
               </div>
             </div>
           </motion.div>
@@ -1203,7 +1204,8 @@ export default function CrmPage() {
           </div>
         </form>
       </Modal>
-      )}
+      </>)
+      }
     </div>
   );
 }

@@ -91,7 +91,7 @@ export default function Sidebar() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
-  const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? tier : 'free') as keyof typeof TIER_CONFIG;
+  const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig   = TIER_CONFIG[currentTier];
   const shouldShowUpgrade = sub.tier !== 'business';
 

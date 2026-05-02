@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
   try {
     // Check user subscription - AI document analysis is Business only feature
     const { createServerSupabaseClient } = await import('@/lib/supabase-server');
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

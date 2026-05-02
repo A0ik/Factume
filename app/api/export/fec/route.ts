@@ -47,8 +47,8 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-  const siren = (profile?.siret || '').slice(0, 9) || '000000000';
+  const { data: fullProfile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+  const siren = (fullProfile?.siret || '').slice(0, 9) || '000000000';
 
   // FEC columns (tab-separated per spec)
   const headers = [

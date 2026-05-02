@@ -45,6 +45,8 @@ export function useSubscription() {
   return {
     tier,
     effectiveTier,
+    effectiveIsPro,
+    effectiveIsBusiness,
     isFree,
     isTrial,
     isSolo,

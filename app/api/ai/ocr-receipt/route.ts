@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 export async function POST(req: NextRequest) {
   try {
     // Check user subscription - OCR is Business only feature
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
