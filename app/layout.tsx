@@ -71,6 +71,8 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const currentDate = new Date().toISOString();
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -78,6 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     description: 'Solution de facturation intelligente pour indépendants et petites entreprises',
     url: 'https://factu.me',
     logo: 'https://factu.me/icons/icon.svg',
+    dateModified: currentDate,
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',

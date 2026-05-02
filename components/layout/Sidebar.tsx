@@ -443,61 +443,63 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Advanced tools */}
+        {/* Advanced tools - Always visible and prominent */}
         {NAV_ADVANCED.some(item => item.enabled || item.lockReason) && (
-          <div className="pb-2">
-            <button
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
-            >
-              <span>Outils avancés</span>
-              <ChevronDown size={12} className={cn('transition-transform duration-200', showAdvanced && 'rotate-180')} />
-            </button>
-            <AnimatePresence>
-              {showAdvanced && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden space-y-0.5 mt-1"
-                >
-                  {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier }) =>
-                    enabled ? (
-                      <Link key={href} href={href}
+          <div className="pb-3">
+            <div className="px-4 mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-primary" />
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fonctionnalités Premium</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier }) => {
+                const isActive = pathname.startsWith(href);
+                return enabled ? (
+                  <Link key={href} href={href}
+                    className={cn(
+                      'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                      isActive
+                        ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                    )}
+                  >
+                    <span className={cn(
+                      'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                      isActive
+                        ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                    )}>
+                      <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+                    </span>
+                    <span className="flex-1 font-medium">{label}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">Disponible</span>
+                  </Link>
+                ) : (
+                  <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
+                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
+                      <Icon size={15} className="text-gray-300 dark:text-gray-600" />
+                    </span>
+                    <span className="flex-1 font-medium">{label}</span>
+                    {unlockTier ? (
+                      <button
+                        onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
                         className={cn(
-                          'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
-                          pathname.startsWith(href) ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+                          'text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide transition-all',
+                          unlockTier === 'pro'
+                            ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                            : 'bg-amber-100 text-amber-600 border border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
                         )}
                       >
-                        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-                          <Icon size={17} />
-                        </span>
-                        <span className="flex-1">{label}</span>
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">Actif</span>
-                      </Link>
+                        {unlockTier === 'pro' ? 'PRO' : 'BUSINESS'}
+                      </button>
                     ) : (
-                      <div key={href} className="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-300 cursor-not-allowed opacity-60" title={lockReason}>
-                        <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 text-gray-300 flex-shrink-0">
-                          <Icon size={17} />
-                        </span>
-                        <span className="flex-1">{label}</span>
-                        {unlockTier ? (
-                          <button
-                            onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
-                            className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide hover:bg-gray-200 hover:text-gray-500 transition-colors"
-                          >
-                            {unlockTier === 'pro' ? 'Pro' : 'Business'}
-                          </button>
-                        ) : (
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
-                        )}
-                      </div>
-                    )
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

@@ -161,8 +161,29 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
 
   const f = (n: number) => fmtCurrency(n, currency, locale);
   const fd = (s: string) => fmtDate(s, locale);
+
+  // Professional font pairing with better hierarchy
   const bold = tpl.useSerif ? 'Times-Bold' : 'Helvetica-Bold';
   const reg = tpl.useSerif ? 'Times-Roman' : 'Helvetica';
+  const light = tpl.useSerif ? 'Times-Roman' : 'Helvetica';
+
+  // Enhanced typography scale for professional look
+  const fontSizes = {
+    title: 26,
+    subtitle: 14,
+    heading: 12,
+    body: 10,
+    small: 9,
+    tiny: 8,
+  };
+
+  // Letter spacing for premium feel
+  const letterSpacing = {
+    tight: -0.3,
+    normal: 0,
+    wide: 0.5,
+    wider: 1,
+  };
 
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client';
   const companyName = profile.company_name || '';

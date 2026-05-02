@@ -178,7 +178,7 @@ export default function LandingPage() {
   ];
 
   const faqItems = [
-    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Gratuit est gratuit pour toujours avec 3 factures par mois, sans carte bancaire requise. Vous pouvez passer à un plan payant quand vous en avez besoin, sans engagement.' },
+    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, commencez avec un essai 4 jours pour découvrir toutes les fonctionnalités. Sans carte bancaire requise, sans engagement.' },
     { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données. Vous pouvez exporter ou supprimer vos données à tout moment.' },
     { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données à tout moment ou demander la suppression totale de votre compte.' },
     { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Vous pouvez dire "5 jours de dev à 600€" et elle créera la facture complète.' },
@@ -186,10 +186,9 @@ export default function LandingPage() {
   ];
 
   const plans = [
-    { name: 'Gratuit', price: '0€', period: 'Pour toujours', features: ['3 factures / mois', 'Clients illimités', '6 templates PDF', 'Envoi par e-mail', 'Paiement en ligne'], popular: false },
-    { name: 'Solo', price: '9,99€', period: '/mois', features: ['Factures illimitées', 'Clients illimités', 'IA et dictée vocale', 'Scan de reçus', 'Import bancaire'], popular: false },
-    { name: 'Pro', price: '19,99€', period: '/mois', features: ['Tout du plan Solo', 'Export officiel impôts', 'CRM Pipeline', 'Factures récurrentes', 'Signature électronique'], popular: true },
-    { name: 'Business', price: '39,99€', period: '/mois', features: ['Tout du plan Pro', '10 espaces de travail', 'Multi-utilisateurs', 'API et Webhooks', 'Support prioritaire'], popular: false }
+    { name: 'Solo', price: '9€', period: '/mois', features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], cta: 'Essai 4 jours', popular: false },
+    { name: 'Pro', price: '29€', period: '/mois', features: ['Tout Solo inclus', 'Notes de frais', 'Contrats de travail', 'CRM Pipeline', 'Signature électronique', '3 espaces de travail'], cta: 'Essai 4 jours', popular: true },
+    { name: 'Business', price: '79€', period: '/mois', features: ['Tout Pro inclus', 'OCR et analyse documents', 'Espaces illimités', 'API d\'intégration', 'Support prioritaire', 'Multi-utilisateurs'], cta: 'Essai 4 jours', popular: false }
   ];
 
   return (
@@ -201,7 +200,7 @@ export default function LandingPage() {
       {/* Sticky mobile CTA */}
       <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 transition-transform duration-300 sm:hidden ${showStickyCta ? 'translate-y-0' : 'translate-y-full'}`}>
         <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="flex items-center justify-center gap-2 bg-brand-500 text-white font-semibold py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm">
-          <Zap className="w-4 h-4" />Commencer gratuitement
+          <Zap className="w-4 h-4" />Essai gratuit 4 jours
         </a>
       </div>
 
@@ -314,9 +313,9 @@ export default function LandingPage() {
                     <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 relative z-10 group-hover:translate-x-1 transition-transform" />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_ease-in-out]" />
                   </Link>
-                  <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="group inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium px-5 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-4.5 rounded-2xl transition-all border border-white/10 hover:border-white/20 text-[13px] sm:text-base lg:text-lg backdrop-blur">
-                    <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" />Voir la démo
-                  </a>
+                  <Link href="/demo" className="group inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium px-5 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-4.5 rounded-2xl transition-all border border-white/10 hover:border-white/20 text-[13px] sm:text-base lg:text-lg backdrop-blur">
+                    <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" />Essayer la démo IA
+                  </Link>
                 </div>
               </ScrollReveal>
 
@@ -1128,15 +1127,15 @@ export default function LandingPage() {
                           {plan.popular && <span className="bg-brand-500 text-white text-[10px] sm:text-xs lg:text-sm font-bold px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full">Populaire</span>}
                         </div>
                         <div className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">{plan.price}<span className="text-xs sm:text-sm lg:text-base text-slate-400 ml-1">{plan.period}</span></div>
-                        {plan.name === 'Gratuit' && <div className="text-xs sm:text-sm lg:text-base text-slate-400">Pour toujours</div>}
+                        <div className="text-xs sm:text-sm lg:text-base text-primary font-medium mt-1">{plan.cta}</div>
                       </div>
                       <ul className="space-y-2.5 mb-6 flex-grow">
                         {plan.features.map((f, j) => (
                           <li key={j} className="flex items-center gap-2 text-sm lg:text-base"><Check className="w-4 h-4 lg:w-5 lg:h-5 text-brand-500 flex-shrink-0" /><span className="text-slate-600">{f}</span></li>
                         ))}
                       </ul>
-                      <Link href={`/register${plan.name !== 'Gratuit' ? `?plan=${plan.name.toLowerCase()}` : ''}`} className={`block text-center font-semibold py-2.5 rounded-xl transition-all text-sm lg:text-base active:scale-[0.97] ${plan.popular ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25' : plan.name === 'Gratuit' ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}>
-                        {plan.name === 'Gratuit' ? 'Commencer' : `Choisir ${plan.name}`}
+                      <Link href={`/register?plan=${plan.name.toLowerCase()}&trial=4`} className={`block text-center font-semibold py-2.5 rounded-xl transition-all text-sm lg:text-base active:scale-[0.97] ${plan.popular ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}>
+                        {plan.cta}
                       </Link>
                     </div>
                   </Card3D>
@@ -1184,6 +1183,74 @@ export default function LandingPage() {
             </div>
             <p className="text-xs sm:text-sm lg:text-base text-brand-200/30 mt-5 sm:mt-6 lg:mt-8">Sans carte bancaire · Sans engagement · Annulation en un clic</p>
           </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ═══════════ RESSOURCES EXTERNES ═══════════ */}
+      <section className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950">
+        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white mb-4">
+              Ressources et références
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Nous référençons les meilleures ressources pour vous accompagner dans votre activité professionnelle
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <a
+              href="https://www.service-public.fr/professionnels-entreprises"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Service-Public.fr</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Informations officielles pour les entreprises</p>
+            </a>
+
+            <a
+              href="https://www.urssaf.fr/portail/home.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Scale className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Urssaf</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Déclarations et cotisations sociales</p>
+            </a>
+
+            <a
+              href="https://www.economie.gouv.fr/facturation/facturation-regles"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Régles de facturation</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Législation française sur la facturation</p>
+            </a>
+
+            <a
+              href="https://www.impots.gouv.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Calculator className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Direction Générale des Impôts</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Fiscalité et déclarations fiscales</p>
+            </a>
+          </div>
         </div>
       </section>
 
