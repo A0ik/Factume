@@ -63,6 +63,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Impossible d\'initialiser le formulaire de paiement. Veuillez réessayer dans quelques instants.' }, { status: 500 });
     }
 
+    // 4. Sauvegarder le stripe_subscription_id MAINTENANT pour que le webhook puisse
+    //    trouver le profil et activer l'abonnement après confirmation du paiement.
+    await supabase.from('profiles').update({
+      stripe_subscription_id: subscription.id,
+    }).eq('id', userId);
+
     return NextResponse.json({ clientSecret, subscriptionId: subscription.id });
 
   } catch (error: unknown) {

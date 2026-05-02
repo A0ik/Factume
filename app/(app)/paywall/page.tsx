@@ -295,6 +295,22 @@ export default function PaywallPage() {
       } else if (data.success) {
         toast.success('Abonnement mis à jour avec succès !');
         setTimeout(() => window.location.reload(), 1500);
+      } else if (data.clientSecret) {
+        // L'utilisateur n'a pas de moyen de paiement enregistré — afficher le formulaire
+        const planInfo: PlanInfo = {
+          id: plan.id,
+          name: plan.name,
+          price: (isYearly ? plan.yearlyPrice : plan.price).replace('€', ''),
+          priceNote: isYearly ? '/ mois (facturé annuellement)' : '/ mois',
+          features: plan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
+        };
+        setCheckoutData({
+          clientSecret: data.clientSecret,
+          userId: profile.id,
+          planInfo,
+        });
+        setLoading(null);
+        return;
       } else {
         toast.error(data.error || "Impossible de changer l'abonnement");
         setSelectedPlan(null);
@@ -777,6 +793,23 @@ export default function PaywallPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Continuer gratuitement — uniquement pour les utilisateurs sur plan gratuit */}
+      {sub.isFree && !checkoutData && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="flex justify-center mt-8"
+        >
+          <button
+            onClick={router.back}
+            className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-4 transition-colors"
+          >
+            Continuer gratuitement (5 factures/mois)
+          </button>
+        </motion.div>
+      )}
 
       {/* Footer */}
       <motion.div

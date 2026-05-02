@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
         await supabase.from('profiles')
-          .update({ subscription_tier: 'free', stripe_subscription_id: null })
+          .update({
+            subscription_tier: 'free',
+            stripe_subscription_id: null,
+            is_trial_active: false,
+          })
           .eq('stripe_subscription_id', sub.id);
         break;
       }
@@ -98,6 +102,47 @@ export async function POST(req: NextRequest) {
             is_trial_active: true,
             subscription_tier: 'trial',
           }).eq('id', userId);
+        }
+        break;
+      }
+
+      case 'invoice.paid': {
+        // Filet de sécurité : activer l'abonnement via stripe_customer_id
+        // couvre le cas où stripe_subscription_id n'était pas encore en DB
+        const inv = event.data.object as Stripe.Invoice;
+        const subscriptionId = typeof inv.subscription === 'string' ? inv.subscription : inv.subscription?.id;
+        const customerId = typeof inv.customer === 'string' ? inv.customer : inv.customer?.id;
+
+        if (!subscriptionId || !customerId) break;
+
+        // Récupérer le plan depuis les métadonnées de la souscription Stripe
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const plan = subscription.metadata?.plan;
+
+        if (!plan || subscription.status !== 'active') break;
+
+        // Chercher par stripe_subscription_id d'abord, puis par stripe_customer_id
+        const { data: profileBySub } = await supabase
+          .from('profiles')
+          .select('id, subscription_tier')
+          .eq('stripe_subscription_id', subscriptionId)
+          .single();
+
+        if (profileBySub) {
+          // Profil trouvé — s'assurer que le tier est bien à jour
+          if (profileBySub.subscription_tier !== plan) {
+            await supabase.from('profiles')
+              .update({ subscription_tier: plan })
+              .eq('id', profileBySub.id);
+          }
+        } else {
+          // Fallback : trouver par customer_id et mettre à jour subscription_id + tier
+          await supabase.from('profiles')
+            .update({
+              subscription_tier: plan,
+              stripe_subscription_id: subscriptionId,
+            })
+            .eq('stripe_customer_id', customerId);
         }
         break;
       }
