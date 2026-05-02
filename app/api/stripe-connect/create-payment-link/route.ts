@@ -46,32 +46,36 @@ export async function POST(req: NextRequest) {
     // Initialize Stripe with the user's access token
     const stripe = new Stripe(profile.stripe_connect_access_token);
 
-    // Create a product
-    const product = await stripe.products.create({
-      name: `Facture ${invoice.number}`,
-      description: invoice.client?.name || invoice.client_name_override || 'Facture',
-      metadata: {
-        invoice_id: invoice.id,
-        user_id: user.id,
-      },
-    });
+    // Create line items from invoice items for better detail
+    const lineItems = await Promise.all(
+      invoice.items.map(async (item: any) => {
+        // Create a product for each invoice item
+        const product = await stripe.products.create({
+          name: item.description.substring(0, 100), // Stripe limits product name length
+          description: item.description,
+          metadata: {
+            invoice_id: invoice.id,
+            invoice_item_id: item.id,
+          },
+        });
 
-    // Create a price
-    const price = await stripe.prices.create({
-      product: product.id,
-      unit_amount: Math.round(invoice.total * 100), // Convert to cents
-      currency: 'eur',
-      metadata: {
-        invoice_id: invoice.id,
-      },
-    });
+        // Create a price for this product
+        const price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: Math.round(item.unit_price * 100), // Convert to cents
+          currency: 'eur',
+        });
 
-    // Create a payment link
+        return {
+          price: price.id,
+          quantity: item.quantity,
+        };
+      })
+    );
+
+    // Create a payment link with all line items
     const paymentLink = await stripe.paymentLinks.create({
-      line_items: [{
-        price: price.id,
-        quantity: 1,
-      }],
+      line_items: lineItems,
       after_completion: {
         type: 'redirect',
         redirect: {
@@ -81,6 +85,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         invoice_id: invoice.id,
         user_id: user.id,
+        invoice_number: invoice.number,
       },
     });
 

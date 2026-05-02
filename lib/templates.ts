@@ -491,8 +491,8 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
     ? `<div style="margin-bottom:20px;padding:16px 20px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--accent-color)"><div style="font-size:9px;font-weight:700;color:var(--accent-color);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">${t.invoice.bankDetails}</div><div style="font-size:12px;color:#374151;line-height:1.9">${p.bank_name ? `<div><strong>${isFR(locale) ? 'Banque' : 'Bank'} :</strong> ${p.bank_name}</div>` : ''}${p.iban ? `<div><strong>IBAN :</strong> ${p.iban}</div>` : ''}${p.bic ? `<div><strong>BIC :</strong> ${p.bic}</div>` : ''}</div></div>`
     : '';
 
-  const paymentUrl = invoice.stripe_payment_url || invoice.payment_link || '';
-  const paymentMethod = invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
+  const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
+  const paymentMethod = invoice.stripe_payment_link_url || invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
 
   const qrBlock = paymentUrl
     ? `<div style="display:inline-block;margin-left:16px;vertical-align:middle;text-align:center"><img src="https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=${encodeURIComponent(paymentUrl)}" width="72" height="72" style="display:block;border-radius:6px;border:1px solid #e5e7eb"/><div style="font-size:10px;color:#374151;margin-top:4px;font-weight:500">${isFR(locale) ? 'Scanner pour payer' : 'Scan to pay'}</div></div>`

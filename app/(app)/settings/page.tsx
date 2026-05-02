@@ -326,6 +326,8 @@ export default function SettingsPage() {
     try {
       await updateProfile({ ...form, template_id: parseInt(form.template_id) } as any);
       if (form.language !== profile?.language) await changeLanguage(form.language);
+      // Refresh profile to get the latest state
+      await fetchProfile(profile?.id ?? '');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e: any) { setError(e.message); }
