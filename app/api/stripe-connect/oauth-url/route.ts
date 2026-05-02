@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     // Generate the OAuth link
     const state = Math.random().toString(36).substring(7); // Simple state for CSRF protection
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
 
     const oauthUrl = `https://connect.stripe.com/oauth/authorize?` +
       `client_id=${clientId}&` +

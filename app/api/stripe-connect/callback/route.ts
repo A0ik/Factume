@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       // User denied or error occurred
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+        || 'http://localhost:3000';
       return NextResponse.redirect(`${baseUrl}/settings?stripe-connect-error=${error}`);
     }
 
@@ -31,9 +33,9 @@ export async function GET(req: NextRequest) {
     const clientId = process.env.STRIPE_CONNECT_CLIENT_ID!;
     const clientSecret = process.env.STRIPE_SECRET_KEY!;
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
 
     // Use fetch directly to exchange code for token
     const tokenResponse = await fetch('https://connect.stripe.com/oauth/token', {
@@ -74,7 +76,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${baseUrl}/settings?stripe-connect=success`);
   } catch (error: any) {
     console.error('[Stripe Connect Callback]', error);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'http://localhost:3000';
     return NextResponse.redirect(`${baseUrl}/settings?stripe-connect-error=${error.message}`);
   }
 }
