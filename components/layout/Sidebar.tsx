@@ -65,8 +65,9 @@ interface NavItem {
   href: string;
   icon: any;
   label: string;
-  badge: null | 'overdue' | 'notif';
+  badge: null | 'overdue' | 'notif' | string;
   hasSubmenu?: boolean;
+  submenu?: SubMenuItem[];
   locked?: boolean;
   lockReason?: string;
   unlockTier?: string;
@@ -111,11 +112,6 @@ export default function Sidebar() {
       badge: overdueCount > 0 ? 'overdue' : null,
       hasSubmenu: true,
     });
-
-    // Notes de frais - Pro/Business only (completely hidden for Free/Solo)
-    if (sub.effectiveIsPro) {
-      core.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais', badge: null });
-    }
 
     core.push(
       { href: '/clients',    icon: Users,     label: 'Clients',         badge: null },
@@ -163,8 +159,17 @@ export default function Sidebar() {
     return tools;
   };
 
-  const buildAdvancedNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string }> => {
+  const buildAdvancedNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> => {
     return [
+      {
+        href: '/expenses',
+        icon: Receipt,
+        label: 'Notes de frais',
+        enabled: sub.effectiveIsPro,
+        lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro',
+        unlockTier: 'pro',
+        badge: sub.effectiveIsPro ? undefined : 'Disponible',
+      },
       {
         href: '/crm',
         icon: Target,
@@ -172,6 +177,7 @@ export default function Sidebar() {
         enabled: sub.canUseCRM,
         lockReason: sub.canUseCRM ? undefined : 'Disponible avec Pro',
         unlockTier: 'pro',
+        badge: sub.canUseCRM ? undefined : 'Disponible',
       },
       {
         href: '/ocr',
@@ -180,6 +186,7 @@ export default function Sidebar() {
         enabled: sub.isBusiness || sub.isTrialActive,
         lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
         unlockTier: 'business',
+        badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
       { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
       { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
@@ -193,7 +200,7 @@ export default function Sidebar() {
   const NAV_TOOLS = buildToolsNav();
   const NAV_ADVANCED = buildAdvancedNav();
 
-  const getBadgeCount = (badge: null | 'overdue' | 'notif') => {
+  const getBadgeCount = (badge: null | 'overdue' | 'notif' | string) => {
     if (badge === 'overdue') return overdueCount;
     if (badge === 'notif')   return unreadCount;
     return 0;
@@ -202,7 +209,7 @@ export default function Sidebar() {
   /* ── Nav item (link or submenu toggle) ── */
   const NavItem = ({ href, icon: Icon, label, badge, hasSubmenu, submenu, locked, lockReason, unlockTier }: {
     href: string; icon: any; label: string;
-    badge: null | 'overdue' | 'notif'; hasSubmenu?: boolean; submenu?: typeof DOCUMENTS_SUBMENU;
+    badge: null | 'overdue' | 'notif' | string; hasSubmenu?: boolean; submenu?: SubMenuItem[];
     locked?: boolean; lockReason?: string; unlockTier?: string;
   }) => {
     const [open, setOpen] = useState(false);
@@ -453,7 +460,7 @@ export default function Sidebar() {
               </div>
             </div>
             <div className="space-y-1">
-              {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier }) => {
+              {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
                 const isActive = pathname.startsWith(href);
                 return enabled ? (
                   <Link key={href} href={href}
@@ -473,7 +480,6 @@ export default function Sidebar() {
                       <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
                     </span>
                     <span className="flex-1 font-medium">{label}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">Disponible</span>
                   </Link>
                 ) : (
                   <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
@@ -481,7 +487,9 @@ export default function Sidebar() {
                       <Icon size={15} className="text-gray-300 dark:text-gray-600" />
                     </span>
                     <span className="flex-1 font-medium">{label}</span>
-                    {unlockTier ? (
+                    {badge ? (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                    ) : unlockTier ? (
                       <button
                         onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
                         className={cn(
