@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, ExternalLink, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, X, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PaymentLinkSuccessModalProps {
@@ -10,11 +10,12 @@ interface PaymentLinkSuccessModalProps {
   paymentLinkUrl: string;
   invoiceNumber: string;
   invoiceTotal: number;
+  onDownloadPdf?: () => Promise<void>;
 }
 
 /**
  * Modal de succès après création d'un lien de paiement
- * Permet de copier le lien ou de l'ouvrir dans un nouvel onglet
+ * Permet de copier le lien, de l'ouvrir ou de télécharger la facture avec QR code
  */
 export function PaymentLinkSuccessModal({
   isOpen,
@@ -22,8 +23,10 @@ export function PaymentLinkSuccessModal({
   paymentLinkUrl,
   invoiceNumber,
   invoiceTotal,
+  onDownloadPdf,
 }: PaymentLinkSuccessModalProps) {
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -40,6 +43,18 @@ export function PaymentLinkSuccessModal({
 
   const handleOpenLink = () => {
     window.open(paymentLinkUrl, '_blank');
+  };
+
+  const handleDownload = async () => {
+    if (!onDownloadPdf) return;
+    setDownloading(true);
+    try {
+      await onDownloadPdf();
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors du téléchargement.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const fmtAmount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoiceTotal);
@@ -110,6 +125,15 @@ export function PaymentLinkSuccessModal({
             >
               <Copy size={18} />
               {copied ? 'Copié !' : 'Copier le lien'}
+            </button>
+
+            <button
+              onClick={handleDownload}
+              disabled={downloading || !onDownloadPdf}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+            >
+              {downloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+              {downloading ? 'Génération...' : 'Télécharger la facture (PDF)'}
             </button>
 
             <button

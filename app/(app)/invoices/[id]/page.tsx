@@ -836,6 +836,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           paymentLinkUrl={paymentSuccessUrl}
           invoiceNumber={invoice.number}
           invoiceTotal={invoice.total}
+          onDownloadPdf={handleDownloadPdf}
         />
       )}
 
