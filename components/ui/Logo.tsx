@@ -10,10 +10,34 @@ interface LogoProps {
 }
 
 const SIZES = {
-  sm: { icon: 'w-8 h-8 rounded-xl', text: 'text-base', gap: 'gap-2', px: 32 },
-  md: { icon: 'w-10 h-10 rounded-xl', text: 'text-lg', gap: 'gap-2.5', px: 40 },
-  lg: { icon: 'w-12 h-12 rounded-xl', text: 'text-xl', gap: 'gap-3', px: 48 },
-  xl: { icon: 'w-16 h-16 rounded-2xl', text: 'text-2xl', gap: 'gap-3', px: 64 },
+  sm: {
+    icon: 'w-8 h-8 rounded-xl',
+    text: 'text-base',
+    gap: 'gap-2',
+    px: 64, // Image size
+    src: '/logo-md.png' // Use optimized 128px image
+  },
+  md: {
+    icon: 'w-10 h-10 rounded-xl',
+    text: 'text-lg',
+    gap: 'gap-2.5',
+    px: 128, // Image size
+    src: '/logo-md.png' // Use optimized 128px image
+  },
+  lg: {
+    icon: 'w-12 h-12 rounded-xl',
+    text: 'text-xl',
+    gap: 'gap-3',
+    px: 256, // Image size
+    src: '/logo-lg.png' // Use optimized 256px image
+  },
+  xl: {
+    icon: 'w-16 h-16 rounded-2xl',
+    text: 'text-2xl',
+    gap: 'gap-3',
+    px: 512, // Image size
+    src: '/logo-xl.png' // Use optimized 512px image
+  },
 };
 
 export function Logo({ size = 'md', variant = 'full', className, dark = false }: LogoProps) {
@@ -21,13 +45,13 @@ export function Logo({ size = 'md', variant = 'full', className, dark = false }:
 
   return (
     <div className={cn('flex items-center', s.gap, className)}>
-      {/* Icon mark — uses logo.png with beautiful rounded corners */}
+      {/* Icon mark — uses optimized logo with beautiful rounded corners */}
       <div className={cn(
         'flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden bg-white border-2 border-primary/10',
         s.icon
       )}>
         <Image
-          src="/logo.png"
+          src={s.src}
           alt="Factu.me"
           width={s.px}
           height={s.px}

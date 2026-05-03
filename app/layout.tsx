@@ -57,7 +57,10 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Factu.me' },
-  icons: { icon: '/icons/icon.svg', apple: '/icons/icon.svg' },
+  icons: {
+    icon: '/favicon.png',
+    apple: '/logo-xl.png',
+  },
   verification: {
     google: 'googleac46477cf91a4e5a.html',
   },
@@ -79,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     name: 'Factu.me',
     description: 'Solution de facturation intelligente pour indépendants et petites entreprises',
     url: 'https://factu.me',
-    logo: 'https://factu.me/icons/icon.svg',
+    logo: 'https://factu.me/logo-xl.png',
     dateModified: currentDate,
     contactPoint: {
       '@type': 'ContactPoint',
