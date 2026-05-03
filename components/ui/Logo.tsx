@@ -10,10 +10,10 @@ interface LogoProps {
 }
 
 const SIZES = {
-  sm: { icon: 'w-7 h-7 rounded-lg', text: 'text-base', gap: 'gap-2', px: 28 },
-  md: { icon: 'w-9 h-9 rounded-xl', text: 'text-lg', gap: 'gap-2.5', px: 36 },
-  lg: { icon: 'w-11 h-11 rounded-xl', text: 'text-xl', gap: 'gap-3', px: 44 },
-  xl: { icon: 'w-14 h-14 rounded-2xl', text: 'text-2xl', gap: 'gap-3', px: 56 },
+  sm: { icon: 'w-8 h-8 rounded-xl', text: 'text-base', gap: 'gap-2', px: 32 },
+  md: { icon: 'w-10 h-10 rounded-xl', text: 'text-lg', gap: 'gap-2.5', px: 40 },
+  lg: { icon: 'w-12 h-12 rounded-xl', text: 'text-xl', gap: 'gap-3', px: 48 },
+  xl: { icon: 'w-16 h-16 rounded-2xl', text: 'text-2xl', gap: 'gap-3', px: 64 },
 };
 
 export function Logo({ size = 'md', variant = 'full', className, dark = false }: LogoProps) {
@@ -21,17 +21,18 @@ export function Logo({ size = 'md', variant = 'full', className, dark = false }:
 
   return (
     <div className={cn('flex items-center', s.gap, className)}>
-      {/* Icon mark — uses company logo */}
+      {/* Icon mark — uses logo.png with beautiful rounded corners */}
       <div className={cn(
-        'flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden',
+        'flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden bg-white border-2 border-primary/10',
         s.icon
       )}>
         <Image
-          src="/icons/icon.svg"
+          src="/logo.png"
           alt="Factu.me"
           width={s.px}
           height={s.px}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover p-1"
+          priority
         />
       </div>
 

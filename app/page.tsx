@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet
@@ -236,7 +237,9 @@ export default function LandingPage() {
         <div className="flex items-center justify-between gap-2">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-brand-500 rounded-lg flex items-center justify-center"><Zap className="w-4 h-4 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5 text-white" /></div>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white rounded-xl flex items-center justify-center shadow-md border-2 border-brand-100 overflow-hidden">
+              <Image src="/logo.png" alt="Factu.me" width={44} height={44} className="w-full h-full object-cover p-1" priority />
+            </div>
             <span className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">Factu<span className="text-brand-500">.me</span></span>
           </Link>
 
