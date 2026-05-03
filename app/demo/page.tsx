@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mic, MicOff, FileText, Play, Zap,
-  CheckCircle2, AlertCircle, Volume2, Loader2, Download, Clock,
+  Mic, MicOff, FileText, Play, Sparkles,
+  CheckCircle2, AlertCircle, Volume2, Loader2, Download, Clock, Info,
 } from 'lucide-react';
 import Link from 'next/link';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { pdf } from '@react-pdf/renderer';
+import { PdfDocument } from '@/components/pdf-document';
 
 interface InvoiceLine {
   description: string;
   quantity: number;
-  unitPrice: number;
+  unit_price: number;
   total: number;
+  vat_rate: number;
 }
 
 interface InvoiceData {
@@ -26,9 +28,42 @@ interface InvoiceData {
   clientPostalCode: string;
   clientCity: string;
   lines: InvoiceLine[];
-  totalHT: number;
-  tva: number;
-  totalTTC: number;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  notes: string | null;
+  discount_percent: number;
+  discount_amount: number;
+}
+
+interface ClientData {
+  name: string;
+  email: string;
+  address: string;
+  postal_code: string;
+  city: string;
+}
+
+interface ProfileData {
+  company_name: string;
+  address: string;
+  postal_code: string;
+  city: string;
+  phone: string;
+  email: string;
+  siret: string;
+  vat_number: string;
+  logo_url: string | null;
+  accent_color: string;
+  template_id: number;
+  currency: string;
+  language: string;
+  legal_status: string;
+  legal_mention: string | null;
+  payment_terms: string | null;
+  iban: string | null;
+  bank_name: string | null;
+  bic: string | null;
 }
 
 export default function DemoPage() {
@@ -36,6 +71,8 @@ export default function DemoPage() {
   const [transcript, setTranscript] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState<'intro' | 'listening' | 'processing' | 'result'>('intro');
   const [audioLevels, setAudioLevels] = useState<number[]>([0, 0, 0, 0, 0]);
@@ -50,32 +87,22 @@ export default function DemoPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | undefined>(undefined);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const audioLevelCheckRef = useRef<number | null>(null);
 
   // Cleanup function
   useEffect(() => {
     return () => {
-      // Cleanup audio context
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
-      // Cleanup animation frames
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      // Cleanup audio level checker
-      if (audioLevelCheckRef.current) {
-        clearInterval(audioLevelCheckRef.current);
-      }
-      // Cleanup timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      // Cleanup PDF URL
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
-      // Cleanup media stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -90,14 +117,12 @@ export default function DemoPage() {
     const dataArray = new Uint8Array(bufferLength);
     analyserRef.current.getByteFrequencyData(dataArray);
 
-    // Calculate average volume
     let sum = 0;
     for (let i = 0; i < bufferLength; i++) {
       sum += dataArray[i];
     }
     const average = sum / bufferLength;
 
-    // Update audio levels (5 bars)
     const newLevels = [
       Math.random() * average * 1.5,
       Math.random() * average * 1.3,
@@ -141,21 +166,17 @@ export default function DemoPage() {
       setIsListening(true);
       audioChunksRef.current = [];
 
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Set up audio context for visualization
       audioContextRef.current = new AudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
 
-      // Start audio level visualization
       updateAudioLevels();
 
-      // Set up MediaRecorder for audio recording
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
@@ -166,20 +187,15 @@ export default function DemoPage() {
       };
 
       mediaRecorder.onstop = async () => {
-        // Stop audio level visualization
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
         }
         setAudioLevels([0, 0, 0, 0, 0]);
-
-        // Stop timer
         stopTimer();
 
-        // Create audio blob and send to API
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await processAudio(audioBlob);
 
-        // Stop all tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
@@ -194,11 +210,11 @@ export default function DemoPage() {
       setCurrentStep('intro');
 
       if (err.name === 'NotAllowedError') {
-        setError('⚠️ Accès au microphone refusé. Cliquez sur le 🔒 dans la barre d\'adresse et autorisez le microphone.');
+        setError('Accès au microphone refusé. Cliquez sur le cadenas dans la barre d\'adresse et autorisez le microphone.');
       } else if (err.name === 'NotFoundError') {
-        setError('⚠️ Aucun microphone trouvé. Veuillez brancher un microphone et réessayer.');
+        setError('Aucun microphone trouvé. Veuillez brancher un microphone et réessayer.');
       } else {
-        setError('❌ Impossible d\'accéder au microphone: ' + err.message);
+        setError('Impossible d\'accéder au microphone: ' + err.message);
       }
     }
   };
@@ -215,11 +231,9 @@ export default function DemoPage() {
     setIsProcessing(true);
 
     try {
-      // Create FormData with audio
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
-      // Send to Groq API endpoint
       const response = await fetch('/api/process-voice', {
         method: 'POST',
         body: formData,
@@ -233,372 +247,216 @@ export default function DemoPage() {
       const data = await response.json();
       setTranscript(data.transcript || '');
 
-      // Parse the invoice data from Groq response
       await processVoiceToInvoice(data.parsed, data.transcript);
 
     } catch (err: any) {
       console.error('Error processing audio:', err);
-      setError('❌ Erreur lors du traitement: ' + err.message);
+      setError('Erreur lors du traitement: ' + err.message);
       setCurrentStep('intro');
       setIsProcessing(false);
     }
   };
 
   const processVoiceToInvoice = async (parsedData: any, transcript: string) => {
-    // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Generate invoice from parsed data or use defaults
+    const now = new Date();
+    const dueDate = new Date(now.getTime() + (parsedData?.due_days || 30) * 24 * 60 * 60 * 1000);
+
+    const items: InvoiceLine[] = parsedData?.items?.map((item: any) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total: item.quantity * item.unit_price,
+      vat_rate: item.vat_rate || 20,
+    })) || [
+      { description: 'Prestation de services professionnels', quantity: 1, unit_price: 1000, total: 1000, vat_rate: 20 },
+    ];
+
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const vat_amount = subtotal * 0.2;
+    const discount_percent = parsedData?.discount_percent || 0;
+    const discount_amount = discount_percent > 0 ? subtotal * (discount_percent / 100) : 0;
+    const total = subtotal + vat_amount - discount_amount;
+
     const selectedInvoice: InvoiceData = {
-      number: parsedData?.invoice_number || `FAC-${new Date().getFullYear()}-DEMO-${Math.floor(Math.random() * 1000) + 1}`,
-      date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
-      dueDate: new Date(Date.now() + (parsedData?.due_days || 30) * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }),
+      number: parsedData?.invoice_number || `FAC-${now.getFullYear()}-DEMO-${Math.floor(Math.random() * 1000) + 1}`,
+      date: now.toISOString(),
+      dueDate: dueDate.toISOString(),
       clientName: parsedData?.client_name || 'Client Démo SARL',
       clientEmail: parsedData?.client_email || 'contact@client-demo.fr',
       clientAddress: parsedData?.client_address || '15 Rue de la République',
       clientPostalCode: parsedData?.client_postal_code || '75001',
       clientCity: parsedData?.client_city || 'Paris',
-      lines: parsedData?.items?.map((item: any) => ({
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        total: item.quantity * item.unit_price,
-      })) || [
-          { description: 'Prestation de services professionnels', quantity: 1, unitPrice: 1000, total: 1000 },
-        ],
-      totalHT: 0,
-      tva: 0,
-      totalTTC: 0,
+      lines: items,
+      subtotal,
+      vat_amount,
+      total,
+      notes: parsedData?.notes || null,
+      discount_percent,
+      discount_amount,
     };
 
-    // Calculate totals
-    selectedInvoice.totalHT = selectedInvoice.lines.reduce((sum, line) => sum + line.total, 0);
-    selectedInvoice.tva = selectedInvoice.totalHT * 0.2;
-    selectedInvoice.totalTTC = selectedInvoice.totalHT + selectedInvoice.tva;
+    const selectedClient: ClientData = {
+      name: selectedInvoice.clientName,
+      email: selectedInvoice.clientEmail,
+      address: selectedInvoice.clientAddress,
+      postal_code: selectedInvoice.clientPostalCode,
+      city: selectedInvoice.clientCity,
+    };
+
+    const selectedProfile: ProfileData = {
+      company_name: 'Factu.me',
+      address: '12 rue de la Paix',
+      postal_code: '75002',
+      city: 'Paris',
+      phone: '+33 1 23 45 67 89',
+      email: 'contact@factu.me',
+      siret: '123 456 789 00012',
+      vat_number: 'FR12345678901',
+      logo_url: null,
+      accent_color: '#1D9E75',
+      template_id: 1,
+      currency: 'EUR',
+      language: 'fr',
+      legal_status: 'auto-entrepreneur',
+      legal_mention: null,
+      payment_terms: null,
+      iban: null,
+      bank_name: null,
+      bic: null,
+    };
 
     setInvoice(selectedInvoice);
+    setClient(selectedClient);
+    setProfile(selectedProfile);
 
-    // Generate PDF
-    await generateDemoPdf(selectedInvoice);
+    await generateDemoPdf(selectedInvoice, selectedClient, selectedProfile);
 
     setIsProcessing(false);
     setCurrentStep('result');
   };
 
-  const generateDemoPdf = async (invoiceData: InvoiceData) => {
+  const generateDemoPdf = async (invoiceData: InvoiceData, clientData: ClientData, profileData: ProfileData) => {
     try {
-      // Create a new PDF document
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
-      const { width, height } = page.getSize();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontSize = 11;
-      const fontSizeLarge = 18;
-      const fontSizeSmall = 9;
+      // Create invoice object for PdfDocument (with required fields)
+      const invoice: any = {
+        id: 'demo',
+        user_id: 'demo-user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        number: invoiceData.number,
+        document_type: 'invoice',
+        status: 'sent',
+        issue_date: invoiceData.date,
+        due_date: invoiceData.dueDate,
+        items: invoiceData.lines.map((line, i) => ({
+          id: `demo-${i}`,
+          invoice_id: 'demo',
+          description: line.description,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          total: line.total,
+          vat_rate: line.vat_rate,
+          created_at: new Date().toISOString(),
+        })),
+        subtotal: invoiceData.subtotal,
+        vat_amount: invoiceData.vat_amount,
+        discount_percent: invoiceData.discount_percent,
+        discount_amount: invoiceData.discount_amount,
+        total: invoiceData.total,
+        notes: invoiceData.notes,
+        client: clientData,
+        stripe_payment_link_url: null,
+        stripe_payment_url: null,
+        payment_link: null,
+      };
 
-      // Colors
-      const primaryColor = rgb(0.13, 0.59, 0.95); // brand-500 equivalent
-      const textColor = rgb(0.2, 0.2, 0.2);
-      const lightGray = rgb(0.95, 0.95, 0.95);
-      const grayColor = rgb(0.5, 0.5, 0.5);
+      // Create profile object for PdfDocument (with required fields)
+      const profile: any = {
+        id: 'demo-profile',
+        user_id: 'demo-user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        company_name: profileData.company_name,
+        address: profileData.address,
+        postal_code: profileData.postal_code,
+        city: profileData.city,
+        country: 'France',
+        phone: profileData.phone,
+        email: profileData.email,
+        siret: profileData.siret,
+        vat_number: profileData.vat_number,
+        logo_url: profileData.logo_url,
+        accent_color: profileData.accent_color,
+        template_id: profileData.template_id,
+        currency: profileData.currency,
+        language: profileData.language,
+        legal_status: profileData.legal_status,
+        legal_mention: profileData.legal_mention,
+        payment_terms: profileData.payment_terms,
+        iban: profileData.iban,
+        bank_name: profileData.bank_name,
+        bic: profileData.bic,
+        subscription_tier: 'solo',
+        invoice_count: 0,
+      };
 
-      let yPos = height - 50;
+      // Generate PDF using the real PdfDocument component
+      const doc = <PdfDocument invoice={invoice} profile={profile} />;
+      const pdfDoc = await pdf(doc);
+      const blob = await pdfDoc.toBlob();
 
-      // Header - Logo and Company Name
-      page.drawText('Factu.me', {
-        x: 50,
-        y: yPos,
-        size: fontSizeLarge,
-        font: fontBold,
-        color: primaryColor,
-      });
-      page.drawText('Facturation intelligente', {
-        x: 50,
-        y: yPos - 15,
-        size: fontSizeSmall,
-        font: font,
-        color: grayColor,
-      });
+      // Add DEMO watermark using pdf-lib
+      const { PDFDocument: PdfLibDoc, rgb, StandardFonts } = await import('pdf-lib');
+      const pdfBytes = await blob.arrayBuffer();
+      const pdfDocLib = await PdfLibDoc.load(pdfBytes);
+      const pages = pdfDocLib.getPages();
+      const font = await pdfDocLib.embedFont(StandardFonts.HelveticaBold);
 
-      // Invoice number and date
-      page.drawText(`Facture n° ${invoiceData.number}`, {
-        x: width - 200,
-        y: yPos,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      page.drawText(`Date: ${invoiceData.date}`, {
-        x: width - 200,
-        y: yPos - 15,
-        size: fontSizeSmall,
-        font: font,
-        color: grayColor,
-      });
-      page.drawText(`Échéance: ${invoiceData.dueDate}`, {
-        x: width - 200,
-        y: yPos - 30,
-        size: fontSizeSmall,
-        font: font,
-        color: grayColor,
-      });
-
-      yPos -= 70;
-
-      // Client Information
-      page.drawText('Facturé à:', {
-        x: 50,
-        y: yPos,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      yPos -= 20;
-      page.drawText(invoiceData.clientName, {
-        x: 50,
-        y: yPos,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      yPos -= 15;
-      page.drawText(invoiceData.clientAddress, {
-        x: 50,
-        y: yPos,
-        size: fontSizeSmall,
-        font: font,
-        color: grayColor,
-      });
-      yPos -= 12;
-      page.drawText(`${invoiceData.clientPostalCode} ${invoiceData.clientCity}`, {
-        x: 50,
-        y: yPos,
-        size: fontSizeSmall,
-        font: font,
-        color: grayColor,
-      });
-
-      yPos -= 50;
-
-      // Table Header
-      const tableTop = yPos;
-      const tableLeft = 50;
-      const tableRight = width - 50;
-      const tableWidth = tableRight - tableLeft;
-
-      page.drawRectangle({
-        x: tableLeft,
-        y: tableTop,
-        width: tableWidth,
-        height: 25,
-        color: lightGray,
-      });
-
-      const colDesc = tableLeft + 10;
-      const colQty = tableLeft + 300;
-      const colPrice = tableLeft + 380;
-      const colTotal = tableRight - 10;
-
-      page.drawText('Description', {
-        x: colDesc,
-        y: tableTop + 8,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      page.drawText('Qté', {
-        x: colQty,
-        y: tableTop + 8,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      page.drawText('Prix unitaire', {
-        x: colPrice,
-        y: tableTop + 8,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-      page.drawText('Total', {
-        x: colTotal - 30,
-        y: tableTop + 8,
-        size: fontSize,
-        font: fontBold,
-        color: textColor,
-      });
-
-      yPos = tableTop - 30;
-
-      // Table rows
-      invoiceData.lines.forEach((line, idx) => {
-        // Draw row background
-        if (idx % 2 === 0) {
-          page.drawRectangle({
-            x: tableLeft,
-            y: yPos + 5,
-            width: tableWidth,
-            height: 30,
-            color: rgb(0.98, 0.98, 0.98),
-          });
-        }
-
-        // Draw description
-        const descriptionLines = wrapText(line.description, 40);
-        descriptionLines.forEach((lineText, i) => {
-          page.drawText(lineText, {
-            x: colDesc,
-            y: yPos - (i * 12),
-            size: fontSize,
-            font: font,
-            color: textColor,
-          });
-        });
-
-        // Draw quantity
-        page.drawText(line.quantity.toString(), {
-          x: colQty,
-          y: yPos,
-          size: fontSize,
-          font: font,
-          color: textColor,
-        });
-
-        // Draw unit price
-        page.drawText(`${line.unitPrice.toFixed(2)} €`, {
-          x: colPrice,
-          y: yPos,
-          size: fontSize,
-          font: font,
-          color: textColor,
-        });
-
-        // Draw total
-        page.drawText(`${line.total.toFixed(2)} €`, {
-          x: colTotal - 30,
-          y: yPos,
-          size: fontSize,
-          font: fontBold,
-          color: textColor,
-        });
-
-        yPos -= 35;
-      });
-
-      // Draw table border
-      page.drawRectangle({
-        x: tableLeft,
-        y: yPos + 10,
-        width: tableWidth,
-        height: tableTop - yPos,
-        borderColor: grayColor,
-        borderWidth: 1,
-      });
-
-      yPos -= 40;
-
-      // Totals
-      const totalsX = width - 200;
-      page.drawText(`Total HT: ${invoiceData.totalHT.toFixed(2)} €`, {
-        x: totalsX,
-        y: yPos,
-        size: fontSize,
-        font: font,
-        color: textColor,
-      });
-      yPos -= 20;
-      page.drawText(`TVA (20%): ${invoiceData.tva.toFixed(2)} €`, {
-        x: totalsX,
-        y: yPos,
-        size: fontSize,
-        font: font,
-        color: textColor,
-      });
-      yPos -= 25;
-
-      // Total TTC box
-      page.drawRectangle({
-        x: totalsX - 10,
-        y: yPos - 10,
-        width: 160,
-        height: 30,
-        color: primaryColor,
-      });
-      page.drawText('Total TTC', {
-        x: totalsX,
-        y: yPos + 2,
-        size: fontSize,
-        font: fontBold,
-        color: rgb(1, 1, 1),
-      });
-      page.drawText(`${invoiceData.totalTTC.toFixed(2)} €`, {
-        x: totalsX + 60,
-        y: yPos + 2,
-        size: fontSize,
-        font: fontBold,
-        color: rgb(1, 1, 1),
-      });
-
-      // Add DEMO watermark on every page
-      const pages = pdfDoc.getPages();
       for (const page of pages) {
         const { width, height } = page.getSize();
+
+        // Add DEMO watermark
         page.drawText('DÉMO', {
-          x: width / 2 - 80,
-          y: height / 2,
-          size: 80,
-          font: fontBold,
-          color: rgb(1, 0, 0), // Red color
-          opacity: 0.1, // 10% opacity
-        });
-        page.drawText('FACTU.ME', {
-          x: width / 2 - 100,
-          y: height / 2 - 80,
-          size: 60,
-          font: fontBold,
+          x: width / 2 - 70,
+          y: height / 2 + 30,
+          size: 70,
+          font: font,
           color: rgb(1, 0, 0),
-          opacity: 0.08, // 8% opacity
+          opacity: 0.08,
+        });
+
+        page.drawText('FACTU.ME', {
+          x: width / 2 - 90,
+          y: height / 2 - 50,
+          size: 50,
+          font: font,
+          color: rgb(1, 0, 0),
+          opacity: 0.06,
+        });
+
+        // Add demo notice at top
+        page.drawText('MODE DÉMO - DOCUMENT NON CONTRACTUEL', {
+          x: width / 2 - 120,
+          y: height - 30,
+          size: 9,
+          font: font,
+          color: rgb(1, 0, 0),
         });
       }
 
-      // Serialize the PDF
-      const pdfBytes = await pdfDoc.save();
+      const modifiedPdfBytes = await pdfDocLib.save();
       // Create blob from Uint8Array - cast as any to bypass TypeScript type checking
-      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-      setPdfBlob(blob);
-      setPdfUrl(URL.createObjectURL(blob));
+      const modifiedBlob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
+
+      setPdfBlob(modifiedBlob);
+      setPdfUrl(URL.createObjectURL(modifiedBlob));
 
     } catch (err) {
       console.error('Error generating PDF:', err);
       setError('Erreur lors de la génération du PDF');
     }
-  };
-
-  // Helper function to wrap text
-  const wrapText = (text: string, maxChars: number): string[] => {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-
-    words.forEach(word => {
-      if ((currentLine + ' ' + word).length > maxChars) {
-        if (currentLine) {
-          lines.push(currentLine);
-          currentLine = word;
-        } else {
-          lines.push(word);
-        }
-      } else {
-        currentLine += (currentLine ? ' ' : '') + word;
-      }
-    });
-
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-
-    return lines;
   };
 
   const downloadPdf = () => {
@@ -614,6 +472,8 @@ export default function DemoPage() {
 
   const resetDemo = () => {
     setInvoice(null);
+    setClient(null);
+    setProfile(null);
     setTranscript('');
     setError('');
     setCurrentStep('intro');
@@ -638,7 +498,7 @@ export default function DemoPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">Factu<span className="text-primary">.me</span></span>
           </Link>
@@ -662,7 +522,7 @@ export default function DemoPage() {
               className="text-center mb-12"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Zap className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
                 Démo Interactive IA
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white mb-6">
@@ -673,7 +533,7 @@ export default function DemoPage() {
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                Parlez naturellement pour créer votre facture. Notre IA comprend le contexte, utilise Groq API, et génère un PDF professionnel.
+                Parlez naturellement pour créer votre facture. Notre IA comprend le contexte et génère un PDF professionnel comme dans la vraie application.
               </p>
             </motion.div>
 
@@ -692,7 +552,7 @@ export default function DemoPage() {
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Prêt à écouter</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Cliquez sur "Commencer" et parlez naturellement
+                    Cliquez sur Commencer et parlez naturellement
                   </p>
                 </div>
               </div>
@@ -708,16 +568,22 @@ export default function DemoPage() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
-                      <span className="text-sm text-blue-800 dark:text-blue-300">"Je veux facturer l'agence Marketing Digital pour un site e-commerce à 3500 euros"</span>
+                      <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-white text-xs font-bold">1</span>
+                      </div>
+                      <span className="text-sm text-blue-800 dark:text-blue-300">Je veux facturer l'agence Marketing Digital pour un site e-commerce à 3500 euros</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
-                      <span className="text-sm text-blue-800 dark:text-blue-300">"Facture pour Startup Innovate, conseil stratégique 3 jours à 850 euros, audit digital 1800 euros"</span>
+                      <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-white text-xs font-bold">2</span>
+                      </div>
+                      <span className="text-sm text-blue-800 dark:text-blue-300">Facture pour Startup Innovate, conseil stratégique 3 jours à 850 euros, audit digital 1800 euros</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
-                      <span className="text-sm text-blue-800 dark:text-blue-300">"Développement application mobile pour Tech Solutions à 12000 euros, design UI 3500 euros"</span>
+                      <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-white text-xs font-bold">3</span>
+                      </div>
+                      <span className="text-sm text-blue-800 dark:text-blue-300">Développement application mobile pour Tech Solutions à 12000 euros, design UI 3500 euros</span>
                     </div>
                   </div>
                 </div>
@@ -747,7 +613,8 @@ export default function DemoPage() {
                 </div>
 
                 <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
-                  💡 Conseil : Utilisez Chrome ou Edge pour la meilleure expérience • L'API Groq transcrira votre voix
+                  <Info className="w-3 h-3 inline mr-1" />
+                  Utilisez Chrome ou Edge pour la meilleure expérience. L'API Groq transcrira votre voix.
                 </p>
               </div>
             </motion.div>
@@ -762,24 +629,24 @@ export default function DemoPage() {
               className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden"
             >
               {/* Active listening visualization */}
-              <div className="relative h-80 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center overflow-hidden">
-                {/* Animated sound bars - responding to audio */}
-                <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative h-96 bg-gradient-to-br from-primary/10 to-primary/20 dark:from-primary/20 dark:to-primary/30 flex items-center justify-center overflow-hidden">
+                {/* Animated sound bars - FIXED POSITION */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   {audioLevels.map((level, i) => (
                     <motion.div
                       key={i}
                       className="absolute w-2 bg-primary/40 rounded-full"
                       animate={{
-                        height: [10, 20 + level * 0.8, 10],
-                        opacity: [0.3, 0.8, 0.3],
+                        height: [8, 20 + level * 0.8, 8],
+                        opacity: [0.2, 0.7, 0.2],
                       }}
                       transition={{
-                        duration: 0.3,
+                        duration: 0.4,
                         repeat: Infinity,
-                        delay: i * 0.05,
+                        delay: i * 0.06,
                       }}
                       style={{
-                        transform: `rotate(${i * 30}deg) translateX(60px)`,
+                        transform: `rotate(${i * 30}deg) translateX(100px)`,
                       }}
                     />
                   ))}
@@ -792,14 +659,13 @@ export default function DemoPage() {
                     className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30 relative"
                   >
                     <Mic className="w-12 h-12 text-white relative z-10" />
-                    {/* Pulse effect */}
                     <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-30" />
                   </motion.div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Je vous écoute...</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Parlez naturellement, je comprends tout</p>
 
                   {/* Timer */}
-                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-lg">
                     <Clock className="w-4 h-4 text-primary" />
                     <span className="text-lg font-bold text-gray-900 dark:text-white font-mono">
                       {formatTime(recordingTime)}
@@ -811,7 +677,10 @@ export default function DemoPage() {
               {/* Live transcript */}
               <div className="p-6 lg:p-8">
                 <div className="mb-6">
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">📝 Transcription en direct</p>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Volume2 className="w-3 h-3" />
+                    Transcription en direct
+                  </p>
                   <div className="min-h-[120px] p-5 rounded-2xl bg-gray-50 dark:bg-slate-800 border-2 border-primary/20 relative">
                     <p className="text-lg text-gray-900 dark:text-white leading-relaxed">
                       {transcript || (
@@ -826,7 +695,7 @@ export default function DemoPage() {
                   </div>
                 </div>
 
-                {error && error !== '💬 Je vous écoute... Parlez maintenant !' && (
+                {error && error !== 'Je vous écoute... Parlez maintenant !' && (
                   <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-600 dark:text-amber-400">{error}</p>
@@ -845,7 +714,8 @@ export default function DemoPage() {
                 </div>
 
                 <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
-                  💡 Parlez pendant au moins 5 secondes pour un meilleur résultat • Cliquez sur "Terminer" quand vous avez fini
+                  <Info className="w-3 h-3 inline mr-1" />
+                  Parlez pendant au moins 5 secondes pour un meilleur résultat. Cliquez sur Terminer quand vous avez fini.
                 </p>
               </div>
             </motion.div>
@@ -866,14 +736,14 @@ export default function DemoPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">L'IA traite votre voix...</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Génération de la facture personnalisée avec PDF</p>
+                  <p className="text-gray-600 dark:text-gray-400">Génération de la facture personnalisée avec le vrai template</p>
                 </div>
               </div>
             </motion.div>
           </div>
         )}
 
-        {currentStep === 'result' && invoice && (
+        {currentStep === 'result' && invoice && client && profile && (
           <div className="max-w-5xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -885,8 +755,9 @@ export default function DemoPage() {
                   <CheckCircle2 className="w-4 h-4" />
                   Facture générée avec succès !
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Voici votre facture démo (avec filigrane DÉMO)
+                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Voici votre facture démo avec le vrai template Factu.me (filigrane DÉMO visible)
                 </p>
               </div>
               <div className="flex gap-2">
@@ -909,113 +780,45 @@ export default function DemoPage() {
               </div>
             </motion.div>
 
-            {/* Invoice Preview - PDF-like display */}
+            {/* Invoice Preview - PDF iframe */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden relative"
+              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden"
             >
-              {/* DEMO Watermark overlay - BIG and visible */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
-                <div className="transform -rotate-45">
-                  <div className="text-[150px] sm:text-[180px] md:text-[200px] font-black text-red-500/10 leading-none select-none whitespace-nowrap">
-                    DÉMO • FACTU.ME • DÉMO • FACTU.ME •
-                  </div>
+              <div className="p-4 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <span className="font-bold text-gray-900 dark:text-white">{invoice.number}</span>
+                </div>
+                <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
+                  <AlertCircle className="w-4 h-4" />
+                  MODE DÉMO
                 </div>
               </div>
 
-              {/* Invoice content */}
-              <div className="relative z-0 p-8 lg:p-12">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-8 pb-8 border-b-2 border-gray-200 dark:border-slate-700">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-xl">
-                      <FileText className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-black text-gray-900 dark:text-white">Factu.me</h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Facturation intelligente</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Facture n°</p>
-                    <p className="text-xl font-black text-gray-900 dark:text-white">{invoice.number}</p>
-                  </div>
+              {pdfUrl && (
+                <div className="w-full h-[800px]">
+                  <iframe
+                    src={pdfUrl}
+                    className="w-full h-full border-0"
+                    title="Aperçu PDF"
+                  />
                 </div>
+              )}
 
-                {/* Client & Dates */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                  <div>
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Facturé à</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white mb-1">{invoice.clientName}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{invoice.clientEmail}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{invoice.clientAddress}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{invoice.clientPostalCode} {invoice.clientCity}</p>
-                  </div>
-                  <div className="text-left lg:text-right">
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Date d'émission</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{invoice.date}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Date d'échéance</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{invoice.dueDate}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="mb-8 overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-slate-800">
-                        <th className="text-left py-4 px-6 text-sm font-bold text-gray-900 dark:text-white">Description</th>
-                        <th className="text-center py-4 px-4 text-sm font-bold text-gray-900 dark:text-white">Qté</th>
-                        <th className="text-right py-4 px-4 text-sm font-bold text-gray-900 dark:text-white">Prix unitaire</th>
-                        <th className="text-right py-4 px-6 text-sm font-bold text-gray-900 dark:text-white">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.lines.map((line, idx) => (
-                        <tr key={idx} className="border-t border-gray-200 dark:border-slate-700">
-                          <td className="py-4 px-6 text-sm text-gray-700 dark:text-gray-300">{line.description}</td>
-                          <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300 text-center font-semibold">{line.quantity}</td>
-                          <td className="py-4 px-4 text-sm text-gray-700 dark:text-gray-300 text-right">{line.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</td>
-                          <td className="py-4 px-6 text-sm font-bold text-gray-900 dark:text-white text-right">{line.total.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Totals */}
-                <div className="flex justify-end mb-8">
-                  <div className="w-full max-w-sm space-y-3 p-6 rounded-2xl bg-gray-50 dark:bg-slate-800">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Total HT</span>
-                      <span className="font-bold text-gray-900 dark:text-white">{invoice.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">TVA (20%)</span>
-                      <span className="font-bold text-gray-900 dark:text-white">{invoice.tva.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
-                    </div>
-                    <div className="flex justify-between pt-4 border-t-2 border-gray-300 dark:border-slate-600">
-                      <span className="text-lg font-black text-gray-900 dark:text-white">Total TTC</span>
-                      <span className="text-2xl font-black text-primary">{invoice.totalTTC.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="text-center p-6 bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl border border-primary/20">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    🔒 <strong>Mode démo</strong> - Filigrane visible sur le PDF
+              <div className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-t border-gray-200 dark:border-slate-700">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    <span className="font-medium">Mode démo</span> - Filigrane visible sur le PDF - Document non contractuel
                   </p>
                   <Link
                     href="/register?plan=solo&trial=4"
                     className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all group"
                   >
                     Commencer avec Factu.me
+                    <Sparkles className="w-5 h-5" />
                   </Link>
                 </div>
               </div>
