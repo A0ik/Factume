@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mic, MicOff, Sparkles, FileText, Play,
+  Mic, MicOff, FileText, Play, Zap,
   CheckCircle2, AlertCircle, Volume2, Loader2, Download, Clock,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -264,8 +264,8 @@ export default function DemoPage() {
         unitPrice: item.unit_price,
         total: item.quantity * item.unit_price,
       })) || [
-        { description: 'Prestation de services professionnels', quantity: 1, unitPrice: 1000, total: 1000 },
-      ],
+          { description: 'Prestation de services professionnels', quantity: 1, unitPrice: 1000, total: 1000 },
+        ],
       totalHT: 0,
       tva: 0,
       totalTTC: 0,
@@ -638,7 +638,7 @@ export default function DemoPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">Factu<span className="text-primary">.me</span></span>
           </Link>
@@ -662,7 +662,7 @@ export default function DemoPage() {
               className="text-center mb-12"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
+                <Zap className="w-4 h-4" />
                 Démo Interactive IA
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white mb-6">
