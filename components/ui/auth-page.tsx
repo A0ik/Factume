@@ -210,9 +210,15 @@ export function AuthPage({
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex-shrink-0 bg-white border-2 border-white/20">
-            <Image src="/logo.png" alt="Factu.me" width={40} height={40} className="w-full h-full object-cover p-1" priority />
-          </div>
+          <Image
+            src="/logo-lg.png"
+            alt="Factu.me"
+            width={44}
+            height={44}
+            className="w-11 h-11 rounded-xl shadow-lg flex-shrink-0"
+            priority
+            style={{ borderRadius: '12px' }}
+          />
           <div className="flex items-baseline gap-0.5">
             <span className="text-xl font-black text-white">Factu</span>
             <span className="text-xl font-black text-primary">.me</span>
@@ -272,9 +278,15 @@ export function AuthPage({
 
         <div className="mx-auto w-full max-w-sm space-y-5">
           <div className="flex items-center gap-3 lg:hidden">
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex-shrink-0 bg-white border-2 border-primary/10">
-              <Image src="/logo.png" alt="Factu.me" width={40} height={40} className="w-full h-full object-cover p-1" priority />
-            </div>
+            <Image
+              src="/logo-lg.png"
+              alt="Factu.me"
+              width={44}
+              height={44}
+              className="w-11 h-11 rounded-xl shadow-lg flex-shrink-0"
+              priority
+              style={{ borderRadius: '12px' }}
+            />
             <div className="flex items-baseline gap-0.5">
               <span className="text-xl font-black text-gray-900">Factu</span>
               <span className="text-xl font-black text-primary">.me</span>

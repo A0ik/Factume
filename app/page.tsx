@@ -237,9 +237,15 @@ export default function LandingPage() {
         <div className="flex items-center justify-between gap-2">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white rounded-xl flex items-center justify-center shadow-md border-2 border-brand-100 overflow-hidden">
-              <Image src="/logo.png" alt="Factu.me" width={44} height={44} className="w-full h-full object-cover p-1" priority />
-            </div>
+            <Image
+              src="/logo-lg.png"
+              alt="Factu.me"
+              width={44}
+              height={44}
+              className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl shadow-md"
+              priority
+              style={{ borderRadius: '12px' }}
+            />
             <span className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">Factu<span className="text-brand-500">.me</span></span>
           </Link>
 

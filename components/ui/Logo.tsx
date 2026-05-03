@@ -11,28 +11,28 @@ interface LogoProps {
 
 const SIZES = {
   sm: {
-    icon: 'w-8 h-8 rounded-xl',
+    icon: 'w-9 h-9 rounded-xl',
     text: 'text-base',
     gap: 'gap-2',
-    px: 64, // Image size
+    px: 128, // Image size
     src: '/logo-md.png' // Use optimized 128px image
   },
   md: {
-    icon: 'w-10 h-10 rounded-xl',
+    icon: 'w-11 h-11 rounded-xl',
     text: 'text-lg',
     gap: 'gap-2.5',
     px: 128, // Image size
     src: '/logo-md.png' // Use optimized 128px image
   },
   lg: {
-    icon: 'w-12 h-12 rounded-xl',
+    icon: 'w-14 h-14 rounded-xl',
     text: 'text-xl',
     gap: 'gap-3',
     px: 256, // Image size
     src: '/logo-lg.png' // Use optimized 256px image
   },
   xl: {
-    icon: 'w-16 h-16 rounded-2xl',
+    icon: 'w-20 h-20 rounded-2xl',
     text: 'text-2xl',
     gap: 'gap-3',
     px: 512, // Image size
@@ -46,19 +46,18 @@ export function Logo({ size = 'md', variant = 'full', className, dark = false }:
   return (
     <div className={cn('flex items-center', s.gap, className)}>
       {/* Icon mark — uses optimized logo with beautiful rounded corners */}
-      <div className={cn(
-        'flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden bg-white border-2 border-primary/10',
-        s.icon
-      )}>
-        <Image
-          src={s.src}
-          alt="Factu.me"
-          width={s.px}
-          height={s.px}
-          className="w-full h-full object-cover p-1"
-          priority
-        />
-      </div>
+      <Image
+        src={s.src}
+        alt="Factu.me"
+        width={s.px}
+        height={s.px}
+        className={cn(
+          'flex-shrink-0 shadow-lg',
+          s.icon
+        )}
+        priority
+        style={{ borderRadius: '12px' }}
+      />
 
       {variant === 'full' && (
         <div className="flex items-baseline gap-0.5">
