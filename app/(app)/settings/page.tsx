@@ -11,7 +11,7 @@ import { CURRENCIES, LEGAL_STATUSES, SECTORS, ACCENT_COLORS } from '@/lib/utils'
 import Modal from '@/components/ui/Modal';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 
-import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw } from 'lucide-react';
+import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard } from 'lucide-react';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
 
@@ -114,6 +114,10 @@ export default function SettingsPage() {
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [templateError, setTemplateError] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [shortcutsUpdateKey, setShortcutsUpdateKey] = useState(0);
+
+  // Force la mise à jour du composant quand l'état des raccourcis change
+  const forceUpdate = () => setShortcutsUpdateKey(prev => prev + 1);
 
   const buildPreviewHtml = (html: string): string => {
     const p = profile;
@@ -999,6 +1003,45 @@ export default function SettingsPage() {
       fields: (
         <div className="space-y-3">
           <Select label="Langue" value={form.language} onChange={(e) => set('language', e.target.value)} options={LANG_OPTS} />
+
+          {/* Raccourcis clavier */}
+          <div className="flex items-center justify-between py-3 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <Keyboard size={18} className="text-gray-500 dark:text-gray-400" />
+              <div>
+                <label className="text-sm font-semibold text-gray-900 dark:text-white block">Raccourcis clavier</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+                    ? 'Désactivés — Utilisez le bouton ? pour réactiver'
+                    : 'Activés — Appuyez sur ? pour voir la liste'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const { areShortcutsDisabled, setShortcutsDisabled } = require('@/hooks/useKeyboardShortcuts');
+                const newState = !areShortcutsDisabled();
+                setShortcutsDisabled(newState);
+                toast.success(newState ? 'Raccourcis clavier désactivés' : 'Raccourcis clavier activés');
+                forceUpdate();
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+                  ? 'bg-primary shadow-lg shadow-primary/30'
+                  : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition shadow-sm ${
+                  !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+                    ? 'translate-x-6'
+                    : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
           <div>
             <label className="text-sm font-semibold text-gray-700 block mb-2">Couleur accent</label>
             <div className="space-y-3">
