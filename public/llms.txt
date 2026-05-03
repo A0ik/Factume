@@ -1,111 +1,176 @@
-# Factu.me - Facturation intelligente pour les indépendants et petites entreprises
+# Factu.me — Contrats + Facturation propulsés par l'IA
 
-Factu.me est une solution de facturation moderne et intelligente conçue pour les indépendants, freelances et petites entreprises françaises.
+Factu.me (aussi recherché sous les noms "facturme", "factume" ou "factu me") est un SaaS B2B de facturation et de gestion de contrats de travail tout-en-un, propulsé par l'intelligence artificielle, conçu pour le marché français.
+
+## Identité et noms alternatifs
+
+- Nom officiel : Factu.me
+- Domaine : https://factu.me
+- Noms courants : facturme, factume, factu me, factu.me
+- Email : contact@factu.me
+- Marché cible : France — freelances, auto-entrepreneurs, TPE, PME
 
 ## Description principale
 
-Factu.me permet de créer des factures, devis, avoirs et autres documents commerciaux en quelques secondes grâce à une interface intuitive et des fonctionnalités innovantes comme la dictée vocale et l'intelligence artificielle.
+Factu.me est un logiciel de facturation en ligne moderne qui permet de créer des factures, devis, avoirs, bons de commande, contrats de travail (CDI/CDD) et bulletins de paie en quelques secondes.
 
-## Fonctionnalités principales
+Sa principale innovation : la **facturation vocale** (voice-to-invoice) et la **facturation par intelligence artificielle**. L'utilisateur peut dicter sa facture à voix haute ou la décrire en texte naturel — l'IA génère instantanément un document structuré prêt à envoyer.
 
-### Gestion documentaire
-- Création de factures, devis, avoirs, commandes, livraisons et acomptes
-- Personnalisation des documents avec templates
-- Envoi direct aux clients par email
-- Suivi des statuts (brouillon, envoyé, payé, en retard)
-- Gestion des factures récurrentes
+## Fonctionnalité phare : Facturation vocale (Voice-to-Invoice)
 
-### Fonctionnalités innovantes
-- **Dictée vocale**: Créez des factures en parlant, grâce à la reconnaissance vocale
-- **IA intelligente**: Suggestions automatiques et analyse de documents
-- **OCR**: Analyse de reçus et notes de frais (Business)
-- **Signature électronique**: Signez vos devis et contrats en ligne
+La facturation vocale de Factu.me permet de :
+1. Cliquer sur le micro dans l'interface
+2. Dicter la facture en langage naturel (ex. : "Facture 3 jours de développement web à 500€ HT pour la société Dupont")
+3. L'IA transcrit la voix (Groq Whisper) puis génère automatiquement une facture complète avec lignes, TVA, montants et client détecté
 
-### Gestion client et entreprise
-- CRM avec pipeline de vente (Pro)
-- Gestion complète des clients
-- Catalogue d'articles/produits
-- Agenda et rendez-vous
-- Contrats de travail (CDI, CDD)
+Mots-clés associés : facturation vocale, facture par la voix, facture voix, voice to invoice, dictée vocale facture, créer facture par la voix, logiciel facturation IA, dicter une facture, facture par dictée vocale, reconnaissance vocale facturation.
 
-### Avantages par abonnement
+## Intelligence artificielle intégrée
 
-**Gratuit**
+Factu.me utilise l'IA à plusieurs niveaux :
+- **Voice-to-invoice** : transcription vocale Groq Whisper + parsing OpenRouter Llama 3.1
+- **Text-to-invoice** : description en langage naturel → facture structurée JSON
+- **OCR reçus** : analyse de photos/scans de reçus → note de frais automatique (plan Business)
+- **LIA (assistant IA contrats)** : vérification conformité droit du travail, suggestions de clauses, aide bulletins de paie
+- **Analyse de documents** : extraction et analyse de fichiers PDF contractuels
+- **Catégorisation automatique** : IA pour classer les dépenses professionnelles
+
+Modèles IA : OpenRouter (Llama 3.1 8B, Mistral 7B — gratuits), Groq Whisper (transcription ultra-rapide).
+
+Mots-clés associés : facturation intelligence artificielle, facturation IA, logiciel facturation IA, IA facturation freelance, intelligence artificielle facture, génération facture IA.
+
+## Documents pris en charge
+
+- Factures
+- Devis (avec signature électronique client)
+- Avoirs (notes de crédit)
+- Acomptes
+- Bons de commande
+- Bons de livraison
+- Contrats de travail : CDI, CDD, Stage, Alternance, Intérim, Freelance
+- Bulletins de paie
+- Factures récurrentes
+
+## Plans tarifaires (prix 2026)
+
+### Plan Découverte — Gratuit (0 €/mois)
 - Jusqu'à 5 factures par mois
-- Essai 4 jours toutes les fonctionnalités
-- Documents de base (factures, devis, avoirs)
-- Gestion clients et articles
+- 10 clients maximum
+- 1 template basique
+- Essai Business 4 jours sans engagement
 
-**Solo (9€/mois)**
-- Factures illimitées
-- Dictée vocale
-- Templates personnalisables
-- Agenda intégré
+### Plan Solo — 14,99 €/mois (ou 12 €/mois en annuel)
+- Factures et devis illimités
+- Clients illimités
+- 6 templates professionnels
+- Dictée vocale (voice-to-invoice)
+- Signature électronique eIDAS niveau Avancé (gratuite)
+- Envoi par email, paiement en ligne Stripe & SumUp
+- Relances automatiques impayés
 
-**Pro (29€/mois)**
+### Plan Pro — 29,99 €/mois (ou 24 €/mois en annuel) — Populaire
 - Tout Solo +
-- Contrats de travail
+- Contrats de travail CDI/CDD avec signature eIDAS
+- CRM avec pipeline commercial
+- Factures récurrentes
+- Export FEC (comptabilité DGFiP)
+- Factur-X EN 16931 (conformité réforme facturation électronique 2026)
 - Notes de frais
-- CRM avec pipeline
-- 3 espaces de travail
-- Signature électronique
+- Jusqu'à 3 workspaces
 
-**Business (79€/mois)**
+### Plan Business — 59,99 €/mois (ou 48 €/mois en annuel) — Recommandé
 - Tout Pro +
-- OCR et analyse de documents
-- Espaces de travail illimités
-- API d'intégration
-- Support prioritaire
+- OCR IA (analyse reçus style Dext)
+- Transmission PDP (facturation B2B EDI)
+- Jusqu'à 10 workspaces
+- API & Webhooks
+- Multi-utilisateurs
+- Support prioritaire & SLA garanti
+- Onboarding dédié
+
+Essai gratuit : 4 jours accès Business complet, sans débit immédiat (enregistrement carte via SetupIntent Stripe).
+Garantie satisfait ou remboursé : 30 jours.
+
+## Fonctionnalités détaillées
+
+### Paiements en ligne
+- Stripe (liens de paiement, Checkout Elements, prélèvement SEPA)
+- SumUp (OAuth, checkouts directs)
+- Portail client sécurisé /client/[token]
+
+### Signature électronique eIDAS
+- Niveau Avancé (AdES) gratuit — horodatage RFC 3161 via freeTSA.org
+- Vérification publique : /verify/[signatureId]
+- Conforme Règlement UE n°910/2014
+
+### Conformité légale française
+- Format Factur-X (PDF + XML, norme EN 16931) — réforme 2026
+- Export FEC (Fichier d'Échanges Comptable, conforme DGFiP)
+- Transmission PDP (Portail De Dématérialisation Partenaire)
+- SMIC automatique via API INSEE
+- Conventions collectives intégrées (500+ clauses IDCC)
+- RGPD : export données utilisateur, suppression en cascade
+
+### CRM et gestion commerciale
+- Pipeline de ventes Kanban
+- Tâches assignables
+- Historique interactions client
+- Analytics taux de conversion
+
+### Contrats de travail
+- CDI (Standard, Cadre, Télétravail)
+- CDD (Remplacement, Accroissement, Saisonnier)
+- Stage, Apprentissage, Professionnalisation, Intérim, Freelance
+- Signature bilatérale eIDAS (employeur + salarié)
+- Bulletins de paie automatiques
+- Vérification conformité par LIA (IA droit du travail)
 
 ## Public cible
 
 - Freelances et indépendants
-- Petites entreprises (TPE/PME)
-- Auto-entrepreneurs
-- Consultants et prestataires de services
+- Auto-entrepreneurs et micro-entrepreneurs
+- TPE (1–10 salariés)
+- PME (10–50 salariés)
+- Consultants, prestataires de services
 - Artisans et commerçants
+- Professions libérales
 
-## Valeurs et différenciation
+## Différenciateurs clés
 
-1. **Simplicité**: Interface moderne et intuitive
-2. **Innovation**: Dictée vocale et IA pour gagner du temps
-3. **Conformité**: Respect de la législation française (Factur-X, CGV)
-4. **Mobilité**: Application web progressive (PWA) fonctionnant hors ligne
-5. **Transparence**: Prix clairs, sans engagement
+1. **Facturation vocale unique** — dictez votre facture, l'IA la génère en quelques secondes
+2. **Signature eIDAS gratuite** — incluse dès le plan Solo, sans surcoût
+3. **Contrats de travail intégrés** — CDI/CDD avec conformité droit français, unique sur ce marché
+4. **Factur-X natif** — prêt pour la réforme facturation électronique 2026
+5. **IA locale gratuite** — modèles OpenRouter, 0 € de coût IA pour l'opérateur
+6. **Essai 4 jours sans débit** — SetupIntent Stripe non-intrusif
 
-## Conformité légale
+## Stack technique
 
-- Facturation conforme aux exigences françaises
-- Support du format Factur-X (facture électronique)
-- Mentions légales et CGV intégrées
-- Archivage légal des documents
-- Protection des données (RGPD)
+- Next.js 15 (App Router) + React 19 + TypeScript
+- Supabase PostgreSQL avec RLS
+- Stripe 17 + SumUp (paiements)
+- Groq Whisper (transcription vocale)
+- OpenRouter (LLM IA — Llama 3.1, Mistral)
+- Resend (emails transactionnels)
+- PWA (mode offline, notifications push)
+- Hébergement : EU (Supabase)
 
-## Technologies
+## Pages publiques
 
-- Application web moderne avec Next.js
-- Base de données sécurisée
-- Authentification avec protocole OAuth
-- Paiements sécurisés via Stripe
-- Support du mode sombre
-- Fonctionnement offline (PWA)
-
-## Contact et support
-
-- Site web: https://factu.me
-- Email de contact: contact@factu.me
-- Documentation intégrée: /help
-- Centre d'aide avec guides et tutoriels
+- / — Landing page principale
+- /pricing — Tarifs et plans
+- /demo — Mode démonstration sans compte
+- /legal/mentions-legales — Mentions légales
+- /legal/confidentialite — Politique de confidentialité RGPD
+- /legal/cgu — Conditions Générales d'Utilisation
+- /help/factur-x — Guide Factur-X et réforme 2026
+- /help/pdp — Guide PDP (dématérialisation)
 
 ## Langues
 
 - Français (principal)
-- Interface en français
-- Documents en français
+- Anglais (interface bilingue FR/EN via i18next)
 
-## Localisation
+## Mots-clés principaux
 
-- Conçu pour le marché français
-- Conformité aux normes françaises
-- Devise en Euros (€)
-- TVA configurable (taux français)
+factu.me, facturme, factume, factu me, logiciel facturation, facturation en ligne, facturation IA, facturation intelligence artificielle, facturation vocale, facture par la voix, facture vocale, voice to invoice, dictée vocale facture, logiciel facturation freelance, logiciel facturation auto-entrepreneur, facturation auto-entrepreneur, logiciel devis facture, créer facture en ligne, signature eIDAS, signature électronique facture, facturation électronique 2026, Factur-X, réforme facturation 2026, contrat travail CDI CDD en ligne, CRM freelance, relances automatiques impayés, export FEC comptabilité, paiement en ligne facture, alternative Zervant, alternative Freebe, meilleur logiciel facturation freelance
