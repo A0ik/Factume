@@ -342,29 +342,38 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     setSaving(true);
     setError('');
     try {
-      await updateInvoice(invoice.id, {
-        client_id: clientId || undefined,
-        client_name_override: clientId ? undefined : clientName || undefined,
-        document_type: docType,
-        issue_date: issueDate,
-        due_date: dueDate || undefined,
-        items: items as InvoiceItem[],
-        notes: notes || undefined,
-        internal_notes: internalNotes || undefined,
-        discount_percent: discountPercent > 0 ? discountPercent : undefined,
-        order_reference: orderReference || undefined,
-        order_number: orderNumber || undefined,
-        legal_mentions: legalMentions || undefined,
-        // Nouveaux champs modifiables
-        client_email: clientEmail || undefined,
-        client_phone: clientPhone || undefined,
-        client_address: clientAddress || undefined,
-      });
+      // Timeout de 7 secondes pour éviter le blocage infini
+      const updatedInvoice = await Promise.race([
+        updateInvoice(invoice.id, {
+          client_id: clientId || undefined,
+          client_name_override: clientId ? undefined : clientName || undefined,
+          document_type: docType,
+          issue_date: issueDate,
+          due_date: dueDate || undefined,
+          items: items as InvoiceItem[],
+          notes: notes || undefined,
+          internal_notes: internalNotes || undefined,
+          discount_percent: discountPercent > 0 ? discountPercent : undefined,
+          order_reference: orderReference || undefined,
+          order_number: orderNumber || undefined,
+          legal_mentions: legalMentions || undefined,
+          // Nouveaux champs modifiables
+          client_email: clientEmail || undefined,
+          client_phone: clientPhone || undefined,
+          client_address: clientAddress || undefined,
+        }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),
+      ]);
       toast.success('Facture modifiée avec succès !');
       setSuccess(true);
       setTimeout(() => router.push(`/invoices/${invoice.id}`), 600);
     } catch (e: any) {
-      setError(e.message || 'Erreur lors de la modification');
+      if ((e as Error).message === '__timeout__') {
+        setError('Délai dépassé — réessayez');
+        toast.error('Délai dépassé — réessayez');
+      } else {
+        setError(e.message || 'Erreur lors de la modification');
+      }
     } finally {
       setSaving(false);
     }

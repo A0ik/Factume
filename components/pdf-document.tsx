@@ -343,7 +343,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         {/* ITEMS TABLE */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
-        <View style={{ marginHorizontal: 44, marginBottom: 14 }}>
+        <View style={{ marginHorizontal: 44, marginBottom: 14 }} wrap={false}>
           {/* Table header */}
           <View style={{ flexDirection: 'row', backgroundColor: tpl.thBg, padding: '8 0', borderTopLeftRadius: 6, borderTopRightRadius: 6 }}>
             <Text style={{ flex: 5, fontSize: 7, fontFamily: bold, color: tpl.thColor, paddingLeft: 14, letterSpacing: 0.8 }}>{meta.tableTitle}</Text>
@@ -387,10 +387,12 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         </View>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* TOTALS */}
+        {/* TOTALS + PAYMENT + NOTES - Keep together to avoid pagination split */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
-        <View style={{ paddingHorizontal: 44, alignItems: 'flex-end', marginBottom: 16 }}>
+        <View wrap={false}>
+          {/* TOTALS */}
+          <View style={{ paddingHorizontal: 44, alignItems: 'flex-end', marginBottom: 16 }}>
           <View style={{ width: 280 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
               <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>Sous-total HT</Text>
@@ -480,6 +482,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             <Text style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>{payTermsText}</Text>
           </View>
         )}
+        </View> {/* Fin du conteneur wrap={false} pour TOTAUX + PAYMENT + NOTES */}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* SIGNATURE SECTION (for signed quotes) */}

@@ -24,9 +24,9 @@ const config: Config = {
           950: '#022c22',
         },
         primary: {
-          DEFAULT: '#1D9E75',
-          dark: '#0F6E56',
-          light: '#E8F7F2',
+          DEFAULT: '#10b981',
+          dark: '#059669',
+          light: '#d1fae5',
         },
         accent: {
           DEFAULT: '#EF9F27',

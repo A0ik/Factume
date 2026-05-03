@@ -236,15 +236,15 @@ export default function Sidebar() {
                   className={cn(
                     'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
                     active || subActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                      ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-900 dark:hover:text-gray-100',
                   )}
                 >
                   <span className={cn(
                     'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
                     active || subActive
-                      ? 'bg-primary text-white shadow-md shadow-primary/30'
-                      : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                      : 'bg-emerald-50/60 dark:bg-white/5 text-gray-500 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
                   )}>
                     <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
                   </span>
@@ -260,8 +260,8 @@ export default function Sidebar() {
                   className={cn(
                     'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
                     active || subActive
-                      ? 'text-primary hover:bg-primary/20'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                      ? 'text-primary hover:bg-primary/15'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-700 dark:hover:text-gray-200',
                   )}
                 >
                   <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
@@ -301,14 +301,14 @@ export default function Sidebar() {
                               'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
                               sa
                                 ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200',
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/5 hover:text-gray-800 dark:hover:text-gray-200',
                             )}
                           >
                             <span className={cn(
                               'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
                               sa
                                 ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
-                                : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10'
+                                : 'bg-emerald-50/60 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:bg-emerald-100/70 dark:hover:bg-white/10'
                             )}>
                               <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
                             </span>
@@ -323,7 +323,7 @@ export default function Sidebar() {
                           </Link>
                         )}
                         {isLastBeforeContracts && !item.locked && (
-                          <div className="mx-3 my-2 h-px bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
+                          <div className="mx-3 my-2 h-px bg-gradient-to-r from-emerald-200/60 to-transparent dark:from-emerald-800/30" />
                         )}
                       </div>
                     );
@@ -339,14 +339,14 @@ export default function Sidebar() {
     if (locked) {
       return (
         <div
-          className="group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
+          className="group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/5 transition-all"
           title={lockReason}
         >
-          <span className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-white/5">
+          <span className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-emerald-50/60 dark:bg-white/5">
             <Icon size={17} strokeWidth={1.8} />
           </span>
           <span className="flex-1 font-semibold">{label}</span>
-          <Lock size={14} className="text-gray-400" />
+          <Lock size={14} className="text-gray-400 dark:text-gray-500" />
         </div>
       );
     }
@@ -385,12 +385,12 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-white dark:bg-slate-950 border-r border-gray-100 dark:border-white/5 overflow-hidden flex-shrink-0">
+    <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950 border-r border-emerald-100 dark:border-emerald-900/30 overflow-hidden flex-shrink-0">
       {/* Subtle gradient header */}
-      <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-primary/[0.04] to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none" />
 
       {/* Logo */}
-      <div className="relative px-5 pt-6 pb-5 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
+      <div className="relative px-5 pt-6 pb-5 border-b border-emerald-100/80 dark:border-emerald-900/20 flex-shrink-0">
         <Link href="/dashboard" className="block hover:opacity-80 transition-opacity">
           <Logo size="md" variant="full" dark={false} />
         </Link>
@@ -404,14 +404,14 @@ export default function Sidebar() {
       </div>
 
       {/* Search */}
-      <div className="relative px-4 py-3 border-b border-gray-100 dark:border-white/5 flex-shrink-0">
+      <div className="relative px-4 py-3 border-b border-emerald-100/60 dark:border-emerald-900/20 flex-shrink-0">
         <button
           onClick={() => openCommandPalette()}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-100 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all text-sm group"
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-white/5 hover:bg-emerald-100/70 dark:hover:bg-white/10 border border-emerald-200/60 dark:border-emerald-800/30 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all text-sm group"
         >
-          <Search size={15} className="group-hover:scale-110 transition-transform" />
-          <span className="flex-1 text-left font-medium">Rechercher...</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white border border-gray-200 text-gray-400 font-mono dark:bg-gray-800 dark:border-gray-700">⌘K</kbd>
+          <Search size={15} className="group-hover:scale-110 transition-transform text-primary" />
+          <span className="flex-1 text-left font-medium text-gray-600 dark:text-gray-300">Rechercher...</span>
+          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 text-gray-500 dark:text-gray-400 font-mono">⌘K</kbd>
         </button>
       </div>
 
@@ -513,8 +513,8 @@ export default function Sidebar() {
 
         {/* Tools nav */}
         <div>
-          <div className="h-px bg-gray-100 dark:bg-white/5 mx-1 mb-3" />
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-2">Outils</p>
+          <div className="h-px bg-gradient-to-r from-emerald-200/60 via-emerald-100/40 to-transparent dark:from-emerald-800/30 dark:via-emerald-900/10 mx-1 mb-3" />
+          <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-4 mb-2">Outils</p>
           <div className="space-y-0.5">
             {NAV_TOOLS.map((item) => <NavItem key={item.href} {...item} />)}
           </div>
@@ -543,8 +543,8 @@ export default function Sidebar() {
       )}
 
       {/* Profile */}
-      <div className="flex-shrink-0 border-t border-gray-100 dark:border-white/5 px-4 py-4">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group">
+      <div className="flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20 px-4 py-4">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-emerald-50/50 dark:hover:bg-emerald-900/5 transition-colors cursor-pointer group">
           <UserDropdown
             user={{
               name: profile?.company_name || profile?.first_name || 'Mon compte',

@@ -42,7 +42,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 safe-area-bottom px-2 py-1">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t border-emerald-100/60 dark:border-emerald-900/20 safe-area-bottom px-2 py-1">
       <InteractiveMenu
         items={NAV}
         activeIndex={activeIndex >= 0 ? activeIndex : 0}

@@ -49,6 +49,19 @@ export async function POST(req: NextRequest) {
         .join('\n');
 
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
+
+RACCOURCIS TECHNIQUES À COMPRENDRE :
+- "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
+- "FAC" ou "Facture" → Facture
+- "DEV" ou "Devis" → Devis
+- "AVOIR" → Avoir
+- "CMD" ou "Commande" → Bon de commande
+- "BL" ou "Livraison" → Bon de livraison
+- "ACOMPTE" ou "Acompte" → Facture d'acompte
+- "HT" → Hors taxes
+- "TTC" → Toutes taxes comprises
+- "TVA" → Taxe sur la valeur ajoutée
+
 L'utilisateur a déjà une facture en cours avec les lignes suivantes :
 
 LIGNES EXISTANTES :
@@ -82,6 +95,19 @@ RÈGLES ABSOLUES :
 - summary doit être en français, court et précis`;
     } else {
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
+
+RACCOURCIS TECHNIQUES À COMPRENDRE :
+- "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
+- "FAC" ou "Facture" → Facture
+- "DEV" ou "Devis" → Devis
+- "AVOIR" → Avoir
+- "CMD" ou "Commande" → Bon de commande
+- "BL" ou "Livraison" → Bon de livraison
+- "ACOMPTE" ou "Acompte" → Facture d'acompte
+- "HT" → Hors taxes
+- "TTC" → Toutes taxes comprises
+- "TVA" → Taxe sur la valeur ajoutée
+
 L'utilisateur vient de dicter une facture à voix haute. Extrais les informations et retourne UNIQUEMENT du JSON valide.
 
 Format attendu:

@@ -153,18 +153,18 @@ export default function MobileDrawer({ open, onClose }: Props) {
         className={cn(
           'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
           active
-            ? 'bg-primary/10 text-primary'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-900 dark:hover:text-white',
         )}
       >
         <span className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0',
-          active ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+          'flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 transition-all',
+          active ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
         )}>
           <Icon size={16} />
         </span>
         <span className="flex-1">{label}</span>
-        {active && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+        {active && <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm" />}
       </Link>
     );
   };
@@ -188,10 +188,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-white dark:bg-gray-900 flex flex-col shadow-2xl"
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-gradient-to-b from-emerald-50/30 to-white dark:from-slate-900 dark:to-gray-900 flex flex-col shadow-2xl border-r border-emerald-100/60 dark:border-emerald-900/20"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-100/60 dark:border-emerald-900/20 bg-gradient-to-r from-emerald-50/50 to-white dark:from-slate-900 dark:to-gray-900">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-black text-sm">
                   {getInitials(profile?.company_name || profile?.first_name || 'U')}
@@ -209,14 +209,14 @@ export default function MobileDrawer({ open, onClose }: Props) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggle}
-                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="p-2 rounded-xl bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
                   aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
                 >
                   {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="p-2 rounded-xl bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -249,10 +249,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
 
             {/* Footer CTA */}
             {sub.tier === 'free' && (
-              <div className="px-3 pb-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+              <div className="px-3 pb-4 border-t border-emerald-100/60 dark:border-emerald-900/20 pt-3">
                 <Link
                   href="/trial"
-                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white"
+                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                 >
                   <Sparkles size={18} />
                   <div>
