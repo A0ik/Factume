@@ -75,8 +75,9 @@ Retourne UNIQUEMENT du JSON valide :
 
 RÈGLES ABSOLUES :
 - "items" doit contenir la liste COMPLÈTE après application de la modification
-- unit_price est TOUJOURS HT (hors taxes)
+- unit_price est TOUJOURS HT (hors taxes) — DOIT être un nombre fini, jamais une expression
 - vat_rate par défaut = 20
+- CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
 - summary doit être en français, court et précis`;
     } else {
@@ -108,14 +109,17 @@ Règles ABSOLUES pour les descriptions :
 - Ex: l'utilisateur dit "logo" → description: "Création d'identité visuelle et logotype"
 - Ex: l'utilisateur dit "3 jours de conseil" → description: "Prestation de conseil et accompagnement stratégique"
 - La description doit être claire, professionnelle, entre 3 et 10 mots
-- unit_price est TOUJOURS HT (hors taxes)
+- unit_price est TOUJOURS HT (hors taxes) — DOIT être un nombre fini, jamais une expression
 - Extrais LES INFORMATIONS CLIENT si mentionnées : email, téléphone, adresse, code postal, ville, SIRET, numéro de TVA
 - SIRET : 14 chiffres sans espaces ni points
 - TVA : format français FRXX123456789 (où XX = numéro de clé, 9 chiffres = SIREN)
 - vat_rate par défaut = 20
 - due_days = délai de paiement en jours (30 par défaut)
 - IMPORTANT: discount_percent (remise globale) ne doit être ajouté QUE si l'utilisateur le demande explicitement (ex: "remise 10%", "10% de remise", "faire une remise"). Si l'utilisateur ne mentionne aucune remise, mets discount_percent à 0.
-- Si le montant est TTC, calcule le HT en divisant par (1 + vat_rate/100)`;
+- CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
+- Exemple CORRECT : unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
+- Exemple FAUX : unit_price: 400 / 1.10
+- Si le montant est TTC, calcule TOI-MÊME le HT avant d'écrire le JSON`;
     }
 
     const completion = await groq.chat.completions.create({
@@ -125,12 +129,32 @@ Règles ABSOLUES pour les descriptions :
         { role: 'user', content: transcript },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      temperature: 0, // Plus déterministe pour éviter les créations non demandées
     });
 
     let parsed: any = {};
     try {
       parsed = JSON.parse(completion.choices[0].message.content || '{}');
+
+      // Post-processing : corriger les expressions mathématiques dans les items
+      if (parsed.items && Array.isArray(parsed.items)) {
+        parsed.items = parsed.items.map((item: any) => {
+          // Si unit_price est une expression, on essaie de l'évaluer
+          if (typeof item.unit_price === 'string' && /[\d\.\s\+\-\*\/\(\)]/.test(item.unit_price)) {
+            try {
+              // Évaluation sécurisée d'expressions simples
+              const result = Function(`"use strict"; return (${item.unit_price})`)();
+              if (typeof result === 'number' && !isNaN(result)) {
+                console.log(`[process-voice] Corrected unit_price from "${item.unit_price}" to ${result}`);
+                item.unit_price = Math.round(result * 100) / 100; // Arrondir à 2 décimales
+              }
+            } catch (e) {
+              console.error(`[process-voice] Failed to evaluate unit_price: ${item.unit_price}`, e);
+            }
+          }
+          return item;
+        });
+      }
     } catch (err) {
       console.error('[process-voice] Failed to parse AI response:', err);
       parsed = {};

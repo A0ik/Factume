@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Keyboard, X } from 'lucide-react';
 import { useGlobalKeyboardShortcuts, formatShortcut } from '@/hooks/useKeyboardShortcuts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,20 +9,17 @@ export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
   const shortcuts = useGlobalKeyboardShortcuts();
 
-  // Raccourci pour ouvrir l'aide
-  useGlobalKeyboardShortcuts();
-
-  // Ajouter le raccourci pour ouvrir l'aide
-  useState(() => {
+  // Raccourci pour ouvrir l'aide (Ctrl+? ou Cmd+?)
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '?' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        setOpen(!open);
+        setOpen(true); // Toujours ouvrir (pas toggle)
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, []);
 
   return (
     <>

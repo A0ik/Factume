@@ -105,6 +105,19 @@ export default function DashboardPage() {
   const totalOverdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date()).reduce((s, i) => s + i.total, 0);
   const recoveryRate = totalPaid + totalOverdue > 0 ? Math.round((totalPaid / (totalPaid + totalOverdue)) * 100) : 100;
 
+  // DSO (Days Sales Outstanding - Délai Moyen de Paiement)
+  const dsoInvoices = invoices.filter((i) => i.status === 'paid' && i.paid_at && i.issue_date);
+  const dso = dsoInvoices.length > 0
+    ? Math.round(
+        dsoInvoices.reduce((sum, inv) => {
+          const issued = new Date(inv.issue_date);
+          const paid = new Date(inv.paid_at!);
+          const days = Math.floor((paid.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + days;
+        }, 0) / dsoInvoices.length
+      )
+    : 0;
+
   const COLORS = ['#1D9E75', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899'];
 
   // Animation variants
@@ -281,15 +294,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* En attente */}
+        {/* DSO - Délai Moyen de Paiement */}
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 group"
+          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-purple-500/5 transition-all duration-300 group"
         >
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">En attente</p>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock size={14} className="text-blue-500" />
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">DSO</p>
+            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock size={14} className="text-purple-500" />
             </div>
           </div>
           <motion.p
@@ -298,9 +311,9 @@ export default function DashboardPage() {
             transition={{ delay: 0.1 }}
             className="text-2xl font-black text-gray-900 dark:text-white"
           >
-            {stats?.pendingCount || 0}
+            {dso}
           </motion.p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatCurrency(stats?.pendingRevenue || 0)}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">jours moyen</p>
         </motion.div>
 
         {/* En retard */}
@@ -329,15 +342,15 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">factures</p>
         </motion.div>
 
-        {/* Total encaissé */}
+        {/* En attente */}
         <motion.div
           whileHover={{ scale: 1.02 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-primary/5 transition-all duration-300 group"
+          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 group"
         >
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">Encaissé</p>
-            <div className="w-8 h-8 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ArrowUpRight size={14} className="text-primary" />
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">En attente</p>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Clock size={14} className="text-blue-500" />
             </div>
           </div>
           <motion.p
@@ -346,9 +359,9 @@ export default function DashboardPage() {
             transition={{ delay: 0.2 }}
             className="text-2xl font-black text-gray-900 dark:text-white"
           >
-            {formatCurrency(stats?.totalRevenue || 0)}
+            {stats?.pendingCount || 0}
           </motion.p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">total</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatCurrency(stats?.pendingRevenue || 0)}</p>
         </motion.div>
       </motion.div>
 
@@ -433,154 +446,7 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* ── Insights row ── */}
-      {topClients.length > 0 && (
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Recovery rate */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Taux de recouvrement</h3>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Payé vs impayé</p>
-              </div>
-              <motion.p
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                className={`text-4xl font-black ${recoveryRate >= 80 ? 'text-primary' : 'text-amber-500'}`}
-              >
-                {recoveryRate}%
-              </motion.p>
-            </div>
-            <div className="h-3 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                style={{ width: progressWidth }}
-                className={`h-full rounded-full ${recoveryRate >= 80 ? 'bg-gradient-to-r from-primary to-primary-dark' : 'bg-gradient-to-r from-amber-400 to-amber-500'} shadow-[0_0_8px_rgba(0,0,0,0.1)]`}
-              />
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-400 dark:text-gray-500">
-              <span>0%</span>
-              <span>100%</span>
-            </div>
-          </div>
-
-          {/* Top clients (compact) */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-4 flex items-center gap-2">
-              <Users size={14} className="text-primary" />
-              Top clients
-            </h3>
-            <div className="space-y-3">
-              {topClients.slice(0, 3).map((c, i) => (
-                <motion.div
-                  key={c.id || c.name}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="flex items-center gap-3 group cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg p-1 -mx-1 transition-colors"
-                >
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0 group-hover:scale-110 transition-transform"
-                    style={{ backgroundColor: COLORS[i] + '20', color: COLORS[i] }}
-                  >
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{c.name}</p>
-                    <div className="h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden mt-1">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(c.paid / maxPaid) * 100}%` }}
-                        transition={{ duration: 0.8, delay: i * 0.1 }}
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: COLORS[i] }}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold" style={{ color: COLORS[i] }}>{formatCurrency(c.paid)}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{c.count} fact.</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Cash Flow Forecast (90 days) ── */}
-      {cashFlowMonths.some((b) => b.toCollect > 0 || b.recurring > 0) && (
-        <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-primary" />
-            <div>
-              <h2 className="font-bold text-gray-900 dark:text-white text-sm">Trésorerie prévisionnelle</h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Projections sur 90 jours</p>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-white/10">
-                  <th className="text-left pb-3 font-semibold">Mois</th>
-                  <th className="text-right pb-3 font-semibold">À encaisser</th>
-                  <th className="text-right pb-3 font-semibold">Récurrents prévus</th>
-                  <th className="text-right pb-3 font-semibold">Total mois</th>
-                  <th className="text-right pb-3 font-semibold">Cumulatif</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                {cashFlowMonths.map((b) => {
-                  const monthTotal = b.toCollect + b.recurring;
-                  return (
-                    <tr key={b.key} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3 font-semibold text-gray-900 dark:text-white capitalize">{b.label}</td>
-                      <td className="py-3 text-right">
-                        {b.toCollect > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full text-xs">
-                            +{formatCurrency(b.toCollect)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 text-right">
-                        {b.recurring > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-full text-xs">
-                            +{formatCurrency(b.recurring)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 text-right font-bold text-gray-900 dark:text-white">
-                        {monthTotal > 0 ? formatCurrency(monthTotal) : <span className="text-gray-300 dark:text-gray-600">—</span>}
-                      </td>
-                      <td className="py-3 text-right">
-                        <span className={`font-bold ${b.cumulative > 0 ? 'text-primary' : 'text-gray-400 dark:text-gray-500'}`}>
-                          {formatCurrency(b.cumulative)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 dark:border-white/10 text-[11px] text-gray-400 dark:text-gray-500">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
-              À encaisser (envoyées / en retard)
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-400 flex-shrink-0" />
-              Récurrents prévus
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Top 5 Clients (detailed) ── */}
+      {/* ── Top 5 Clients ── */}
       {topClients.length > 0 && (
         <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">

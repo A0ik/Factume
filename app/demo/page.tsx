@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mic, MicOff, FileText, Play, Sparkles,
+  Mic, MicOff, FileText, Play, Zap,
   CheckCircle2, AlertCircle, Volume2, Loader2, Download, Clock, Info,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -270,8 +270,8 @@ export default function DemoPage() {
       total: item.quantity * item.unit_price,
       vat_rate: item.vat_rate || 20,
     })) || [
-      { description: 'Prestation de services professionnels', quantity: 1, unit_price: 1000, total: 1000, vat_rate: 20 },
-    ];
+        { description: 'Prestation de services professionnels', quantity: 1, unit_price: 1000, total: 1000, vat_rate: 20 },
+      ];
 
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const vat_amount = subtotal * 0.2;
@@ -498,7 +498,7 @@ export default function DemoPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">Factu<span className="text-primary">.me</span></span>
           </Link>
@@ -522,7 +522,7 @@ export default function DemoPage() {
               className="text-center mb-12"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-                <Sparkles className="w-4 h-4" />
+                <Zap className="w-4 h-4" />
                 Démo Interactive IA
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white mb-6">
@@ -818,7 +818,7 @@ export default function DemoPage() {
                     className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all group"
                   >
                     Commencer avec Factu.me
-                    <Sparkles className="w-5 h-5" />
+                    <Zap className="w-5 h-5" />
                   </Link>
                 </div>
               </div>
