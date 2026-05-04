@@ -65,7 +65,7 @@ interface NavItem {
   href: string;
   icon: any;
   label: string;
-  badge: null | 'overdue' | 'notif' | string;
+  badge?: null | 'overdue' | 'notif' | string;
   hasSubmenu?: boolean;
   submenu?: SubMenuItem[];
   locked?: boolean;
@@ -209,7 +209,7 @@ export default function Sidebar() {
   const NAV_TOOLS = buildToolsNav();
   const NAV_ADVANCED = buildAdvancedNav();
 
-  const getBadgeCount = (badge: null | 'overdue' | 'notif' | string) => {
+  const getBadgeCount = (badge: null | 'overdue' | 'notif' | string | undefined) => {
     if (badge === 'overdue') return overdueCount;
     if (badge === 'notif')   return unreadCount;
     return 0;
@@ -218,7 +218,7 @@ export default function Sidebar() {
   /* ── Nav item (link or submenu toggle) ── */
   const NavItem = ({ href, icon: Icon, label, badge, hasSubmenu, submenu, locked, lockReason, unlockTier }: {
     href: string; icon: any; label: string;
-    badge: null | 'overdue' | 'notif' | string; hasSubmenu?: boolean; submenu?: SubMenuItem[];
+    badge?: null | 'overdue' | 'notif' | string; hasSubmenu?: boolean; submenu?: SubMenuItem[];
     locked?: boolean; lockReason?: string; unlockTier?: string;
   }) => {
     const [open, setOpen] = useState(false);
