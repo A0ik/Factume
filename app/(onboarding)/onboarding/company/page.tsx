@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 import { LEGAL_STATUSES, SECTORS } from '@/lib/utils';
-import { Check, ChevronDown, Building2, Briefcase } from 'lucide-react';
+import { Check, ChevronDown, Building2, Briefcase, ArrowLeft } from 'lucide-react';
 
 /* ── Nice searchable dropdown ── */
 function SearchableSelect({
@@ -145,7 +145,17 @@ export default function OnboardingCompanyPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
         <div className="mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg mb-4">F</div>
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => router.push('/onboarding/language')}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Retour"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg">F</div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-900">Votre entreprise</h2>
           <p className="text-gray-500 text-sm mt-1">Recherchez votre entreprise ou remplissez manuellement</p>
         </div>

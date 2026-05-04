@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ArrowLeft } from 'lucide-react';
 
 export default function OnboardingAddressPage() {
   const router = useRouter();
@@ -50,7 +51,17 @@ export default function OnboardingAddressPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
         <div className="mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg mb-4">F</div>
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => router.push('/onboarding/company')}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Retour"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg">F</div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-900">Adresse & coordonnées</h2>
           <p className="text-gray-500 text-sm mt-1">Apparaîtront sur vos factures</p>
         </div>

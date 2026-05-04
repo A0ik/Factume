@@ -7,13 +7,14 @@ import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Truck, Calculator, HelpCircle,
   Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight,
-  Moon, Sun,
+  Moon, Sun, Home,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn, getInitials } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/ui/Logo';
 
 const TIER_ICON: Record<string, any> = { free: Zap, solo: Rocket, pro: Crown, business: Sparkles, trial: Sparkles };
 const TIER_LABEL: Record<string, string> = { free: 'Gratuit', solo: 'Solo', pro: 'Pro', business: 'Business', trial: 'Essai' };
@@ -138,11 +139,11 @@ export default function MobileDrawer({ open, onClose }: Props) {
           className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
           title={lockReason}
         >
-          <span className="flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800">
-            <Icon size={16} />
+          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
+            <Icon size={17} strokeWidth={2} />
           </span>
-          <span className="flex-1">{label}</span>
-          <Lock size={14} />
+          <span className="flex-1 font-medium">{label}</span>
+          <Lock size={13} />
         </div>
       );
     }
@@ -151,20 +152,28 @@ export default function MobileDrawer({ open, onClose }: Props) {
       <Link
         href={href}
         className={cn(
-          'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all',
+          'flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200',
           active
-            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-900 dark:hover:text-white',
+            ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
         )}
       >
         <span className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-xl flex-shrink-0 transition-all',
-          active ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+          'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+          active
+            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+            : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400 group-hover:scale-110',
         )}>
-          <Icon size={16} />
+          <Icon size={17} strokeWidth={active ? 2.5 : 2} />
         </span>
-        <span className="flex-1">{label}</span>
-        {active && <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm" />}
+        <span className="flex-1 font-semibold">{label}</span>
+        {active && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-2 h-2 rounded-full bg-primary shadow-sm"
+          />
+        )}
       </Link>
     );
   };
@@ -173,31 +182,34 @@ export default function MobileDrawer({ open, onClose }: Props) {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
+          {/* Backdrop - Enhanced with better contrast */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
-          {/* Drawer */}
+          {/* Drawer - Enhanced liquid glass effect */}
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm bg-gradient-to-b from-emerald-50/30 to-white dark:from-slate-900 dark:to-gray-900 flex flex-col shadow-2xl border-r border-emerald-100/60 dark:border-emerald-900/20"
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-200/80 dark:border-emerald-800/40 backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.98) 100%)',
+            }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-emerald-100/60 dark:border-emerald-900/20 bg-gradient-to-r from-emerald-50/50 to-white dark:from-slate-900 dark:to-gray-900">
+            {/* Header - Logo and profile */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-200/80 dark:border-emerald-800/40 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-black text-sm">
-                  {getInitials(profile?.company_name || profile?.first_name || 'U')}
-                </div>
+                <Link href="/dashboard" onClick={onClose} className="flex-shrink-0">
+                  <Logo size="sm" variant="icon" className="hover:opacity-80 transition-opacity" />
+                </Link>
                 <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[140px]">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[150px]">
                     {profile?.company_name || profile?.first_name || 'Mon compte'}
                   </p>
                   <div className="flex items-center gap-1 mt-0.5">
@@ -206,17 +218,18 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={toggle}
-                  className="p-2 rounded-xl bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
+                  className="p-2 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all hover:scale-105 active:scale-95"
                   aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
                 >
                   {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl bg-emerald-50/60 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
+                  className="p-2 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all hover:scale-105 active:scale-95"
+                  aria-label="Fermer le menu"
                 >
                   <X size={18} />
                 </button>
@@ -224,40 +237,62 @@ export default function MobileDrawer({ open, onClose }: Props) {
             </div>
 
             {/* Nav content */}
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
               {/* Main nav */}
-              <div className="space-y-0.5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-1 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                    <Home size={12} className="text-primary" strokeWidth={2.5} />
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accueil</p>
+                </div>
                 {NAV_MAIN.map((item) => <NavItem key={item.href} {...item} />)}
               </div>
 
               {/* Documents hub */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-4 mb-1">Types de documents</p>
-                <div className="space-y-0.5">
-                  {NAV_DOCS.map((item) => <NavItem key={item.href} {...item} />)}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-1 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center">
+                    <FileText size={12} className="text-blue-500" strokeWidth={2.5} />
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documents</p>
                 </div>
+                {NAV_DOCS.map((item) => <NavItem key={item.href} {...item} />)}
               </div>
 
               {/* Tools */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-4 mb-1">Outils</p>
-                <div className="space-y-0.5">
-                  {NAV_TOOLS.map((item) => <NavItem key={item.href} {...item} />)}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-1 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/10 flex items-center justify-center">
+                    <Settings size={12} className="text-purple-500" strokeWidth={2.5} />
+                  </div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Outils</p>
                 </div>
+                {NAV_TOOLS.map((item) => <NavItem key={item.href} {...item} />)}
               </div>
             </div>
 
             {/* Footer CTA */}
             {sub.tier === 'free' && (
-              <div className="px-3 pb-4 border-t border-emerald-100/60 dark:border-emerald-900/20 pt-3">
+              <div className="px-3 pb-5 pt-2">
                 <Link
                   href="/trial"
-                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+                  className="group relative flex items-center gap-3 p-4 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={onClose}
                 >
-                  <Sparkles size={18} />
-                  <div>
-                    <p className="text-sm font-bold">Essai gratuit 4 jours</p>
-                    <p className="text-[11px] text-white/70">Accès complet · Sans engagement</p>
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark to-emerald-600 transition-transform group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-20" />
+                  <div className="relative flex items-center gap-3 w-full">
+                    <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 transition-transform group-hover:rotate-12 group-hover:scale-110">
+                      <Sparkles size={20} className="text-white" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-black text-white">Essai gratuit 4 jours</p>
+                      <p className="text-[11px] text-white/80 mt-0.5">Accès complet · Sans engagement</p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <ChevronRight size={18} className="text-white/80 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                    </div>
                   </div>
                 </Link>
               </div>

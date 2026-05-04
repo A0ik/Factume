@@ -1,6 +1,5 @@
 'use client';
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface DialogProps {
@@ -10,10 +9,27 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEsc, { capture: true });
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleEsc, { capture: true });
+    };
+  }, [open, onOpenChange]);
+
   if (!open) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => onOpenChange(false)}
+      />
       {children}
     </div>
   );
@@ -26,7 +42,12 @@ interface DialogContentProps {
 
 export function DialogContent({ children, className }: DialogContentProps) {
   return (
-    <div className={cn('relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto w-full max-w-lg', className)}>
+    <div
+      className={cn(
+        'relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto w-full max-w-lg',
+        className
+      )}
+    >
       {children}
     </div>
   );

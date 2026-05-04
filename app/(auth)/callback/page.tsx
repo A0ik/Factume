@@ -11,11 +11,32 @@ export default function CallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       const { data: { session } } = await getSupabaseClient().auth.getSession();
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-        router.push('/dashboard');
-      } else {
+      if (!session?.user) {
         router.push('/login');
+        return;
+      }
+
+      await fetchProfile(session.user.id);
+
+      const { data: profile } = await getSupabaseClient()
+        .from('profiles')
+        .select('onboarding_done')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile || !profile.onboarding_done) {
+        // Nouveau compte (Google ou autre) — créer le profil initial si absent
+        await getSupabaseClient().from('profiles').upsert({
+          id: session.user.id,
+          email: session.user.email ?? '',
+          company_name: '',
+          language: 'fr',
+          onboarding_done: false,
+          created_at: new Date().toISOString(),
+        });
+        router.push('/onboarding/language');
+      } else {
+        router.push('/dashboard');
       }
     };
     handleCallback();

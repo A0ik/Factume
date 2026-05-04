@@ -9,10 +9,28 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "categories": ["finance", "business", "productivity"],
@@ -20,12 +38,14 @@
     {
       "name": "Nouvelle facture",
       "url": "/invoices/new?type=invoice",
-      "description": "Créer une nouvelle facture"
+      "description": "Créer une nouvelle facture",
+      "icons": [{"src": "/logo.png", "sizes": "96x96", "type": "image/png"}]
     },
     {
       "name": "Nouveau devis",
       "url": "/invoices/new?type=quote",
-      "description": "Créer un nouveau devis"
+      "description": "Créer un nouveau devis",
+      "icons": [{"src": "/logo.png", "sizes": "96x96", "type": "image/png"}]
     }
   ]
 }

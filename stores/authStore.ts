@@ -7,6 +7,9 @@ import { changeLanguage } from '@/i18n';
 
 let _authUnsubscribe: (() => void) | null = null;
 
+// Clés localStorage à conserver après déconnexion (thème, préférences UI)
+const PERSISTENT_KEYS = ['theme', 'facturme_shortcuts_disabled'];
+
 interface AuthState {
   user: User | null;
   session: Session | null;
@@ -61,7 +64,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!data.user) throw new Error('Erreur lors de la création du compte');
       set({ user: data.user, session: data.session });
       if (!data.session) throw new Error('CONFIRM_EMAIL');
-      // Create initial profile row immediately so onboarding updateProfile works
       const { error: profileError } = await getSupabaseClient().from('profiles').upsert({
         id: data.user.id,
         email: data.user.email ?? email,
@@ -94,7 +96,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({ user: null, session: null, profile: null });
     if (typeof window !== 'undefined') {
+      // Conserver uniquement les préférences UI persistantes
+      const saved: Record<string, string> = {};
+      for (const key of PERSISTENT_KEYS) {
+        const val = localStorage.getItem(key);
+        if (val !== null) saved[key] = val;
+      }
       localStorage.clear();
+      for (const [key, val] of Object.entries(saved)) {
+        localStorage.setItem(key, val);
+      }
       window.location.href = '/login';
     }
   },
@@ -109,15 +120,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data, error } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
     if (error && error.code !== 'PGRST116') return;
     if (data) {
-      // Expire trial if end date has passed (runs silently, no pg_cron needed)
       if (data.is_trial_active && data.trial_end_date && new Date(data.trial_end_date) < new Date()) {
-        (async () => { try { await getSupabaseClient().rpc('expire_trials'); } catch {} })();
+        // Appel RPC en arrière-plan — on n'attend pas pour éviter le race condition
+        getSupabaseClient().rpc('expire_trials').catch(() => {});
         set({ profile: { ...data, is_trial_active: false, subscription_tier: 'free' } });
       } else {
         set({ profile: data });
       }
       if (data.language) changeLanguage(data.language).catch(() => {});
-      registerWebPush(userId).catch(() => {});
+      // Web Push enregistré en différé (30s) pour ne pas interrompre l'expérience
+      setTimeout(() => registerWebPush(userId).catch(() => {}), 30_000);
     }
   },
 
@@ -136,9 +148,13 @@ async function registerWebPush(userId: string): Promise<void> {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapidKey) return;
+    // Ne demander la permission que si elle n'a pas déjà été accordée ou refusée
+    if (Notification.permission === 'denied') return;
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+    }
     const reg = await navigator.serviceWorker.ready;
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
     const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
     await getSupabaseClient().from('profiles').update({ web_push_subscription: JSON.stringify(sub) }).eq('id', userId);
   } catch {}

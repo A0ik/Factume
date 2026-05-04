@@ -6,7 +6,6 @@ const PUBLIC_PATHS = [
   '/login',
   '/register',
   '/auth/callback',
-  '/onboarding',
 ];
 
 // Routes API/pages publiques par préfixe
@@ -22,7 +21,6 @@ const PUBLIC_PREFIXES = [
 ];
 
 // Préfixes protégés : tout ce qui commence par ces segments nécessite une session
-// Mis à jour automatiquement : ajouter ici tout nouveau segment de route protégée
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/invoices',
@@ -44,6 +42,7 @@ const PROTECTED_PREFIXES = [
   '/contracts',
   '/documents',
   '/trial',
+  '/onboarding',
 ];
 
 export async function middleware(req: NextRequest) {
@@ -53,10 +52,8 @@ export async function middleware(req: NextRequest) {
   // Racine toujours publique
   if (pathname === '/') return res;
 
-  // Chemins publics exacts
+  // Chemins publics exacts ou par préfixe
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return res;
-
-  // Préfixes publics
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return res;
 
   // Vérifier si Supabase est configuré

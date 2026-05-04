@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { ArrowLeft } from 'lucide-react';
 
 const TEMPLATES = [
   { id: 1, name: 'Minimaliste', desc: 'Épuré et moderne',     headerBg: 'bg-primary',   headerH: 'h-1',  bodyBg: 'bg-white' },
@@ -36,7 +37,17 @@ export default function OnboardingTemplatePage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
         <div className="mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg mb-4">F</div>
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => router.push('/onboarding/address')}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Retour"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg">F</div>
+          </div>
           <h2 className="text-2xl font-bold text-gray-900">Choisissez votre modèle</h2>
           <p className="text-gray-500 text-sm mt-1">Vous pourrez le modifier plus tard</p>
         </div>
