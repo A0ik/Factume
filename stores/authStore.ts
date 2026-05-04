@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (data) {
       if (data.is_trial_active && data.trial_end_date && new Date(data.trial_end_date) < new Date()) {
         // Appel RPC en arrière-plan — on n'attend pas pour éviter le race condition
-        getSupabaseClient().rpc('expire_trials').catch(() => {});
+        void getSupabaseClient().rpc('expire_trials');
         set({ profile: { ...data, is_trial_active: false, subscription_tier: 'free' } });
       } else {
         set({ profile: data });
