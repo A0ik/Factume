@@ -100,41 +100,41 @@ export default function Calendar({
   }, [currentMonth, daysInMonth, adjustedFirstDay]);
 
   return (
-    <div className={cn("bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden", className)}>
+    <div className={cn("bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-lg overflow-hidden", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-primary/10 border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 border-b border-gray-200 dark:border-slate-700">
         <button
           type="button"
           onClick={prevMonth}
           disabled={disabled}
-          className="p-2 rounded-lg hover:bg-white/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-white/80 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={18} className="text-gray-700 dark:text-gray-300" />
         </button>
-        <h3 className="text-base font-bold text-gray-900">
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </h3>
         <button
           type="button"
           onClick={nextMonth}
           disabled={disabled}
-          className="p-2 rounded-lg hover:bg-white/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-white/80 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronRight size={18} />
+          <ChevronRight size={18} className="text-gray-700 dark:text-gray-300" />
         </button>
       </div>
 
       {/* Days of week */}
-      <div className="grid grid-cols-7 gap-px bg-gray-200">
+      <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
         {dayNames.map((day) => (
-          <div key={day} className="bg-gray-50 py-2 text-center">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{day}</span>
+          <div key={day} className="bg-gray-50 dark:bg-slate-800 py-2 text-center">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{day}</span>
           </div>
         ))}
       </div>
 
       {/* Calendar days */}
-      <div className="grid grid-cols-7 gap-px bg-gray-200">
+      <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-slate-700">
         {calendarDays.map((day, index) => (
           <button
             key={index}
@@ -143,8 +143,8 @@ export default function Calendar({
             disabled={isDisabled(day.date)}
             className={cn(
               "relative h-11 transition-colors disabled:cursor-not-allowed",
-              day.isOtherMonth ? "bg-gray-50" : "bg-white",
-              !day.isOtherMonth && "hover:bg-primary/5",
+              day.isOtherMonth ? "bg-gray-50 dark:bg-slate-800" : "bg-white dark:bg-slate-900",
+              !day.isOtherMonth && "hover:bg-primary/5 dark:hover:bg-primary/10",
               isDisabled(day.date) && "opacity-40",
               isSelected(day.date) && "bg-primary text-white hover:bg-primary-dark",
               !isSelected(day.date) && isToday(day.date) && "ring-2 ring-primary/30 ring-inset"
@@ -152,7 +152,7 @@ export default function Calendar({
           >
             <span className={cn(
               "text-sm font-medium",
-              day.isOtherMonth ? "text-gray-300" : isSelected(day.date) ? "text-white" : "text-gray-700"
+              day.isOtherMonth ? "text-gray-300 dark:text-gray-600" : isSelected(day.date) ? "text-white" : "text-gray-700 dark:text-gray-300"
             )}>
               {day.day}
             </span>

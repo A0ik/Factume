@@ -55,7 +55,7 @@ function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavI
           'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
           active
             ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
-            : 'bg-gradient-to-br from-blue-100 to-blue-200/80 dark:from-blue-900/40 dark:to-blue-800/40 text-blue-600 dark:text-blue-400 group-hover:scale-110',
+            : 'bg-gradient-to-br from-emerald-100 to-emerald-200/80 dark:from-emerald-900/40 dark:to-emerald-800/40 text-primary dark:text-primary/80 group-hover:scale-110',
         )}>
           <FileText size={17} strokeWidth={active ? 2.5 : 2} />
         </span>
@@ -75,7 +75,7 @@ function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavI
         className={cn(
           'w-full flex items-center gap-3 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200',
           expanded
-            ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/20'
+            ? 'text-primary dark:text-primary/80 bg-primary/10 dark:bg-primary/5'
             : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
         )}
       >
@@ -126,14 +126,14 @@ function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavI
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-gradient-to-r from-blue-500/15 to-blue-500/5 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200/50 dark:border-blue-800/30'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-blue-50/60 hover:to-blue-100/30 dark:hover:from-blue-900/10 dark:hover:to-blue-800/5',
+                      ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary dark:text-primary/80 shadow-sm border border-primary/20 dark:border-primary/30'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-emerald-50/60 hover:to-emerald-100/30 dark:hover:from-emerald-900/10 dark:hover:to-emerald-800/5',
                   )}
                 >
                   <span className={cn(
                     'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all duration-200',
                     isActive
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                      ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30'
                       : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
                   )}>
                     <item.icon size={15} strokeWidth={isActive ? 2.5 : 2} />
@@ -143,7 +143,7 @@ function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavI
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm"
+                      className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
                     />
                   )}
                 </Link>
@@ -181,10 +181,15 @@ export default function MobileDrawer({ open, onClose }: Props) {
       { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     ];
 
-    // Notes de frais - Pro/Business only (completely hidden for Free/Solo)
-    if (sub.effectiveIsPro) {
-      main.push({ href: '/expenses', icon: Receipt, label: 'Notes de frais' });
-    }
+    // Notes de frais - Show with Pro indicator for all, only accessible for Pro/Business
+    main.push({
+      href: '/expenses',
+      icon: Receipt,
+      label: 'Notes de frais',
+      locked: !sub.effectiveIsPro,
+      lockReason: 'Disponible avec Pro',
+      unlockTier: 'pro',
+    });
 
     main.push(
       { href: '/clients',   icon: Users,           label: 'Clients' },
@@ -373,8 +378,8 @@ export default function MobileDrawer({ open, onClose }: Props) {
                 {/* Documents hub - Combined button + expandable */}
                 <div className="mt-2">
                   <div className="flex items-center gap-2 px-1 mb-2">
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center">
-                      <FileText size={12} className="text-blue-500" strokeWidth={2.5} />
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                      <FileText size={12} className="text-primary" strokeWidth={2.5} />
                     </div>
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documents</p>
                   </div>

@@ -131,12 +131,12 @@ export default function WorkspacePage() {
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Workspace</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Collaborez en équipe sur vos factures et clients</p>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100">Workspace</h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Collaborez en équipe sur vos factures et clients</p>
         </div>
 
         {/* Hero */}
-        <div className="bg-gray-950 rounded-3xl p-8 text-white text-center relative overflow-hidden">
+        <div className="bg-gray-950 dark:bg-slate-950 rounded-3xl p-8 text-white text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-blue-600/10 pointer-events-none" />
           <div className="relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mx-auto mb-4">
@@ -159,16 +159,16 @@ export default function WorkspacePage() {
         {/* Features */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { icon: Shield, title: 'Rôles granulaires', desc: 'Propriétaire, Admin, Membre ou Lecteur — contrôlez chaque accès', color: 'text-blue-500', bg: 'bg-blue-50' },
-            { icon: Mail, title: 'Invitations par email', desc: 'Envoyez une invitation sécurisée, le membre rejoint en un clic', color: 'text-purple-500', bg: 'bg-purple-50' },
-            { icon: Globe, title: 'Données partagées', desc: 'Clients et factures accessibles à toute l\'équipe selon les droits', color: 'text-green-600', bg: 'bg-green-50' },
+            { icon: Shield, title: 'Rôles granulaires', desc: 'Propriétaire, Admin, Membre ou Lecteur — contrôlez chaque accès', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+            { icon: Mail, title: 'Invitations par email', desc: 'Envoyez une invitation sécurisée, le membre rejoint en un clic', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+            { icon: Globe, title: 'Données partagées', desc: 'Clients et factures accessibles à toute l\'équipe selon les droits', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20' },
           ].map((f) => (
-            <div key={f.title} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div key={f.title} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-4 shadow-sm">
               <div className={`w-9 h-9 rounded-xl ${f.bg} flex items-center justify-center mb-3`}>
                 <f.icon size={17} className={f.color} />
               </div>
-              <p className="font-bold text-gray-900 text-sm">{f.title}</p>
-              <p className="text-xs text-gray-400 mt-1">{f.desc}</p>
+              <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{f.title}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{f.desc}</p>
             </div>
           ))}
         </div>
@@ -205,17 +205,17 @@ export default function WorkspacePage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gray-950 flex items-center justify-center text-white font-black text-lg shadow-md">
+          <div className="w-14 h-14 rounded-2xl bg-gray-950 dark:bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-md">
             {(workspace?.name ?? 'W').charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900">{workspace?.name}</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100">{workspace?.name}</h1>
             {workspace?.description && (
-              <p className="text-sm text-gray-400 mt-0.5">{workspace.description}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{workspace.description}</p>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-400">{members.length + 1} membre{members.length !== 0 ? 's' : ''}</span>
-              <span className="w-1 h-1 rounded-full bg-gray-300" />
+              <span className="text-xs text-gray-400 dark:text-gray-500">{members.length + 1} membre{members.length !== 0 ? 's' : ''}</span>
+              <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               <span className="text-xs text-primary font-semibold capitalize">{workspace?.plan ?? 'free'}</span>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function WorkspacePage() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowSettingsModal(true)}
-              className="flex items-center gap-1.5 border border-gray-200 px-3 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+              className="flex items-center gap-1.5 border border-gray-200 dark:border-slate-700 px-3 py-2 rounded-xl text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-slate-600 transition-all"
             >
               <Settings size={14} /> Paramètres
             </button>
@@ -236,14 +236,14 @@ export default function WorkspacePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-gray-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
         {(['members', 'settings'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-semibold transition-all capitalize',
-              activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+              activeTab === tab ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
             )}
           >
             {tab === 'members' ? `Membres (${members.length + 1})` : 'Paramètres'}
@@ -255,9 +255,9 @@ export default function WorkspacePage() {
       {activeTab === 'members' && (
         <div className="space-y-3">
           {/* Owner row */}
-          <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-gray-50/60">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Propriétaire</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 divide-y divide-gray-50 dark:divide-slate-800 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50/60 dark:bg-slate-800/60">
+              <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Propriétaire</p>
             </div>
             <div className="flex items-center gap-4 px-5 py-4">
               <div
@@ -267,10 +267,10 @@ export default function WorkspacePage() {
                 {getInitials(profile?.company_name || profile?.first_name || 'O')}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-sm truncate">
+                <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">
                   {profile?.company_name || profile?.first_name || 'Mon compte'}
                 </p>
-                <p className="text-xs text-gray-400 truncate">{profile?.email}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{profile?.email}</p>
               </div>
               <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold', ROLE_CONFIG.owner.bg, ROLE_CONFIG.owner.color)}>
                 <Crown size={11} />
@@ -281,13 +281,13 @@ export default function WorkspacePage() {
 
           {/* Members list */}
           {members.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 bg-gray-50/60 border-b border-gray-50">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 bg-gray-50/60 dark:bg-slate-800/60 border-b border-gray-50 dark:border-slate-800">
+                <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   Membres invités ({members.length})
                 </p>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-slate-800">
                 {members.map((member, idx) => {
                   const roleConf = ROLE_CONFIG[member.role];
                   const statusConf = STATUS_CONFIG[member.status];
@@ -295,7 +295,7 @@ export default function WorkspacePage() {
                   const RoleIcon = roleConf.icon;
 
                   return (
-                    <div key={member.id} className="flex items-center gap-4 px-5 py-4 group hover:bg-gray-50/50 transition-colors">
+                    <div key={member.id} className="flex items-center gap-4 px-5 py-4 group hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       <div
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                         style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}

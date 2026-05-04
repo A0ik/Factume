@@ -28,9 +28,41 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENROUTER_API_KEY,
     });
 
-    const systemPrompt = `Tu es un assistant expert en extraction de données depuis des documents administratifs français.
-Extrais les informations pertinentes pour un contrat de travail (CDD, CDI, ou autre).
-Retourne UNIQUEMENT du JSON valide (pas de markdown) avec ce format (null si non trouvé):
+    const systemPrompt = `Tu es un assistant expert en extraction de données depuis des documents administratifs français, spécialisé dans les contrats de travail.
+
+INSTRUCTIONS PRÉCISES D'EXTRACTION :
+
+1. NUMÉRO DE SÉCURITÉ SOCIALE (NIR) :
+   - Cherche tous les formats : 15 chiffres, X XX XX XX XXX XXX XX, ou avec clés (2 chiffres à la fin)
+   - Termes associés : NIR, numéro Sécu, sécurité sociale, SS, numéro d'inscription
+   - Nettoie : retire tous les espaces, tirets et caractères non numériques (garde 15 chiffres)
+   - Exemples : 185012345678912, 1 85 01 23 456 789 12 → 185012345678912
+
+2. NATIONALITÉ :
+   - Cherche : nationalité, de nationalité, Français(e), Française, étranger
+   - Valeurs courantes : Française, Marocaine, Algérienne, Tunisienne, Italienne, Espagnole, Portugaise
+   - Convertis au féminin singulier si possible
+
+3. DATES DE CONTRAT :
+   - Cherche : date de début, date de fin, début du contrat, fin du contrat, durée, prise de fonction, à compter du, jusqu'au
+   - Formats acceptés : JJ/MM/AAAA, JJ-MM-AAAA, en toutes lettres (1er janvier 2025)
+   - Convertis TOUJOURS au format YYYY-MM-DD
+
+4. MONTANTS ET SALAIRES :
+   - Cherche : salaire, rémunération, montant, taux horaire
+   - Extrais le montant numérique uniquement (sans €, sans espaces)
+   - Convertis en nombre décimal si nécessaire
+
+5. COORDONNÉES :
+   - Email : cherche les formats standard (nom@domaine.fr)
+   - Téléphone : cherche formats français (06 XX XX XX XX, +33 6 XX XX XX XX)
+   - Adresse complète : complète avec code postal et ville si possible
+
+6. RAISON SOCIALE ET SIRET :
+   - Nom de l'entreprise : cherche "Raison sociale", "Entreprise", "Société"
+   - SIRET : 14 chiffres, peut être écrit avec ou sans espaces
+
+Retourne UNIQUEMENT du JSON valide (pas de markdown, pas de commentaires) avec ce format (null si non trouvé) :
 {
   "employeeFirstName": "string ou null",
   "employeeLastName": "string ou null",
@@ -40,7 +72,7 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown) avec ce format (null si non
   "employeeEmail": "string ou null",
   "employeePhone": "string ou null",
   "employeeBirthDate": "string ou null (format YYYY-MM-DD)",
-  "employeeSocialSecurity": "string ou null",
+  "employeeSocialSecurity": "string ou null (15 chiffres, sans espaces ni tirets)",
   "employeeNationality": "string ou null",
   "contractStartDate": "string ou null (format YYYY-MM-DD)",
   "contractEndDate": "string ou null (format YYYY-MM-DD)",
@@ -55,9 +87,9 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown) avec ce format (null si non
   "companyCity": "string ou null",
   "companySiret": "string ou null",
   "employerName": "string ou null",
-  "contractReason": "string ou null (pour CDD)",
+  "contractReason": "string ou null (pour CDD : remplacement, accroisse, saisonnier, usage)",
   "replacedEmployeeName": "string ou null",
-  "contractClassification": "string ou null (pour CDI)",
+  "contractClassification": "string ou null (pour CDI : niveau, coefficient, catégorie)",
   "workingHours": "string ou null"
 }`;
 
@@ -82,15 +114,17 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown) avec ce format (null si non
         if (text.length > 50) {
           const completion = await withTimeout(
             openrouter.chat.completions.create({
-              model: 'mistralai/mistral-small-24b-instruct-2501',
+              // Modèle économique et performant pour l'extraction de données françaises
+              model: 'google/gemma-3-27b-it',
               messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: `Analyse ce document et extrais les informations :\n\n${text.slice(0, 12000)}` },
+                { role: 'user', content: `Analyse ce document de contrat et extrais les informations demandées avec précision :\n\n${text.slice(0, 12000)}` },
               ],
               response_format: { type: 'json_object' },
-              temperature: 0.1,
+              temperature: 0, // Température nulle pour une extraction plus précise
+              max_tokens: 2000,
             }),
-            30000
+            35000 // Timeout augmenté pour les contrats longs
           );
           responseText = completion.choices[0].message.content;
         }
@@ -105,9 +139,9 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown) avec ce format (null si non
       const imgMime = isImage ? mimeType : 'image/jpeg';
 
       const VISION_MODELS = [
-        'google/gemini-2.0-flash-exp',
-        'meta-llama/llama-3.2-11b-vision',
-        'openai/gpt-4o-mini',
+        'google/gemini-2.0-flash-exp', // Rapide et gratuit, excellent pour l'OCR
+        'meta-llama/llama-3.2-90b-vision-preview', // Plus précis pour les contrats complexes
+        'openai/gpt-4o-mini', // Fallback fiable
       ];
 
       for (const model of VISION_MODELS) {

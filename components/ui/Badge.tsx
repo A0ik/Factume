@@ -10,12 +10,12 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
-    default: 'bg-gray-100 text-gray-600',
-    success: 'bg-primary-light text-primary-dark',
-    warning: 'bg-yellow-100 text-yellow-700',
-    danger: 'bg-red-100 text-red-600',
-    info: 'bg-blue-100 text-blue-600',
-    purple: 'bg-purple-100 text-purple-600',
+    default: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400',
+    success: 'bg-primary-light/30 dark:bg-primary/20 text-primary-dark dark:text-primary/80',
+    warning: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+    danger: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+    info: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
   };
   return (
     <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', variants[variant], className)}>

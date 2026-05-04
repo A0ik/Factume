@@ -136,7 +136,7 @@ export function VoiceInput({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute -top-16 left-0 right-0 z-50 bg-gradient-to-r from-primary/10 to-purple-600/10 backdrop-blur-xl border border-primary/30 rounded-2xl p-4 shadow-xl"
+              className="absolute -top-16 left-0 right-0 z-50 bg-gradient-to-r from-primary/10 to-purple-600/10 dark:from-primary/20 dark:to-purple-600/20 backdrop-blur-xl border border-primary/30 dark:border-primary/40 rounded-2xl p-4 shadow-xl"
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -146,12 +146,12 @@ export function VoiceInput({
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-purple-600 animate-ping opacity-30" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-medium">Écoute en cours...</p>
-                  <p className="text-sm font-semibold text-gray-900">{transcript || placeholder}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Écoute en cours...</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{transcript || placeholder}</p>
                 </div>
                 <button
                   onClick={toggleListening}
-                  className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                 >
                   <MicOff size={16} />
                 </button>

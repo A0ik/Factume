@@ -286,7 +286,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Main layout */}
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 p-3 sm:p-4 lg:p-6">
+      <div className="flex flex-col lg:flex-row gap-3 xs:gap-4 lg:gap-6 p-2 xs:p-3 sm:p-4 lg:p-6">
         {/* Left column: Header + Calendar Grid (swipeable on mobile) */}
         <div
           className="flex-1 flex flex-col gap-3 sm:gap-4"

@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader2, Check, AlertCircle } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, AlertCircle, Lightbulb } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -374,9 +374,12 @@ export function PulseVoiceRecorder({
           animate={{ opacity: 1 }}
           className="w-full p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
         >
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            <strong>💡 Astuce:</strong> Dites{" "}
-            <span className="italic">"Facture pour Startup Tech, site web 3500€ HT, design 1500€ HT"</span>
+          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
+            <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Astuce:</strong> Dites{" "}
+              <span className="italic">"Facture pour Startup Tech, site web 3500€ HT, design 1500€ HT"</span>
+            </span>
           </p>
         </motion.div>
       )}

@@ -34,7 +34,7 @@ export function MagnificentCalendarDayCell({
   className,
 }: MagnificentCalendarDayCellProps) {
   if (day === null) {
-    return <div className="aspect-square sm:aspect-auto sm:min-h-[52px]" />;
+    return <div className="aspect-square xs:aspect-auto xs:min-h-[48px] sm:min-h-[52px]" />;
   }
 
   const date = new Date(currentYear, currentMonth, day);
@@ -55,8 +55,8 @@ export function MagnificentCalendarDayCell({
       whileTap={{ scale: 0.93 }}
       onClick={onClick}
       className={cn(
-        'relative aspect-square sm:aspect-auto sm:min-h-[52px] rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-200',
-        'group overflow-hidden flex flex-col items-center justify-between py-1.5 px-1',
+        'relative aspect-square xs:aspect-auto xs:min-h-[48px] sm:min-h-[52px] rounded-xl sm:rounded-2xl cursor-pointer transition-all duration-200',
+        'group overflow-hidden flex flex-col items-center justify-between py-1 xs:py-1.5 px-0.5 xs:px-1',
         // Background
         todayFlag && !isSelected
           ? 'bg-gradient-to-br from-primary/20 to-emerald-500/20 dark:from-primary/30 dark:to-emerald-500/30'
@@ -83,25 +83,25 @@ export function MagnificentCalendarDayCell({
 
       {/* Event dots */}
       {totalEvents > 0 ? (
-        <div className="flex gap-0.5 sm:gap-1 items-center justify-center">
+        <div className="flex gap-0.5 xs:gap-1 items-center justify-center">
           {hasAppts && (
-            <div className={cn('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white/90' : 'bg-primary')} />
+            <div className={cn('w-1 h-1 xs:w-1.5 xs:h-1.5 rounded-full', isSelected ? 'bg-white/90' : 'bg-primary')} />
           )}
           {hasInvoices && (
-            <div className={cn('w-1.5 h-1.5 rounded-full', isSelected ? 'bg-white/70' : 'bg-amber-500')} />
+            <div className={cn('w-1 h-1 xs:w-1.5 xs:h-1.5 rounded-full', isSelected ? 'bg-white/70' : 'bg-amber-500')} />
           )}
         </div>
       ) : (
-        <div className="h-1.5" />
+        <div className="h-1 xs:h-1.5" />
       )}
 
       {/* Today ring */}
       {todayFlag && !isSelected && (
-        <div className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-primary/50 pointer-events-none" />
+        <div className="absolute inset-0 rounded-xl xs:rounded-2xl border-2 border-primary/50 pointer-events-none" />
       )}
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none rounded-xl sm:rounded-2xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none rounded-xl xs:rounded-2xl" />
     </motion.div>
   );
 }

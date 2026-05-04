@@ -20,22 +20,46 @@ export async function POST(req: NextRequest) {
 
     // System prompts for different contract types
     const systemPrompts: Record<string, string> = {
-      cdd: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDD.
-À partir du texte fourni, extrait les informations pertinentes pour un contrat CDD.
+      cdd: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDD (Contrats à Durée Déterminée).
 
-IMPORTANT - Numéro de Sécurité sociale:
-- Cherche les formats: 15 chiffres, X XX XX XX XXX XXX XX, ou avec clés (2 chiffres à la fin)
-- Peut être écrit: NIR, numéro Sécu, sécurité sociale, SS
-- Exemples: 185012345678912, 1 85 01 23 456 789 12, 18501234567891234 (avec clé)
+INSTRUCTIONS PRÉCISES D'EXTRACTION POUR UN CDD :
 
-IMPORTANT - Nationalité:
-- Cherche: nationalité, de nationalité, Français(e), Française, étranger, etc.
-- Valeurs courantes: Française, Marocaine, Algérienne, Tunisienne, Italienne, Espagnole, Portugaise, etc.
+1. IDENTIFICATION DU SALARIÉ :
+   - Prénom et nom : cherche en priorité l'en-tête "Salarié", "Employé", "Collaborateur"
+   - Adresse complète : numéro, rue, code postal, ville
+   - Nationalité : Française, Marocaine, Algérienne, etc.
+   - Date de naissance : format JJ/MM/AAAA ou en toutes lettres → YYYY-MM-DD
+   - NIR/Sécu : 15 chiffres, retire tous les espaces et tirets
 
-IMPORTANT - Dates de contrat:
-- Cherche: date de début, date de fin, début du contrat, fin du contrat, durée
-- Formats acceptés: JJ/MM/AAAA, JJ-MM-AAAA, en toutes lettres, "à compter du", "jusqu'au"
-- Convertis toujours au format YYYY-MM-DD
+2. DATES ET DURÉE DU CONTRAT :
+   - Date début : "date de début", "début du contrat", "à compter du", "prend effet"
+   - Date fin : "date de fin", "fin du contrat", "jusqu'au", "durée de"
+   - Durée totale : peut être exprimée en semaines ou mois
+   - Période d'essai : "période d'essai", "essai", durée en jours
+
+3. MOTIF DU RECOURS AU CDD (OBLIGATOIRE) :
+   - Remplacement : "remplacement de", "remplace", "titulaire"
+   - Accroisse d'activité : "accroisse", "augmentation temporaire d'activité"
+   - Saisonnier : "saison", "saisonnier", "activité saisonnière"
+   - Usage : "contrat d'usage", "secteur d'usage", "convention"
+   - Nom du salarié remplacé : si motif = remplacement
+
+4. RÉMUNÉRATION :
+   - Montant du salaire : extraire le nombre uniquement
+   - Taux horaire : peut inclure des primes ou commissions
+   - Fréquence : mensuel (mois), horaire (heure)
+   - Peut inclure : primes, avantages en nature, congés payés
+
+5. POSTE ET CONDITIONS DE TRAVAIL :
+   - Intitulé du poste : "fonction", "poste", "emploi occupé"
+   - Lieu de travail : adresse, télétravail possible
+   - Horaires : durée hebdomadaire, heures par jour
+
+6. EMPLOYEUR / ENTREPRISE :
+   - Dénomination sociale : nom légal de l'entreprise
+   - Adresse complète du siège
+   - SIRET : 14 chiffres
+   - Nom de l'employeur : personne signataire
 
 Format JSON attendu (null si non trouvé) :
 {
@@ -68,22 +92,44 @@ Format JSON attendu (null si non trouvé) :
   "employerTitle": "string ou null"
 }`,
 
-      cdi: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDI.
-À partir du texte fourni, extrait les informations pertinentes pour un contrat CDI.
+      cdi: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDI (Contrats à Durée Indéterminée).
 
-IMPORTANT - Numéro de Sécurité sociale:
-- Cherche les formats: 15 chiffres, X XX XX XX XXX XXX XX, ou avec clés (2 chiffres à la fin)
-- Peut être écrit: NIR, numéro Sécu, sécurité sociale, SS
-- Exemples: 185012345678912, 1 85 01 23 456 789 12, 18501234567891234 (avec clé)
+INSTRUCTIONS PRÉCISES D'EXTRACTION POUR UN CDI :
 
-IMPORTANT - Nationalité:
-- Cherche: nationalité, de nationalité, Français(e), Française, étranger, etc.
-- Valeurs courantes: Française, Marocaine, Algérienne, Tunisienne, Italienne, Espagnole, Portugaise, etc.
+1. IDENTIFICATION DU SALARIÉ :
+   - Prénom et nom : cherche "Salarié", "Employé", "Collaborateur", "Mr", "Mme"
+   - Adresse : numéro, rue, code postal, ville
+   - Nationalité : Française, Marocaine, Algérienne, Tunisienne, etc.
+   - Date de naissance : JJ/MM/AAAA ou en toutes lettres → YYYY-MM-DD
+   - NIR/Sécu : 15 chiffres, retire espaces et tirets
+   - Qualification : métier, qualification professionnelle
 
-IMPORTANT - Dates de contrat:
-- Cherche: date de début, début du contrat, prise de fonction, à compter du
-- Formats acceptés: JJ/MM/AAAA, JJ-MM-AAAA, en toutes lettres
-- Convertis toujours au format YYYY-MM-DD
+2. DATES ET PÉRIODE D'ESSAI :
+   - Date de début : "date de début", "début du contrat", "prise de fonction", "à compter du"
+   - Période d'essai : durée en jours ou mois, peut être renouvelable
+   - Format : "2 mois", "90 jours", "1 mois renouvelable 1 fois"
+
+3. EMPLOI ET CLASSIFICATION :
+   - Intitulé du poste : "fonction", "poste", "emploi", "titre"
+   - Classification : niveau, coefficient, catégorie professionnelle
+   - Convention collective : IDCC, nom de la convention, applicable
+   - Horaires : durée hebdomadaire, 35h, 39h, temps partiel
+
+4. RÉMUNÉRATION :
+   - Montant : extraire le nombre uniquement (sans €, ni espaces)
+   - Taux horaire ou mensuel
+   - Peut inclure : primes, avantages, 13ème mois, participation
+
+5. CLAUSES PARTICULIÈRES :
+   - Clause d'essai : présence de période d'essai
+   - Clause de non-concurrence : "non-concurrence"
+   - Clause de mobilité : "mobilité géographique", "mutation"
+
+6. EMPLOYEUR :
+   - Raison sociale : nom légal de l'entreprise
+   - Adresse du siège social
+   - SIRET : 14 chiffres
+   - Représentant légal : gérant, directeur, signataire
 
 Format JSON attendu (null si non trouvé) :
 {
@@ -120,8 +166,37 @@ Format JSON attendu (null si non trouvé) :
   "mobilityClause": "boolean ou null"
 }`,
 
-      other: `Tu es un assistant expert en contrats de travail français.
-À partir du texte fourni, extrait les informations pertinentes pour un contrat.
+      other: `Tu es un assistant expert en contrats de travail français, spécialisé dans les autres types de contrats (stage, freelance, intérim, alternance, etc.).
+
+INSTRUCTIONS PRÉCISES D'EXTRACTION :
+
+1. TYPE DE CONTRAT :
+   - stage : "convention de stage", "stage de", "période de stage"
+   - freelance : "prestation de service", "consultant", "freelance"
+   - temp_work : "intérim", "mission", "entreprise utilisatrice"
+   - apprenticeship : "contrat d'apprentissage", "apprenti"
+   - professionalization : "professionnalisation", "alternance"
+   - other : si aucun type identifié
+
+2. PARTIES AU CONTRAT :
+   - Salarié/Stagiaire : prénom, nom, adresse, email, téléphone
+   - Entreprise/Tuteur : nom, adresse, SIRET, représentant
+
+3. DATES ET DURÉE :
+   - Date de début : "date de début", "début", "à compter du"
+   - Date de fin : "date de fin", "fin", "jusqu'au"
+   - Durée : en semaines ou mois
+
+4. RÉMUNÉRATION :
+   - Montant : extraire le nombre uniquement
+   - Fréquence : mensuel, horaire, hebdomadaire, forfait
+   - Gratification (stage) : montant mensuel
+
+5. SPÉCIFICITÉS SELON LE TYPE :
+   - Stage : tuteur, école, objectifs, tâches
+   - Alternance : specialité, formation, objectifs pédagogiques
+   - Intérim : mission, entreprise utilisatrice
+   - Freelance : prestation, livrables
 
 Format JSON attendu (null si non trouvé) :
 {
@@ -152,17 +227,18 @@ Format JSON attendu (null si non trouvé) :
     const systemPrompt = systemPrompts[contract_type] || systemPrompts.other;
 
     const completion = await openrouter.chat.completions.create({
-      // Modèle performant et moins cher sur OpenRouter : Gemma 3 27B
+      // Modèle performant et économique sur OpenRouter : Gemma 3 27B
       // Coût: ~0.10€/M tokens vs ~0.30€/M pour Mistral Small
-      // Performance: Excellente pour le français et les tâches structurées
+      // Performance: Excellente pour le français et l'extraction structurée de données
+      // Alternative: meta-llama/llama-3.3-70b-instruct pour plus de précision si nécessaire
       model: 'google/gemma-3-27b-it',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: text },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.1,
-      max_tokens: 1500,
+      temperature: 0, // Température basse pour une extraction plus précise
+      max_tokens: 2000, // Augmenté pour les contrats plus longs
     });
 
     let parsed: any = {};

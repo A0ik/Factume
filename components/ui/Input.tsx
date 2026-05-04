@@ -12,23 +12,23 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function Input({ label, error, hint, icon, className, ...props }: InputProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
+      {label && <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>}
       <div className="relative">
-        {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
+        {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">{icon}</span>}
         <input
           className={cn(
-            'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all',
+            'w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all',
             'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
-            'disabled:bg-gray-50 disabled:text-gray-500',
-            error && 'border-red-400 focus:ring-red-300 focus:border-red-400',
+            'disabled:bg-gray-50 dark:disabled:bg-slate-800 disabled:text-gray-500 dark:disabled:text-gray-400',
+            error && 'border-red-400 dark:border-red-500 focus:ring-red-300 focus:border-red-400',
             icon != null && 'pl-10',
             className
           )}
           {...props}
         />
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-      {hint && !error && <p className="text-xs text-gray-400">{hint}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+      {hint && !error && <p className="text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
     </div>
   );
 }
@@ -42,19 +42,19 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export function Select({ label, error, options, className, ...props }: SelectProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
+      {label && <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>}
       <select
         className={cn(
-          'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 transition-all appearance-none',
+          'w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 transition-all appearance-none',
           'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
-          error && 'border-red-400',
+          error && 'border-red-400 dark:border-red-500',
           className
         )}
         {...props}
       >
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   );
 }
@@ -67,17 +67,17 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 export function Textarea({ label, error, className, ...props }: TextareaProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
+      {label && <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>}
       <textarea
         className={cn(
-          'w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all resize-none',
+          'w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all resize-none',
           'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
-          error && 'border-red-400',
+          error && 'border-red-400 dark:border-red-500',
           className
         )}
         {...props}
       />
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   );
 }

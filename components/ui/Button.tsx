@@ -14,9 +14,9 @@ export default function Button({ variant = 'primary', size = 'md', loading, icon
 
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary-dark focus:ring-primary shadow-sm hover:shadow-md active:scale-[0.98]',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-300',
-    outline: 'border-2 border-primary text-primary hover:bg-primary/10 focus:ring-primary',
-    ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-300',
+    secondary: 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-slate-700 focus:ring-gray-300 dark:focus:ring-slate-600',
+    outline: 'border-2 border-primary text-primary hover:bg-primary/10 dark:hover:bg-primary/20 focus:ring-primary',
+    ghost: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-gray-300 dark:focus:ring-slate-600',
     danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-sm',
   };
 

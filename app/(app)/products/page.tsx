@@ -1193,6 +1193,7 @@ export default function ProductsPage() {
                     </div>
                   </div>
                   <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Unité *</label>
                     <CustomSelect
                       options={UNITS.map((u) => ({
                         value: u.value,
@@ -1200,7 +1201,7 @@ export default function ProductsPage() {
                       }))}
                       value={form.unit}
                       onChange={(v) => set('unit', v)}
-                      placeholder="Unité"
+                      placeholder="Sélectionner"
                     />
                   </div>
                 </div>

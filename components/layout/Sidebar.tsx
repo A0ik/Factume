@@ -152,10 +152,28 @@ export default function Sidebar() {
   const buildToolsNav = (): NavItem[] => {
     const tools: NavItem[] = [
       { href: '/offline/workspace', icon: Building2, label: 'Workspace', badge: null },
+    ];
+
+    // Pipeline CRM - Pro/Business only - show with lock indicator for Free/Solo
+    if (!sub.canUseCRM) {
+      tools.push({
+        href: '/crm',
+        icon: Target,
+        label: 'Pipeline CRM',
+        locked: true,
+        lockReason: 'Disponible avec Pro',
+        unlockTier: 'pro',
+      });
+    } else {
+      tools.push({ href: '/crm', icon: Target, label: 'Pipeline CRM' });
+    }
+
+    tools.push(
       { href: '/notifications',     icon: Bell,      label: 'Notifications', badge: unreadCount > 0 ? 'notif' : null },
       { href: '/settings',          icon: Settings,  label: 'Paramètres',    badge: null },
       { href: '/help',              icon: HelpCircle,label: 'Aide',           badge: null },
-    ];
+    );
+
     return tools;
   };
 
@@ -169,15 +187,6 @@ export default function Sidebar() {
         lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro',
         unlockTier: 'pro',
         badge: sub.effectiveIsPro ? undefined : 'Disponible',
-      },
-      {
-        href: '/crm',
-        icon: Target,
-        label: 'Pipeline CRM',
-        enabled: sub.canUseCRM,
-        lockReason: sub.canUseCRM ? undefined : 'Disponible avec Pro',
-        unlockTier: 'pro',
-        badge: sub.canUseCRM ? undefined : 'Disponible',
       },
       {
         href: '/ocr',
