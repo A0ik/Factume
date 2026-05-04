@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
 
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
+CONTEXTE: L'utilisateur modifie une facture existante par voix. Analyse avec précision son intention.
+
 RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
 - "FAC" ou "Facture" → Facture
@@ -62,17 +64,16 @@ RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "TTC" → Toutes taxes comprises
 - "TVA" → Taxe sur la valeur ajoutée
 
-L'utilisateur a déjà une facture en cours avec les lignes suivantes :
-
 LIGNES EXISTANTES :
 ${existingList}
 
 L'utilisateur vient de dicter une modification. Analyse son intention précisément :
 
-- "ajoute / rajoute / nouvelle ligne / et aussi" → AJOUTER le(s) nouvel(s) item(s) à la liste existante
-- "modifie / change / mets à X€ / X jours / la ligne N" → MODIFIER uniquement l'item concerné
-- "supprime / enlève la ligne N / retire" → SUPPRIMER l'item concerné
-- "remplace tout / nouvelle facture / efface tout" → REMPLACER toute la liste
+INTENTIONS POSSIBLES :
+- "ajoute / rajoute / nouvelle ligne / et aussi / en plus" → AJOUTER le(s) nouvel(s) item(s) à la liste existante
+- "modifie / change / mets à X€ / X jours / la ligne N / remplace la ligne" → MODIFIER uniquement l'item concerné
+- "supprime / enlève / retire la ligne N / supprime le premier" → SUPPRIMER l'item concerné
+- "remplace tout / nouvelle facture / efface tout / recommence" → REMPLACER toute la liste
 
 Retourne UNIQUEMENT du JSON valide :
 {
@@ -96,6 +97,8 @@ RÈGLES ABSOLUES :
     } else {
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
+CONTEXTE: L'utilisateur dicte une facture par voix. Extrais TOUTES les informations pertinentes de manière professionnelle.
+
 RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
 - "FAC" ou "Facture" → Facture
@@ -108,13 +111,17 @@ RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "TTC" → Toutes taxes comprises
 - "TVA" → Taxe sur la valeur ajoutée
 
-L'utilisateur vient de dicter une facture à voix haute. Extrais les informations et retourne UNIQUEMENT du JSON valide.
+EXTRACTION OBLIGATOIRE :
+1. CLIENT: Toute mention de "client", "pour", "chez", "agence", "startup", "société", "entreprise"
+2. LIGNES: Chaque prestation/produit mentionné avec quantité et prix
+3. DÉLAI: "30 jours", "60 jours", "à réception", "comptant", "15 jours"
+4. REMISE: Uniquement si explicite ("remise 10%", "faire une remise", "-10%")
 
-Format attendu:
+Format JSON attendu:
 {
   "action": "replaced",
   "summary": null,
-  "client_name": "string ou null",
+  "client_name": "string ou null — nom du client",
   "client_email": "string ou null — email du client",
   "client_phone": "string ou null — téléphone du client",
   "client_address": "string ou null — adresse rue du client",
@@ -128,24 +135,41 @@ Format attendu:
   "discount_percent": number
 }
 
-Règles ABSOLUES pour les descriptions :
+RÈGLES ABSOLUES pour les descriptions :
 - NE JAMAIS recopier mot pour mot ce que l'utilisateur a dit
-- Rédige une description PROFESSIONNELLE et COMMERCIALE, comme on le ferait sur une vraie facture
-- Ex: l'utilisateur dit "site internet pour mon client" → description: "Conception et développement de site web"
-- Ex: l'utilisateur dit "logo" → description: "Création d'identité visuelle et logotype"
-- Ex: l'utilisateur dit "3 jours de conseil" → description: "Prestation de conseil et accompagnement stratégique"
-- La description doit être claire, professionnelle, entre 3 et 10 mots
-- unit_price est TOUJOURS HT (hors taxes) — DOIT être un nombre fini, jamais une expression
-- Extrais LES INFORMATIONS CLIENT si mentionnées : email, téléphone, adresse, code postal, ville, SIRET, numéro de TVA
-- SIRET : 14 chiffres sans espaces ni points
-- TVA : format français FRXX123456789 (où XX = numéro de clé, 9 chiffres = SIREN)
+- Rédige une description PROFESSIONNELLE et COMMERCIALE
+- "site internet" → "Conception et développement de site web"
+- "logo" → "Création d'identité visuelle et logotype"
+- "3 jours de conseil" → "Prestation de conseil et accompagnement stratégique"
+- Description entre 3 et 10 mots, claire et professionnelle
+
+RÈGLES POUR LES MONTANTS :
+- unit_price est TOUJOURS HT — DOIT être un nombre fini
+- Si le montant est TTC, calcule TOI-MÊME le HT : HT = TTC / (1 + TVA/100)
+- TVA standard = 20%, réduite = 10%, très réduite = 5.5%, exonérée = 0%
 - vat_rate par défaut = 20
-- due_days = délai de paiement en jours (30 par défaut)
-- IMPORTANT: discount_percent (remise globale) ne doit être ajouté QUE si l'utilisateur le demande explicitement (ex: "remise 10%", "10% de remise", "faire une remise"). Si l'utilisateur ne mentionne aucune remise, mets discount_percent à 0.
-- CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
-- Exemple CORRECT : unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
-- Exemple FAUX : unit_price: 400 / 1.10
-- Si le montant est TTC, calcule TOI-MÊME le HT avant d'écrire le JSON`;
+- CORRECT: unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
+- FAUX: unit_price: 400 / 1.10
+
+INFORMATIONS CLIENT :
+- SIRET: 14 chiffres sans espaces ni points
+- TVA: format FRXX123456789 (XX = clé, 9 chiffres = SIREN)
+
+DÉLAI DE PAIEMENT :
+- "à réception" / "comptant" / "sur place" → due_days: 0
+- "15 jours" → due_days: 15
+- "30 jours" (défaut) → due_days: 30
+- "45 jours" → due_days: 45
+- "60 jours" → due_days: 60
+- "fin de mois" → ajouter aux jours indiqués
+
+REMISE:
+- NE JAMAIS mettre de remise par défaut
+- Uniquement si l'utilisateur le demande explicitement
+- "remise 10%" ou "10% de remise" → discount_percent: 10
+- Sans mention → discount_percent: 0
+
+RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'expressions`;
     }
 
     const completion = await groq.chat.completions.create({

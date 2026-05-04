@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { toast } from 'sonner';
+import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-recording';
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
@@ -63,20 +64,12 @@ export default function NewFacturePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Voice recording
-  const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [voiceError, setVoiceError] = useState('');
-  const [recordTime, setRecordTime] = useState(0);
-  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const pendingIdRef = useRef<string | null>(null);
-
   // AI generation
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+
+  const pendingIdRef = useRef<string | null>(null);
 
   // Form state
   const [clientName, setClientName] = useState(paramClientName || '');
@@ -223,111 +216,55 @@ export default function NewFacturePage() {
     }
   };
 
-  const startRecording = async () => {
-    if (!sub.canUseVoice) { router.push('/paywall'); return; }
-    setVoiceError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.onstop = () => { stream.getTracks().forEach((t) => t.stop()); processVoiceBlob(); };
-      mediaRecorderRef.current = mr;
-      mr.start();
-      recordTimerRef.current = setInterval(() => setRecordTime((t) => t + 1), 1000);
-      setRecording(true);
-    } catch {
-      setVoiceError('Accès au micro refusé. Vérifiez les permissions dans votre navigateur.');
+  // Voice result handler
+  const handleVoiceResult = (result: VoiceAnalysisResult) => {
+    if (result.client_name) {
+      const searchTerm = result.client_name.toLowerCase();
+      let matchingClient = clients.find(c => c.name.toLowerCase() === searchTerm);
+      if (!matchingClient) {
+        matchingClient = clients.find(c =>
+          c.name.toLowerCase().includes(searchTerm) ||
+          searchTerm.includes(c.name.toLowerCase())
+        );
+      }
+      if (matchingClient) {
+        setClientId(matchingClient.id);
+        setClientName(matchingClient.name);
+        toast.success(`Client "${matchingClient.name}" sélectionné automatiquement`);
+      } else {
+        setClientName(result.client_name);
+        setClientId(null);
+      }
     }
-  };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
-    setRecording(false);
-    setRecordTime(0);
-    setLoading(true);
-  };
+    if (!clientId) {
+      if (result.client_email) setClientEmail(result.client_email);
+      if (result.client_phone) setClientPhone(result.client_phone);
+      if (result.client_address) setClientAddress(result.client_address);
+      if (result.client_city) setClientCity(result.client_city);
+      if (result.client_postal_code) setClientPostalCode(result.client_postal_code);
+      if (result.client_siret) setClientSiret(result.client_siret);
+      if (result.client_vat_number) setClientVatNumber(result.client_vat_number);
+    }
 
-  const processVoiceBlob = async () => {
-    try {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-      const fd = new FormData();
-      fd.append('audio', blob, 'recording.webm');
-      if (profile?.sector) fd.append('sector', profile.sector);
-      const hasContent = items.some(i => i.description || i.unit_price > 0);
-      if (hasContent) {
-        fd.append('isEdit', 'true');
-        fd.append('existingItems', JSON.stringify(items));
-      }
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-      let res: Response;
-      try {
-        res = await fetch('/api/process-voice', { method: 'POST', body: fd, signal: controller.signal });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Erreur de traitement vocal');
-      }
-      const result = await res.json();
-      setTranscript(result.transcript || '');
-      const parsed = result.parsed;
-
-      if (parsed?.client_name) {
-        const searchTerm = parsed.client_name.toLowerCase();
-        let matchingClient = clients.find(c => c.name.toLowerCase() === searchTerm);
-        if (!matchingClient) {
-          matchingClient = clients.find(c =>
-            c.name.toLowerCase().includes(searchTerm) ||
-            searchTerm.includes(c.name.toLowerCase())
-          );
-        }
-        if (matchingClient) {
-          setClientId(matchingClient.id);
-          setClientName(matchingClient.name);
-          toast.success(`Client "${matchingClient.name}" sélectionné automatiquement`);
-        } else {
-          setClientName(parsed.client_name);
-          setClientId(null);
-        }
-      }
-
-      if (!clientId) {
-        if (parsed?.client_email) setClientEmail(parsed.client_email);
-        if (parsed?.client_phone) setClientPhone(parsed.client_phone);
-        if (parsed?.client_address) setClientAddress(parsed.client_address);
-        if (parsed?.client_city) setClientCity(parsed.client_city);
-        if (parsed?.client_postal_code) setClientPostalCode(parsed.client_postal_code);
-        if (parsed?.client_siret) setClientSiret(parsed.client_siret);
-        if (parsed?.client_vat_number) setClientVatNumber(parsed.client_vat_number);
-      }
-
-      if (parsed?.items?.length) {
-        setItems(parsed.items.map((item: any) => ({
-          id: generateId(),
-          description: item.description || '',
-          quantity: Number(item.quantity) || 1,
-          unit_price: Number(item.unit_price) || 0,
-          vat_rate: Number(item.vat_rate) || 20,
-        })));
-      }
-      if (parsed?.notes) setNotes(parsed.notes);
-      if (parsed?.due_days != null) {
-        setPaymentDays(parsed.due_days);
-        const days = parsed.due_days;
-        const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
-        setPaymentTermId(termMap[days] || `custom-${days}`);
-      }
-      if (result.summary) toast.success(result.summary);
-      setLastGenSource('voice');
-      setMode('manual');
-    } catch (e: any) {
-      setVoiceError(e.message || 'Erreur lors du traitement vocal');
-    } finally {
-      setLoading(false);
+    if (result.items?.length) {
+      setItems(result.items.map((item) => ({
+        id: generateId(),
+        description: item.description || '',
+        quantity: Number(item.quantity) || 1,
+        unit_price: Number(item.unit_price) || 0,
+        vat_rate: Number(item.vat_rate) || 20,
+      })));
+    }
+    if (result.notes) setNotes(result.notes);
+    if (result.due_days != null) {
+      setPaymentDays(result.due_days);
+      const days = result.due_days;
+      const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
+      setPaymentTermId(termMap[days] || `custom-${days}`);
+    }
+    if (result.discount_percent) {
+      setDiscountPercent(result.discount_percent);
     }
   };
 
@@ -550,91 +487,14 @@ export default function NewFacturePage() {
               </motion.button>
             )}
 
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative">
-                {recording && (
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1.2, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    className="absolute inset-0 rounded-full bg-red-500/20"
-                  />
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={recording ? stopRecording : startRecording}
-                  disabled={loading}
-                  className={`relative w-24 sm:w-28 h-24 sm:h-28 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${recording ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' : 'bg-gradient-to-br from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {loading ? (
-                    <Loader2 size={30} className="text-white animate-spin" />
-                  ) : recording ? (
-                    <MicOff size={32} className="text-white" />
-                  ) : (
-                    <Mic size={32} className="text-white" />
-                  )}
-                </motion.button>
-              </div>
-
-              <div className="space-y-1 text-center">
-                {recording && (
-                  <motion.p
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="text-lg sm:text-xl font-black text-red-500 tabular-nums"
-                  >
-                    {formatTime(recordTime)}
-                  </motion.p>
-                )}
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  {loading
-                    ? "L'IA analyse votre enregistrement..."
-                    : recording
-                    ? 'Parlez clairement — cliquez pour arrêter'
-                    : 'Cliquez pour commencer la dictée'}
-                </p>
-                {!recording && !loading && (
-                  <p className="text-xs text-gray-300 dark:text-gray-600">
-                    Ex: "Facture pour Entreprise XYZ, design web 5 jours à 2000€, TVA 20%"
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {transcript && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-left bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} className="text-blue-500" />
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Transcription IA</p>
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{transcript}</p>
-              </motion.div>
-            )}
-
-            {voiceError && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/30 rounded-xl p-3"
-              >
-                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
-                <p className="text-sm text-red-600 dark:text-red-400">{voiceError}</p>
-              </motion.div>
-            )}
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setMode('manual')}
-              className="text-sm text-blue-600 font-semibold hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-            >
-              Passer en saisie manuelle →
-            </motion.button>
+            <PulseVoiceRecorder
+              onResult={handleVoiceResult}
+              isPro={sub.canUseVoice}
+              mode="invoice"
+              existingItems={items}
+              sector={profile?.sector || ''}
+              onClose={() => setMode('manual')}
+            />
           </motion.div>
         )}
       </AnimatePresence>

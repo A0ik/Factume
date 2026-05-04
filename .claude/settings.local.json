@@ -178,7 +178,12 @@
       "Bash(cp logo.png icons/apple-touch-icon.png)",
       "Bash(cp logo.png icons/icon-192x192.png)",
       "Bash(cp logo.png icons/icon-512x512.png)",
-      "Bash(cp logo.png icons/favicon-32x32.png)"
+      "Bash(cp logo.png icons/favicon-32x32.png)",
+      "Bash(node fix_voice_ui.js \"app\\\\\\(app\\)\\\\documents\\\\avoirs\\\\new\\\\page.tsx\")",
+      "Bash(node fix_voice_ui.js \"app\\\\\\(app\\)\\\\documents\\\\commandes\\\\new\\\\page.tsx\")",
+      "Bash(node fix_voice_ui.js \"app\\\\\\(app\\)\\\\documents\\\\livraisons\\\\new\\\\page.tsx\")",
+      "Bash(node fix_voice_ui.js \"app\\\\\\(app\\)\\\\documents\\\\acomptes\\\\new\\\\page.tsx\")",
+      "Bash(node fix_voice_remaining.js)"
     ]
   },
   "enableAllProjectMcpServers": true,

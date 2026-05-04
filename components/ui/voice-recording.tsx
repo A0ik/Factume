@@ -1,0 +1,398 @@
+'use client';
+
+import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Mic, MicOff, Loader2, Check, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+
+interface VoiceRecordingProps {
+  onResult: (data: VoiceAnalysisResult) => void;
+  onClose?: () => void;
+  isPro?: boolean;
+  mode?: 'invoice' | 'quote' | 'credit_note' | 'order' | 'delivery' | 'deposit';
+  existingItems?: Array<{ description: string; quantity: number; unit_price: number; vat_rate: number }>;
+  sector?: string;
+}
+
+export interface VoiceAnalysisResult {
+  action?: 'added' | 'modified' | 'removed' | 'replaced';
+  summary?: string | null;
+  client_name?: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  client_address?: string | null;
+  client_city?: string | null;
+  client_postal_code?: string | null;
+  client_siret?: string | null;
+  client_vat_number?: string | null;
+  items?: Array<{ description: string; quantity: number; unit_price: number; vat_rate: number }>;
+  due_days?: number | null;
+  notes?: string | null;
+  discount_percent?: number;
+}
+
+export function PulseVoiceRecorder({
+  onResult,
+  onClose,
+  isPro = true,
+  mode = 'invoice',
+  existingItems = [],
+  sector = '',
+}: VoiceRecordingProps) {
+  const [recording, setRecording] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [pulseIntensity, setPulseIntensity] = useState<number[]>([]);
+  const [error, setError] = useState('');
+  const [transcript, setTranscript] = useState('');
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!recording) {
+      setDuration(0);
+      setPulseIntensity([]);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    timerRef.current = setInterval(() => {
+      setDuration(prev => prev + 1);
+      // Generate random pulse patterns for visual feedback
+      setPulseIntensity(Array.from({ length: 5 }, () => Math.random()));
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [recording]);
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    if (!isPro) {
+      toast.error('La reconnaissance vocale est disponible avec les abonnements Pro et Business');
+      return;
+    }
+
+    setError('');
+    setTranscript('');
+    setProcessing(false);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mr.onstop = async () => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        await processAudio();
+      };
+
+      mediaRecorderRef.current = mr;
+      mr.start();
+      setRecording(true);
+    } catch (err: any) {
+      console.error('Error starting recording:', err);
+      if (err.name === 'NotAllowedError') {
+        setError('Accès au micro refusé. Cliquez sur le cadenas dans la barre d\'adresse et autorisez le microphone.');
+      } else if (err.name === 'NotFoundError') {
+        setError('Aucun microphone trouvé. Veuillez brancher un microphone et réessayer.');
+      } else {
+        setError('Impossible d\'accéder au microphone: ' + err.message);
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setRecording(false);
+    setProcessing(true);
+  };
+
+  const processAudio = async () => {
+    try {
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+
+      if (sector) {
+        formData.append('sector', sector);
+      }
+
+      // Check if we're editing (have existing items)
+      const hasContent = existingItems.some(item => item.description || item.unit_price > 0);
+      if (hasContent) {
+        formData.append('isEdit', 'true');
+        formData.append('existingItems', JSON.stringify(existingItems));
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+      let response: Response;
+      try {
+        response = await fetch('/api/process-voice', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Clé API invalide. Vérifiez GROQ_API_KEY.');
+        }
+        if (response.status === 429) {
+          throw new Error('Trop de requêtes. Réessayez dans quelques instants.');
+        }
+        throw new Error(errorData.error || 'Erreur lors du traitement vocal');
+      }
+
+      const result = await response.json();
+
+      if (result.transcript) {
+        setTranscript(result.transcript);
+      }
+
+      if (result.parsed) {
+        onResult(result.parsed);
+        if (result.summary) {
+          toast.success(result.summary);
+        }
+
+        // Auto-close after successful processing if onClose provided
+        if (onClose) {
+          setTimeout(() => onClose(), 500);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error processing audio:', err);
+      if (err.name === 'AbortError') {
+        setError('Délai d\'attente dépassé. Réessayez avec un enregistrement plus court.');
+      } else {
+        setError(err.message || 'Erreur lors du traitement vocal');
+      }
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const isSupported = typeof window !== 'undefined' &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  if (!isSupported) {
+    return (
+      <div className="flex flex-col items-center gap-4 p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+        </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          La reconnaissance vocale n'est pas supportée par ce navigateur.
+        </p>
+        <p className="text-sm text-gray-500">
+          Utilisez Chrome, Edge ou Safari pour cette fonctionnalité.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-6 p-6 w-full max-w-md mx-auto">
+      {/* Animated pulse rings */}
+      <div className="relative">
+        {recording && (
+          <>
+            {[0, 1, 2].map((index) => (
+              <motion.div
+                key={index}
+                className={cn(
+                  "absolute inset-0 rounded-full border-2 border-primary/20",
+                )}
+                initial={{ scale: 1, opacity: 0.5 }}
+                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{
+                  duration: 2,
+                  delay: index * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
+            {/* Sound wave visualization */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {pulseIntensity.map((intensity, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-1 bg-primary/40 rounded-full"
+                  animate={{
+                    height: [8, 20 + intensity * 40, 8],
+                    opacity: [0.2, 0.7, 0.2],
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    repeat: Infinity,
+                    delay: i * 0.06,
+                  }}
+                  style={{
+                    transform: `rotate(${i * 30}deg) translateX(60px)`,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Main record button */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={recording ? stopRecording : startRecording}
+          disabled={processing}
+          className={cn(
+            "relative z-10 w-24 h-24 rounded-full transition-all duration-300",
+            "flex items-center justify-center shadow-lg",
+            recording
+              ? "bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-red-500/50"
+              : processing
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-br from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-primary/50"
+          )}
+        >
+          {processing ? (
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          ) : recording ? (
+            <MicOff className="w-8 h-8 text-white" />
+          ) : (
+            <Mic className="w-8 h-8 text-white" />
+          )}
+        </motion.button>
+      </div>
+
+      {/* Duration display */}
+      <AnimatePresence>
+        {(recording || processing) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-center"
+          >
+            <div className="text-3xl font-mono font-bold text-gray-900 dark:text-white">
+              {formatTime(duration)}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {recording ? 'Enregistrement en cours...' : 'Traitement en cours...'}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Transcript display */}
+      <AnimatePresence>
+        {transcript && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full p-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+          >
+            <div className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">
+                  Transcription
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
+                  {transcript}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error display */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-400 flex-1">
+                {error}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tips */}
+      {!recording && !processing && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="w-full p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800"
+        >
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            <strong>💡 Astuce:</strong> Dites{" "}
+            <span className="italic">"Facture pour Startup Tech, site web 3500€ HT, design 1500€ HT"</span>
+          </p>
+        </motion.div>
+      )}
+
+      {/* Close button */}
+      {onClose && (
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={onClose}
+          disabled={recording || processing}
+          className="px-6 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Fermer
+        </motion.button>
+      )}
+    </div>
+  );
+}

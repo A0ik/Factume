@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +33,129 @@ interface Props {
   onClose: () => void;
 }
 
+// Documents expandable component - main button navigates, arrow expands submenu
+function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavItem[]; pathname: string; onClose: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const active = pathname.startsWith('/documents');
+
+  return (
+    <div className="space-y-1">
+      {/* Main Documents button - navigates to /documents */}
+      <Link
+        href="/documents"
+        onClick={onClose}
+        className={cn(
+          'flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 group',
+          active
+            ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+        )}
+      >
+        <span className={cn(
+          'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+          active
+            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+            : 'bg-gradient-to-br from-blue-100 to-blue-200/80 dark:from-blue-900/40 dark:to-blue-800/40 text-blue-600 dark:text-blue-400 group-hover:scale-110',
+        )}>
+          <FileText size={17} strokeWidth={active ? 2.5 : 2} />
+        </span>
+        <span className="flex-1 font-semibold">Documents</span>
+        {active && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-2 h-2 rounded-full bg-primary shadow-sm"
+          />
+        )}
+      </Link>
+
+      {/* Expand arrow button */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={cn(
+          'w-full flex items-center gap-3 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200',
+          expanded
+            ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/20'
+            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
+        )}
+      >
+        <span className="w-10" /> {/* Spacer for alignment */}
+        <span className="flex-1 text-xs font-medium uppercase tracking-wide">
+          Types de documents
+        </span>
+        <ChevronRight
+          size={14}
+          className={cn('transition-transform duration-200', expanded && 'rotate-90')}
+        />
+      </button>
+
+      {/* Submenu - expands on arrow click */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden ml-4 space-y-0.5"
+          >
+            {documents.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+
+              if (item.locked) {
+                return (
+                  <div
+                    key={item.href}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
+                    title={item.lockReason}
+                  >
+                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                      <item.icon size={15} strokeWidth={2} />
+                    </span>
+                    <span className="flex-1 font-medium">{item.label}</span>
+                    <Lock size={13} />
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-500/15 to-blue-500/5 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200/50 dark:border-blue-800/30'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-blue-50/60 hover:to-blue-100/30 dark:hover:from-blue-900/10 dark:hover:to-blue-800/5',
+                  )}
+                >
+                  <span className={cn(
+                    'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all duration-200',
+                    isActive
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                  )}>
+                    <item.icon size={15} strokeWidth={isActive ? 2.5 : 2} />
+                  </span>
+                  <span className="flex-1 font-medium">{item.label}</span>
+                  {isActive && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm"
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -56,7 +179,6 @@ export default function MobileDrawer({ open, onClose }: Props) {
   const buildMainNav = (): NavItem[] => {
     const main: NavItem[] = [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-      { href: '/documents', icon: FileText,        label: 'Documents' },
     ];
 
     // Notes de frais - Pro/Business only (completely hidden for Free/Solo)
@@ -247,17 +369,17 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accueil</p>
                 </div>
                 {NAV_MAIN.map((item) => <NavItem key={item.href} {...item} />)}
-              </div>
 
-              {/* Documents hub */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 px-1 mb-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center">
-                    <FileText size={12} className="text-blue-500" strokeWidth={2.5} />
+                {/* Documents hub - Combined button + expandable */}
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 px-1 mb-2">
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center">
+                      <FileText size={12} className="text-blue-500" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documents</p>
                   </div>
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documents</p>
+                  <DocumentsExpandable documents={NAV_DOCS} pathname={pathname} onClose={onClose} />
                 </div>
-                {NAV_DOCS.map((item) => <NavItem key={item.href} {...item} />)}
               </div>
 
               {/* Tools */}

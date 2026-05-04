@@ -4,7 +4,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import Sidebar from '@/components/layout/Sidebar';
-import BottomNav from '@/components/layout/BottomNav';
 import MobileDrawer from '@/components/layout/MobileDrawer';
 import { Logo } from '@/components/ui/Logo';
 import { ServiceWorkerRegistration } from '@/components/ui/ServiceWorkerRegistration';
@@ -137,8 +136,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile slide-out drawer */}
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-        <BottomNav />
       </div>
     </>
   );
