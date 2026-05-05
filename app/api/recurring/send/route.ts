@@ -175,11 +175,33 @@ export async function POST(request: NextRequest) {
           results.sent++;
         }
 
-        // Mettre à jour la prochaine date d'exécution
+        // Mettre à jour la prochaine date d'exécution selon la fréquence
+        const nextDate = new Date();
+        switch (recurring.frequency) {
+          case 'daily':
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case 'weekly':
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case 'monthly':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case 'quarterly':
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            break;
+          case 'yearly':
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+          default:
+            nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+
         const { error: updateError } = await supabase
           .from('recurring_invoices')
           .update({
-            next_run_date: new Date(), // Sera mis à jour automatiquement par le trigger
+            last_run_date: new Date().toISOString().split('T')[0],
+            next_run_date: nextDate.toISOString().split('T')[0],
           })
           .eq('id', recurring.id);
 

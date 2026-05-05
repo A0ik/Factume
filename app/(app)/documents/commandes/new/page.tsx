@@ -362,7 +362,7 @@ export default function NewCommandePage() {
           client_siret: clientId ? undefined : clientSiret || undefined,
           client_vat_number: clientId ? undefined : clientVatNumber || undefined,
         }, profile, pendingIdRef.current),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
       ]);
       pendingIdRef.current = null;
       toast.success('Document créé avec succès !');

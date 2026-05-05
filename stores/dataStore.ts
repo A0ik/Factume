@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Client, Invoice, InvoiceFormData, InvoiceStatus, DashboardStats, RecurringInvoice } from '@/types';
 import { generateId } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 interface DataState {
   clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null;
@@ -125,6 +126,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     }).select('*, client:clients(*)').single();
 
     if (error) {
+      // Unique violation (23505): a concurrent retry already inserted with the same idempotencyId.
+      // Fetch and return the existing invoice instead of throwing.
+      if (error.code === '23505' && idempotencyId) {
+        const { data: existing } = await getSupabaseClient()
+          .from('invoices')
+          .select('*, client:clients(*)')
+          .eq('id', idempotencyId)
+          .single();
+        if (existing) return existing;
+      }
       console.error('[createInvoice] Insert error:', error);
       throw error;
     }
@@ -136,7 +147,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
         if (freshProfile) {
           try {
-            const { useAuthStore } = require('@/stores/authStore');
             useAuthStore.getState().setProfile(freshProfile);
           } catch (e) {
             console.warn('[createInvoice] Could not update auth store:', e);

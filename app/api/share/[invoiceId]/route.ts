@@ -13,10 +13,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ inv
 
   if (error || !invoice) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Fetch public profile info (no sensitive data)
+  // Fetch public profile info - exclude sensitive data (IBAN, BIC, bank info, legal details)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('company_name,address,city,postal_code,country,phone,siret,logo_url,accent_color,language,currency,iban,bic,bank_name,legal_status,legal_mention,payment_terms')
+    .select('company_name,address,city,postal_code,country,phone,siret,logo_url,accent_color,language,currency,payment_terms')
     .eq('id', invoice.user_id)
     .single();
 

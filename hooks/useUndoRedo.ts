@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UndoRedoState<T> {
   past: T[];
@@ -95,7 +95,7 @@ export function useUndoRedo<T>(initialState: T, maxHistory = 50) {
 
 // Keyboard shortcuts for undo/redo
 export function useUndoRedoShortcuts(undo: () => void, redo: () => void) {
-  useState(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+Z or Cmd+Z for undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -115,5 +115,5 @@ export function useUndoRedoShortcuts(undo: () => void, redo: () => void) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [undo, redo]);
 }
