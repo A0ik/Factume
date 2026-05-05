@@ -127,9 +127,9 @@ export default function MobileDrawer({ open, onClose }: Props) {
         badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
       { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
     );
 
     return items;
@@ -206,10 +206,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-200/80 dark:border-emerald-800/40 backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90"
-            style={{
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.98) 100%)',
-            }}
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-200/80 dark:border-emerald-800/40 backdrop-blur-2xl bg-gradient-to-b from-white/95 to-white/98 dark:from-slate-900/95 dark:to-slate-900/98"
           >
             {/* Header - Logo and profile */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-200/80 dark:border-emerald-800/40 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
@@ -255,9 +252,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   </div>
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accueil</p>
                 </div>
-                {NAV_MAIN.map((item) => <NavItem key={item.href} {...item} />)}
+                {/* Dashboard first */}
+                {NAV_MAIN.length > 0 && <NavItem key={NAV_MAIN[0].href} {...NAV_MAIN[0]} />}
 
-                {/* Expandable Documents */}
+                {/* Expandable Documents (2nd position) */}
                 <div className="space-y-0.5">
                   <div className="flex items-stretch gap-0">
                     <Link
@@ -319,6 +317,9 @@ export default function MobileDrawer({ open, onClose }: Props) {
                     </div>
                   )}
                 </div>
+
+                {/* Rest of core nav (Clients, Articles, Agenda) */}
+                {NAV_MAIN.slice(1).map((item) => <NavItem key={item.href} {...item} />)}
               </div>
 
               {/* Premium features */}

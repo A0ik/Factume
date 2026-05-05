@@ -11,7 +11,9 @@ import { CURRENCIES, LEGAL_STATUSES, SECTORS, ACCENT_COLORS } from '@/lib/utils'
 import Modal from '@/components/ui/Modal';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 
-import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard } from 'lucide-react';
+import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
 
@@ -56,6 +58,7 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [accentOpen, setAccentOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -1043,57 +1046,94 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-2">Couleur accent</label>
-            <div className="space-y-3">
-              {/* Couleurs prédéfinies */}
-              <div className="flex gap-2 flex-wrap">
-                {ACCENT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => set('accent_color', c)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${form.accent_color === c ? 'border-gray-900 scale-110 ring-2 ring-gray-300' : 'border-transparent hover:scale-105'}`}
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
-                ))}
-              </div>
-
-              {/* Couleur customisée */}
-              <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500 mb-1 block">Ou choisir une couleur personnalisée :</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={form.accent_color}
-                      onChange={(e) => set('accent_color', e.target.value)}
-                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-gray-200"
-                      title="Sélectionner une couleur personnalisée"
-                    />
-                    <input
-                      type="text"
-                      value={form.accent_color}
-                      onChange={(e) => {
-                        // Valider que c'est un code hex valide
-                        const hexColor = e.target.value;
-                        if (/^#[0-9A-F]{6}$/i.test(hexColor)) {
-                          set('accent_color', hexColor);
-                        }
-                      }}
-                      placeholder="Ex: #FF5733"
-                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                {/* Aperçu de la couleur sélectionnée */}
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-2">Couleur accent</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAccentOpen(true)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
                 <div
-                  className="w-12 h-12 rounded-xl border-2 border-gray-200 shadow-sm"
+                  className="w-6 h-6 rounded-full border border-gray-200 dark:border-slate-600"
                   style={{ backgroundColor: form.accent_color }}
-                  title={`Couleur actuelle: ${form.accent_color}`}
                 />
-              </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{form.accent_color}</span>
+                <Palette size={14} className="text-gray-400" />
+              </button>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Cliquez pour personnaliser</span>
             </div>
+
+            {/* Accent Color Dialog */}
+            <Dialog open={accentOpen} onOpenChange={setAccentOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    Choisir la couleur accent
+                  </DialogTitle>
+                  <DialogDescription>
+                    Personnalisez la couleur principale de votre espace de travail
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogBody>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="mb-2 block text-sm font-medium">Couleurs prédéfinies</Label>
+                      <div className="grid grid-cols-8 gap-2">
+                        {ACCENT_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`h-10 w-10 rounded-full border-2 transition-all cursor-pointer ${
+                              form.accent_color === c
+                                ? 'border-foreground dark:border-white scale-110'
+                                : 'hover:scale-105 border-transparent'
+                            }`}
+                            style={{ backgroundColor: c }}
+                            onClick={() => { set('accent_color', c); setAccentOpen(false); }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="mb-2 block text-sm font-medium">Couleur personnalisée</Label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={form.accent_color}
+                          onChange={(e) => set('accent_color', e.target.value)}
+                          className="h-10 w-10 cursor-pointer rounded-md border p-0"
+                        />
+                        <input
+                          type="text"
+                          value={form.accent_color}
+                          onChange={(e) => {
+                            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                              set('accent_color', e.target.value);
+                            }
+                          }}
+                          placeholder="#000000"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div
+                      className="rounded-lg border border-gray-200 dark:border-slate-700 p-4"
+                      style={{ backgroundColor: form.accent_color + '20' }}
+                    >
+                      <p className="text-sm font-medium" style={{ color: form.accent_color }}>
+                        Aperçu : voici comment votre couleur accent apparaîtra dans l'application.
+                      </p>
+                    </div>
+                  </div>
+                </DialogBody>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" onClick={() => setAccentOpen(false)}>Fermer</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       ),

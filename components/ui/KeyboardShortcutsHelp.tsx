@@ -1,28 +1,43 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Keyboard, X, Power } from 'lucide-react';
+import { Keyboard, X, Power, Command, Search } from 'lucide-react';
 import { useGlobalKeyboardShortcuts, formatShortcut, areShortcutsDisabled, setShortcutsDisabled } from '@/hooks/useKeyboardShortcuts';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogBody, DialogFooter, DialogClose,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+const isMac = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+function ShortcutKey({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className={cn(
+      'inline-flex items-center justify-center min-w-7 h-7 px-2',
+      'text-xs font-semibold rounded-lg',
+      'bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600',
+      'text-gray-700 dark:text-gray-200',
+      'shadow-[0_1px_0_1px_rgba(0,0,0,0.08)] dark:shadow-none',
+    )}>
+      {children}
+    </kbd>
+  );
+}
 
 export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
   const [disabled, setDisabled] = useState(false);
 
-  // Synchroniser l'état avec localStorage
   const updateDisabledState = useCallback(() => {
     setDisabled(areShortcutsDisabled());
   }, []);
 
-  // Vérifier l'état initial
-  useEffect(() => {
-    updateDisabledState();
-  }, [updateDisabledState]);
+  useEffect(() => { updateDisabledState(); }, [updateDisabledState]);
 
   const shortcuts = useGlobalKeyboardShortcuts(!disabled);
 
-  // Raccourci pour ouvrir l'aide (Ctrl+? ou Cmd+?) - fonctionne même si désactivé
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === '?') {
       e.preventDefault();
@@ -43,16 +58,12 @@ export function KeyboardShortcutsHelp() {
     const newState = !disabled;
     setDisabled(newState);
     setShortcutsDisabled(newState);
-
     if (newState) {
       toast.success('Raccourcis clavier désactivés', {
-        description: 'Réactivez-les depuis l\'aide ou les paramètres',
+        description: "Réactivez-les depuis l'aide ou les paramètres",
         action: {
           label: 'Annuler',
-          onClick: () => {
-            setDisabled(false);
-            setShortcutsDisabled(false);
-          },
+          onClick: () => { setDisabled(false); setShortcutsDisabled(false); },
         },
       });
     } else {
@@ -60,18 +71,16 @@ export function KeyboardShortcutsHelp() {
     }
   };
 
-  const isMac = typeof window !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const navShortcuts = shortcuts.filter(s => s.description.startsWith('Aller'));
+  const actionShortcuts = shortcuts.filter(s => !s.description.startsWith('Aller'));
 
   return (
     <>
       <button
-        onClick={() => {
-          updateDisabledState();
-          setOpen(true);
-        }}
-        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors relative"
+        onClick={() => { updateDisabledState(); setOpen(true); }}
+        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors relative"
         aria-label="Raccourcis clavier"
-        title={disabled ? "Raccourcis désactivés" : "Raccourcis clavier"}
+        title={disabled ? 'Raccourcis désactivés' : 'Raccourcis clavier'}
       >
         <Keyboard size={18} />
         {disabled && (
@@ -83,81 +92,94 @@ export function KeyboardShortcutsHelp() {
         setOpen(newOpen);
         if (newOpen) updateDisabledState();
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <Keyboard size={20} />
-                Raccourcis clavier
-              </DialogTitle>
-              <button
-                onClick={toggleDisabled}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  disabled
-                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                    : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
-                }`}
-              >
-                <Power size={14} />
-                {disabled ? 'Désactivés' : 'Activés'}
-              </button>
-            </div>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Keyboard size={16} className="text-primary" />
+              </div>
+              Raccourcis clavier
+            </DialogTitle>
+            <DialogDescription>
+              Gagnez du temps avec ces raccourcis
+            </DialogDescription>
           </DialogHeader>
 
-          {disabled && (
-            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ Les raccourcis clavier sont actuellement désactivés. Cliquez sur le bouton "Activés" ci-dessus pour les réactiver.
-              </p>
-            </div>
-          )}
+          {/* Toggle */}
+          <div className="px-6 pt-2">
+            <button
+              onClick={toggleDisabled}
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all w-fit',
+                disabled
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                  : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+              )}
+            >
+              <Power size={14} />
+              {disabled ? 'Désactivés' : 'Activés'}
+            </button>
 
-          <div className="space-y-6 mt-4">
-            {/* Navigation */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Navigation</h3>
-              <div className="space-y-2">
-                {shortcuts.filter(s => s.description.startsWith('Aller')).map((shortcut, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{shortcut.description.replace('Aller aux ', '').replace('Aller au ', '')}</span>
-                    <kbd className="px-2 py-1 text-xs font-semibold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
-                      {formatShortcut(shortcut)}
-                    </kbd>
-                  </div>
-                ))}
+            {disabled && (
+              <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Les raccourcis clavier sont désactivés. Cliquez sur le bouton ci-dessus pour les réactiver.
+                </p>
               </div>
-            </div>
+            )}
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-6">
+            {/* Navigation */}
+            {navShortcuts.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Command size={12} /> Navigation
+                </h3>
+                <div className="space-y-1.5">
+                  {navShortcuts.map((shortcut, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {shortcut.description.replace('Aller aux ', '').replace('Aller au ', '')}
+                      </span>
+                      <ShortcutKey>{formatShortcut(shortcut)}</ShortcutKey>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Actions</h3>
-              <div className="space-y-2">
-                {shortcuts.filter(s => !s.description.startsWith('Aller')).map((shortcut, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{shortcut.description}</span>
-                    <kbd className="px-2 py-1 text-xs font-semibold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
-                      {formatShortcut(shortcut)}
-                    </kbd>
-                  </div>
-                ))}
+            {actionShortcuts.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Search size={12} /> Actions
+                </h3>
+                <div className="space-y-1.5">
+                  {actionShortcuts.map((shortcut, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{shortcut.description}</span>
+                      <ShortcutKey>{formatShortcut(shortcut)}</ShortcutKey>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Help */}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+            {/* Help shortcut */}
+            <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-primary/5 dark:bg-primary/10">
                 <span className="text-sm text-gray-700 dark:text-gray-300">Afficher cette aide</span>
-                <kbd className="px-2 py-1 text-xs font-semibold text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
-                  {isMac ? '⌘ ?' : 'Ctrl + ?'}
-                </kbd>
+                <ShortcutKey>{isMac ? '⌘ ?' : 'Ctrl + ?'}</ShortcutKey>
               </div>
             </div>
 
-            {/* Info Mac */}
+            {/* Mac info */}
             {isMac && (
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  Sur Mac, utilisez la touche <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded">⌥</kbd> (Option) pour les raccourcis de navigation
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                  Sur Mac, utilisez la touche <ShortcutKey>⌥</ShortcutKey> (Option) pour les raccourcis de navigation
                 </p>
               </div>
             )}

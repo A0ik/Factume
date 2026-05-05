@@ -159,9 +159,9 @@ export default function Sidebar() {
         badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
       { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
     );
 
     return items;
@@ -268,12 +268,10 @@ export default function Sidebar() {
       {/* Main nav */}
       <nav className="relative flex-1 overflow-y-auto px-3 py-4 scrollbar-none space-y-1">
 
-        {/* Core nav */}
-        {NAV_CORE.map((item) => (
-          <NavItem key={item.href} {...item} />
-        ))}
+        {/* Dashboard (1st item) */}
+        <NavItem key={NAV_CORE[0].href} {...NAV_CORE[0]} />
 
-        {/* Expandable Documents */}
+        {/* Expandable Documents (2nd position) */}
         <div className="space-y-0.5">
           <div className="flex items-stretch gap-0">
             <Link href="/documents"
@@ -335,6 +333,11 @@ export default function Sidebar() {
             </div>
           )}
         </div>
+
+        {/* Rest of Core nav (Clients, Articles, Agenda) */}
+        {NAV_CORE.slice(1).map((item) => (
+          <NavItem key={item.href} {...item} />
+        ))}
 
         {/* Divider + quick stats */}
         <div className="pt-4 pb-2">

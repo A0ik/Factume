@@ -128,9 +128,9 @@ export default function DevisPage() {
   };
 
   const handleRequestSignature = async (quote: any) => {
-    // Vérifier l'abonnement - Les signatures de devis sont réservées à Pro et Business
-    if (!sub.effectiveIsPro) {
-      router.push('/paywall?plan=pro');
+    // Vérifier l'abonnement - Les signatures de devis sont disponibles pour Solo, Pro et Business
+    if (sub.isFree) {
+      router.push('/paywall?plan=solo');
       return;
     }
 
@@ -401,14 +401,14 @@ export default function DevisPage() {
                         <button
                           onClick={() => handleRequestSignature(devi)}
                           className={`p-2 rounded-lg transition-colors ${
-                            !sub.effectiveIsPro
+                            sub.isFree
                               ? 'text-gray-400 cursor-not-allowed opacity-60'
                               : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                           }`}
-                          title={sub.effectiveIsPro ? 'Demander la signature' : 'Signature disponible avec Pro'}
+                          title={sub.isFree ? 'Signature disponible avec Solo' : 'Demander la signature'}
                         >
                           <PenTool size={18} />
-                          {!sub.effectiveIsPro && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
+                          {sub.isFree && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
                         </button>
                         <Link
                           href={`/invoices/${devi.id}/edit`}
@@ -519,14 +519,14 @@ export default function DevisPage() {
                             <button
                               onClick={() => handleRequestSignature(devi)}
                               className={`p-2 rounded-lg transition-colors relative ${
-                                !sub.effectiveIsPro
+                                sub.isFree
                                   ? 'text-gray-400 cursor-not-allowed opacity-60'
                                   : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                               }`}
-                              title={sub.effectiveIsPro ? 'Demander la signature' : 'Signature disponible avec Pro'}
+                              title={sub.isFree ? 'Signature disponible avec Solo' : 'Demander la signature'}
                             >
                               <PenTool size={18} />
-                              {!sub.effectiveIsPro && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
+                              {sub.isFree && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
                             </button>
                             <Link
                               href={`/invoices/${devi.id}/edit`}
