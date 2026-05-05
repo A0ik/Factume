@@ -1,17 +1,16 @@
 'use client';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
-export default function CallbackPage() {
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { fetchProfile } = useAuthStore();
 
   useEffect(() => {
     const handleCallback = async () => {
-      // Check if this is a password reset callback
       const next = searchParams.get('next');
       if (next === '/reset-password') {
         router.push('/reset-password');
@@ -56,5 +55,20 @@ export default function CallbackPage() {
         <p className="text-gray-500 text-sm">Connexion en cours...</p>
       </div>
     </div>
+  );
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-500 text-sm">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <CallbackHandler />
+    </Suspense>
   );
 }
