@@ -320,6 +320,12 @@ export function AuthPage({
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
             </div>
 
+            {isLogin && (
+              <div className="text-right">
+                <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">Mot de passe oublie ?</Link>
+              </div>
+            )}
+
             {!isLogin && password.length > 0 && (
               <div className="space-y-2.5 bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <div className="flex items-center gap-2">

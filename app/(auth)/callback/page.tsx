@@ -1,15 +1,23 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function CallbackPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { fetchProfile } = useAuthStore();
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Check if this is a password reset callback
+      const next = searchParams.get('next');
+      if (next === '/reset-password') {
+        router.push('/reset-password');
+        return;
+      }
+
       const { data: { session } } = await getSupabaseClient().auth.getSession();
       if (!session?.user) {
         router.push('/login');
@@ -25,7 +33,6 @@ export default function CallbackPage() {
         .single();
 
       if (!profile || !profile.onboarding_done) {
-        // Nouveau compte (Google ou autre) — créer le profil initial si absent
         await getSupabaseClient().from('profiles').upsert({
           id: session.user.id,
           email: session.user.email ?? '',

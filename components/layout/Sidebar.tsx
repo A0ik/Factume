@@ -2,13 +2,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, FileText, Users, Kanban,
-  RefreshCw, Settings, Zap, ChevronRight, ChevronDown,
+  LayoutDashboard, FileText, Users,
+  Settings, Zap, ChevronRight,
   Building2, Bell, HelpCircle, Package, Receipt, Calendar,
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
-  Rocket, Crown, Sparkles, ArrowUpRight, Truck, Target, Lock,
+  Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -66,17 +65,6 @@ interface NavItem {
   icon: any;
   label: string;
   badge?: null | 'overdue' | 'notif' | string;
-  hasSubmenu?: boolean;
-  submenu?: SubMenuItem[];
-  locked?: boolean;
-  lockReason?: string;
-  unlockTier?: string;
-}
-
-interface SubMenuItem {
-  href: string;
-  icon: any;
-  label: string;
   locked?: boolean;
   lockReason?: string;
   unlockTier?: string;
@@ -89,8 +77,6 @@ export default function Sidebar() {
   const { invoices } = useDataStore();
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
   const sub = useSubscription();
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
   const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig   = TIER_CONFIG[currentTier];
@@ -102,16 +88,8 @@ export default function Sidebar() {
   const buildCoreNav = (): NavItem[] => {
     const core: NavItem[] = [
       { href: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', badge: null },
+      { href: '/documents',  icon: FileText,        label: 'Documents',       badge: overdueCount > 0 ? 'overdue' : null },
     ];
-
-    // Documents - always shown, submenu items filtered by tier
-    core.push({
-      href: '/documents',
-      icon: FileText,
-      label: 'Documents',
-      badge: overdueCount > 0 ? 'overdue' : null,
-      hasSubmenu: true,
-    });
 
     core.push(
       { href: '/clients',    icon: Users,     label: 'Clients',         badge: null },
@@ -122,51 +100,10 @@ export default function Sidebar() {
     return core;
   };
 
-  const buildDocumentsSubmenu = (): SubMenuItem[] => {
-    const docs: SubMenuItem[] = [
-      { href: '/documents/factures', icon: Receipt,    label: 'Factures' },
-      { href: '/documents/devis',     icon: FileText,   label: 'Devis' },
-      { href: '/documents/avoirs',    icon: Receipt,    label: 'Avoirs' },
-      { href: '/documents/commandes', icon: Package,    label: 'Commandes' },
-      { href: '/documents/livraisons',icon: Truck,      label: 'Livraisons' },
-      { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
-    ];
-
-    // Contracts - Pro/Business only
-    if (!sub.effectiveIsPro) {
-      docs.push({
-        href: '/contracts',
-        icon: FileText,
-        label: 'Contrats',
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
-      docs.push({ href: '/contracts', icon: FileText, label: 'Contrats' });
-    }
-
-    return docs;
-  };
-
   const buildToolsNav = (): NavItem[] => {
     const tools: NavItem[] = [
       { href: '/offline/workspace', icon: Building2, label: 'Workspace', badge: null },
     ];
-
-    // Pipeline CRM - Pro/Business only - show with lock indicator for Free/Solo
-    if (!sub.canUseCRM) {
-      tools.push({
-        href: '/crm',
-        icon: Target,
-        label: 'Pipeline CRM',
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
-      tools.push({ href: '/crm', icon: Target, label: 'Pipeline CRM' });
-    }
 
     tools.push(
       { href: '/notifications',     icon: Bell,      label: 'Notifications', badge: unreadCount > 0 ? 'notif' : null },
@@ -178,7 +115,20 @@ export default function Sidebar() {
   };
 
   const buildAdvancedNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> => {
-    return [
+    const items: Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> = [];
+
+    // Pipeline CRM - Pro/Business only
+    items.push({
+      href: '/crm',
+      icon: Target,
+      label: 'Pipeline CRM',
+      enabled: sub.canUseCRM,
+      lockReason: sub.canUseCRM ? undefined : 'Disponible avec Pro',
+      unlockTier: 'pro',
+      badge: sub.canUseCRM ? undefined : 'PRO',
+    });
+
+    items.push(
       {
         href: '/expenses',
         icon: Receipt,
@@ -201,11 +151,12 @@ export default function Sidebar() {
       { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
       { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false, lockReason: 'Bientôt disponible' },
       { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false, lockReason: 'Bientôt disponible' },
-    ];
+    );
+
+    return items;
   };
 
   const NAV_CORE = buildCoreNav();
-  const DOCUMENTS_SUBMENU = buildDocumentsSubmenu();
   const NAV_TOOLS = buildToolsNav();
   const NAV_ADVANCED = buildAdvancedNav();
 
@@ -215,135 +166,14 @@ export default function Sidebar() {
     return 0;
   };
 
-  /* ── Nav item (link or submenu toggle) ── */
-  const NavItem = ({ href, icon: Icon, label, badge, hasSubmenu, submenu, locked, lockReason, unlockTier }: {
+  /* ── Nav item ── */
+  const NavItem = ({ href, icon: Icon, label, badge, locked, lockReason }: {
     href: string; icon: any; label: string;
-    badge?: null | 'overdue' | 'notif' | string; hasSubmenu?: boolean; submenu?: SubMenuItem[];
+    badge?: null | 'overdue' | 'notif' | string;
     locked?: boolean; lockReason?: string; unlockTier?: string;
   }) => {
-    const [open, setOpen] = useState(false);
     const active          = pathname.startsWith(href);
     const count           = getBadgeCount(badge);
-    const subActive       = submenu?.some((s) => pathname.startsWith(s.href));
-
-    if (hasSubmenu && submenu) {
-      return (
-        <div>
-          <div className="flex items-center gap-1">
-            {locked ? (
-              <div className="flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70">
-                <span className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-white/5">
-                  <Icon size={17} strokeWidth={1.8} />
-                </span>
-                <span className="flex-1 font-semibold">{label}</span>
-                <Lock size={14} className="text-gray-400" />
-              </div>
-            ) : (
-              <>
-                <Link
-                  href={href}
-                  className={cn(
-                    'group flex-1 flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer',
-                    active || subActive
-                      ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-900 dark:hover:text-gray-100',
-                  )}
-                >
-                  <span className={cn(
-                    'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
-                    active || subActive
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                      : 'bg-emerald-50/60 dark:bg-white/5 text-gray-500 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
-                  )}>
-                    <Icon size={17} strokeWidth={active || subActive ? 2.5 : 1.8} />
-                  </span>
-                  <span className="flex-1 font-semibold">{label}</span>
-                  {count > 0 && (
-                    <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
-                      {count > 9 ? '9+' : count}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  onClick={() => setOpen(!open)}
-                  className={cn(
-                    'p-3 rounded-2xl text-sm font-medium transition-all duration-200',
-                    active || subActive
-                      ? 'text-primary hover:bg-primary/15'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/10 hover:text-gray-700 dark:hover:text-gray-200',
-                  )}
-                >
-                  <ChevronDown size={14} className={cn('transition-transform duration-200', open && 'rotate-180')} />
-                </button>
-              </>
-            )}
-          </div>
-          {!locked && (
-            <AnimatePresence>
-              {open && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden ml-5 mt-1 space-y-0.5"
-                >
-                  {submenu.map((item, index) => {
-                    const sa = pathname.startsWith(item.href);
-                    const isLastBeforeContracts = index === submenu.length - 2;
-                    return (
-                      <div key={item.href}>
-                        {item.locked ? (
-                          <div
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60"
-                            title={item.lockReason}
-                          >
-                            <span className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 bg-gray-100 dark:bg-white/5">
-                              <item.icon size={13} strokeWidth={1.8} />
-                            </span>
-                            <span className="flex-1">{item.label}</span>
-                            <Lock size={12} />
-                          </div>
-                        ) : (
-                          <Link href={item.href}
-                            className={cn(
-                              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer',
-                              sa
-                                ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/5 hover:text-gray-800 dark:hover:text-gray-200',
-                            )}
-                          >
-                            <span className={cn(
-                              'flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 transition-all',
-                              sa
-                                ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
-                                : 'bg-emerald-50/60 dark:bg-white/5 text-gray-400 dark:text-gray-500 hover:bg-emerald-100/70 dark:hover:bg-white/10'
-                            )}>
-                              <item.icon size={13} strokeWidth={sa ? 2.5 : 1.8} />
-                            </span>
-                            <span className={cn('flex-1', sa && 'font-semibold')}>{item.label}</span>
-                            {sa && (
-                              <motion.span
-                                layoutId="activeIndicator"
-                                className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
-                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                              />
-                            )}
-                          </Link>
-                        )}
-                        {isLastBeforeContracts && !item.locked && (
-                          <div className="mx-3 my-2 h-px bg-gradient-to-r from-emerald-200/60 to-transparent dark:from-emerald-800/30" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-        </div>
-      );
-    }
 
     if (locked) {
       return (
@@ -429,11 +259,7 @@ export default function Sidebar() {
 
         {/* Core nav */}
         {NAV_CORE.map((item) => (
-          <NavItem
-            key={item.href}
-            {...item}
-            submenu={item.hasSubmenu ? DOCUMENTS_SUBMENU : undefined}
-          />
+          <NavItem key={item.href} {...item} />
         ))}
 
         {/* Divider + quick stats */}

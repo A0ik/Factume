@@ -5,14 +5,14 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
-  Package, Receipt, Truck, Calculator, HelpCircle,
+  Package, Receipt, Calculator, HelpCircle,
   Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight,
-  Moon, Sun, Home,
+  Moon, Sun, Home, Search, Activity, Landmark, Link2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useThemeStore } from '@/stores/themeStore';
-import { cn, getInitials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/ui/Logo';
 
@@ -33,128 +33,7 @@ interface Props {
   onClose: () => void;
 }
 
-// Documents expandable component - main button navigates, arrow expands submenu
-function DocumentsExpandable({ documents, pathname, onClose }: { documents: NavItem[]; pathname: string; onClose: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const active = pathname.startsWith('/documents');
-
-  return (
-    <div className="space-y-1">
-      {/* Main Documents button - navigates to /documents */}
-      <Link
-        href="/documents"
-        onClick={onClose}
-        className={cn(
-          'flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 group',
-          active
-            ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
-        )}
-      >
-        <span className={cn(
-          'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
-          active
-            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
-            : 'bg-gradient-to-br from-emerald-100 to-emerald-200/80 dark:from-emerald-900/40 dark:to-emerald-800/40 text-primary dark:text-primary/80 group-hover:scale-110',
-        )}>
-          <FileText size={17} strokeWidth={active ? 2.5 : 2} />
-        </span>
-        <span className="flex-1 font-semibold">Documents</span>
-        {active && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-2 h-2 rounded-full bg-primary shadow-sm"
-          />
-        )}
-      </Link>
-
-      {/* Expand arrow button */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className={cn(
-          'w-full flex items-center gap-3 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200',
-          expanded
-            ? 'text-primary dark:text-primary/80 bg-primary/10 dark:bg-primary/5'
-            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
-        )}
-      >
-        <span className="w-10" /> {/* Spacer for alignment */}
-        <span className="flex-1 text-xs font-medium uppercase tracking-wide">
-          Types de documents
-        </span>
-        <ChevronRight
-          size={14}
-          className={cn('transition-transform duration-200', expanded && 'rotate-90')}
-        />
-      </button>
-
-      {/* Submenu - expands on arrow click */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden ml-4 space-y-0.5"
-          >
-            {documents.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-
-              if (item.locked) {
-                return (
-                  <div
-                    key={item.href}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
-                    title={item.lockReason}
-                  >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
-                      <item.icon size={15} strokeWidth={2} />
-                    </span>
-                    <span className="flex-1 font-medium">{item.label}</span>
-                    <Lock size={13} />
-                  </div>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary dark:text-primary/80 shadow-sm border border-primary/20 dark:border-primary/30'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-emerald-50/60 hover:to-emerald-100/30 dark:hover:from-emerald-900/10 dark:hover:to-emerald-800/5',
-                  )}
-                >
-                  <span className={cn(
-                    'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all duration-200',
-                    isActive
-                      ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/30'
-                      : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
-                  )}>
-                    <item.icon size={15} strokeWidth={isActive ? 2.5 : 2} />
-                  </span>
-                  <span className="flex-1 font-medium">{item.label}</span>
-                  {isActive && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm"
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+// Documents is now a simple nav button — no expandable section
 
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
@@ -179,17 +58,8 @@ export default function MobileDrawer({ open, onClose }: Props) {
   const buildMainNav = (): NavItem[] => {
     const main: NavItem[] = [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+      { href: '/documents', icon: FileText,        label: 'Documents' },
     ];
-
-    // Notes de frais - Show with Pro indicator for all, only accessible for Pro/Business
-    main.push({
-      href: '/expenses',
-      icon: Receipt,
-      label: 'Notes de frais',
-      locked: !sub.effectiveIsPro,
-      lockReason: 'Disponible avec Pro',
-      unlockTier: 'pro',
-    });
 
     main.push(
       { href: '/clients',   icon: Users,           label: 'Clients' },
@@ -200,49 +70,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
     return main;
   };
 
-  const buildDocsNav = (): NavItem[] => {
-    const docs: NavItem[] = [
-      { href: '/documents/factures', icon: Receipt, label: 'Factures' },
-      { href: '/documents/devis',     icon: FileText, label: 'Devis' },
-      { href: '/documents/avoirs',    icon: Receipt, label: 'Avoirs' },
-      { href: '/documents/commandes', icon: Package, label: 'Commandes' },
-      { href: '/documents/livraisons',icon: Truck,   label: 'Livraisons' },
-      { href: '/documents/acomptes',  icon: Calculator, label: 'Acomptes' },
-    ];
-
-    // Contracts - Pro/Business only
-    if (!sub.effectiveIsPro) {
-      docs.push({
-        href: '/contracts',
-        icon: FileText,
-        label: 'Contrats',
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
-      docs.push({ href: '/contracts', icon: FileText, label: 'Contrats' });
-    }
-
-    return docs;
-  };
-
   const buildToolsNav = (): NavItem[] => {
-    const tools: NavItem[] = [];
-
-    // CRM - Pro/Business only
-    if (!sub.canUseCRM) {
-      tools.push({
-        href: '/crm',
-        icon: Target,
-        label: 'Pipeline CRM',
-        locked: true,
-        lockReason: 'Disponible avec Pro',
-        unlockTier: 'pro',
-      });
-    } else {
-      tools.push({ href: '/crm', icon: Target, label: 'Pipeline CRM' });
-    }
+    const tools: NavItem[] = [
+      { href: '/offline/workspace', icon: Building2, label: 'Workspace' },
+    ];
 
     tools.push(
       { href: '/notifications', icon: Bell, label: 'Notifications' },
@@ -253,9 +84,51 @@ export default function MobileDrawer({ open, onClose }: Props) {
     return tools;
   };
 
+  const buildPremiumNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> => {
+    const items: Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> = [];
+
+    // Pipeline CRM - Pro/Business only
+    items.push({
+      href: '/crm',
+      icon: Target,
+      label: 'Pipeline CRM',
+      enabled: sub.canUseCRM,
+      lockReason: sub.canUseCRM ? undefined : 'Disponible avec Pro',
+      unlockTier: 'pro',
+      badge: sub.canUseCRM ? undefined : 'PRO',
+    });
+
+    items.push(
+      {
+        href: '/expenses',
+        icon: Receipt,
+        label: 'Notes de frais',
+        enabled: sub.effectiveIsPro,
+        lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro',
+        unlockTier: 'pro',
+        badge: sub.effectiveIsPro ? undefined : 'Disponible',
+      },
+      {
+        href: '/ocr',
+        icon: Search,
+        label: 'Analyse OCR',
+        enabled: sub.isBusiness || sub.isTrialActive,
+        lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
+        unlockTier: 'business',
+        badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
+      },
+      { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: false, lockReason: 'Bientôt disponible' },
+      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: false, lockReason: 'Bientôt disponible' },
+    );
+
+    return items;
+  };
+
   const NAV_MAIN = buildMainNav();
-  const NAV_DOCS = buildDocsNav();
   const NAV_TOOLS = buildToolsNav();
+  const NAV_PREMIUM = buildPremiumNav();
 
   const NavItem = ({ href, icon: Icon, label, locked, lockReason, unlockTier }: NavItem) => {
     const active = pathname.startsWith(href);
@@ -374,18 +247,67 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accueil</p>
                 </div>
                 {NAV_MAIN.map((item) => <NavItem key={item.href} {...item} />)}
-
-                {/* Documents hub - Combined button + expandable */}
-                <div className="mt-2">
-                  <div className="flex items-center gap-2 px-1 mb-2">
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                      <FileText size={12} className="text-primary" strokeWidth={2.5} />
-                    </div>
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documents</p>
-                  </div>
-                  <DocumentsExpandable documents={NAV_DOCS} pathname={pathname} onClose={onClose} />
-                </div>
               </div>
+
+              {/* Premium features */}
+              {NAV_PREMIUM.some(item => item.enabled || item.lockReason) && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 px-1 mb-2">
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/10 flex items-center justify-center">
+                      <Sparkles size={12} className="text-amber-500" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Premium</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    {NAV_PREMIUM.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                      if (enabled) {
+                        const isActive = pathname.startsWith(href);
+                        return (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={onClose}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                              isActive
+                                ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                            )}
+                          >
+                            <span className={cn(
+                              'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                              isActive
+                                ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                                : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                            )}>
+                              <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                            </span>
+                            <span className="flex-1 font-semibold">{label}</span>
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={href}
+                          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
+                          title={lockReason}
+                        >
+                          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                            <Icon size={17} strokeWidth={2} />
+                          </span>
+                          <span className="flex-1 font-medium">{label}</span>
+                          {badge ? (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                          ) : (
+                            <Lock size={13} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Tools */}
               <div className="space-y-1">
