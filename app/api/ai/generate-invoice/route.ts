@@ -1,9 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+type DocumentType = 'invoice' | 'quote' | 'credit_note' | 'purchase_order' | 'delivery_note' | 'deposit';
+
+const DOC_TYPE_CONFIG: Record<DocumentType, {
+  label: string;
+  defaultDueDays: number;
+  defaultNotes: string;
+  promptHint: string;
+}> = {
+  invoice: {
+    label: 'facture',
+    defaultDueDays: 30,
+    defaultNotes: 'Paiement par virement bancaire. En cas de retard de paiement, une indemnité forfaitaire pour frais de recouvrement de 40€ sera appliquée conformément à l\'article L441-6 du Code de commerce.',
+    promptHint: 'C\'est une FACTURE. due_days est un NOMBRE (30 par défaut) géré par un sélecteur de conditions de paiement — ne PAS le mentionner dans notes. Le champ "notes" doit contenir des conditions COMPLÈTES en français : mode de règlement, pénalités de retard, indemnité de recouvrement.',
+  },
+  quote: {
+    label: 'devis',
+    defaultDueDays: 0,
+    defaultNotes: 'Devis valable 30 jours à compter de la date d\'émission. Acceptation du devis par signature et retour d\'un exemplaire.',
+    promptHint: 'C\'est un DEVIS. Mets due_days à 0. Le champ "notes" doit mentionner la durée de validité du devis et les conditions d\'acceptation — pas de délai de paiement.',
+  },
+  credit_note: {
+    label: 'avoir',
+    defaultDueDays: 0,
+    defaultNotes: 'Avoir à déduire de la prochaine facture.',
+    promptHint: 'C\'est un AVOIR. Mets due_days à 0. Le champ "notes" doit indiquer que c\'est un avoir à déduire. Pas de conditions de paiement.',
+  },
+  purchase_order: {
+    label: 'bon de commande',
+    defaultDueDays: 30,
+    defaultNotes: 'Commande confirmée sous réserve de disponibilité. Livraison selon conditions convenues.',
+    promptHint: 'C\'est un BON DE COMMANDE. Le champ "notes" doit mentionner les conditions de livraison et de commande.',
+  },
+  delivery_note: {
+    label: 'bon de livraison',
+    defaultDueDays: 0,
+    defaultNotes: 'Bon de livraison à conserver. Veuillez vérifier la conformité de la livraison à réception et signaler toute anomalie dans les 48h.',
+    promptHint: 'C\'est un BON DE LIVRAISON. Mets due_days à 0. Le champ "notes" doit concerner la vérification de la réception, pas le paiement.',
+  },
+  deposit: {
+    label: 'facture d\'acompte',
+    defaultDueDays: 0,
+    defaultNotes: 'Acompte demandé à la commande. Ce montant sera déduit de la facture finale.',
+    promptHint: 'C\'est une FACTURE D\'ACOMPE. Mets due_days à 0. Le champ "notes" doit préciser que c\'est un acompte déductible de la facture finale.',
+  },
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, sector, isEdit, existingItems } = await req.json();
+    const { prompt, sector, isEdit, existingItems, document_type } = await req.json();
     if (!prompt?.trim()) return NextResponse.json({ error: 'Prompt requis' }, { status: 400 });
 
     if (!process.env.OPENROUTER_API_KEY) {
@@ -15,6 +61,8 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENROUTER_API_KEY,
     });
 
+    const docType: DocumentType = document_type || 'invoice';
+    const docConfig = DOC_TYPE_CONFIG[docType] || DOC_TYPE_CONFIG.invoice;
     const sectorHint = sector ? `L'utilisateur travaille dans le secteur : ${sector}.` : '';
 
     let systemPrompt: string;
@@ -27,7 +75,10 @@ export async function POST(req: NextRequest) {
         .join('\n');
 
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
-L'utilisateur a déjà une facture en cours avec les lignes suivantes :
+TYPE DE DOCUMENT : ${docConfig.label.toUpperCase()}
+${docConfig.promptHint}
+
+L'utilisateur a déjà un ${docConfig.label} en cours avec les lignes suivantes :
 
 LIGNES EXISTANTES :
 ${existingList}
@@ -58,10 +109,20 @@ RÈGLES ABSOLUES :
 - vat_rate par défaut = 20
 - CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
-- summary doit être en français, court et précis`;
+- summary doit être en français, court et précis
+
+IMPORTANT — DEUX CHAMPS SÉPARÉS :
+- "due_days" est un NOMBRE (ex: 30) utilisé par un sélecteur de conditions de paiement. C'est JUSTE un chiffre.
+- "notes" est un TEXTE COMPLET en français qui apparaît sur le document. Ce doit être une ou plusieurs phrases complètes, JAMAIS un nombre seul.
+  INTERDIT : notes: "30" ou notes: "30 jours"
+  OBLIGATOIRE : notes: "Paiement par virement bancaire sous 30 jours à compter de la date d'émission."
+- Si l'utilisateur ne précise pas de conditions : due_days: ${docConfig.defaultDueDays} et notes: "${docConfig.defaultNotes}"`;
     } else {
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
-L'utilisateur décrit en langage naturel ce qu'il veut facturer.
+TYPE DE DOCUMENT : ${docConfig.label.toUpperCase()}
+${docConfig.promptHint}
+
+L'utilisateur décrit en langage naturel ce qu'il veut créer.
 Extrais les informations et retourne UNIQUEMENT du JSON valide.
 
 Format attendu:
@@ -85,15 +146,22 @@ Format attendu:
     }
   ],
   "due_days": number,
-  "notes": "string ou null",
+  "notes": "string ou null — conditions adaptées au type de document",
   "discount_percent": number
 }
 
 Règles strictes:
 - unit_price est TOUJOURS HT (hors taxes) — DOIT être un nombre fini, jamais une expression
 - vat_rate par défaut = 20 (taux normal français)
-- due_days = délai paiement en jours (30 par défaut)
-- IMPORTANT: discount_percent (remise globale) ne doit être ajouté QUE si l'utilisateur le demande explicitement (ex: "remise 10%", "10% de remise", "faire une remise", "avec une remise de 5%"). Si l'utilisateur ne mentionne aucune remise, mets discount_percent à 0.
+- due_days par défaut = ${docConfig.defaultDueDays} (${docConfig.label})
+
+IMPORTANT — DEUX CHAMPS SÉPARÉS pour les conditions :
+- "due_days" est un NOMBRE (ex: 30) utilisé par un sélecteur de délai de paiement. Juste un chiffre.
+- "notes" est un TEXTE COMPLET en français qui sera imprimé sur le document. Ce doit être une ou plusieurs PHRASES COMPLÈTES.
+  INTERDIT : notes: "30" ou notes: "30 jours"
+  OBLIGATOIRE : notes: "Paiement par virement bancaire sous 30 jours à compter de la date d'émission. En cas de retard, une indemnité forfaitaire de 40€ sera appliquée."
+- Si l'utilisateur ne précise pas de conditions/notes, utilise par défaut : "${docConfig.defaultNotes}"
+- discount_percent (remise globale) ne doit être ajouté QUE si l'utilisateur le demande explicitement. Sinon, mets discount_percent à 0.
 - CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
 - Exemple CORRECT : unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
 - Exemple FAUX : unit_price: 400 / 1.10
@@ -126,14 +194,12 @@ Règles strictes:
       // Post-processing : corriger les expressions mathématiques dans les items
       if (parsed.items && Array.isArray(parsed.items)) {
         parsed.items = parsed.items.map((item: any) => {
-          // Si unit_price est une expression, on essaie de l'évaluer
           if (typeof item.unit_price === 'string' && /[\d\.\s\+\-\*\/\(\)]/.test(item.unit_price)) {
             try {
-              // Évaluation sécurisée d'expressions simples
               const result = Function(`"use strict"; return (${item.unit_price})`)();
               if (typeof result === 'number' && !isNaN(result)) {
                 console.log(`[ai-generate-invoice] Corrected unit_price from "${item.unit_price}" to ${result}`);
-                item.unit_price = Math.round(result * 100) / 100; // Arrondir à 2 décimales
+                item.unit_price = Math.round(result * 100) / 100;
               }
             } catch (e) {
               console.error(`[ai-generate-invoice] Failed to evaluate unit_price: ${item.unit_price}`, e);
@@ -141,6 +207,17 @@ Règles strictes:
           }
           return item;
         });
+      }
+
+      // Post-processing : s'assurer que "notes" est un vrai texte, pas juste un nombre
+      if (parsed.notes !== null && parsed.notes !== undefined) {
+        const n = String(parsed.notes).trim();
+        if (/^\d+$/.test(n) || /^(\d+)\s*(jours?|days?)?$/i.test(n)) {
+          const days = parsed.due_days ?? parseInt(n) ?? docConfig.defaultDueDays;
+          const dayText = days === 0 ? 'à réception' : `sous ${days} jours à compter de la date d'émission`;
+          parsed.notes = `Paiement par virement bancaire ${dayText}. En cas de retard, une indemnité forfaitaire pour frais de recouvrement de 40€ sera appliquée.`;
+          console.log(`[ai-generate-invoice] Fixed bare number notes "${n}" → "${parsed.notes}"`);
+        }
       }
     } catch {
       return NextResponse.json({ error: 'Erreur parsing IA' }, { status: 500 });

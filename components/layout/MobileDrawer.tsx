@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Calculator, HelpCircle,
-  Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight,
+  Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight, ChevronDown,
   Moon, Sun, Home, Search, Activity, Landmark, Link2,
+  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -33,7 +34,14 @@ interface Props {
   onClose: () => void;
 }
 
-// Documents is now a simple nav button — no expandable section
+const DOC_SUB_ITEMS = [
+  { href: '/documents/factures',  icon: FilePlus2,   label: 'Factures' },
+  { href: '/documents/devis',     icon: FileCheck,   label: 'Devis' },
+  { href: '/documents/avoirs',    icon: FilePenLine,  label: 'Avoirs' },
+  { href: '/documents/commandes', icon: Receipt,      label: 'Commandes' },
+  { href: '/documents/livraisons',icon: Truck,        label: 'Bons de livraison' },
+  { href: '/documents/acomptes',  icon: CreditCard,   label: 'Acomptes' },
+];
 
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
@@ -41,6 +49,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
   const { profile } = useAuthStore();
   const sub = useSubscription();
   const { theme, toggle } = useThemeStore();
+  const [docsExpanded, setDocsExpanded] = useState(pathname.startsWith('/documents'));
 
   // Close on route change
   useEffect(() => { onClose(); }, [pathname]);
@@ -53,12 +62,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
   }, [open]);
 
   const TierIcon = TIER_ICON[sub.tier] || Zap;
+  const docsActive = pathname.startsWith('/documents');
 
   // Build nav items based on subscription
   const buildMainNav = (): NavItem[] => {
     const main: NavItem[] = [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-      { href: '/documents', icon: FileText,        label: 'Documents' },
     ];
 
     main.push(
@@ -247,6 +256,69 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Accueil</p>
                 </div>
                 {NAV_MAIN.map((item) => <NavItem key={item.href} {...item} />)}
+
+                {/* Expandable Documents */}
+                <div className="space-y-0.5">
+                  <div className="flex items-stretch gap-0">
+                    <Link
+                      href="/documents"
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-3 px-4 py-3.5 rounded-l-2xl text-sm font-medium transition-all duration-200 flex-1',
+                        docsActive
+                          ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                      )}
+                    >
+                      <span className={cn(
+                        'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                        docsActive
+                          ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                          : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                      )}>
+                        <FileText size={17} strokeWidth={docsActive ? 2.5 : 2} />
+                      </span>
+                      <span className="flex-1 font-semibold">Documents</span>
+                    </Link>
+                    <button
+                      onClick={() => setDocsExpanded(!docsExpanded)}
+                      className={cn(
+                        'flex items-center justify-center w-12 rounded-r-2xl transition-all duration-200 active:scale-95',
+                        docsActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5',
+                      )}
+                      aria-label={docsExpanded ? 'Réduire' : 'Développer'}
+                    >
+                      {docsExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                    </button>
+                  </div>
+
+                  {/* Sub-items */}
+                  {docsExpanded && (
+                    <div className="ml-6 pl-4 border-l border-gray-100 dark:border-white/5 space-y-0.5 py-1">
+                      {DOC_SUB_ITEMS.map(({ href, icon: SubIcon, label }) => {
+                        const subActive = pathname.startsWith(href);
+                        return (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={onClose}
+                            className={cn(
+                              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                              subActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
+                            )}
+                          >
+                            <SubIcon size={16} strokeWidth={subActive ? 2.5 : 1.8} />
+                            <span>{label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Premium features */}

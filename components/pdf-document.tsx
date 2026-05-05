@@ -2,6 +2,7 @@
  * Single source of truth for all PDF rendering.
  * Used by: lib/pdf.ts (client download) + api/send-invoice (email attachment).
  * Supports all 6 templates, all 6 document types, watermarks, payment links, logos.
+ * Handles multi-page with page numbers.
  */
 import React from 'react';
 import { Document, Page, Text, View, Image, Link } from '@react-pdf/renderer';
@@ -129,7 +130,7 @@ function getTplStyle(templateId: number, accent: string): TplStyle {
 
 function fmtCurrency(n: number, currency = 'EUR', locale = 'fr-FR') {
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(n ?? 0)
-    .replace(/\u202F/g, ' ');
+    .replace(/ /g, ' ');
 }
 
 function fmtDate(s: string, locale = 'fr-FR') {
@@ -162,35 +163,15 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
   const f = (n: number) => fmtCurrency(n, currency, locale);
   const fd = (s: string) => fmtDate(s, locale);
 
-  // Professional font pairing with better hierarchy
   const bold = tpl.useSerif ? 'Times-Bold' : 'Helvetica-Bold';
   const reg = tpl.useSerif ? 'Times-Roman' : 'Helvetica';
-  const light = tpl.useSerif ? 'Times-Roman' : 'Helvetica';
-
-  // Enhanced typography scale for professional look
-  const fontSizes = {
-    title: 26,
-    subtitle: 14,
-    heading: 12,
-    body: 10,
-    small: 9,
-    tiny: 8,
-  };
-
-  // Letter spacing for premium feel
-  const letterSpacing = {
-    tight: -0.3,
-    normal: 0,
-    wide: 0.5,
-    wider: 1,
-  };
 
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client';
   const companyName = profile.company_name || '';
   const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
   const paymentMethod = invoice.stripe_payment_link_url || invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
 
-  // Company info lines (shown below company name)
+  // Company info lines
   const senderInfo: string[] = [];
   if (profile.address) senderInfo.push(profile.address);
   if (profile.postal_code || profile.city) senderInfo.push([profile.postal_code, profile.city].filter(Boolean).join(' '));
@@ -198,7 +179,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
   if (profile.email) senderInfo.push(profile.email);
   if (profile.siret) senderInfo.push(`SIRET : ${profile.siret}`);
 
-  // Client details — use invoice-level fields if set, otherwise fall back to client record
+  // Client details
   const clientLines: string[] = [];
   const cAddr = (invoice as any).client_address || invoice.client?.address;
   const cCity = (invoice as any).client_city || invoice.client?.city;
@@ -228,9 +209,39 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
 
   const isFullHeader = tpl.headerType === 'full';
 
+  // Shared footer component — renders on every page via `fixed`
+  const Footer = () => (
+    <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 44, paddingBottom: 16, paddingTop: 10, borderTopWidth: 1.5, borderTopColor: tpl.borderColor }} fixed>
+      <View style={{ position: 'absolute', top: -3, left: 44, width: 60, height: 3, backgroundColor: accent }} />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, fontFamily: bold, color: '#111827' }}>{invoice.number}</Text>
+        <Text style={{ fontSize: 7, color: '#9ca3af' }}>{companyName}{profile.siret ? ` — SIRET ${profile.siret}` : ''}</Text>
+        <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} style={{ fontSize: 7, color: '#9ca3af' }} />
+      </View>
+      {legalText && (
+        <Text style={{ fontSize: 6.5, color: '#b0b0c0', marginTop: 4, lineHeight: 1.4 }}>{legalText}</Text>
+      )}
+    </View>
+  );
+
+  // Table header row — reused on each page break
+  const TableHeader = () => (
+    <View style={{ flexDirection: 'row', backgroundColor: tpl.thBg, padding: '8 0', borderTopLeftRadius: 6, borderTopRightRadius: 6 }}>
+      <Text style={{ flex: 5, fontSize: 7, fontFamily: bold, color: tpl.thColor, paddingLeft: 14, letterSpacing: 0.8 }}>{meta.tableTitle}</Text>
+      <Text style={{ width: 34, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'center', letterSpacing: 0.8 }}>QTÉ</Text>
+      <Text style={{ width: 68, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', letterSpacing: 0.8 }}>P.U. HT</Text>
+      {meta.showVat && (
+        <Text style={{ width: 34, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'center', letterSpacing: 0.8 }}>TVA</Text>
+      )}
+      <Text style={{ width: 72, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', paddingRight: 14, letterSpacing: 0.8 }}>
+        {meta.showItemTTC ? 'TOTAL TTC' : 'TOTAL HT'}
+      </Text>
+    </View>
+  );
+
   return (
     <Document title={`${meta.label} ${invoice.number}`} author={companyName}>
-      <Page size="A4" style={{ fontFamily: reg, backgroundColor: tpl.bodyBg, paddingBottom: 70 }}>
+      <Page size="A4" style={{ fontFamily: reg, backgroundColor: tpl.bodyBg, paddingBottom: 70 }} wrap>
 
         {/* ── WATERMARK ── */}
         {wm && (
@@ -239,13 +250,15 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
           </View>
         )}
 
+        {/* FOOTER on every page */}
+        <Footer />
+
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* HEADER */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {isFullHeader ? (
           <View style={{ backgroundColor: tpl.headerColor, paddingHorizontal: 44, paddingTop: 28, paddingBottom: 22 }}>
-            {/* Logo left - positioned at top left */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, alignItems: 'flex-start' }}>
                 {profile.logo_url ? (
@@ -254,12 +267,10 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
                   <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff' }}>{companyName}</Text>
                 )}
               </View>
-              {/* Doc label badge right */}
               <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
                 <Text style={{ fontSize: 9, fontFamily: bold, color: '#ffffff', letterSpacing: 2.5 }}>{meta.label}</Text>
               </View>
             </View>
-            {/* Company name + info below logo */}
             {profile.logo_url && companyName && (
               <Text style={{ fontSize: 14, fontFamily: bold, color: '#ffffff', marginTop: 8 }}>{companyName}</Text>
             )}
@@ -275,7 +286,6 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
           <View>
             <View style={{ height: 4, backgroundColor: accent }} />
             <View style={{ paddingHorizontal: 44, paddingTop: 28, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              {/* Logo + company name + info left */}
               <View style={{ flex: 1, alignItems: 'flex-start' }}>
                 {profile.logo_url ? (
                   <Image src={profile.logo_url} style={{ height: 60, maxWidth: 200, objectFit: 'contain' }} />
@@ -293,7 +303,6 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
                   </View>
                 )}
               </View>
-              {/* Doc info right */}
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={{ fontSize: 9, fontFamily: bold, color: accent, letterSpacing: 2.5, marginBottom: 5 }}>{meta.label}</Text>
                 <Text style={{ fontSize: 13, fontFamily: bold, color: '#111827' }}>{invoice.number}</Text>
@@ -307,7 +316,6 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         <View style={{ paddingHorizontal: 44, marginTop: 18, flexDirection: 'row', justifyContent: 'space-between' }}>
-          {/* Left: dates */}
           <View>
             <Text style={{ fontSize: 8, fontFamily: bold, color: '#9ca3af', letterSpacing: 1.5, marginBottom: 6 }}>DATE</Text>
             <Text style={{ fontSize: 10, color: '#374151' }}>{meta.issuedLabel} <Text style={{ fontFamily: bold, color: '#111827' }}>{fd(invoice.issue_date)}</Text></Text>
@@ -316,7 +324,6 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             )}
           </View>
 
-          {/* Right: client card */}
           <View style={{ width: 220, backgroundColor: '#ffffff', padding: '14 16', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: accent }}>
             <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 6 }}>{meta.billedLabel.toUpperCase()}</Text>
             {invoice.client?.logo_url && (
@@ -329,10 +336,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
           </View>
         </View>
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
         {/* DIVIDER */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-
         <View style={{ marginHorizontal: 44, marginTop: 18, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ height: 2, flex: 1, backgroundColor: tpl.divider }} />
           <Text style={{ fontSize: 7.5, fontFamily: bold, color: tpl.divider, letterSpacing: 2 }}>DÉTAIL</Text>
@@ -340,24 +344,12 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         </View>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* ITEMS TABLE */}
+        {/* ITEMS TABLE — allow wrapping across pages */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
-        <View style={{ marginHorizontal: 44, marginBottom: 14 }} wrap={false}>
-          {/* Table header */}
-          <View style={{ flexDirection: 'row', backgroundColor: tpl.thBg, padding: '8 0', borderTopLeftRadius: 6, borderTopRightRadius: 6 }}>
-            <Text style={{ flex: 5, fontSize: 7, fontFamily: bold, color: tpl.thColor, paddingLeft: 14, letterSpacing: 0.8 }}>{meta.tableTitle}</Text>
-            <Text style={{ width: 34, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'center', letterSpacing: 0.8 }}>QTÉ</Text>
-            <Text style={{ width: 68, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', letterSpacing: 0.8 }}>P.U. HT</Text>
-            {meta.showVat && (
-              <Text style={{ width: 34, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'center', letterSpacing: 0.8 }}>TVA</Text>
-            )}
-            <Text style={{ width: 72, fontSize: 7, fontFamily: bold, color: tpl.thColor, textAlign: 'right', paddingRight: 14, letterSpacing: 0.8 }}>
-              {meta.showItemTTC ? 'TOTAL TTC' : 'TOTAL HT'}
-            </Text>
-          </View>
+        <View style={{ marginHorizontal: 44, marginBottom: 14 }} wrap>
+          <TableHeader />
 
-          {/* Rows */}
           {invoice.items.map((item, i) => {
             const htTotal = item.total ?? item.quantity * item.unit_price;
             const ttcTotal = htTotal * (1 + (item.vat_rate || 0) / 100);
@@ -371,6 +363,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
                   borderBottomWidth: 0.5,
                   borderBottomColor: tpl.borderColor,
                 }}
+                wrap={false}
               >
                 <Text style={{ flex: 5, fontSize: 9.5, color: '#111827', paddingLeft: 14, paddingRight: 8 }}>{item.description || ''}</Text>
                 <Text style={{ width: 34, fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{item.quantity}</Text>
@@ -387,12 +380,10 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         </View>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* TOTALS + PAYMENT + NOTES - Keep together to avoid pagination split */}
+        {/* TOTALS — allow wrapping */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
-        <View wrap={false}>
-          {/* TOTALS */}
-          <View style={{ paddingHorizontal: 44, alignItems: 'flex-end', marginBottom: 16 }}>
+        <View style={{ paddingHorizontal: 44, alignItems: 'flex-end', marginBottom: 16 }}>
           <View style={{ width: 280 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
               <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>Sous-total HT</Text>
@@ -423,11 +414,11 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         </View>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* PAYMENT LINK */}
+        {/* PAYMENT LINK — separate section to avoid overlap */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {paymentUrl && (
-          <View style={{ marginHorizontal: 44, marginBottom: 12, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '14 18', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ marginHorizontal: 44, marginBottom: 14, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '14 18', flexDirection: 'row', alignItems: 'center', gap: 14 }} wrap={false}>
             <View style={{ width: 36, height: 36, backgroundColor: accent, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ fontSize: 16, color: '#ffffff' }}>€</Text>
             </View>
@@ -447,18 +438,18 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {invoice.notes && (
-          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '12 16', borderLeftWidth: 3, borderLeftColor: accent }}>
+          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '12 16', borderLeftWidth: 3, borderLeftColor: accent }} wrap={false}>
             <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 4 }}>NOTES</Text>
             <Text style={{ fontSize: 9, color: '#374151', lineHeight: 1.6 }}>{invoice.notes}</Text>
           </View>
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* BANK INFO */}
+        {/* BANK INFO — separate from payment link */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {meta.showBankInfo && (profile.iban || profile.bank_name) && (
-          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '12 16', borderLeftWidth: 3, borderLeftColor: accent }}>
+          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '12 16', borderLeftWidth: 3, borderLeftColor: accent }} wrap={false}>
             <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 5 }}>COORDONNÉES BANCAIRES</Text>
             {profile.bank_name && <Text style={{ fontSize: 9, color: '#374151', marginBottom: 2 }}>Banque : {profile.bank_name}</Text>}
             {profile.iban && <Text style={{ fontSize: 9, color: '#374151', marginBottom: 2 }}>IBAN : {profile.iban}</Text>}
@@ -467,25 +458,24 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* PAYMENT TERMS */}
+        {/* PAYMENT TERMS / VALIDITY */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {meta.validityNote && (
-          <View style={{ marginHorizontal: 44, marginBottom: 8 }}>
+          <View style={{ marginHorizontal: 44, marginBottom: 8 }} wrap={false}>
             <Text style={{ fontSize: 8.5, color: '#6b7280', fontStyle: 'italic' }}>{meta.validityNote}</Text>
           </View>
         )}
 
         {(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && (
-          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 6, padding: '10 14' }}>
+          <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 6, padding: '10 14' }} wrap={false}>
             <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 3 }}>CONDITIONS DE PAIEMENT</Text>
             <Text style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>{payTermsText}</Text>
           </View>
         )}
-        </View> {/* Fin du conteneur wrap={false} pour TOTAUX + PAYMENT + NOTES */}
 
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* SIGNATURE SECTION (for signed quotes) */}
+        {/* SIGNATURE SECTION */}
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at && invoice.client_signature_url) && (
@@ -493,13 +483,11 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: tpl.borderColor, borderRadius: 8, padding: '16 18', backgroundColor: tpl.sectionBg }}>
               <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 8 }}>SIGNATURE DU CLIENT</Text>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
-                {/* Signature image */}
                 {invoice.client_signature_url && (
                   <View style={{ width: 120, height: 60, backgroundColor: '#ffffff', borderRadius: 6, borderWidth: 1, borderColor: tpl.borderColor, padding: 4 }}>
-                    <Image src={invoice.client_signature_url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <Image src={invoice.client_signature_url} style={{ width: '100', height: '100%', objectFit: 'contain' }} />
                   </View>
                 )}
-                {/* Signature details */}
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                     <View style={{ width: 16, height: 16, backgroundColor: '#10b981', borderRadius: 3, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
@@ -521,22 +509,6 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
             </View>
           </View>
         )}
-
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* FOOTER */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
-
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 44, paddingBottom: 16, paddingTop: 10, borderTopWidth: 1.5, borderTopColor: tpl.borderColor }} fixed>
-          {/* Accent line */}
-          <View style={{ position: 'absolute', top: -3, left: 44, width: 60, height: 3, backgroundColor: accent }} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 12, fontFamily: bold, color: '#111827' }}>{invoice.number}</Text>
-            <Text style={{ fontSize: 7, color: '#9ca3af' }}>{companyName}{profile.siret ? ` — SIRET ${profile.siret}` : ''}</Text>
-          </View>
-          {legalText && (
-            <Text style={{ fontSize: 6.5, color: '#b0b0c0', marginTop: 4, lineHeight: 1.4 }}>{legalText}</Text>
-          )}
-        </View>
 
       </Page>
     </Document>

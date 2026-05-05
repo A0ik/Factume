@@ -4,10 +4,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, FileText, Users,
-  Settings, Zap, ChevronRight,
+  Settings, Zap, ChevronRight, ChevronDown,
   Building2, Bell, HelpCircle, Package, Receipt, Calendar,
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
   Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
+  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -70,6 +71,15 @@ interface NavItem {
   unlockTier?: string;
 }
 
+const DOC_SUB_ITEMS = [
+  { href: '/documents/factures',  icon: FilePlus2,   label: 'Factures' },
+  { href: '/documents/devis',     icon: FileCheck,   label: 'Devis' },
+  { href: '/documents/avoirs',    icon: FilePenLine,  label: 'Avoirs' },
+  { href: '/documents/commandes', icon: Receipt,      label: 'Commandes' },
+  { href: '/documents/livraisons',icon: Truck,        label: 'Bons de livraison' },
+  { href: '/documents/acomptes',  icon: CreditCard,   label: 'Acomptes' },
+];
+
 export default function Sidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
@@ -81,6 +91,8 @@ export default function Sidebar() {
   const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig   = TIER_CONFIG[currentTier];
   const shouldShowUpgrade = sub.tier !== 'business';
+  const [docsExpanded, setDocsExpanded] = useState(pathname.startsWith('/documents'));
+  const docsActive = pathname.startsWith('/documents');
 
   useEffect(() => { if (user) fetchNotifications(user.id); }, [user]);
 
@@ -88,7 +100,6 @@ export default function Sidebar() {
   const buildCoreNav = (): NavItem[] => {
     const core: NavItem[] = [
       { href: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord', badge: null },
-      { href: '/documents',  icon: FileText,        label: 'Documents',       badge: overdueCount > 0 ? 'overdue' : null },
     ];
 
     core.push(
@@ -261,6 +272,69 @@ export default function Sidebar() {
         {NAV_CORE.map((item) => (
           <NavItem key={item.href} {...item} />
         ))}
+
+        {/* Expandable Documents */}
+        <div className="space-y-0.5">
+          <div className="flex items-stretch gap-0">
+            <Link href="/documents"
+              className={cn(
+                'group flex items-center gap-3.5 px-4 py-3 rounded-l-2xl text-sm font-medium transition-all duration-200 flex-1',
+                docsActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+              )}
+            >
+              <span className={cn(
+                'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
+                docsActive
+                  ? 'bg-primary text-white shadow-md shadow-primary/30'
+                  : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+              )}>
+                <FileText size={17} strokeWidth={docsActive ? 2.5 : 1.8} />
+              </span>
+              <span className="flex-1 font-semibold">Documents</span>
+              {overdueCount > 0 && (
+                <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                  {overdueCount > 9 ? '9+' : overdueCount}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={() => setDocsExpanded(!docsExpanded)}
+              className={cn(
+                'flex items-center justify-center w-10 rounded-r-2xl transition-all duration-200',
+                docsActive
+                  ? 'bg-primary/10 text-primary hover:bg-primary/15'
+                  : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600',
+              )}
+              aria-label={docsExpanded ? 'Réduire' : 'Développer'}
+            >
+              {docsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </div>
+
+          {/* Sub-items */}
+          {docsExpanded && (
+            <div className="ml-5 pl-4 border-l border-gray-100 dark:border-white/5 space-y-0.5 py-1">
+              {DOC_SUB_ITEMS.map(({ href, icon: SubIcon, label }) => {
+                const subActive = pathname.startsWith(href);
+                return (
+                  <Link key={href} href={href}
+                    className={cn(
+                      'group flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200',
+                      subActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
+                    )}
+                  >
+                    <SubIcon size={14} strokeWidth={subActive ? 2.5 : 1.8} />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Divider + quick stats */}
         <div className="pt-4 pb-2">
