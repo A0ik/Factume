@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
-import { CHECKS } from '@/lib/data-health-engine';
+import { CHECK_METADATA } from '@/lib/data-health-metadata';
 import { toast } from 'sonner';
 
 interface Scan {
@@ -19,9 +19,9 @@ interface Scan {
 }
 
 const CATEGORY_ICONS: Record<string, string> = {};
-CHECKS.forEach((c) => { CATEGORY_ICONS[c.id] = c.icon; });
+CHECK_METADATA.forEach((c) => { CATEGORY_ICONS[c.id] = c.icon; });
 const CATEGORY_LABELS: Record<string, string> = {};
-CHECKS.forEach((c) => { CATEGORY_LABELS[c.id] = c.label; });
+CHECK_METADATA.forEach((c) => { CATEGORY_LABELS[c.id] = c.label; });
 
 function getScoreColor(score: number) {
   if (score >= 80) return 'text-green-500';
