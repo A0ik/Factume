@@ -325,6 +325,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ALLOWED_CLASSIFY_TYPES = new Set([
+      'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf',
+    ]);
+    if (!ALLOWED_CLASSIFY_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: `Type de fichier non supporté (${file.type}). Formats acceptés : JPEG, PNG, WebP, HEIC, PDF.` },
+        { status: 400 },
+      );
+    }
+
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
         { error: 'Fichier trop volumineux (max 10 Mo). Compressez le fichier avant l\'envoi.' },
@@ -363,7 +373,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.1,
         max_tokens: 300,
       }),
-      30000,
+      20000,
     );
 
     const classificationRaw = classificationCompletion.choices[0]?.message?.content;
@@ -416,7 +426,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.1,
         max_tokens: 4000,
       }),
-      45000,
+      35000,
     );
 
     const extractionRaw = extractionCompletion.choices[0]?.message?.content;

@@ -5,6 +5,8 @@ import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 
 const MAX_FILES = 20;
 const MAX_CONCURRENT_OCR = 3;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 
 const OCR_PROMPT = `Tu es un expert-comptable français. Analyse ce justificatif de dépense et extrais les informations pour une écriture comptable complète (Plan Comptable Général). Retourne UNIQUEMENT du JSON valide:
 {
@@ -59,7 +61,9 @@ async function processFile(
       const processed = await preprocessReceipt(originalBuffer, originalMimeType);
       ocrBuffer = Buffer.from(processed.buffer);
       ocrMimeType = processed.mimeType;
-    } catch {}
+    } catch (preprocErr) {
+      console.warn(`[OCR Bulk] Preprocessing failed for ${fileName}, using original:`, preprocErr);
+    }
 
     const base64 = ocrBuffer.toString('base64');
     const mimeType = ocrMimeType;
@@ -113,6 +117,9 @@ async function processFile(
     }
 
     // Determine accounting code
+    const rawConfidence = typeof extracted.confidence === 'number' ? extracted.confidence : 0;
+    const normalizedConfidence = rawConfidence > 1 ? rawConfidence / 100 : rawConfidence;
+
     const category = (extracted.category as string) || 'other';
     const supplierCategory = (extracted.supplier_category as string) || null;
     const accountMapping = getAccountCode(category, supplierCategory);
@@ -145,7 +152,7 @@ async function processFile(
       location_country: 'France',
       is_deductible: true,
       ocr_raw_response: extracted,
-      ocr_confidence: (extracted.confidence as number) ?? null,
+      ocr_confidence: normalizedConfidence,
       ocr_line_items: null,
       ocr_invoice_number: (extracted.invoice_number as string) ?? null,
       ocr_currency: (extracted.currency as string) || 'EUR',
@@ -245,17 +252,37 @@ export async function POST(req: NextRequest) {
       }, { status: 402 });
     }
 
+    // Rate limiting (Supabase-backed)
+    {
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+      const { count: recentCount } = await supabase
+        .from('expenses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', windowStart);
+
+      if (recentCount !== null && recentCount >= RATE_LIMIT_MAX_REQUESTS) {
+        return NextResponse.json(
+          { error: 'Trop de requetes OCR. Reessayez dans une minute.' },
+          { status: 429 },
+        );
+      }
+    }
+
     // API key check
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
     }
 
-    // Parse form data
+    // Parse form data — accept both "files" (multi) and "file" (single) field names
     const formData = await req.formData();
-    const files: File[] = formData.getAll('files').filter((f): f is File => f instanceof File);
+    const filesEntries = formData.getAll('files');
+    const fileEntry = formData.getAll('file');
+    const allEntries = filesEntries.length > 0 ? filesEntries : fileEntry;
+    const files: File[] = allEntries.filter((f): f is File => f instanceof File);
 
     if (files.length === 0) {
-      return NextResponse.json({ error: 'Aucun fichier recu. Utilisez la cle "files".' }, { status: 400 });
+      return NextResponse.json({ error: 'Aucun fichier recu. Utilisez la cle "files" ou "file".' }, { status: 400 });
     }
 
     if (files.length > MAX_FILES) {

@@ -3,31 +3,8 @@ import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getAccountCode, generateJournalEntry, getVatAccount } from '@/lib/plan-comptable';
 
-// ---------------------------------------------------------------------------
-// Rate limiting: 10 requests per minute per user.
-// In production, replace this in-memory map with Redis (Upstash) or a
-// Supabase-backed counter so it works across serverless instances.
-// ---------------------------------------------------------------------------
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return false;
-  }
-
-  entry.count += 1;
-  return true;
-}
 
 // ---------------------------------------------------------------------------
 // Allowed MIME types
@@ -255,13 +232,22 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 2. Rate limiting
+    // 2. Rate limiting (Supabase-backed, works across serverless instances)
     // ------------------------------------------------------------------
-    if (!checkRateLimit(user.id)) {
-      return NextResponse.json(
-        { error: 'Trop de requêtes OCR. Réessayez dans une minute.' },
-        { status: 429 },
-      );
+    {
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+      const { count: recentCount } = await supabase
+        .from('expenses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', windowStart);
+
+      if (recentCount !== null && recentCount >= RATE_LIMIT_MAX_REQUESTS) {
+        return NextResponse.json(
+          { error: 'Trop de requêtes OCR. Réessayez dans une minute.' },
+          { status: 429 },
+        );
+      }
     }
 
     // ------------------------------------------------------------------
@@ -314,8 +300,8 @@ export async function POST(req: NextRequest) {
         const processed = await preprocessReceipt(originalBuffer, originalMimeType);
         ocrBuffer = Buffer.from(processed.buffer);
         ocrMimeType = processed.mimeType;
-      } catch {
-        // Fallback to original if preprocessing fails
+      } catch (preprocErr) {
+        console.warn('[OCR Receipt] Preprocessing failed, using original:', preprocErr);
       }
     }
 
@@ -442,7 +428,7 @@ export async function POST(req: NextRequest) {
               account_label: sanitizeString(v.account_label),
             }))
         : [],
-      confidence: sanitizeNumeric(parsed.confidence) ?? 0,
+      confidence: ((sanitizeNumeric(parsed.confidence) ?? 0) / 100),
       payment_method: sanitizePaymentMethod(parsed.payment_method),
       is_duplicate: typeof parsed.is_duplicate === 'boolean' ? parsed.is_duplicate : false,
       supplier_category: supplierCategory,

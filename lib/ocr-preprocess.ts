@@ -182,6 +182,10 @@ export async function preprocessReceipt(
   buffer: Buffer,
   mimeType: string,
 ): Promise<PreprocessResult> {
+  if (!buffer || buffer.length === 0) {
+    return { buffer, mimeType };
+  }
+
   const s = getSharp();
   if (!s) {
     return { buffer, mimeType };

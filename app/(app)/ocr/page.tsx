@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -208,6 +208,16 @@ export default function OCRPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Revoke all Object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      setFiles(prev => {
+        prev.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
+        return prev;
+      });
+    };
+  }, []);
+
   // Review state
   const [reviewingFile, setReviewingFile] = useState<ScannedFile | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -297,7 +307,6 @@ export default function OCRPage() {
     try {
       // Simulate upload progress
       const progressInterval = setInterval(() => {
-        updateFile(scannedFile.id, {});
         setFiles(prev => prev.map(f => {
           if (f.id !== scannedFile.id) return f;
           const newProgress = Math.min(f.progress + 8, 45);
@@ -317,14 +326,18 @@ export default function OCRPage() {
 
       clearInterval(progressInterval);
 
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Erreur lors de l\'analyse');
+        throw new Error((data as { error?: string } | null)?.error || 'Erreur lors de l\'analyse');
+      }
+
+      // 207 = extraction OK but DB save failed — show warning, still display results
+      if (response.status === 207) {
+        toast.warning('Extraction réussie mais sauvegarde partielle. Vérifiez vos dépenses.');
       }
 
       updateFile(scannedFile.id, { status: 'analyzing', progress: 70 });
-
-      const data = await response.json();
 
       // Small delay for UX
       await new Promise(resolve => setTimeout(resolve, 400));
@@ -391,10 +404,37 @@ export default function OCRPage() {
 
   const saveWithEdits = useCallback(async (scannedFile: ScannedFile) => {
     if (!editData) return;
-    // For now, save with the edited data
-    // The expense was already created by the API, we would update it here
+
+    const expenseId = scannedFile.result?.expense?.id;
+
+    // If the expense exists in DB, persist the corrections via PATCH
+    if (expenseId) {
+      try {
+        const res = await fetch(`/api/expenses/${expenseId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vendor: editData.vendor,
+            amount: editData.amount,
+            vat_amount: editData.vat_amount,
+            date: editData.date,
+            category: editData.category,
+            description: editData.description,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({})) as { error?: string };
+          toast.error(`Erreur lors de la sauvegarde : ${errData.error || 'inconnue'}`);
+          return;
+        }
+      } catch {
+        toast.error('Impossible de contacter le serveur pour sauvegarder les corrections.');
+        return;
+      }
+    }
+
     setHistory(prev => [{
-      id: scannedFile.result?.expense?.id || generateId(),
+      id: expenseId || generateId(),
       vendor: editData.vendor,
       amount: editData.amount,
       date: editData.date,
