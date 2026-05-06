@@ -17,14 +17,14 @@ export async function POST(req: NextRequest) {
       if (externalRef && body.supplier_invoice.payment_status === 'paid') {
         const { data: expenses } = await admin
           .from('expenses')
-          .select('id')
+          .select('id, notes')
           .like('notes', `%exported:pennylane%${externalRef}%`)
           .limit(1);
 
         if (expenses?.[0]) {
           await admin
             .from('expenses')
-            .update({ notes: `${expenses[0].notes || ''} [paid_via_pennylane:${new Date().toISOString()}]` })
+            .update({ notes: `${(expenses[0] as { id: string; notes?: string }).notes || ''} [paid_via_pennylane:${new Date().toISOString()}]` })
             .eq('id', expenses[0].id);
         }
       }
