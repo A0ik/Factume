@@ -180,7 +180,7 @@ export default function LandingPage() {
   ];
 
   const faqItems = [
-    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, commencez avec un essai 4 jours pour découvrir toutes les fonctionnalités. Sans carte bancaire requise, sans engagement.' },
+    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, commencez avec un essai 7 jours pour découvrir toutes les fonctionnalités. Sans carte bancaire requise, sans engagement.' },
     { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données. Vous pouvez exporter ou supprimer vos données à tout moment.' },
     { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données à tout moment ou demander la suppression totale de votre compte.' },
     { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Vous pouvez dire "5 jours de dev à 600€" et elle créera la facture complète.' },
@@ -228,7 +228,7 @@ export default function LandingPage() {
       {/* Sticky mobile CTA */}
       <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 transition-transform duration-300 sm:hidden ${showStickyCta ? 'translate-y-0' : 'translate-y-full'}`}>
         <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="flex items-center justify-center gap-2 bg-brand-500 text-white font-semibold py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm">
-          <Zap className="w-4 h-4" />Essai gratuit 4 jours
+          <Zap className="w-4 h-4" />Essai gratuit 7 jours
         </a>
       </div>
 
@@ -1301,7 +1301,7 @@ export default function LandingPage() {
                               : 'bg-slate-900 hover:bg-slate-800 text-white'
                           }`}
                         >
-                          Essai 4 jours gratuit
+                          Essai 7 jours gratuit
                         </Link>
                       </div>
                     </Card3D>

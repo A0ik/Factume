@@ -261,7 +261,7 @@ export default function InvoicesPage() {
               <p className="font-bold text-amber-800 dark:text-amber-400 text-sm">
                 {sub.isAtLimit
                   ? 'Limite atteinte — passez à Pro pour continuer'
-                  : `Plan Discovery · ${sub.invoiceCount}/5 factures ce mois`}
+                  : `Plan Discovery · ${sub.invoiceCount}/10 factures ce mois`}
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-500/80 mt-0.5">
                 Factures illimitées dès 19€/mois →

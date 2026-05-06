@@ -41,18 +41,18 @@ export async function POST(req: NextRequest) {
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
     }
 
-    // 2. Créer l'abonnement avec 4 jours d'essai gratuit
+    // 2. Créer l'abonnement avec 7 jours d'essai gratuit
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      trial_period_days: 4,
+      trial_period_days: 7,
       trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
       payment_settings: { save_default_payment_method: 'on_subscription' },
       metadata: {
         userId,
         plan,
         trialStart: new Date().toISOString(),
-        trialEnd: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
     });
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       clientSecret: setupIntent.client_secret,
       subscriptionId: subscription.id,
-      trialDays: 4,
+      trialDays: 7,
       isSetupMode: true,
     });
 

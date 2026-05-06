@@ -152,7 +152,7 @@ export function generateSoftwareApplicationJsonLd() {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'EUR',
-      description: 'Gratuit jusqu\'à 5 factures par mois',
+      description: 'Gratuit jusqu\'à 10 factures par mois',
     },
     aggregateRating: {
       '@type': 'AggregateRating',

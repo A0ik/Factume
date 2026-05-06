@@ -97,7 +97,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <UpgradeBanner
             type="limit"
             buttonText="Activer l'essai gratuit"
-            description="4 jours d'accès complet à toutes les fonctionnalités"
+            description="7 jours d'accès complet à toutes les fonctionnalités"
             onClick={() => router.push('/trial')}
             onClose={() => setShowInvoiceCounter(false)}
           />
@@ -124,7 +124,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className={cn(
             "flex-1 w-full mx-auto px-4 lg:px-8 py-5 lg:py-6",
-            pathname === '/paywall' || pathname === '/calendar'
+            pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals'
               ? "max-w-[1800px]"
               : pathname.startsWith('/contracts')
               ? "max-w-[1400px]"

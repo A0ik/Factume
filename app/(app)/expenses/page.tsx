@@ -1,6 +1,7 @@
 'use client';
 import { toast } from 'sonner';
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -682,6 +683,10 @@ export default function ExpensesPage() {
             <p className="text-gray-500 dark:text-gray-400 mt-2">100% Légal FR • Indemnités Kilométriques • Plafonds Repas</p>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/expenses/analytics" className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-700 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-violet-500/20 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+              <TrendingDown size={18} />
+              Analytics
+            </Link>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

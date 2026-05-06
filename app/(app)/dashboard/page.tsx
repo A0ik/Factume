@@ -251,7 +251,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1">
               <p className="text-sm text-amber-700 dark:text-amber-400 font-bold flex-1">
-                {sub.isAtLimit ? 'Limite atteinte — Passez à Solo pour continuer' : `Plan Discovery · ${sub.invoiceCount}/5 factures ce mois`}
+                {sub.isAtLimit ? 'Limite atteinte — Passez à Solo pour continuer' : `Plan Discovery · ${sub.invoiceCount}/10 factures ce mois`}
               </p>
             </div>
             <ArrowUpRight size={18} className="text-amber-500 group-hover:translate-x-1 transition-transform" />

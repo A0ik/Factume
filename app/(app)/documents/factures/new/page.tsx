@@ -381,8 +381,8 @@ export default function NewFacturePage() {
     } catch (e: any) {
       if ((e as Error).message === '__timeout__') {
         toast.error('Délai dépassé — réessayez');
-      } else if ((e as Error).message?.includes('Limite de 5 factures')) {
-        toast.error('Limite atteinte ! Vous avez utilisé vos 5 factures mensuelles gratuites. Passez à un plan supérieur pour des factures illimitées.');
+      } else if ((e as Error).message?.includes('Limite de 10 factures')) {
+        toast.error('Limite atteinte ! Vous avez utilisé vos 10 factures mensuelles gratuites. Passez à un plan supérieur pour des factures illimitées.');
         setTimeout(() => router.push('/paywall'), 1500);
       } else {
         console.error('[new invoice] createInvoice error:', e);

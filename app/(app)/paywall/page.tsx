@@ -96,10 +96,10 @@ function getPriceNote(plan: Plan, yearly: boolean, trialMode = false): string {
   if (yearly) {
     const monthlyNum = parseFloat(plan.yearlyPrice.replace('€', ''));
     const total = Math.round(monthlyNum * 12);
-    const suffix = trialMode ? ` (après 4 jours d'essai)` : '';
+    const suffix = trialMode ? ` (après 7 jours d'essai)` : '';
     return `/ mois · ${total}€ facturés annuellement${suffix}`;
   }
-  return trialMode ? '/ mois (après 4 jours d\'essai)' : '/ mois';
+  return trialMode ? '/ mois (après 7 jours d\'essai)' : '/ mois';
 }
 
 export default function PaywallPage() {
@@ -178,11 +178,6 @@ export default function PaywallPage() {
   }, [profile?.id, sub.isFree, sub.tier]);
 
   const handleSelectWithTrial = async (planId: string) => {
-    if (planId !== 'business') {
-      // Trial is only available for Business plan, use direct payment for others
-      handleSelect(planId);
-      return;
-    }
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan || !profile?.id) return;
 
@@ -234,14 +229,14 @@ export default function PaywallPage() {
     const planParam = params.get('plan');
     const trialParam = params.get('trial');
 
-    if (planParam === 'business' && trialParam === 'true') {
+    if (planParam && trialParam === 'true') {
       trialTriggered.current = true;
       // Nettoyer l'URL immédiatement pour éviter un re-trigger au refresh
       window.history.replaceState({}, '', '/paywall');
-      const businessPlan = PLANS.find(p => p.id === 'business');
-      if (businessPlan) {
-        setSelectedPlan(businessPlan);
-        handleSelectWithTrial('business');
+      const plan = PLANS.find(p => p.id === planParam);
+      if (plan) {
+        setSelectedPlan(plan);
+        handleSelectWithTrial(planParam);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -404,7 +399,7 @@ export default function PaywallPage() {
                   </motion.div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-bold text-purple-700">Essai Gratuit Business 4 Jours</h3>
+                      <h3 className="text-xl font-bold text-purple-700">Essai Gratuit 7 Jours</h3>
                       <motion.span
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
@@ -414,7 +409,7 @@ export default function PaywallPage() {
                       </motion.span>
                     </div>
                     <p className="text-sm text-purple-800 mb-2">
-                      Accédez à TOUTES les fonctionnalités Business pendant 4 jours, sans engagement.
+                      Accédez à TOUTES les fonctionnalités pendant 7 jours, sans engagement.
                     </p>
                     <div className="flex items-center gap-2 text-sm text-purple-700 font-semibold">
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -457,11 +452,11 @@ export default function PaywallPage() {
                   <p className="text-sm text-gray-700 mb-4">
                     {remainingInvoices > 0
                       ? `Vous pouvez créer encore ${remainingInvoices} facture${remainingInvoices > 1 ? 's' : ''} ce mois-ci.`
-                      : 'Vous avez atteint votre limite de 5 factures mensuelles.'}
+                      : 'Vous avez atteint votre limite de 10 factures mensuelles.'}
                   </p>
                   <div className="mb-5">
                     <div className="flex justify-between text-xs mb-2">
-                      <span className="font-medium text-gray-600">{sub.invoiceCount} / 5 factures</span>
+                      <span className="font-medium text-gray-600">{sub.invoiceCount} / 10 factures</span>
                       <span className={cn("font-bold", remainingInvoices > 0 ? "text-primary" : "text-red-500")}>
                         {remainingInvoices > 0 ? `${remainingInvoices} restantes` : 'Limite atteinte'}
                       </span>
@@ -470,7 +465,7 @@ export default function PaywallPage() {
                       <motion.div
                         className={cn("h-full rounded-full", remainingInvoices > 0 ? "bg-gradient-to-r from-primary to-primary-dark" : "bg-gradient-to-r from-red-400 to-red-500")}
                         initial={{ width: 0 }}
-                        animate={{ width: `${(sub.invoiceCount / 5) * 100}%` }}
+                        animate={{ width: `${(sub.invoiceCount / 10) * 100}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
@@ -829,7 +824,7 @@ export default function PaywallPage() {
             onClick={router.back}
             className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-4 transition-colors"
           >
-            Continuer gratuitement (5 factures/mois)
+            Continuer gratuitement (10 factures/mois)
           </button>
         </motion.div>
       )}

@@ -53,6 +53,7 @@ export interface Profile {
   is_trial_active?: boolean;
   auto_contract_transitions?: boolean;
   website?: string;
+  referral_code?: string;
   created_at: string;
 }
 

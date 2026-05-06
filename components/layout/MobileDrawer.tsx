@@ -8,7 +8,7 @@ import {
   Package, Receipt, Calculator, HelpCircle,
   Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight, ChevronDown,
   Moon, Sun, Home, Search, Activity, Landmark, Link2,
-  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
+  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -119,8 +119,8 @@ export default function MobileDrawer({ open, onClose }: Props) {
       },
       {
         href: '/ocr',
-        icon: Search,
-        label: 'Analyse OCR',
+        icon: ScanLine,
+        label: 'Scan OCR',
         enabled: sub.isBusiness || sub.isTrialActive,
         lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
         unlockTier: 'business',
@@ -148,7 +148,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
           className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
           title={lockReason}
         >
-          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
             <Icon size={17} strokeWidth={2} />
           </span>
           <span className="flex-1 font-medium">{label}</span>
@@ -206,10 +206,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-200/80 dark:border-emerald-800/40 backdrop-blur-2xl bg-gradient-to-b from-white/95 to-white/98 dark:from-slate-900/95 dark:to-slate-900/98"
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-100 dark:border-emerald-900/30 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950"
           >
             {/* Header - Logo and profile */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-200/80 dark:border-emerald-800/40 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-100/80 dark:border-emerald-900/20 bg-emerald-50/30 dark:bg-slate-900/50">
               <div className="flex items-center gap-3">
                 <Link href="/dashboard" onClick={onClose} className="flex-shrink-0">
                   <Logo size="sm" variant="icon" className="hover:opacity-80 transition-opacity" />
@@ -227,14 +227,14 @@ export default function MobileDrawer({ open, onClose }: Props) {
               <div className="flex items-center gap-1">
                 <button
                   onClick={toggle}
-                  className="p-2 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all hover:scale-105 active:scale-95"
+                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all hover:scale-105 active:scale-95"
                   aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
                 >
                   {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all hover:scale-105 active:scale-95"
+                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all hover:scale-105 active:scale-95"
                   aria-label="Fermer le menu"
                 >
                   <X size={18} />
@@ -366,7 +366,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
                           className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
                           title={lockReason}
                         >
-                          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
                             <Icon size={17} strokeWidth={2} />
                           </span>
                           <span className="flex-1 font-medium">{label}</span>
@@ -395,10 +395,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
             </div>
 
             {/* Footer CTA */}
-            {sub.tier === 'free' && (
+            {sub.tier !== 'business' && (
               <div className="px-3 pb-5 pt-2">
                 <Link
-                  href="/trial"
+                  href={sub.tier === 'free' ? '/trial' : '/paywall'}
                   className="group relative flex items-center gap-3 p-4 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                   onClick={onClose}
                 >
@@ -409,8 +409,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
                       <Sparkles size={20} className="text-white" strokeWidth={2.5} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-black text-white">Essai gratuit 4 jours</p>
-                      <p className="text-[11px] text-white/80 mt-0.5">Accès complet · Sans engagement</p>
+                      <p className="text-sm font-black text-white">
+                        {sub.tier === 'free' ? 'Essai gratuit 7 jours' : sub.tier === 'trial' ? 'Essai en cours' : 'Passer au plan supérieur'}
+                      </p>
+                      <p className="text-[11px] text-white/80 mt-0.5">
+                        {sub.tier === 'free' ? 'Accès complet · Sans engagement' : 'Plus de fonctionnalités'}
+                      </p>
                     </div>
                     <div className="flex-shrink-0">
                       <ChevronRight size={18} className="text-white/80 group-hover:text-white group-hover:translate-x-0.5 transition-all" />

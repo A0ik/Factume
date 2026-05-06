@@ -54,10 +54,10 @@ Mots-clés associés : facturation intelligence artificielle, facturation IA, lo
 ## Plans tarifaires (prix 2026)
 
 ### Plan Découverte — Gratuit (0 €/mois)
-- Jusqu'à 5 factures par mois
+- Jusqu'à 10 factures par mois
 - 10 clients maximum
 - 1 template basique
-- Essai Business 4 jours sans engagement
+- Essai gratuit 7 jours sans engagement
 
 ### Plan Solo — 14,99 €/mois (ou 12 €/mois en annuel)
 - Factures et devis illimités
@@ -88,7 +88,7 @@ Mots-clés associés : facturation intelligence artificielle, facturation IA, lo
 - Support prioritaire & SLA garanti
 - Onboarding dédié
 
-Essai gratuit : 4 jours accès Business complet, sans débit immédiat (enregistrement carte via SetupIntent Stripe).
+Essai gratuit : 7 jours accès complet sur tous les plans, sans débit immédiat (enregistrement carte via SetupIntent Stripe).
 Garantie satisfait ou remboursé : 30 jours.
 
 ## Fonctionnalités détaillées
@@ -142,7 +142,7 @@ Garantie satisfait ou remboursé : 30 jours.
 3. **Contrats de travail intégrés** — CDI/CDD avec conformité droit français, unique sur ce marché
 4. **Factur-X natif** — prêt pour la réforme facturation électronique 2026
 5. **IA locale gratuite** — modèles OpenRouter, 0 € de coût IA pour l'opérateur
-6. **Essai 4 jours sans débit** — SetupIntent Stripe non-intrusif
+6. **Essai 7 jours sans débit** — SetupIntent Stripe non-intrusif
 
 ## Stack technique
 

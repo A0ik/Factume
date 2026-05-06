@@ -63,10 +63,10 @@ export function useSubscription() {
     canDeleteInvoice:     isSolo || effectiveIsPro || effectiveIsBusiness,
     canUseContracts:      effectiveIsPro || effectiveIsBusiness,
     canUseCRM:            effectiveIsPro || effectiveIsBusiness,
-    maxInvoices:          isFree ? 5 : Infinity,
+    maxInvoices:          isFree ? 10 : Infinity,
     invoiceCount:         monthlyInvoiceCount,
-    invoicesRemaining:    isFree ? Math.max(0, 5 - monthlyInvoiceCount) : null,
-    isAtLimit:            isFree && monthlyInvoiceCount >= 5,
+    invoicesRemaining:    isFree ? Math.max(0, 10 - monthlyInvoiceCount) : null,
+    isAtLimit:            isFree && monthlyInvoiceCount >= 10,
     maxWorkspaces:        effectiveIsBusiness ? Infinity : (effectiveIsPro || isTrial) ? 3 : 1,
     canCreateWorkspace:   (count: number) => effectiveIsBusiness || ((effectiveIsPro || isTrial) && count < 3) || count < 1,
   };

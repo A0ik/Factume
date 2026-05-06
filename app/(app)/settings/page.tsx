@@ -11,11 +11,12 @@ import { CURRENCIES, LEGAL_STATUSES, SECTORS, ACCENT_COLORS } from '@/lib/utils'
 import Modal from '@/components/ui/Modal';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 
-import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette } from 'lucide-react';
+import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
+import Link from 'next/link';
 
 const CURRENCY_OPTS = CURRENCIES.map((c) => ({ value: c.code, label: `${c.symbol} ${c.label}` }));
 const LANG_OPTS = [{ value: 'fr', label: '🇫🇷 Français' }, { value: 'en', label: '🇬🇧 English' }];
@@ -1177,6 +1178,30 @@ export default function SettingsPage() {
         </Button>
       </form>
 
+      {/* Team management - Business only */}
+      {sub.isBusiness && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <Users size={16} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">Équipe</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Invitez des collaborateurs et attribuez des rôles</p>
+              </div>
+            </div>
+            <Link
+              href="/settings/team"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-all flex-shrink-0"
+            >
+              <ArrowUpRight size={14} />
+              Gérer
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Accounting export */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <h3 className="font-bold text-gray-900">Export comptabilité</h3>
@@ -1270,6 +1295,50 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Team management (Business only) */}
+      {sub.isBusiness && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-purple-500" />
+              <h3 className="font-bold text-gray-900">Équipe</h3>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">BUSINESS</span>
+          </div>
+          <p className="text-sm text-gray-500">
+            Invitez des collaborateurs, comptables ou associés à accéder à votre espace.
+          </p>
+          <button
+            onClick={() => router.push('/settings/team')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 text-sm font-semibold hover:bg-purple-100 transition-colors border border-purple-200"
+          >
+            <Sparkles size={14} />
+            Gérer mon équipe
+            <ArrowUpRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Referral program */}
+      {sub.isFree && (
+        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl border border-primary/20 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-primary" />
+            <h3 className="font-bold text-gray-900">Parrainage</h3>
+          </div>
+          <p className="text-sm text-gray-500">
+            Parrainez un ami et gagnez 1 mois gratuit pour chaque inscription !
+          </p>
+          <button
+            onClick={() => router.push('/settings/referral')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors"
+          >
+            <Zap size={14} />
+            Mon lien de parrainage
+          </button>
+        </div>
+      )}
 
       {/* Webhooks */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">

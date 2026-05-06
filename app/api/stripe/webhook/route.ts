@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
         if (userId) {
           await supabase.from('profiles').update({
             trial_start_date: new Date().toISOString(),
-            trial_end_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+            trial_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             is_trial_active: true,
             subscription_tier: 'trial',
           }).eq('id', userId);

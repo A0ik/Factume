@@ -194,7 +194,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             name: 'Plan Découverte',
             price: '0',
             priceCurrency: 'EUR',
-            description: 'Gratuit — jusqu\'à 5 factures par mois',
+            description: 'Gratuit — jusqu\'à 10 factures par mois',
           },
           {
             '@type': 'Offer',
@@ -292,7 +292,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             name: 'Quels sont les tarifs de Factu.me ?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Factu.me propose 4 plans : Découverte (gratuit, 5 factures/mois), Solo à 14,99€/mois (factures illimitées, dictée vocale, signature eIDAS), Pro à 29,99€/mois (+ contrats CDI/CDD, CRM, Factur-X, FEC), Business à 59,99€/mois (+ OCR IA, API, multi-workspaces). Réduction de 20% en annuel. Essai Business gratuit 4 jours, sans engagement.',
+              text: 'Factu.me propose 4 plans : Découverte (gratuit, 10 factures/mois), Solo à 14,99€/mois (factures illimitées, dictée vocale, signature eIDAS), Pro à 29,99€/mois (+ contrats CDI/CDD, CRM, Factur-X, FEC), Business à 59,99€/mois (+ OCR IA, API, multi-workspaces). Réduction de 20% en annuel. Essai gratuit 7 jours sur tous les plans, sans engagement.',
             },
           },
           {

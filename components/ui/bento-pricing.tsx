@@ -24,7 +24,7 @@ const PLANS: PlanConfig[] = [
     description: "L'essentiel pour tester l'outil.",
     recommended: false,
     features: [
-      '5 factures et devis par mois',
+      '10 factures et devis par mois',
       '10 clients enregistrés',
       '1 template basique',
       { label: 'Envoi par email', included: false },
@@ -36,7 +36,7 @@ const PLANS: PlanConfig[] = [
   {
     id: 'solo',
     name: 'Solo',
-    priceMonthly: 19,
+    priceMonthly: 14.99,
     description: 'Pour les freelances qui veulent être pros et sereins.',
     recommended: true,
     features: [
@@ -51,18 +51,39 @@ const PLANS: PlanConfig[] = [
     ctaVariant: 'default',
   },
   {
-    id: 'business',
-    name: 'Business',
-    priceMonthly: 39,
-    description: "L'arsenal complet pour automatiser tout.",
+    id: 'pro',
+    name: 'Pro',
+    priceMonthly: 29.99,
+    description: 'Pour grandir avec l\'IA et les contrats.',
     recommended: false,
     features: [
       'Tout le plan Solo inclus',
+      'Contrats & Signatures électroniques',
+      'Factur-X (Conforme 2026)',
+      'IA & Relances automatiques',
+      'Export FEC & Comptabilité',
+      'Pipeline CRM intégré',
+      'Factures récurrentes',
+      'Notes de frais',
+    ],
+    ctaText: 'Essayer Pro gratuitement',
+    ctaVariant: 'default',
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    priceMonthly: 59.99,
+    description: "L'arsenal complet pour automatiser tout.",
+    recommended: false,
+    features: [
+      'Tout le plan Pro inclus',
       'Scan IA de reçus (Dext-like)',
       'Export FEC automatique',
       'CRM & Pipeline intégré',
-      'Multi-Workspaces',
-      'Webhooks avancés',
+      '10 espaces de travail',
+      'Multi-utilisateurs & Équipes',
+      'API & Webhooks avancés',
+      'Support prioritaire',
     ],
     ctaText: 'Choisir Business',
     ctaVariant: 'outline',
@@ -113,19 +134,17 @@ function FeatureList({
 
 export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void }) {
   const handleClick = (planId: string) => {
-    console.log(planId);
     onSelect?.(planId);
   };
 
-  const [decouverte, solo, business] = PLANS;
+  const [decouverte, solo, pro, business] = PLANS;
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-8">
-      {/* ── Découverte (col-span-3) ── */}
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+      {/* Découverte */}
       <div
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white',
-          'lg:col-span-3',
         )}
       >
         <div className="flex items-center gap-2 p-5 pb-3">
@@ -155,14 +174,12 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
         </div>
       </div>
 
-      {/* ── Solo (col-span-5, featured) ── */}
+      {/* Solo (featured) */}
       <div
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border border-primary/30 bg-gray-950',
-          'lg:col-span-5',
         )}
       >
-        {/* subtle grid pattern */}
         <div
           className="pointer-events-none absolute inset-0 opacity-10"
           style={{
@@ -180,17 +197,11 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
             <Sparkles className="h-3 w-3 text-primary" />
             Recommandé
           </span>
-          <button
-            onClick={() => handleClick(solo.id)}
-            className="ml-auto rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark active:scale-95"
-          >
-            {solo.ctaText}
-          </button>
         </div>
 
         <div className="relative z-10 px-5 pb-3">
           <div className="flex items-end gap-1.5">
-            <span className="font-mono text-5xl font-bold tracking-tight text-white">
+            <span className="font-mono text-4xl font-bold tracking-tight text-white">
               {solo.priceMonthly}€
             </span>
             <span className="pb-1.5 text-sm text-gray-400">/mois</span>
@@ -201,41 +212,86 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
         <div className="relative z-10 flex-1 p-5">
           <FeatureList features={solo.features} textClass="text-gray-300" />
         </div>
+
+        <div className="relative z-10 px-5 pb-5">
+          <button
+            onClick={() => handleClick(solo.id)}
+            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark active:scale-95"
+          >
+            {solo.ctaText}
+          </button>
+        </div>
       </div>
 
-      {/* ── Business (full width col-span-8) ── */}
+      {/* Pro */}
       <div
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white',
-          'md:flex-row lg:col-span-8',
         )}
       >
-        <div className="flex-1 p-6">
-          <div className="mb-3 flex items-center gap-3">
-            <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
-              {business.name.toUpperCase()}
-            </span>
-          </div>
+        <div className="flex items-center gap-2 p-5 pb-3">
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700">
+            {pro.name.toUpperCase()}
+          </span>
+        </div>
 
-          <div className="mb-1 flex items-end gap-1.5">
+        <div className="px-5 pb-3">
+          <div className="flex items-end gap-1.5">
+            <span className="font-mono text-4xl font-bold tracking-tight text-gray-900">
+              {pro.priceMonthly}€
+            </span>
+            <span className="pb-1.5 text-sm text-gray-400">/mois</span>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">{pro.description}</p>
+        </div>
+
+        <div className="flex-1 px-5 pb-5">
+          <FeatureList features={pro.features} />
+        </div>
+
+        <div className="px-5 pb-5">
+          <button
+            onClick={() => handleClick(pro.id)}
+            className="w-full rounded-xl border-2 border-gray-900 px-6 py-2.5 text-sm font-bold text-gray-900 transition-all hover:bg-gray-900 hover:text-white active:scale-95"
+          >
+            {pro.ctaText}
+          </button>
+        </div>
+      </div>
+
+      {/* Business */}
+      <div
+        className={cn(
+          'relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white',
+        )}
+      >
+        <div className="flex items-center gap-2 p-5 pb-3">
+          <span className="inline-flex items-center rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-purple-700">
+            {business.name.toUpperCase()}
+          </span>
+        </div>
+
+        <div className="px-5 pb-3">
+          <div className="flex items-end gap-1.5">
             <span className="font-mono text-4xl font-bold tracking-tight text-gray-900">
               {business.priceMonthly}€
             </span>
-            <span className="pb-1 text-sm text-gray-400">/mois</span>
+            <span className="pb-1.5 text-sm text-gray-400">/mois</span>
           </div>
+          <p className="mt-1 text-sm text-gray-500">{business.description}</p>
+        </div>
 
-          <p className="mb-5 text-sm text-gray-500">{business.description}</p>
+        <div className="flex-1 px-5 pb-5">
+          <FeatureList features={business.features} />
+        </div>
 
+        <div className="px-5 pb-5">
           <button
             onClick={() => handleClick(business.id)}
-            className="rounded-xl border-2 border-gray-900 px-6 py-2.5 text-sm font-bold text-gray-900 transition-all hover:bg-gray-900 hover:text-white active:scale-95"
+            className="w-full rounded-xl border-2 border-gray-900 px-6 py-2.5 text-sm font-bold text-gray-900 transition-all hover:bg-gray-900 hover:text-white active:scale-95"
           >
             {business.ctaText}
           </button>
-        </div>
-
-        <div className="flex-1 border-t border-gray-100 p-6 md:border-l md:border-t-0">
-          <FeatureList features={business.features} />
         </div>
       </div>
     </div>

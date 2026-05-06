@@ -8,7 +8,7 @@ import {
   Building2, Bell, HelpCircle, Package, Receipt, Calendar,
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
   Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
-  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
+  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -28,9 +28,18 @@ const TIER_CONFIG = {
     gradient: 'from-gray-600 to-gray-700',
     iconBg: 'from-gray-100 to-gray-200',
     icon: Zap, iconColor: 'text-white',
-    message: 'Essai gratuit 4 jours',
+    message: 'Essai gratuit 7 jours',
     subtext: 'Accès complet · Sans engagement',
     cta: '/trial',
+  },
+  trial: {
+    name: 'Essai', nextTier: 'pro',
+    gradient: 'from-purple-500 to-violet-600',
+    iconBg: 'from-purple-500 to-violet-600',
+    icon: Sparkles, iconColor: 'text-white',
+    message: 'Essai en cours',
+    subtext: 'Accès Pro · 7 jours gratuits',
+    cta: '/paywall',
   },
   solo: {
     name: 'Solo', nextTier: 'pro',
@@ -88,7 +97,7 @@ export default function Sidebar() {
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
   const sub = useSubscription();
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
-  const currentTier  = (['free','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
+  const currentTier  = (['free','trial','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig   = TIER_CONFIG[currentTier];
   const shouldShowUpgrade = sub.tier !== 'business';
   const [docsExpanded, setDocsExpanded] = useState(pathname.startsWith('/documents'));
@@ -151,8 +160,8 @@ export default function Sidebar() {
       },
       {
         href: '/ocr',
-        icon: Search,
-        label: 'Analyse OCR',
+        icon: ScanLine,
+        label: 'Scan OCR',
         enabled: sub.isBusiness || sub.isTrialActive,
         lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
         unlockTier: 'business',
