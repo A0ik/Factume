@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     let completion: Awaited<ReturnType<typeof openrouter.chat.completions.create>>;
     try {
       completion = await openrouter.chat.completions.create({
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
         messages: [
         {
           role: 'system',

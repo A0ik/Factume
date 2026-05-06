@@ -330,6 +330,10 @@ export interface BankTransaction {
   currency: string;
   source: string;
   status: 'unreconciled' | 'reconciled';
+  bank_connection_id?: string;
+  external_id?: string;
+  description?: string;
+  matched_expense_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -377,6 +381,73 @@ export interface MerchantConnection {
 }
 
 export type MerchantProvider = 'amazon' | 'orange' | 'uber' | 'apple' | 'google' | 'microsoft' | 'other';
+
+export interface Integration {
+  id: string;
+  user_id: string;
+  workspace_id?: string;
+  provider: 'pennylane' | 'sage' | 'bridge' | 'other';
+  config: Record<string, any>;
+  status: 'connected' | 'disconnected' | 'error';
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankConnection {
+  id: string;
+  user_id: string;
+  workspace_id?: string;
+  provider: string;
+  connection_id?: string;
+  access_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  bank_name?: string;
+  bank_logo?: string;
+  status: 'active' | 'disconnected' | 'error';
+  last_synced_at?: string;
+  created_at: string;
+}
+
+export interface DataHealthScan {
+  id: string;
+  user_id: string;
+  workspace_id?: string;
+  overall_score: number;
+  category_scores: Record<string, number>;
+  issues: Array<{ category: string; severity: string; message: string; count: number }>;
+  suggestions: Array<{ category: string; message: string }>;
+  scanned_at: string;
+  created_at: string;
+}
+
+export interface Cabinet {
+  id: string;
+  name: string;
+  owner_id: string;
+  siret?: string;
+  logo_url?: string;
+  settings: Record<string, any>;
+  created_at: string;
+}
+
+export interface CabinetMember {
+  id: string;
+  cabinet_id: string;
+  user_id: string;
+  role: 'admin' | 'manager' | 'viewer';
+  created_at: string;
+}
+
+export interface CabinetClient {
+  id: string;
+  cabinet_id: string;
+  client_user_id: string;
+  status: 'pending' | 'active' | 'disconnected';
+  invited_at: string;
+  connected_at?: string;
+}
 
 export const MERCHANT_PROVIDERS: Record<MerchantProvider, { name: string; icon: string; color: string }> = {
   amazon: { name: 'Amazon Business', icon: '📦', color: 'bg-orange-500' },

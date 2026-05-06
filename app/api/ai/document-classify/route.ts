@@ -346,7 +346,7 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     const classificationCompletion = await withTimeout(
       openrouter.chat.completions.create({
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'user',
@@ -399,7 +399,7 @@ export async function POST(req: NextRequest) {
 
     const extractionCompletion = await withTimeout(
       openrouter.chat.completions.create({
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'user',

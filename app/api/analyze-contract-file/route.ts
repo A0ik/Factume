@@ -139,7 +139,7 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown, pas de commentaires) avec c
       const imgMime = isImage ? mimeType : 'image/jpeg';
 
       const VISION_MODELS = [
-        'google/gemini-2.0-flash-exp', // Rapide et gratuit, excellent pour l'OCR
+        'google/gemini-2.5-flash', // Rapide et gratuit, excellent pour l'OCR
         'meta-llama/llama-3.2-90b-vision-preview', // Plus précis pour les contrats complexes
         'openai/gpt-4o-mini', // Fallback fiable
       ];

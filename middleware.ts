@@ -14,6 +14,9 @@ const PUBLIC_PREFIXES = [
   '/api/share/',
   '/api/client-portal/',
   '/api/contract-signing/',
+  '/api/integrations/pennylane/webhook',
+  '/api/bank-feed/callback',
+  '/api/cron/',
   '/share/',
   '/client/',
   '/sign/',
@@ -43,6 +46,9 @@ const PROTECTED_PREFIXES = [
   '/documents',
   '/trial',
   '/onboarding',
+  '/data-health',
+  '/integrations',
+  '/cabinet',
 ];
 
 export async function middleware(req: NextRequest) {

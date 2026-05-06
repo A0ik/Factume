@@ -9,6 +9,7 @@ import {
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
   Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
+  Shield, Plug, Briefcase,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -167,10 +168,12 @@ export default function Sidebar() {
         unlockTier: 'business',
         badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
-      { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
-      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
-      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/integrations', icon: Plug,     label: 'Connexions',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/data-health',  icon: Shield,   label: 'Santé des données', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/accounting',   icon: Calculator,label: 'Comptabilité',     enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/activity',     icon: Activity, label: 'Activité',          enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/banking',      icon: Landmark, label: 'Banque',            enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/cabinet',      icon: Briefcase,label: 'Cabinet',          enabled: sub.isBusiness || sub.isTrialActive, lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business', unlockTier: 'business', badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business' },
     );
 
     return items;

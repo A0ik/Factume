@@ -49,7 +49,7 @@ interface ScannedFile {
   progress: number;
   result?: {
     extracted: ExtractedData;
-    expense?: { id: string; [key: string]: unknown };
+    expense?: { id: string;[key: string]: unknown };
     receipt_url?: string;
   };
   error?: string;
@@ -441,7 +441,7 @@ export default function OCRPage() {
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-bold shadow-lg shadow-violet-500/20"
               >
                 <Sparkles size={12} />
-                IA Gemini 2.0
+                Propulsé par Gemini
               </motion.span>
             </div>
             <p className="text-gray-500 dark:text-gray-400">
@@ -1190,8 +1190,8 @@ export default function OCRPage() {
                   <span className={cn(
                     'px-2.5 py-1 rounded-lg text-xs font-bold',
                     item.status === 'saved' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
-                    item.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                    'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                      item.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                        'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
                   )}>
                     {item.status === 'saved' ? 'Sauvegardé' : item.status === 'reviewed' ? 'Vérifié' : 'En attente'}
                   </span>

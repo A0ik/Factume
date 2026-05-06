@@ -1,26 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 
 const MAX_FILES = 20;
 const MAX_CONCURRENT_OCR = 3;
 
-const OCR_PROMPT = `Analyse ce justificatif de depense et extrait les informations. Retourne UNIQUEMENT du JSON valide:
+const OCR_PROMPT = `Tu es un expert-comptable français. Analyse ce justificatif de dépense et extrais les informations pour une écriture comptable complète (Plan Comptable Général). Retourne UNIQUEMENT du JSON valide:
 {
   "vendor": "nom du fournisseur/magasin",
+  "vendor_siret": "SIRET 14 chiffres ou null",
   "amount": nombre TTC,
   "ht_amount": montant HT ou null,
   "vat_amount": montant TVA ou null,
   "vat_rate": taux TVA (%) ou null,
   "date": "YYYY-MM-DD ou null",
+  "due_date": "YYYY-MM-DD ou null",
   "description": "description courte de l'achat",
-  "category": "transport|meals|accommodation|equipment|office|shopping|telecom|insurance|software|other",
+  "category": "transport|meals|accommodation|equipment|office|shopping|mileage|telecom|insurance|software|other",
   "currency": "EUR",
   "confidence": nombre entre 0 et 100,
-  "payment_method": "card|cash|transfer|other",
-  "invoice_number": "numero de facture ou null"
+  "payment_method": "card|cash|transfer|check|null",
+  "invoice_number": "numero de facture ou null",
+  "supplier_category": "restaurant|gas_station|hotel|supermarket|pharmacy|electronics|telecom_provider|software_provider|transport_company|other",
+  "account_code": "numero de compte PCG (6 chiffres, ex: 625600, 606400, 618300)",
+  "account_label": "libellé du compte PCG",
+  "document_type": "invoice|receipt|expense_report|credit_note|other"
 }
-Si une information n'est pas lisible, mets null. La categorie doit etre la plus precise possible parmi les options listees.`;
+Si une information n'est pas lisible, mets null. La catégorie et le code compte doivent être les plus précis possibles.
+Codes comptables courants: 625600 (déplacements), 606400 (fournitures bureau), 618300 (logiciels), 626000 (télécom), 616000 (assurance), 604000 (matériel), 606150 (carburant), 648000 (autres).`;
 
 interface OcrResult {
   success: boolean;
@@ -40,10 +48,23 @@ async function processFile(
   try {
     // Convert file to base64
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = file.type || 'image/jpeg';
+    const originalBuffer = Buffer.from(arrayBuffer);
+    const originalMimeType = file.type || 'image/jpeg';
 
-    // Upload to Supabase storage
+    // Preprocess image for better OCR accuracy
+    let ocrBuffer: Buffer = originalBuffer;
+    let ocrMimeType = originalMimeType;
+    try {
+      const { preprocessReceipt } = await import('@/lib/ocr-preprocess');
+      const processed = await preprocessReceipt(originalBuffer, originalMimeType);
+      ocrBuffer = Buffer.from(processed.buffer);
+      ocrMimeType = processed.mimeType;
+    } catch {}
+
+    const base64 = ocrBuffer.toString('base64');
+    const mimeType = ocrMimeType;
+
+    // Upload original to Supabase storage
     const timestamp = Date.now();
     const storagePath = `${userId}/${timestamp}_${fileName}`;
 
@@ -68,7 +89,7 @@ async function processFile(
 
     // OCR via OpenRouter Gemini
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -91,13 +112,31 @@ async function processFile(
       return { success: false, file: fileName, error: 'Impossible de lire le justificatif' };
     }
 
+    // Determine accounting code
+    const category = (extracted.category as string) || 'other';
+    const supplierCategory = (extracted.supplier_category as string) || null;
+    const accountMapping = getAccountCode(category, supplierCategory);
+    const finalAccountCode = (extracted.account_code as string) ?? accountMapping.code;
+    const finalAccountLabel = (extracted.account_label as string) ?? accountMapping.label;
+
+    // Generate journal entry
+    const journalEntry = generateJournalEntry({
+      category,
+      supplierCategory,
+      amountTtc: typeof extracted.amount === 'number' ? extracted.amount : 0,
+      amountHt: typeof extracted.ht_amount === 'number' ? extracted.ht_amount : null,
+      vatAmount: typeof extracted.vat_amount === 'number' ? extracted.vat_amount : null,
+      vatRate: typeof extracted.vat_rate === 'number' ? extracted.vat_rate : null,
+      paymentMethod: (extracted.payment_method as string) || null,
+    });
+
     // Insert into expenses table
     const expenseRecord = {
       user_id: userId,
       vendor: (extracted.vendor as string) || 'Inconnu',
       amount: typeof extracted.amount === 'number' ? extracted.amount : 0,
       vat_amount: (extracted.vat_amount as number) ?? null,
-      category: (extracted.category as string) || 'other',
+      category,
       date: (extracted.date as string) || new Date().toISOString().split('T')[0],
       description: (extracted.description as string) || fileName,
       receipt_url: receiptUrl,
@@ -111,6 +150,18 @@ async function processFile(
       ocr_invoice_number: (extracted.invoice_number as string) ?? null,
       ocr_currency: (extracted.currency as string) || 'EUR',
       receipt_storage_path: storagePath,
+      // Accounting fields (PCG)
+      account_code: finalAccountCode,
+      account_label: finalAccountLabel,
+      journal_type: journalEntry.journalType,
+      journal_entry: {
+        debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
+        credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
+        vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
+      },
+      vat_account: journalEntry.vatAccount || null,
+      document_type: (extracted.document_type as string) || null,
+      supplier_category: supplierCategory,
     };
 
     const { data: expense, error: insertError } = await supabase

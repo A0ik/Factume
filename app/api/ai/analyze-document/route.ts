@@ -10,7 +10,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 //   Fallbacks: gemma-2-9b-it (free), mistral-7b-instruct ($0.03/M)
 //
 // Vision Models (images and non-text PDFs):
-//   Primary: google/gemini-2.0-flash-exp (good cost/quality ratio)
+//   Primary: google/gemini-2.5-flash (good cost/quality ratio)
 //   Fallbacks: llama-3.2-11b-vision, gpt-4o-mini
 //
 // Estimated cost per document: $0.01-0.02 (vs $0.05-0.10 before optimization)
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
 
       // Cost-optimized vision models in order of preference
       const VISION_MODELS = [
-        'google/gemini-2.0-flash-exp',    // Good balance of quality and cost
+        'google/gemini-2.5-flash',    // Good balance of quality and cost
         'google/gemini-2.0-flash-thinking', // Better reasoning for complex docs
         'meta-llama/llama-3.2-11b-vision', // Cheaper alternative
         'openai/gpt-4o-mini',              // Reliable fallback

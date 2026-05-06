@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getAccountCode, generateJournalEntry, getVatAccount } from '@/lib/plan-comptable';
 
 // ---------------------------------------------------------------------------
 // Rate limiting: 10 requests per minute per user.
@@ -109,7 +110,7 @@ function sanitizePaymentMethod(val: unknown): string | null {
 // ---------------------------------------------------------------------------
 
 function buildOcrPrompt(): string {
-  return `Tu es un expert-comptable français spécialisé dans la lecture et l'analyse de justificatifs de dépenses professionnelles (tickets de caisse, factures, reçus, notes de frais). Tu dois analyser cette image ou ce document avec une précision maximale.
+  return `Tu es un expert-comptable français diplômé, spécialisé dans la saisie de pièces comptables et le Plan Comptable Général (PCG). Tu analyses des justificatifs de dépenses pour produire une écriture comptable complète prête à être saisie dans un logiciel de comptabilité.
 
 CONSIGNES CRITIQUES :
 1. Analyse CHAQUE ligne du document avec attention.
@@ -118,12 +119,46 @@ CONSIGNES CRITIQUES :
 4. Si plusieurs taux de TVA sont présents, détaille-les tous dans vat_details.
 5. Pour les tickets de caisse, extrais chaque ligne d'achat dans line_items avec sa quantité et son prix unitaire quand c'est visible.
 6. La catégorie doit être la plus précise possible parmi la liste autorisée.
-7. Le champ supplier_category indique le TYPE d'établissement (restaurant, station-service, hôtel, supermarché, etc.).
-8. Le champ confidence est ta confiance GLOBALE dans l'extraction (0-100), en tenant compte de la qualité de l'image, de la lisibilité, et de la cohérence des montants.
-9. is_duplicate doit être true UNIQUEMENT si le document semble être un doublon (même vendeur, même montant, même date — typiquement un ticket imprimé en double).
-10. Le champ payment_method déduit le mode de paiement si visible (CB, espèces, virement, chèque).
-11. Les montants doivent être des NOMBRES (pas des chaînes), sans symbole monétaire.
+7. Le champ supplier_category indique le TYPE d'établissement.
+8. Le champ confidence est ta confiance GLOBALE dans l'extraction (0-100).
+9. is_duplicate doit être true UNIQUEMENT si le document semble être un doublon.
+10. Le champ payment_method déduit le mode de paiement si visible.
+11. Les montants doivent être des NOMBRES, sans symbole monétaire.
 12. Les dates doivent être au format YYYY-MM-DD (ISO 8601).
+
+COMPTABILISATION — PLAN COMPTABLE GÉNÉRAL (PCG) :
+Pour CHAQUE dépense, attribue le numéro de compte PCG le plus précis parmi :
+- 601000 : Achats stockés – Matières premières
+- 602000 : Achats stockés – Autres approvisionnements
+- 604000 : Achats d'études et prestations de services
+- 606100 : Achats non stockés – Énergie (électricité, gaz)
+- 606150 : Achats non stockés – Carburants
+- 606400 : Achats non stockés – Fournitures de bureau
+- 606800 : Achats non stockés – Autres approvisionnements
+- 611000 : Sous-traitance générale
+- 612000 : Redevances de crédit-bail
+- 613000 : Locations (immobilier, matériel)
+- 614000 : Charges locatives
+- 615000 : Entretien et réparations
+- 616000 : Primes d'assurance
+- 618100 : Services extérieurs – Documentation générale
+- 618300 : Services extérieurs – Logiciels et abonnements SaaS
+- 618400 : Services extérieurs – Documentation technique
+- 618500 : Services extérieurs – Frais de formation
+- 621000 : Personnel extérieur
+- 622000 : Rémunérations d'intermédiaires
+- 625100 : Indemnités kilométriques
+- 625600 : Missions, réceptions, déplacements
+- 626000 : Frais de télécommunications
+- 627000 : Services bancaires
+- 631000 : Impôts et taxes – Charges sociales
+- 635000 : Autres impôts et taxes
+- 641000 : Rémunérations du personnel
+- 645000 : Charges de sécurité sociale
+- 648000 : Autres charges de gestion courante
+
+Le champ "account_code" doit contenir le numéro de compte PCG (6 chiffres).
+Le champ "account_label" doit contenir le libellé exact du compte PCG.
 
 CATÉGORIES AUTORISÉES pour "category" :
 - transport (train, avion, taxi, Uber, péage, parking, location voiture, carburant)
@@ -159,15 +194,20 @@ Retourne UNIQUEMENT du JSON valide, sans texte autour, sans markdown, sans comme
   "category": "transport|meals|accommodation|equipment|office|shopping|mileage|telecom|insurance|software|other",
   "currency": "EUR",
   "line_items": [
-    { "description": "Description de l'article", "quantity": 1, "unit_price": 0.00, "total": 0.00, "vat_rate": 20.0 }
+    { "description": "Description de l'article", "quantity": 1, "unit_price": 0.00, "total": 0.00, "vat_rate": 20.0, "account_code": "606400", "account_label": "Fournitures de bureau" }
   ],
   "confidence": 85,
   "payment_method": "card|cash|transfer|check|null",
   "is_duplicate": false,
-  "supplier_category": "restaurant|gas_station|hotel|supermarket|pharmacy|bookstore|clothing|electronics|telecom_provider|insurance_company|software_provider|transport_company|other"
+  "supplier_category": "restaurant|gas_station|hotel|supermarket|pharmacy|bookstore|clothing|electronics|telecom_provider|insurance_company|software_provider|transport_company|other",
+  "account_code": "625600",
+  "account_label": "Missions, réceptions, déplacements",
+  "document_type": "invoice|receipt|expense_report|rent_receipt|credit_note|purchase_order|delivery_note|quote|other",
+  "is_professional_expense": true,
+  "cost_center": "string ou null"
 }
 
-Analyse maintenant ce document avec la plus grande rigueur professionnelle.`;
+Analyse maintenant ce document et produis l'écriture comptable avec la plus grande rigueur professionnelle.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,8 +302,25 @@ export async function POST(req: NextRequest) {
 
     const isPdf = file.type === 'application/pdf';
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = file.type || 'image/jpeg';
+    const originalBuffer = Buffer.from(arrayBuffer);
+    const originalMimeType = file.type || 'image/jpeg';
+
+    // Preprocess image for better OCR accuracy (skip PDFs)
+    let ocrBuffer: Buffer = originalBuffer;
+    let ocrMimeType = originalMimeType;
+    if (!isPdf) {
+      try {
+        const { preprocessReceipt } = await import('@/lib/ocr-preprocess');
+        const processed = await preprocessReceipt(originalBuffer, originalMimeType);
+        ocrBuffer = Buffer.from(processed.buffer);
+        ocrMimeType = processed.mimeType;
+      } catch {
+        // Fallback to original if preprocessing fails
+      }
+    }
+
+    const base64 = ocrBuffer.toString('base64');
+    const mimeType = ocrMimeType;
 
     // ------------------------------------------------------------------
     // 5. Upload to Supabase Storage
@@ -300,7 +357,7 @@ export async function POST(req: NextRequest) {
 
     // Gemini handles PDF natively when sent as inline data
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -345,6 +402,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Sanitize all extracted fields
+    const category = sanitizeCategory(parsed.category);
+    const supplierCategory = sanitizeString(parsed.supplier_category);
+
     const extracted = {
       vendor: sanitizeString(parsed.vendor),
       vendor_address: sanitizeString(parsed.vendor_address),
@@ -367,7 +427,7 @@ export async function POST(req: NextRequest) {
       due_date: sanitizeDate(parsed.due_date),
       invoice_number: sanitizeString(parsed.invoice_number),
       description: sanitizeString(parsed.description),
-      category: sanitizeCategory(parsed.category),
+      category,
       currency: sanitizeString(parsed.currency) || 'EUR',
       line_items: Array.isArray(parsed.line_items)
         ? parsed.line_items
@@ -378,13 +438,37 @@ export async function POST(req: NextRequest) {
               unit_price: sanitizeNumeric(v.unit_price),
               total: sanitizeNumeric(v.total),
               vat_rate: sanitizeNumeric(v.vat_rate),
+              account_code: sanitizeString(v.account_code),
+              account_label: sanitizeString(v.account_label),
             }))
         : [],
       confidence: sanitizeNumeric(parsed.confidence) ?? 0,
       payment_method: sanitizePaymentMethod(parsed.payment_method),
       is_duplicate: typeof parsed.is_duplicate === 'boolean' ? parsed.is_duplicate : false,
-      supplier_category: sanitizeString(parsed.supplier_category),
+      supplier_category: supplierCategory,
+      // Accounting fields (PCG)
+      account_code: sanitizeString(parsed.account_code),
+      account_label: sanitizeString(parsed.account_label),
+      document_type: sanitizeString(parsed.document_type),
+      is_professional_expense: typeof parsed.is_professional_expense === 'boolean' ? parsed.is_professional_expense : true,
+      cost_center: sanitizeString(parsed.cost_center),
     };
+
+    // Determine account code: AI suggestion → fallback to plan-comptable mapping
+    const accountMapping = getAccountCode(category, supplierCategory);
+    const finalAccountCode = extracted.account_code ?? accountMapping.code;
+    const finalAccountLabel = extracted.account_label ?? accountMapping.label;
+
+    // Generate journal entry (écriture comptable)
+    const journalEntry = generateJournalEntry({
+      category,
+      supplierCategory,
+      amountTtc: extracted.amount ?? 0,
+      amountHt: extracted.ht_amount,
+      vatAmount: extracted.vat_amount,
+      vatRate: extracted.vat_rate,
+      paymentMethod: extracted.payment_method,
+    });
 
     // ------------------------------------------------------------------
     // 8. Save to expenses table
@@ -408,6 +492,19 @@ export async function POST(req: NextRequest) {
       ocr_invoice_number: extracted.invoice_number,
       ocr_currency: extracted.currency,
       ocr_payment_due_date: extracted.due_date,
+      // Accounting (PCG) fields
+      account_code: finalAccountCode,
+      account_label: finalAccountLabel,
+      journal_type: journalEntry.journalType,
+      journal_entry: {
+        debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
+        credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
+        vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
+      },
+      vat_account: journalEntry.vatAccount || null,
+      document_type: extracted.document_type,
+      is_professional_expense: extracted.is_professional_expense,
+      supplier_category: extracted.supplier_category,
     };
 
     // Remove null keys so Supabase uses column defaults
@@ -446,6 +543,18 @@ export async function POST(req: NextRequest) {
         success: true,
         expense: savedExpense,
         extracted,
+        accounting: {
+          account_code: finalAccountCode,
+          account_label: finalAccountLabel,
+          journal_type: journalEntry.journalType,
+          journal_entry: {
+            debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
+            credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
+            vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
+          },
+          vat_deductible: accountMapping.vatDeductible,
+          default_vat_rate: accountMapping.defaultVatRate,
+        },
         receipt_url: receiptPublicUrl,
         receipt_storage_path: storagePath,
         meta: {
@@ -453,7 +562,7 @@ export async function POST(req: NextRequest) {
           file_size: file.size,
           file_type: file.type,
           is_pdf: isPdf,
-          model: 'google/gemini-2.0-flash-exp',
+          model: 'google/gemini-2.5-flash',
           ocr_confidence: extracted.confidence,
         },
       },

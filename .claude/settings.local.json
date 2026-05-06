@@ -185,7 +185,8 @@
       "Bash(node fix_voice_ui.js \"app\\\\\\(app\\)\\\\documents\\\\acomptes\\\\new\\\\page.tsx\")",
       "Bash(node fix_voice_remaining.js)",
       "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('ScanLine:', typeof l.ScanLine\\); console.log\\('Scan:', typeof l.Scan\\);\")",
-      "Bash([ -f \"c:/Users/salma/Desktop/FACTU.ME/$f\" ])"
+      "Bash([ -f \"c:/Users/salma/Desktop/FACTU.ME/$f\" ])",
+      "Bash(grep -E \"\\\\.md$|README\")"
     ]
   },
   "enableAllProjectMcpServers": true,

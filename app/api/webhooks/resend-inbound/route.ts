@@ -188,7 +188,7 @@ async function runOcr(
 
   try {
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -265,8 +265,20 @@ async function processAttachment(
     const isPdf = content_type === 'application/pdf';
     const ocrMime = isPdf ? 'application/pdf' : content_type;
 
+    // Preprocess image for better OCR accuracy (skip PDFs)
+    let ocrBase64 = content;
+    let finalMime = ocrMime;
+    if (!isPdf) {
+      try {
+        const { preprocessReceipt } = await import('@/lib/ocr-preprocess');
+        const processed = await preprocessReceipt(buffer, ocrMime);
+        ocrBase64 = processed.buffer.toString('base64');
+        finalMime = processed.mimeType;
+      } catch {}
+    }
+
     // Run OCR
-    const raw = await runOcr(content, ocrMime);
+    const raw = await runOcr(ocrBase64, finalMime);
     if (!raw) {
       // Save minimal record even without OCR
       const { data: saved } = await getSupabaseAdmin()
@@ -386,7 +398,7 @@ async function extractFromHtmlBody(
 
   try {
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
