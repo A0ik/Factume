@@ -91,12 +91,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     const currentMonth = new Date().toISOString().slice(0, 7);
 
     // Incrément atomique via RPC — élimine la race condition sur invoice_count
-    const { data: invoiceCount, error: rpcError } = await getSupabaseClient()
-      .rpc('increment_invoice_count', { p_user_id: user.id });
-    if (rpcError || invoiceCount == null) {
+    const { data: invoiceCountData, error: rpcError } = await getSupabaseClient()
+      .rpc('increment_invoice_count', { p_user_id: user.id, p_month: currentMonth });
+    if (rpcError || invoiceCountData == null) {
       console.error('[createInvoice] RPC increment error:', rpcError);
-      throw new Error('Impossible de générer le numéro de document');
+      throw new Error(rpcError?.message || 'Impossible de générer le numéro de document');
     }
+    const invoiceCount = Array.isArray(invoiceCountData)
+      ? invoiceCountData[0]?.invoice_count
+      : invoiceCountData;
+    if (!invoiceCount) throw new Error('Impossible de générer le numéro de document');
     const number = get().getNextInvoiceNumber(prefix, invoiceCount);
 
     const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
