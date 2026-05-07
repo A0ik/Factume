@@ -62,14 +62,10 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
   createInvoice: async (formData, profile, idempotencyId?: string) => {
-    const { data: { session } } = await getSupabaseClient().auth.getSession();
-    const user = session?.user;
-    if (!user) throw new Error('Non authentifié');
-
-    // Validate profile
-    if (!profile) {
+    if (!profile?.id) {
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
+    const userId = profile.id;
 
     // Note: The invoice limit is now enforced at the database level by increment_invoice_count RPC
     // This will throw an error if the free tier limit (5/month) is exceeded
@@ -92,7 +88,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     // Incrément atomique via RPC — élimine la race condition sur invoice_count
     const { data: invoiceCountData, error: rpcError } = await getSupabaseClient()
-      .rpc('increment_invoice_count', { p_user_id: user.id, p_month: currentMonth });
+      .rpc('increment_invoice_count', { p_user_id: userId, p_month: currentMonth });
     if (rpcError || invoiceCountData == null) {
       console.error('[createInvoice] RPC increment error:', rpcError);
       throw new Error(rpcError?.message || 'Impossible de générer le numéro de document');
@@ -108,7 +104,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     // Insert invoice
     const { data, error } = await getSupabaseClient().from('invoices').insert({
       ...(idempotencyId ? { id: idempotencyId } : {}),
-      user_id: user.id,
+      user_id: userId,
       client_id: formData.client_id || null,
       client_name_override: formData.client_name_override || null,
       number,
@@ -152,7 +148,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     (async () => {
       try {
         // RPC already updated invoice_count + monthly_invoice_count, just refresh profile
-        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
+        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
         if (freshProfile) {
           try {
             useAuthStore.getState().setProfile(freshProfile);

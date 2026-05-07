@@ -440,10 +440,25 @@ export async function POST(req: NextRequest) {
       cost_center: sanitizeString(parsed.cost_center),
     };
 
-    // Determine account code: AI suggestion → fallback to plan-comptable mapping
+    // Determine account code: vendor_mappings → AI suggestion → fallback to plan-comptable mapping
     const accountMapping = getAccountCode(category, supplierCategory);
-    const finalAccountCode = extracted.account_code ?? accountMapping.code;
-    const finalAccountLabel = extracted.account_label ?? accountMapping.label;
+    let finalAccountCode = extracted.account_code ?? accountMapping.code;
+    let finalAccountLabel = extracted.account_label ?? accountMapping.label;
+
+    // Check vendor_mappings for user-learned account codes (highest priority)
+    if (extracted.vendor) {
+      const normalized = extracted.vendor.toLowerCase().trim();
+      const { data: mapping } = await supabase
+        .from('vendor_mappings')
+        .select('account_code, account_name')
+        .eq('user_id', user.id)
+        .ilike('vendor_name_pattern', normalized)
+        .maybeSingle();
+      if (mapping?.account_code) {
+        finalAccountCode = mapping.account_code;
+        finalAccountLabel = mapping.account_name || finalAccountLabel;
+      }
+    }
 
     // Generate journal entry (écriture comptable)
     const journalEntry = generateJournalEntry({

@@ -4,6 +4,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 const ALLOWED_UPDATE_FIELDS = new Set([
   'vendor', 'amount', 'vat_amount', 'category', 'date',
   'description', 'payment_method', 'currency', 'invoice_number', 'client_id',
+  'account_code', 'account_label', 'journal_type', 'journal_entry',
+  'vat_account', 'status', 'ht_amount', 'vat_rate', 'document_type',
+  'supplier_category', 'project_code', 'is_deductible', 'is_professional_expense',
 ]);
 
 export async function PATCH(
@@ -25,7 +28,7 @@ export async function PATCH(
     const body = await req.json();
 
     // Only allow whitelisted fields to be updated
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of Object.keys(body)) {
       if (ALLOWED_UPDATE_FIELDS.has(key)) {
         updates[key] = body[key];
