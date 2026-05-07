@@ -177,20 +177,20 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
   // Variant accordion - replié par défaut
   if (variant === 'accordion') {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800/30 dark:border-slate-700/50 overflow-hidden">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center gap-3 p-3 hover:bg-amber-100/50 dark:hover:bg-amber-500/20 transition-colors text-left"
+          className="w-full flex items-center gap-3 p-3 hover:bg-white/50 dark:hover:bg-black/10 transition-colors text-left"
         >
-          <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/20 flex-shrink-0">
-            <AlertCircle size={16} className="text-amber-600 dark:text-amber-400" />
+          <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex-shrink-0">
+            <Info size={16} className="text-slate-500 dark:text-slate-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-amber-900 dark:text-amber-300 truncate">
-              Factur-X : {criticalFields.length > 0 ? 'Champs obligatoires manquants' : 'Informations incomplètes'}
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+              Optionnel · Export PDF électronique Factur-X
             </p>
-            <p className="text-[10px] text-amber-700 dark:text-amber-500">
-              {criticalFields.length > 0 ? `${criticalFields.length} champ(s) obligatoire(s)` : `${missingFields.length} champ(s) recommandé(s)`}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Non requis pour une facture standard
             </p>
           </div>
           <motion.div
@@ -198,7 +198,7 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
             transition={{ duration: 0.2 }}
             className="flex-shrink-0"
           >
-            <ChevronRight size={16} className="text-amber-600 dark:text-amber-400" />
+            <ChevronRight size={16} className="text-slate-400 dark:text-slate-500" />
           </motion.div>
         </button>
 
@@ -211,15 +211,18 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="px-3 pb-3 pt-1 border-t border-amber-200/50 dark:border-amber-500/20">
+              <div className="px-3 pb-3 pt-1 border-t border-slate-200/50 dark:border-slate-700/30">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2">
+                  Ces champs sont nécessaires uniquement pour générer un PDF au format Factur-X (facture électronique normée). Votre facture reste valide sans eux.
+                </p>
                 {criticalFields.length > 0 && (
                   <div className="mb-2">
-                    <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase mb-1">
-                      Obligatoires
+                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
+                      Requis pour Factur-X
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {criticalFields.map((field, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 rounded text-[10px] font-semibold">
+                        <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 rounded text-[10px] font-semibold">
                           {field}
                         </span>
                       ))}
@@ -228,12 +231,12 @@ export function FacturXWarnings({ invoice, profile, variant = 'inline' }: Factur
                 )}
                 {missingFields.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500 uppercase mb-1">
-                      Recommandés
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                      Recommandés pour Factur-X
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {missingFields.map((field, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-500 rounded text-[10px] font-semibold">
+                        <span key={idx} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 rounded text-[10px]">
                           {field}
                         </span>
                       ))}

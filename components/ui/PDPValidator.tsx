@@ -189,33 +189,24 @@ export function PDPValidator({ invoice, profile, onFix, mode = 'inline' }: PDPVa
   // Mode accordion - replié par défaut
   if (mode === 'accordion') {
     if (result.isValid) {
-      return null; // Pas d'affichage si tout est bon
+      return null;
     }
 
     return (
-      <div className={cn(
-        'rounded-xl border overflow-hidden',
-        result.complianceLevel === 'none'
-          ? 'border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30'
-          : 'border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30'
-      )}>
+      <div className="rounded-xl border overflow-hidden border-slate-200 bg-slate-50 dark:bg-slate-800/30 dark:border-slate-700/50">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center gap-3 p-3 hover:bg-white/50 dark:hover:bg-black/10 transition-colors text-left"
         >
           <div className="flex-shrink-0">
-            {result.complianceLevel === 'none' ? (
-              <XCircle size={16} className="text-red-600 dark:text-red-400" />
-            ) : (
-              <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />
-            )}
+            <Info size={16} className="text-slate-500 dark:text-slate-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-              {result.complianceLevel === 'none' ? 'Facture non conforme PDP' : 'Facture partiellement conforme'}
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+              Optionnel · Informations e-facturation PDP
             </p>
-            <p className="text-[10px] text-gray-600 dark:text-gray-400">
-              {result.errors.length > 0 ? `${result.errors.length} erreur(s)` : `${warnings.length} avertissement(s)`}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              Non requis pour une facture standard — uniquement pour l&apos;échange électronique B2B
             </p>
           </div>
           <motion.div
@@ -223,9 +214,7 @@ export function PDPValidator({ invoice, profile, onFix, mode = 'inline' }: PDPVa
             transition={{ duration: 0.2 }}
             className="flex-shrink-0"
           >
-            <ChevronRight size={16} className={cn(
-              result.complianceLevel === 'none' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
-            )} />
+            <ChevronRight size={16} className="text-slate-400 dark:text-slate-500" />
           </motion.div>
         </button>
 
@@ -238,24 +227,22 @@ export function PDPValidator({ invoice, profile, onFix, mode = 'inline' }: PDPVa
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className={cn(
-                'px-3 pb-3 pt-1 border-t',
-                result.complianceLevel === 'none'
-                  ? 'border-red-200/50 dark:border-red-500/20'
-                  : 'border-amber-200/50 dark:border-amber-500/20'
-              )}>
+              <div className="px-3 pb-3 pt-1 border-t border-slate-200/50 dark:border-slate-700/30">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2">
+                  Ces informations sont requises uniquement si vous souhaitez émettre des factures électroniques via une Plateforme de Dématérialisation Partenaire (PDP). Votre facture reste valide sans elles.
+                </p>
                 {result.errors.length > 0 && (
                   <div className="mb-2">
-                    <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase mb-1">Erreurs</p>
+                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Informations manquantes pour PDP</p>
                     <ul className="space-y-0.5">
                       {result.errors.slice(0, 5).map((error, idx) => (
-                        <li key={idx} className="text-xs text-red-700 dark:text-red-400">
-                          • {error}
+                        <li key={idx} className="text-xs text-slate-600 dark:text-slate-400">
+                          · {error}
                         </li>
                       ))}
                       {result.errors.length > 5 && (
-                        <li className="text-xs text-red-700 dark:text-red-400">
-                          • ...et {result.errors.length - 5} autres
+                        <li className="text-xs text-slate-500 dark:text-slate-400">
+                          · ...et {result.errors.length - 5} autres
                         </li>
                       )}
                     </ul>
@@ -263,11 +250,11 @@ export function PDPValidator({ invoice, profile, onFix, mode = 'inline' }: PDPVa
                 )}
                 {warnings.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase mb-1">Avertissements</p>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Recommandations</p>
                     <ul className="space-y-0.5">
                       {warnings.slice(0, 3).map((warning, idx) => (
-                        <li key={idx} className="text-xs text-amber-700 dark:text-amber-400">
-                          • {warning}
+                        <li key={idx} className="text-xs text-slate-500 dark:text-slate-400">
+                          · {warning}
                         </li>
                       ))}
                     </ul>
