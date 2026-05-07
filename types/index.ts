@@ -449,14 +449,14 @@ export interface CabinetClient {
   connected_at?: string;
 }
 
-export const MERCHANT_PROVIDERS: Record<MerchantProvider, { name: string; icon: string; color: string }> = {
-  amazon: { name: 'Amazon Business', icon: 'A', color: 'bg-orange-500' },
-  orange: { name: 'Orange Business', icon: 'O', color: 'bg-orange-400' },
-  uber: { name: 'Uber for Business', icon: 'U', color: 'bg-black' },
-  apple: { name: 'Apple Business', icon: '', color: 'bg-gray-800' },
-  google: { name: 'Google Workspace', icon: 'G', color: 'bg-blue-500' },
-  microsoft: { name: 'Microsoft 365', icon: 'M', color: 'bg-blue-600' },
-  other: { name: 'Autre fournisseur', icon: '?', color: 'bg-gray-500' },
+export const MERCHANT_PROVIDERS: Record<MerchantProvider, { name: string; icon: string; color: string; logoClass: string }> = {
+  amazon: { name: 'Amazon Business', icon: 'package', color: 'bg-gradient-to-br from-orange-500 to-amber-600', logoClass: 'text-white' },
+  orange: { name: 'Orange Business', icon: 'zap', color: 'bg-gradient-to-br from-orange-500 to-orange-600', logoClass: 'text-white' },
+  uber: { name: 'Uber for Business', icon: 'car', color: 'bg-gradient-to-br from-gray-800 to-black', logoClass: 'text-white' },
+  apple: { name: 'Apple Business', icon: 'smartphone', color: 'bg-gradient-to-br from-gray-700 to-gray-900', logoClass: 'text-white' },
+  google: { name: 'Google Workspace', icon: 'layout-grid', color: 'bg-gradient-to-br from-blue-500 to-blue-600', logoClass: 'text-white' },
+  microsoft: { name: 'Microsoft 365', icon: 'file-text', color: 'bg-gradient-to-br from-blue-600 to-blue-700', logoClass: 'text-white' },
+  other: { name: 'Autre fournisseur', icon: 'more-horizontal', color: 'bg-gradient-to-br from-gray-400 to-gray-500', logoClass: 'text-white' },
 };
 
 // ============================

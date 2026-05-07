@@ -19,8 +19,16 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchClients: async () => {
     set({ loading: true });
-    try { const { data } = await getSupabaseClient().from('clients').select('*').order('name'); set({ clients: data || [] }); }
-    finally { set({ loading: false }); }
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    try {
+      const data = await Promise.race([
+        getSupabaseClient().from('clients').select('*').order('name'),
+        timeout
+      ]) as any;
+      set({ clients: data.data || [] });
+    } catch (error) {
+      console.error('[fetchClients] Error:', error);
+    } finally { set({ loading: false }); }
   },
   createClient: async (clientData) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
@@ -55,9 +63,15 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchInvoices: async () => {
     set({ loading: true });
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
-      const { data } = await getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false });
-      set({ invoices: data || [] }); get().computeStats();
+      const data = await Promise.race([
+        getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false }),
+        timeout
+      ]) as any;
+      set({ invoices: data.data || [] }); get().computeStats();
+    } catch (error) {
+      console.error('[fetchInvoices] Error:', error);
     } finally { set({ loading: false }); }
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
@@ -243,8 +257,16 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   fetchRecurringInvoices: async () => {
     set({ loading: true });
-    try { const { data } = await getSupabaseClient().from('recurring_invoices').select('*, client:clients(*)').order('next_run_date', { ascending: true }); set({ recurringInvoices: data || [] }); }
-    finally { set({ loading: false }); }
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    try {
+      const data = await Promise.race([
+        getSupabaseClient().from('recurring_invoices').select('*, client:clients(*)').order('next_run_date', { ascending: true }),
+        timeout
+      ]) as any;
+      set({ recurringInvoices: data.data || [] });
+    } catch (error) {
+      console.error('[fetchRecurringInvoices] Error:', error);
+    } finally { set({ loading: false }); }
   },
   createRecurringInvoice: async (recData) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();

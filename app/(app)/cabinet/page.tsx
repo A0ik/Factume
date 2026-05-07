@@ -56,12 +56,23 @@ export default function CabinetPage() {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      // Fix: use non-blocking auth state instead of getSession()
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
       const res = await fetch('/api/cabinet/dashboard', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (res.ok) setData(await res.json());
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
+        throw new Error(error.error || 'Erreur de chargement');
+      }
+      setData(await res.json());
+    } catch (error: any) {
+      console.error('[loadDashboard] Error:', error);
+      toast.error(error.message || 'Erreur de chargement du tableau de bord');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -74,7 +85,10 @@ export default function CabinetPage() {
     try {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
       const res = await fetch('/api/cabinet/clients', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
@@ -85,10 +99,12 @@ export default function CabinetPage() {
         setCabinetName('');
         await loadDashboard();
       } else {
-        toast.error('Erreur lors de la création');
+        const error = await res.json().catch(() => ({ error: 'Erreur lors de la création' }));
+        toast.error(error.error || 'Erreur lors de la création');
       }
-    } catch {
-      toast.error('Erreur');
+    } catch (error: any) {
+      console.error('[handleCreateCabinet] Error:', error);
+      toast.error(error.message || 'Erreur lors de la création');
     } finally {
       setCreating(false);
     }
