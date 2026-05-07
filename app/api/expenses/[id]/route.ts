@@ -8,17 +8,16 @@ const ALLOWED_UPDATE_FIELDS = new Set([
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: expenseId } = await params;
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
-
-    const expenseId = params.id;
     if (!expenseId) {
       return NextResponse.json({ error: 'ID de dépense manquant' }, { status: 400 });
     }
