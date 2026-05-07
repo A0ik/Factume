@@ -100,7 +100,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     if (realtimeInvoice) {
       // Check if status changed to paid
       if (previousStatus && previousStatus !== 'paid' && realtimeInvoice.status === 'paid') {
-        toast.success('💰 Paiement reçu ! La facture a été marquée comme payée.', {
+        toast.success('Paiement reçu ! La facture a été marquée comme payée.', {
           duration: 5000,
           position: 'top-right',
         });

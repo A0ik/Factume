@@ -317,8 +317,8 @@ export async function POST(req: NextRequest) {
 
     const { error: uploadError } = await supabase.storage
       .from('receipts')
-      .upload(storagePath, Buffer.from(arrayBuffer), {
-        contentType: mimeType,
+      .upload(storagePath, originalBuffer, {
+        contentType: originalMimeType,
         upsert: false,
       });
 

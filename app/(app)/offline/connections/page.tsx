@@ -6,7 +6,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { MerchantConnection, MERCHANT_PROVIDERS, MerchantProvider } from '@/types';
 import {
   Plus, Link2, RefreshCw, Trash2, CheckCircle2, AlertTriangle,
-  Settings, Download, ChevronDown, Building, ExternalLink as ExternalLinkIcon
+  Settings, Download, ChevronDown, Building, ExternalLink as ExternalLinkIcon, X
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -230,7 +230,7 @@ export default function ConnectionsPage() {
                   onClick={() => setShowAddModal(false)}
                   className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500"
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
               <div className="p-4 grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">

@@ -99,7 +99,7 @@ export default function SettingsPage() {
     invoice_prefix: profile?.invoice_prefix || 'FACT',
     currency: profile?.currency || 'EUR',
     language: profile?.language || 'fr',
-    template_id: String(profile?.template_id || 1),
+    template_id: String(profile?.template_id ?? 1),
     accent_color: profile?.accent_color || '#1D9E75',
     bank_name: profile?.bank_name || '',
     iban: profile?.iban || '',
@@ -1174,7 +1174,7 @@ export default function SettingsPage() {
 
         {error && <p className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{error}</p>}
         <Button type="submit" className="w-full" size="lg" loading={saving}>
-          {saved ? '✓ Enregistré !' : 'Enregistrer les modifications'}
+          {saved ? 'Enregistré !' : 'Enregistrer les modifications'}
         </Button>
       </form>
 

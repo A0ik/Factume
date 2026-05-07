@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthPage } from '@/components/ui/auth-page';
 
+
 export default function LoginPage() {
   const router = useRouter();
   const { signIn, signInWithGoogle, loading } = useAuthStore();

@@ -450,13 +450,13 @@ export interface CabinetClient {
 }
 
 export const MERCHANT_PROVIDERS: Record<MerchantProvider, { name: string; icon: string; color: string }> = {
-  amazon: { name: 'Amazon Business', icon: '📦', color: 'bg-orange-500' },
-  orange: { name: 'Orange Business', icon: '🔶', color: 'bg-orange-400' },
-  uber: { name: 'Uber for Business', icon: '🚗', color: 'bg-black' },
-  apple: { name: 'Apple Business', icon: '🍎', color: 'bg-gray-800' },
-  google: { name: 'Google Workspace', icon: '🔵', color: 'bg-blue-500' },
-  microsoft: { name: 'Microsoft 365', icon: '🔷', color: 'bg-blue-600' },
-  other: { name: 'Autre fournisseur', icon: '🏢', color: 'bg-gray-500' },
+  amazon: { name: 'Amazon Business', icon: 'A', color: 'bg-orange-500' },
+  orange: { name: 'Orange Business', icon: 'O', color: 'bg-orange-400' },
+  uber: { name: 'Uber for Business', icon: 'U', color: 'bg-black' },
+  apple: { name: 'Apple Business', icon: '', color: 'bg-gray-800' },
+  google: { name: 'Google Workspace', icon: 'G', color: 'bg-blue-500' },
+  microsoft: { name: 'Microsoft 365', icon: 'M', color: 'bg-blue-600' },
+  other: { name: 'Autre fournisseur', icon: '?', color: 'bg-gray-500' },
 };
 
 // ============================

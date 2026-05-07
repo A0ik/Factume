@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, RefreshCw, ArrowRight, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useIntegrationStore } from '@/stores/integrationStore';
 import { cn } from '@/lib/utils';
@@ -54,7 +54,7 @@ export default function PennylanePage() {
         </Link>
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-            📊 Pennylane
+            <BarChart3 size={24} /> Pennylane
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Configuration de l'intégration comptable</p>
         </div>

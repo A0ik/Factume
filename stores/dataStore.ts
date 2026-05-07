@@ -39,12 +39,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     return data || [];
   },
   updateClient: async (id, updates) => {
-    const { data, error } = await getSupabaseClient().from('clients').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
+    const { data, error } = await getSupabaseClient().from('clients').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id).select().single();
     if (error) throw error;
     set((s) => ({ clients: s.clients.map((c) => (c.id === id ? data : c)) }));
   },
   deleteClient: async (id) => {
-    const { error } = await getSupabaseClient().from('clients').delete().eq('id', id);
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
+    const { error } = await getSupabaseClient().from('clients').delete().eq('id', id).eq('user_id', user.id);
     if (error) throw error;
     set((s) => ({ clients: s.clients.filter((c) => c.id !== id) }));
   },
@@ -162,6 +166,8 @@ export const useDataStore = create<DataState>((set, get) => ({
     return data;
   },
   updateInvoice: async (id, updates) => {
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
     let u: any = { ...updates, updated_at: new Date().toISOString() };
     if (updates.items) {
       const items = updates.items.map((i) => ({ ...i, total: i.quantity * i.unit_price }));
@@ -172,15 +178,17 @@ export const useDataStore = create<DataState>((set, get) => ({
       const discAmt = discPct > 0 ? (subtotal + vat) * (discPct / 100) : 0;
       u = { ...u, items, subtotal, vat_amount: vat, discount_percent: discPct || null, discount_amount: discAmt || null, total: subtotal + vat - discAmt };
     }
-    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).select('*, client:clients(*)').single();
+    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
     if (error) throw error;
     set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) })); get().computeStats();
   },
   updateInvoiceStatus: async (id, status) => {
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
     const u: any = { status, updated_at: new Date().toISOString() };
     if (status === 'paid') u.paid_at = new Date().toISOString();
     if (status === 'sent') u.sent_at = new Date().toISOString();
-    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).select('*, client:clients(*)').single();
+    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
     if (error) throw error;
     set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) })); get().computeStats();
   },

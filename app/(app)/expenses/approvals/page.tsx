@@ -15,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -56,13 +57,13 @@ interface Stats {
 // Categories
 // ---------------------------------------------------------------------------
 const CATEGORIES = [
-  { value: 'transport', label: 'Transport', icon: '🚗' },
-  { value: 'meals', label: 'Repas', icon: '☕' },
-  { value: 'accommodation', label: 'Hébergement', icon: '🏠' },
-  { value: 'equipment', label: 'Matériel', icon: '💻' },
-  { value: 'office', label: 'Bureau', icon: '💼' },
-  { value: 'shopping', label: 'Achats', icon: '🛒' },
-  { value: 'other', label: 'Autre', icon: '📦' },
+  { value: 'transport', label: 'Transport', Icon: Car },
+  { value: 'meals', label: 'Repas', Icon: Coffee },
+  { value: 'accommodation', label: 'Hébergement', Icon: Home },
+  { value: 'equipment', label: 'Matériel', Icon: Laptop },
+  { value: 'office', label: 'Bureau', Icon: Briefcase },
+  { value: 'shopping', label: 'Achats', Icon: ShoppingCart },
+  { value: 'other', label: 'Autre', Icon: Package },
 ];
 
 function getCategoryMeta(value: string) {
@@ -442,8 +443,8 @@ export default function ExpenseApprovalsPage() {
                         <div className="p-5 pl-14">
                           <div className="flex items-start gap-4">
                             {/* Category icon */}
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center text-2xl flex-shrink-0">
-                              {cat.icon}
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
+                              <cat.Icon size={22} />
                             </div>
 
                             {/* Details */}

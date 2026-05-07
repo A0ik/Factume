@@ -1,5 +1,3 @@
-'use client';
-
 import { FileText, Download, CheckCircle, AlertCircle, ExternalLink, Sparkles, Shield, Clock, Users, Zap } from 'lucide-react';
 
 /**
@@ -8,6 +6,12 @@ import { FileText, Download, CheckCircle, AlertCircle, ExternalLink, Sparkles, S
  * Documentation complète sur le format Factur-X,
  * son utilisation et ses bénéfices pour la réforme 2026+
  */
+
+export const metadata = {
+  title: 'Guide Factur-X | Factu.me',
+  description: 'Tout savoir sur le format Factur-X (norme EN 16931) et la réforme de la facturation électronique 2026. Guide complet pour préparer votre entreprise.',
+  robots: { index: true, follow: true },
+};
 
 export default function FacturXHelpPage() {
   return (
@@ -43,7 +47,7 @@ export default function FacturXHelpPage() {
                 C'est la version française du standard allemand ZUGFeRD.
               </p>
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-100">
-                <h3 className="font-bold text-gray-900 mb-2">📄 Format hybride PDF + XML</h3>
+                <h3 className="font-bold text-gray-900 mb-2">Format hybride PDF + XML</h3>
                 <p className="text-sm">
                   Un fichier Factur-X est un <strong>PDF standard</strong> qui contient un <strong>fichier XML embarqué</strong> dans ses métadonnées.
                   Ce fichier peut être :
@@ -257,7 +261,7 @@ export default function FacturXHelpPage() {
                 <td className="py-3 px-4">
                   <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
                     <CheckCircle size={14} />
-                    Oui ✅
+                    Oui
                   </span>
                 </td>
               </tr>

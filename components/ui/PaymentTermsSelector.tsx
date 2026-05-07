@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Clock, CalendarDays, Receipt, Plus, X, Check, Zap } from 'lucide-react';
+import { Clock, CalendarDays, Receipt, Plus, X, Check, Zap, Star } from 'lucide-react';
 
 interface Term {
   id: string;
@@ -104,7 +104,7 @@ export default function PaymentTermsSelector({
         {active ? <Check size={12} /> : <Icon size={12} className="opacity-50" />}
         <span>{term.shortLabel ?? term.label}</span>
         {term.popular && !active && (
-          <span className="ml-0.5 text-[9px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded leading-none">★</span>
+          <span className="ml-0.5 text-[9px] font-bold text-primary bg-primary/10 px-1 py-0.5 rounded leading-none"><Star size={8} className="inline" /></span>
         )}
       </button>
     );

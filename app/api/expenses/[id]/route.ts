@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 const ALLOWED_UPDATE_FIELDS = new Set([
   'vendor', 'amount', 'vat_amount', 'category', 'date',
-  'description', 'payment_method', 'currency', 'invoice_number',
+  'description', 'payment_method', 'currency', 'invoice_number', 'client_id',
 ]);
 
 export async function PATCH(

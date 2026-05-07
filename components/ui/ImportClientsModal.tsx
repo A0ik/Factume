@@ -482,7 +482,7 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                             : <Square size={14} className="text-gray-400" />}
                           {selected.size === result.companies.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                         </button>
-                        <span className="text-[11px] text-gray-400">Cliquez sur ✏️ pour modifier</span>
+                        <span className="text-[11px] text-gray-400">Cliquez sur <Edit2 size={10} /> pour modifier</span>
                       </div>
 
                       {/* Company list */}

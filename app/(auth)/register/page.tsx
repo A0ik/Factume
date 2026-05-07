@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthPage } from '@/components/ui/auth-page';
 
+
 const PASSWORD_CHECKS = [
   { label: 'Au moins 8 caractères', test: (p: string) => p.length >= 8 },
   { label: 'Une lettre majuscule', test: (p: string) => /[A-Z]/.test(p) },

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { getStatusColor, getStatusLabel, formatSyncDate, getIntegrationProvider } from '@/lib/integration-helpers';
 import type { Integration } from '@/types';
 
+
 const INTEGRATIONS = [
   { provider: 'pennylane' as const, enabled: true },
   { provider: 'sage' as const, enabled: false },

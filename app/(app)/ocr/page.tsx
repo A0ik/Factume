@@ -1,24 +1,26 @@
 'use client';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { useDataStore } from '@/stores/dataStore';
+import { getSupabaseClient } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown } from 'lucide-react';
+import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const CATEGORIES = [
-  { value: 'transport', label: 'Transport', icon: '🚗' },
-  { value: 'meals', label: 'Repas', icon: '☕' },
-  { value: 'accommodation', label: 'Hébergement', icon: '🏠' },
-  { value: 'equipment', label: 'Matériel', icon: '💻' },
-  { value: 'office', label: 'Bureau', icon: '💼' },
-  { value: 'shopping', label: 'Achats', icon: '🛒' },
-  { value: 'telecom', label: 'Télécom', icon: '📱' },
-  { value: 'insurance', label: 'Assurance', icon: '🛡️' },
-  { value: 'software', label: 'Logiciel', icon: '💿' },
-  { value: 'other', label: 'Autre', icon: '📦' },
+  { value: 'transport', label: 'Transport', Icon: Car },
+  { value: 'meals', label: 'Repas', Icon: Coffee },
+  { value: 'accommodation', label: 'Hébergement', Icon: Home },
+  { value: 'equipment', label: 'Matériel', Icon: Laptop },
+  { value: 'office', label: 'Bureau', Icon: Briefcase },
+  { value: 'shopping', label: 'Achats', Icon: ShoppingCart },
+  { value: 'telecom', label: 'Télécom', Icon: Smartphone },
+  { value: 'insurance', label: 'Assurance', Icon: Shield },
+  { value: 'software', label: 'Logiciel', Icon: Disc },
+  { value: 'other', label: 'Autre', Icon: Package },
 ];
 
 interface LineItem {
@@ -31,6 +33,7 @@ interface LineItem {
 interface ExtractedData {
   vendor: string;
   amount: number;
+  ht_amount: number;
   vat_amount: number;
   date: string;
   description: string;
@@ -39,6 +42,10 @@ interface ExtractedData {
   invoice_number: string;
   currency: string;
   line_items: LineItem[];
+  client_name?: string;
+  project_code?: string;
+  accounting_code?: string;
+  is_duplicate?: boolean;
 }
 
 interface ScannedFile {
@@ -63,7 +70,7 @@ interface HistoryItem {
   category: string;
   confidence: number;
   thumbnail: string;
-  status: 'saved' | 'reviewed' | 'pending';
+  status: 'processed' | 'reviewed' | 'archived';
 }
 
 function generateId(): string {
@@ -108,6 +115,60 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
     </span>
   );
 }
+
+// ---------- Dext-style status helpers ----------
+type DextTab = 'all' | 'processing' | 'to_review' | 'ready' | 'processed';
+
+function getDextStatus(file: ScannedFile): 'processing' | 'to_review' | 'ready' | 'error' {
+  if (file.status === 'error') return 'error';
+  if (file.status !== 'complete') return 'processing';
+  if (!file.result?.extracted) return 'to_review';
+  const { confidence, vendor, amount, date } = file.result.extracted;
+  if (confidence < 0.65 || !vendor || !amount || !date) return 'to_review';
+  return 'ready';
+}
+
+// Duplicate detection
+function checkDuplicate(file: ScannedFile, allFiles: ScannedFile[], history: HistoryItem[]): boolean {
+  if (!file.result?.extracted) return false;
+  const { vendor, amount, date } = file.result.extracted;
+  if (!vendor || !amount || !date) return false;
+
+  // Check against other completed files
+  for (const other of allFiles) {
+    if (other.id === file.id || other.status !== 'complete' || !other.result?.extracted) continue;
+    const o = other.result.extracted;
+    if (o.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(o.amount - amount) < 0.01 && o.date === date) return true;
+  }
+
+  // Check against history
+  for (const h of history) {
+    if (h.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(h.amount - amount) < 0.01 && h.date === date) return true;
+  }
+  return false;
+}
+
+// PCG accounting codes mapping
+const CATEGORY_ACCOUNTING: Record<string, { code: string; label: string }> = {
+  transport: { code: '625600', label: 'Transports de personnel' },
+  meals: { code: '625700', label: 'Repas' },
+  accommodation: { code: '613100', label: 'Locations immobilières' },
+  equipment: { code: '604000', label: 'Matériel et fournitures' },
+  office: { code: '606400', label: 'Fournitures de bureau' },
+  shopping: { code: '607000', label: 'Achats de marchandises' },
+  telecom: { code: '626000', label: 'Communications' },
+  insurance: { code: '616000', label: "Primes d'assurance" },
+  software: { code: '618300', label: 'Logiciels' },
+  other: { code: '613200', label: 'Autres charges locatives' },
+};
+
+const DEXT_TABS: { key: DextTab; label: string; icon: typeof Inbox }[] = [
+  { key: 'all', label: 'Tous', icon: Inbox },
+  { key: 'processing', label: 'En cours', icon: Loader2 },
+  { key: 'to_review', label: 'À vérifier', icon: Eye },
+  { key: 'ready', label: 'Prêts', icon: CheckCircle2 },
+  { key: 'processed', label: 'Traités', icon: Archive },
+];
 
 // ---------- Paywall for non-Business users ----------
 function PaywallSection() {
@@ -198,7 +259,7 @@ function PaywallSection() {
 
 // ---------- Main Page ----------
 export default function OCRPage() {
-  const { profile } = useAuthStore();
+  const { profile, user } = useAuthStore();
   const router = useRouter();
   const isBusiness = profile?.subscription_tier === 'business' || profile?.is_trial_active;
 
@@ -206,6 +267,7 @@ export default function OCRPage() {
   const [files, setFiles] = useState<ScannedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<DextTab>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Revoke all Object URLs on unmount to prevent memory leaks
@@ -223,9 +285,43 @@ export default function OCRPage() {
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<ExtractedData | null>(null);
   const [lineItemsExpanded, setLineItemsExpanded] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [projectCode, setProjectCode] = useState<string>('');
+
+  // Clients from dataStore
+  const { clients } = useDataStore();
+
+  // Keep a stable ref to history for use inside setFiles callbacks (avoids stale closure)
+  const historyRef = useRef<HistoryItem[]>([]);
+
+  // Vendor learning: load rules from Supabase
+  const [vendorRules, setVendorRules] = useState<Record<string, { category: string; accounting_code: string }>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    getSupabaseClient()
+      .from('expenses')
+      .select('vendor, category, account_code')
+      .eq('user_id', user.id)
+      .not('vendor', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(200)
+      .then(({ data }) => {
+        if (!data) return;
+        const rules: Record<string, { category: string; accounting_code: string }> = {};
+        for (const row of data) {
+          const key = (row.vendor || '').toLowerCase().trim();
+          if (key && !rules[key]) {
+            rules[key] = { category: row.category, accounting_code: row.account_code || '' };
+          }
+        }
+        setVendorRules(rules);
+      });
+  }, [user]);
 
   // History state
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  useEffect(() => { historyRef.current = history; }, [history]);
 
   // Stats
   const scannedToday = files.filter(f => f.status === 'complete').length + history.length;
@@ -237,6 +333,24 @@ export default function OCRPage() {
     ? completedFiles.reduce((sum, f) => sum + (f.result?.extracted.confidence || 0), 0) / completedFiles.length
     : 0;
   const pendingReview = completedFiles.length;
+
+  // Dext-style tab counts
+  const tabCounts = useMemo(() => ({
+    all: files.length,
+    processing: files.filter(f => f.status === 'pending' || f.status === 'uploading' || f.status === 'analyzing').length,
+    to_review: files.filter(f => getDextStatus(f) === 'to_review').length,
+    ready: files.filter(f => getDextStatus(f) === 'ready').length,
+    processed: history.length,
+  }), [files, history]);
+
+  const filteredFiles = useMemo(() => {
+    if (activeTab === 'all') return files;
+    if (activeTab === 'processing') return files.filter(f => f.status === 'pending' || f.status === 'uploading' || f.status === 'analyzing');
+    if (activeTab === 'to_review') return files.filter(f => getDextStatus(f) === 'to_review');
+    if (activeTab === 'ready') return files.filter(f => getDextStatus(f) === 'ready');
+    if (activeTab === 'processed') return []; // history is rendered separately below
+    return files;
+  }, [files, activeTab]);
 
   // ---------- File handling ----------
   const addFiles = useCallback((newFiles: FileList | File[]) => {
@@ -342,10 +456,19 @@ export default function OCRPage() {
       // Small delay for UX
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      updateFile(scannedFile.id, {
-        status: 'complete',
-        progress: 100,
-        result: data,
+      // Mark complete then recalculate is_duplicate for all completed files
+      setFiles(prev => {
+        const updated = prev.map(f =>
+          f.id === scannedFile.id
+            ? { ...f, status: 'complete' as const, progress: 100, result: data }
+            : f
+        );
+        return updated.map(f => {
+          if (f.status !== 'complete' || !f.result?.extracted) return f;
+          const isDup = checkDuplicate(f, updated, historyRef.current);
+          if (isDup === f.result.extracted.is_duplicate) return f;
+          return { ...f, result: { ...f.result, extracted: { ...f.result.extracted, is_duplicate: isDup } } };
+        });
       });
 
       toast.success(`"${scannedFile.file.name}" analysé avec succès`);
@@ -368,13 +491,15 @@ export default function OCRPage() {
 
     setIsProcessing(true);
 
-    // Process files sequentially to avoid API overload
-    for (const file of pending) {
-      await processFile(file);
+    try {
+      // Process files sequentially to avoid API overload
+      for (const file of pending) {
+        await processFile(file);
+      }
+      toast.success('Analyse terminée !');
+    } finally {
+      setIsProcessing(false);
     }
-
-    setIsProcessing(false);
-    toast.success('Analyse terminée !');
   }, [files, processFile]);
 
   // ---------- Save expense ----------
@@ -383,24 +508,44 @@ export default function OCRPage() {
       toast.error('Aucune dépense à sauvegarder');
       return;
     }
-    // The expense is already created by the API, move to history
+    const expenseId = scannedFile.result.expense.id;
+
+    // Persist client assignment if selected
+    if (selectedClientId) {
+      try {
+        const res = await fetch(`/api/expenses/${expenseId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: selectedClientId }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({})) as { error?: string };
+          toast.error(`Erreur lors de l'affectation client : ${errData.error || 'inconnue'}`);
+          return;
+        }
+      } catch {
+        toast.error("Impossible de contacter le serveur pour l'affectation client.");
+        return;
+      }
+    }
+
     const extracted = scannedFile.result.extracted;
     setHistory(prev => [{
-      id: scannedFile.result!.expense!.id,
+      id: expenseId,
       vendor: extracted.vendor,
       amount: extracted.amount,
       date: extracted.date,
       category: extracted.category,
       confidence: extracted.confidence,
       thumbnail: scannedFile.preview,
-      status: 'saved',
+      status: 'processed',
     }, ...prev]);
 
     removeFile(scannedFile.id);
     setReviewingFile(null);
     setEditMode(false);
     toast.success('Dépense créée avec succès !');
-  }, [removeFile]);
+  }, [removeFile, selectedClientId]);
 
   const saveWithEdits = useCallback(async (scannedFile: ScannedFile) => {
     if (!editData) return;
@@ -420,6 +565,7 @@ export default function OCRPage() {
             date: editData.date,
             category: editData.category,
             description: editData.description,
+            ...(selectedClientId && { client_id: selectedClientId }),
           }),
         });
         if (!res.ok) {
@@ -441,14 +587,14 @@ export default function OCRPage() {
       category: editData.category,
       confidence: editData.confidence,
       thumbnail: scannedFile.preview,
-      status: 'saved',
+      status: 'processed',
     }, ...prev]);
 
     removeFile(scannedFile.id);
     setReviewingFile(null);
     setEditMode(false);
     toast.success('Dépense corrigée et sauvegardée !');
-  }, [editData, removeFile]);
+  }, [editData, removeFile, selectedClientId]);
 
   // ---------- Paywall guard ----------
   if (!isBusiness) {
@@ -510,7 +656,7 @@ export default function OCRPage() {
           { label: 'Scannés aujourd\'hui', value: String(scannedToday), icon: Scan, color: 'from-violet-500 to-purple-600' },
           { label: 'Montant détecté', value: formatCurrency(totalDetected), icon: Zap, color: 'from-amber-500 to-orange-500' },
           { label: 'Confiance moyenne', value: avgConfidence > 0 ? `${Math.round(avgConfidence * 100)}%` : '-', icon: Shield, color: 'from-emerald-500 to-teal-500' },
-          { label: 'En attente', value: String(pendingReview), icon: Clock, color: 'from-blue-500 to-indigo-500' },
+          { label: 'À vérifier', value: String(tabCounts.to_review), icon: Eye, color: 'from-amber-500 to-orange-500' },
         ].map(({ label, value, icon: Icon, color }, i) => (
           <motion.div
             key={label}
@@ -661,17 +807,56 @@ export default function OCRPage() {
                   </span>
                 </div>
 
+                {/* Dext-style Tabs */}
+                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-2xl overflow-x-auto">
+                  {DEXT_TABS.map(tab => {
+                    const count = tabCounts[tab.key];
+                    const isActive = activeTab === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap',
+                          isActive
+                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                        )}
+                      >
+                        <tab.icon size={13} className={cn(tab.key === 'processing' && count > 0 && 'animate-spin')} />
+                        {tab.label}
+                        {count > 0 && (
+                          <span className={cn(
+                            'ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black',
+                            isActive ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+                          )}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* File cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <AnimatePresence mode="popLayout">
-                    {files.map((scannedFile) => (
+                    {filteredFiles.map((scannedFile) => {
+                      const dextStatus = getDextStatus(scannedFile);
+                      return (
                       <motion.div
                         key={scannedFile.id}
                         layout
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-white/10 shadow-lg overflow-hidden"
+                        className={cn(
+                          'relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl border shadow-lg overflow-hidden',
+                          dextStatus === 'to_review' ? 'border-amber-300/60 dark:border-amber-700/60' :
+                          dextStatus === 'ready' ? 'border-emerald-300/60 dark:border-emerald-700/60' :
+                          dextStatus === 'error' ? 'border-red-300/60 dark:border-red-700/60' :
+                          'border-white/50 dark:border-white/10'
+                        )}
                       >
                         <div className="p-4">
                           <div className="flex items-start gap-3">
@@ -713,14 +898,21 @@ export default function OCRPage() {
                                     Analyse IA...
                                   </span>
                                 )}
-                                {scannedFile.status === 'complete' && (
-                                  <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                                    <Check size={12} />
-                                    Terminé
+                                {scannedFile.status === 'complete' && dextStatus === 'to_review' && (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                    <Eye size={12} />
+                                    À vérifier
                                     {scannedFile.result?.extracted && (
-                                      <span className="ml-1">
-                                        - {formatCurrency(scannedFile.result.extracted.amount)}
-                                      </span>
+                                      <span className="ml-1 text-amber-500">- {formatCurrency(scannedFile.result.extracted.amount)}</span>
+                                    )}
+                                  </span>
+                                )}
+                                {scannedFile.status === 'complete' && dextStatus === 'ready' && (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 size={12} />
+                                    Prêt
+                                    {scannedFile.result?.extracted && (
+                                      <span className="ml-1 text-emerald-500">- {formatCurrency(scannedFile.result.extracted.amount)}</span>
                                     )}
                                   </span>
                                 )}
@@ -744,10 +936,16 @@ export default function OCRPage() {
                                 </div>
                               )}
 
-                              {/* Complete: confidence + action */}
+                              {/* Complete: confidence + duplicate badge */}
                               {scannedFile.status === 'complete' && scannedFile.result?.extracted && (
-                                <div className="mt-2 flex items-center gap-2">
+                                <div className="mt-2 flex items-center gap-2 flex-wrap">
                                   <ConfidenceBadge confidence={scannedFile.result.extracted.confidence} />
+                                  {scannedFile.result.extracted.is_duplicate && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                      <AlertCircle size={10} />
+                                      Doublon
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -762,6 +960,8 @@ export default function OCRPage() {
                                     setReviewingFile(scannedFile);
                                     setEditData(scannedFile.result?.extracted || null);
                                     setEditMode(false);
+                                    setSelectedClientId('');
+                                    setProjectCode('');
                                   }}
                                   className="p-2 rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
                                 >
@@ -789,7 +989,8 @@ export default function OCRPage() {
                           </div>
                         )}
                       </motion.div>
-                    ))}
+                    );
+                    })}
                   </AnimatePresence>
                 </div>
               </motion.div>
@@ -891,7 +1092,7 @@ export default function OCRPage() {
                           <input
                             type="number"
                             step="0.01"
-                            value={editData?.amount || ''}
+                            value={editData?.amount ?? ''}
                             onChange={(e) => setEditData(prev => prev ? { ...prev, amount: parseFloat(e.target.value) || 0 } : null)}
                             className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                           />
@@ -910,7 +1111,7 @@ export default function OCRPage() {
                           <input
                             type="number"
                             step="0.01"
-                            value={editData?.vat_amount || ''}
+                            value={editData?.vat_amount ?? ''}
                             onChange={(e) => setEditData(prev => prev ? { ...prev, vat_amount: parseFloat(e.target.value) || 0 } : null)}
                             className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                           />
@@ -961,7 +1162,7 @@ export default function OCRPage() {
                                 : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
                             )}
                           >
-                            <span>{cat.icon}</span>
+                            <cat.Icon size={14} />
                             {cat.label}
                           </button>
                         ))}
@@ -972,7 +1173,7 @@ export default function OCRPage() {
                           const cat = CATEGORIES.find(c => c.value === reviewingFile.result!.extracted.category);
                           return cat ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-sm font-bold text-gray-900 dark:text-white">
-                              <span>{cat.icon}</span>
+                              <cat.Icon size={14} />
                               {cat.label}
                             </span>
                           ) : (
@@ -982,6 +1183,37 @@ export default function OCRPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* HT Amount */}
+                  {(reviewingFile.result.extracted.ht_amount ?? 0) > 0 && (
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Montant HT</label>
+                      <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-0.5">
+                        {formatCurrency(reviewingFile.result.extracted.ht_amount)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Accounting code suggestion */}
+                  {reviewingFile.result.extracted.category && CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category] && (
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Compte comptable suggéré</label>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">
+                        {CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category].code} — {CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category].label}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Duplicate warning */}
+                  {reviewingFile.result.extracted.is_duplicate && (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                      <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Doublon possible</p>
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Une facture avec le même fournisseur, montant et date existe déjà.</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Invoice number */}
                   {reviewingFile.result.extracted.invoice_number && (
@@ -1028,14 +1260,15 @@ export default function OCRPage() {
                   )}
 
                   {/* Description */}
-                  {reviewingFile.result.extracted.description && (
+                  {(editMode || reviewingFile.result.extracted.description) && (
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Description</label>
                       {editMode ? (
                         <textarea
-                          value={editData?.description || ''}
+                          value={editData?.description ?? ''}
                           onChange={(e) => setEditData(prev => prev ? { ...prev, description: e.target.value } : null)}
                           rows={2}
+                          placeholder="Ajouter une description..."
                           className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
                         />
                       ) : (
@@ -1046,6 +1279,47 @@ export default function OCRPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Client & Project Assignment */}
+                <div className="px-5 pb-3 space-y-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      <Users size={10} /> Affectation client
+                    </label>
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-medium focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                    >
+                      <option value="">Aucun client</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      <Tag size={10} /> Code projet
+                    </label>
+                    <input
+                      type="text"
+                      value={projectCode}
+                      onChange={(e) => setProjectCode(e.target.value)}
+                      placeholder="Ex: PROJ-2024-001"
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Vendor Learning Indicator */}
+                {reviewingFile.result.extracted.vendor && vendorRules[(reviewingFile.result.extracted.vendor || '').toLowerCase().trim()] && (
+                  <div className="mx-5 mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <Sparkles size={12} className="text-blue-500" />
+                    <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium">
+                      Catégorie auto-apprise de vos factures précédentes de {reviewingFile.result.extracted.vendor}
+                    </p>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="p-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
@@ -1079,7 +1353,7 @@ export default function OCRPage() {
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all"
                       >
                         <Check size={16} />
-                        Créer la dépense
+                        Valider et traiter
                       </motion.button>
                       <div className="flex gap-2">
                         <motion.button
@@ -1214,7 +1488,7 @@ export default function OCRPage() {
                   {(() => {
                     const cat = CATEGORIES.find(c => c.value === item.category);
                     return cat ? (
-                      <span className="text-sm">{cat.icon}</span>
+                      <cat.Icon size={16} className="text-gray-500 dark:text-gray-400" />
                     ) : null;
                   })()}
 
@@ -1229,11 +1503,11 @@ export default function OCRPage() {
                   {/* Status */}
                   <span className={cn(
                     'px-2.5 py-1 rounded-lg text-xs font-bold',
-                    item.status === 'saved' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                    item.status === 'processed' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
                       item.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                        'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                   )}>
-                    {item.status === 'saved' ? 'Sauvegardé' : item.status === 'reviewed' ? 'Vérifié' : 'En attente'}
+                    {item.status === 'processed' ? 'Traité' : item.status === 'reviewed' ? 'Vérifié' : 'Archivé'}
                   </span>
 
                   {/* Arrow */}

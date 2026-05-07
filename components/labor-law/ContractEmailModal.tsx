@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, Mail, FileText, AlertCircle, Check, PenTool, ArrowLeft, Copy, Link as LinkIcon, Calendar, Info } from 'lucide-react';
+import { X, Send, Loader2, Mail, FileText, AlertCircle, Check, PenTool, ArrowLeft, Copy, Link as LinkIcon, Calendar, Info, FileBadge } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabaseClient } from '@/lib/supabase';
 
@@ -69,7 +69,7 @@ export function ContractEmailModal({
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
         <div style="background:#1D9E75;padding:20px 24px;border-radius:8px 8px 0 0;">
           <h2 style="color:#fff;margin:0;font-size:18px;">
-            <span style="margin-right:8px;">📄</span>${label}
+            ${label}
           </h2>
           <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px;">${employeeName}</p>
         </div>

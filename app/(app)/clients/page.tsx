@@ -17,7 +17,7 @@ import {
   Plus, Search, Users, Trash2, Phone, Mail, Download,
   Building2, Globe, MapPin, FileText, TrendingUp, ChevronRight,
   Star, Sparkles, Grid3X3, List, LayoutGrid, ArrowUpRight,
-  Eye, EyeOff, Filter, X, Calendar, DollarSign, Activity,
+  Eye, EyeOff, Filter, X, Calendar, DollarSign, Activity, Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -244,7 +244,7 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
               </div>
             ) : (
               <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
-                <p className="text-lg font-black text-green-600">✓</p>
+                <p className="text-lg font-black text-green-600"><Check size={20} /></p>
                 <p className="text-[10px] text-gray-500 font-medium">À jour</p>
               </div>
             )}

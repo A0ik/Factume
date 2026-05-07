@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader2, Sparkles, X, Check, Plus } from 'lucide-react';
+import { Mic, MicOff, Loader2, Sparkles, X, Check, Plus, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -88,7 +88,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
         recognitionRef.current.abort();
       }
     };
-  }, [isPro]);
+  }, [isPro, mode]);
 
   const startListening = () => {
     if (!isPro) {
@@ -497,10 +497,12 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
 
       {/* Tips */}
       <div className="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30">
-        <p className="text-xs text-blue-700 dark:text-blue-300">
-          <strong>💡 Astuces:</strong> Dites{" "}
+        <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
+          <Lightbulb size={14} className="shrink-0 mt-0.5" />
+          <span><strong>Astuces:</strong> Dites{" "}
           <span className="italic">"Ajouter un site vitrine 850 euros HT"</span> ou{" "}
           <span className="italic">"Créer une facture mensuelle pour Martin à 2000€"</span>
+          </span>
         </p>
       </div>
     </div>

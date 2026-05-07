@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, RefreshCw, Download, Shield, AlertTriangle, CheckCircle, Info, Loader2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Download, Shield, AlertTriangle, CheckCircle, Info, Loader2, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -211,7 +211,7 @@ export default function DataHealthPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Object.entries(scan.category_scores).map(([key, catScore]) => (
                   <div key={key} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                    <span className="text-lg">{CATEGORY_ICONS[key] || '📊'}</span>
+                    <span className="text-lg flex items-center justify-center">{CATEGORY_ICONS[key] || <BarChart3 size={20} className="text-gray-400" />}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{CATEGORY_LABELS[key] || key}</p>
                       <div className="mt-1 w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">

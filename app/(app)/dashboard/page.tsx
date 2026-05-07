@@ -219,7 +219,7 @@ export default function DashboardPage() {
         <div>
           <p className="text-gray-400 dark:text-gray-500 text-sm font-medium flex items-center gap-2">
             <Sparkles size={14} className="text-primary animate-pulse" />
-            {greeting} 👋
+            {greeting}
           </p>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white mt-0.5">
             {profile?.company_name || 'Mon entreprise'}

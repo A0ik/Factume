@@ -24,15 +24,19 @@ interface BankTransaction {
 }
 
 const BANKS = [
-  { name: 'BNP Paribas', img: '🏦', format: 'CSV (séparateur ;)' },
-  { name: 'Société Générale', img: '🏦', format: 'CSV (séparateur ;)' },
-  { name: 'Crédit Agricole', img: '🏦', format: 'CSV (séparateur ,)' },
-  { name: 'La Banque Postale', img: '🏦', format: 'CSV OFX' },
-  { name: 'CIC / Crédit Mutuel', img: '🏦', format: 'CSV (séparateur ;)' },
-  { name: 'Boursorama', img: '🏦', format: 'CSV (séparateur ,)' },
-  { name: 'N26 / Revolut', img: '🏦', format: 'CSV (séparateur ,)' },
-  { name: 'Autre', img: '🏦', format: 'CSV générique' },
+  { name: 'BNP Paribas', format: 'CSV (séparateur ;)' },
+  { name: 'Société Générale', format: 'CSV (séparateur ;)' },
+  { name: 'Crédit Agricole', format: 'CSV (séparateur ,)' },
+  { name: 'La Banque Postale', format: 'CSV OFX' },
+  { name: 'CIC / Crédit Mutuel', format: 'CSV (séparateur ;)' },
+  { name: 'Boursorama', format: 'CSV (séparateur ,)' },
+  { name: 'N26 / Revolut', format: 'CSV (séparateur ,)' },
+  { name: 'Autre', format: 'CSV générique' },
 ];
+
+function BankIcon() {
+  return <Building2 size={24} className="text-gray-400" />;
+}
 
 function parseCSV(text: string): BankTransaction[] {
   const lines = text.trim().split('\n').filter(Boolean);
@@ -203,7 +207,7 @@ export default function BankingPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {BANKS.map((bank) => (
                 <div key={bank.name} className="flex flex-col items-center gap-1.5 p-3 bg-gray-50 rounded-xl text-center">
-                  <span className="text-2xl">{bank.img}</span>
+                  <span className="text-2xl"><BankIcon /></span>
                   <p className="text-xs font-semibold text-gray-700">{bank.name}</p>
                   <p className="text-[10px] text-gray-400">{bank.format}</p>
                 </div>
@@ -392,7 +396,7 @@ export default function BankingPage() {
                           onClick={() => handleConfirmMatch(tx.id, matchedInvoice.id)}
                           className="text-[11px] font-bold text-green-600 hover:underline mt-0.5"
                         >
-                          ✓ Confirmer payée
+                          Confirmer payée
                         </button>
                       )}
                     </div>

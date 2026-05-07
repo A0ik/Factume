@@ -186,7 +186,13 @@
       "Bash(node fix_voice_remaining.js)",
       "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('ScanLine:', typeof l.ScanLine\\); console.log\\('Scan:', typeof l.Scan\\);\")",
       "Bash([ -f \"c:/Users/salma/Desktop/FACTU.ME/$f\" ])",
-      "Bash(grep -E \"\\\\.md$|README\")"
+      "Bash(grep -E \"\\\\.md$|README\")",
+      "Bash(xxd -l 200 -s 0)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(python3 scripts/fix-ocr.py)",
+      "Bash(python3 scripts/enhance-ocr.py)",
+      "Bash(python3 scripts/add-client-vendor.py)"
     ]
   },
   "enableAllProjectMcpServers": true,

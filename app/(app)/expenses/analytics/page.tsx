@@ -6,7 +6,9 @@ import { motion } from 'framer-motion';
 import {
   TrendingDown, TrendingUp, Receipt, ArrowDownUp, Calculator,
   Building2, Clock, Check, X, Download, Calendar, BarChart3,
-  PieChart, FileText, Euro, ArrowRight, ChevronRight
+  PieChart, FileText, Euro, ArrowRight, ChevronRight,
+  Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Gauge,
+  Smartphone, Shield, Disc, Package
 } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -37,17 +39,17 @@ interface Expense {
 // Constants
 // ---------------------------------------------------------------------------
 const CATEGORIES = [
-  { value: 'transport', label: 'Transport', icon: '🚗', color: 'from-blue-500 to-blue-600' },
-  { value: 'meals', label: 'Repas', icon: '☕', color: 'from-amber-500 to-amber-600' },
-  { value: 'accommodation', label: 'Hébergement', icon: '🏠', color: 'from-green-500 to-green-600' },
-  { value: 'equipment', label: 'Matériel', icon: '💻', color: 'from-purple-500 to-purple-600' },
-  { value: 'office', label: 'Bureau', icon: '💼', color: 'from-cyan-500 to-cyan-600' },
-  { value: 'shopping', label: 'Achats', icon: '🛒', color: 'from-pink-500 to-pink-600' },
-  { value: 'mileage', label: 'IK', icon: '🏎️', color: 'from-red-500 to-red-600' },
-  { value: 'telecom', label: 'Télécom', icon: '📱', color: 'from-indigo-500 to-indigo-600' },
-  { value: 'insurance', label: 'Assurance', icon: '🛡️', color: 'from-teal-500 to-teal-600' },
-  { value: 'software', label: 'Logiciel', icon: '💿', color: 'from-violet-500 to-violet-600' },
-  { value: 'other', label: 'Autre', icon: '📦', color: 'from-gray-500 to-gray-600' },
+  { value: 'transport', label: 'Transport', Icon: Car, color: 'from-blue-500 to-blue-600' },
+  { value: 'meals', label: 'Repas', Icon: Coffee, color: 'from-amber-500 to-amber-600' },
+  { value: 'accommodation', label: 'Hébergement', Icon: Home, color: 'from-green-500 to-green-600' },
+  { value: 'equipment', label: 'Matériel', Icon: Laptop, color: 'from-purple-500 to-purple-600' },
+  { value: 'office', label: 'Bureau', Icon: Briefcase, color: 'from-cyan-500 to-cyan-600' },
+  { value: 'shopping', label: 'Achats', Icon: ShoppingCart, color: 'from-pink-500 to-pink-600' },
+  { value: 'mileage', label: 'IK', Icon: Gauge, color: 'from-red-500 to-red-600' },
+  { value: 'telecom', label: 'Télécom', Icon: Smartphone, color: 'from-indigo-500 to-indigo-600' },
+  { value: 'insurance', label: 'Assurance', Icon: Shield, color: 'from-teal-500 to-teal-600' },
+  { value: 'software', label: 'Logiciel', Icon: Disc, color: 'from-violet-500 to-violet-600' },
+  { value: 'other', label: 'Autre', Icon: Package, color: 'from-gray-500 to-gray-600' },
 ];
 
 const STATUS_STYLES: Record<string, { label: string; class: string; icon: typeof Check }> = {
@@ -481,7 +483,7 @@ export default function ExpenseAnalyticsPage() {
                     className="group"
                   >
                     <div className="flex items-center gap-3 mb-1.5">
-                      <span className="text-lg flex-shrink-0">{cat.icon}</span>
+                      <span className="text-lg flex-shrink-0"><cat.Icon size={18} /></span>
                       <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">{cat.label}</span>
                       <span className="text-xs text-gray-400 mr-2">{cat.count} dépense{cat.count !== 1 ? 's' : ''}</span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
@@ -795,7 +797,7 @@ export default function ExpenseAnalyticsPage() {
                   transition={{ delay: 0.75 + idx * 0.04 }}
                   className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50/80 dark:hover:bg-slate-700/30 transition-all"
                 >
-                  <span className="text-lg flex-shrink-0">{cat.icon}</span>
+                  <span className="text-lg flex-shrink-0 flex items-center"><cat.Icon size={18} /></span>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

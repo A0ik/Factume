@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Info, X, ChevronDown, ChevronRight, FileText, Shield, AlertCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, X, ChevronDown, ChevronRight, FileText, Shield, AlertCircle, ScrollText } from 'lucide-react';
 import { validateContract, getAllSectors } from '@/lib/labor-law/rules';
 import { calculerSalaireMinimum } from '@/lib/labor-law/bulletin-paie';
 
@@ -229,7 +229,7 @@ export function ContractValidator({
                         </p>
                         {error.source && (
                           <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                            📜 {error.source}
+                            <ScrollText size={12} className="inline shrink-0" /> {error.source}
                           </p>
                         )}
                       </div>
@@ -255,7 +255,7 @@ export function ContractValidator({
                         </p>
                         {warning.source && (
                           <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                            📜 {warning.source}
+                            <ScrollText size={12} className="inline shrink-0" /> {warning.source}
                           </p>
                         )}
                       </div>
@@ -281,7 +281,7 @@ export function ContractValidator({
                         </p>
                         {info.source && (
                           <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                            📜 {info.source}
+                            <ScrollText size={12} className="inline shrink-0" /> {info.source}
                           </p>
                         )}
                       </div>

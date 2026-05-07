@@ -218,7 +218,7 @@ export default function NotificationsPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900">Notifications push</p>
             {pushStatus === 'subscribed' && (
-              <p className="text-xs text-green-700 mt-0.5 font-semibold">Notifications activées ✓</p>
+              <p className="text-xs text-green-700 mt-0.5 font-semibold">Notifications activées</p>
             )}
             {pushStatus === 'denied' && (
               <p className="text-xs text-red-600 mt-0.5">

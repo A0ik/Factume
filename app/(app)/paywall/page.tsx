@@ -16,6 +16,7 @@ import EmbeddedCheckout, { PlanInfo } from '@/components/ui/EmbeddedCheckout';
 import OptimizedPricingCard from '@/components/ui/OptimizedPricingCard';
 import { PaywallHeader } from '@/components/ui/PaywallHeader';
 
+
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
   id: string; name: string; price: string; yearlyPrice: string; yearlySavings: string; tagline: string;

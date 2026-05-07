@@ -12,7 +12,7 @@ import {
   AlertTriangle, Download, Sparkles, Archive, ZoomIn,
   Check, FileSpreadsheet, Building2, RotateCcw, Database,
   CreditCard, Building, ShoppingBag, TrendingUp, Receipt,
-  Layers, SlidersHorizontal,
+  Layers, SlidersHorizontal, Lock,
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 
@@ -1115,7 +1115,7 @@ export default function CapturePage() {
                     {!isPro && workspaces.length >= 1 && (
                       <div className="border-t border-gray-100 p-2">
                         <div className="px-3 py-2 text-[10px] text-gray-500 text-center">
-                          <span className="block mb-1">🔒 Plan Solo - 1 dossier max</span>
+                          <span className="block mb-1"><Lock size={10} className="inline" /> Plan Solo - 1 dossier max</span>
                           <span className="text-primary font-semibold">Passez à Pro</span> pour en créer d'autres
                         </div>
                       </div>
@@ -1266,7 +1266,7 @@ export default function CapturePage() {
                     {item.status === 'waiting'   && 'En file d\'attente...'}
                     {item.status === 'uploading' && 'Envoi du fichier...'}
                     {item.status === 'analyzing' && 'Analyse IA — extraction des données...'}
-                    {item.status === 'done'      && '✓ Terminé — données extraites'}
+                    {item.status === 'done'      && 'Terminé — données extraites'}
                     {item.status === 'error'     && `Erreur : ${item.error}`}
                   </p>
                 </div>
@@ -1640,7 +1640,7 @@ export default function CapturePage() {
 
             <div className="px-6 pb-5">
               <p className="text-[10px] text-gray-400 text-center">
-                ✨ Style Dext — chaque page traitée comme une facture individuelle
+                <Sparkles size={10} className="inline" /> Style Dext — chaque page traitée comme une facture individuelle
               </p>
             </div>
           </div>

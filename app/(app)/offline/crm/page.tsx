@@ -13,24 +13,25 @@ import {
   Plus, Trash2, GripVertical, TrendingUp, Target,
   Trophy, Users, ChevronRight, Sparkles, ArrowUpRight,
   Percent, BarChart3, Flame, CheckSquare, Square, X,
+  Eye, CheckCircle, FileText, Handshake, XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const STAGES: {
   key: OpportunityStage;
   label: string;
-  emoji: string;
+  Icon: React.ElementType;
   color: string;
   bg: string;
   border: string;
   barColor: string;
 }[] = [
-  { key: 'prospect',    label: 'Prospect',     emoji: '👁️',  color: 'text-gray-600',   bg: 'bg-gray-100',   border: 'border-gray-200',  barColor: 'bg-gray-400' },
-  { key: 'qualified',   label: 'Qualifié',     emoji: '✅',  color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-100',  barColor: 'bg-blue-500' },
-  { key: 'proposal',    label: 'Proposition',  emoji: '📄',  color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', barColor: 'bg-purple-500' },
-  { key: 'negotiation', label: 'Négociation',  emoji: '🤝',  color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-100', barColor: 'bg-yellow-500' },
-  { key: 'won',         label: 'Gagné',        emoji: '🏆',  color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-100',  barColor: 'bg-green-500' },
-  { key: 'lost',        label: 'Perdu',        emoji: '❌',  color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-100',    barColor: 'bg-red-400' },
+  { key: 'prospect',    label: 'Prospect',     Icon: Eye,         color: 'text-gray-600',   bg: 'bg-gray-100',   border: 'border-gray-200',  barColor: 'bg-gray-400' },
+  { key: 'qualified',   label: 'Qualifié',     Icon: CheckCircle, color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-100',  barColor: 'bg-blue-500' },
+  { key: 'proposal',    label: 'Proposition',  Icon: FileText,    color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', barColor: 'bg-purple-500' },
+  { key: 'negotiation', label: 'Négociation',  Icon: Handshake,   color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-100', barColor: 'bg-yellow-500' },
+  { key: 'won',         label: 'Gagné',        Icon: Trophy,      color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-100',  barColor: 'bg-green-500' },
+  { key: 'lost',        label: 'Perdu',        Icon: XCircle,     color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-100',    barColor: 'bg-red-400' },
 ];
 
 const PROB_BY_STAGE: Record<OpportunityStage, number> = {
@@ -295,7 +296,7 @@ export default function CrmPage() {
                     stage.bg, stage.border,
                   )}>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm">{stage.emoji}</span>
+                      <stage.Icon size={14} className={stage.color} />
                       <span className={cn('text-xs font-bold', stage.color)}>{stage.label}</span>
                       <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold', stage.bg, stage.color, 'border', stage.border)}>
                         {stageOpps.length}
@@ -369,9 +370,9 @@ export default function CrmPage() {
                             {opp.stage !== 'won' && opp.stage !== 'lost' && (
                               <button
                                 onClick={(e) => handleQuickWin(e, opp)}
-                                className="flex-1 text-[11px] text-green-600 font-semibold hover:text-green-700 transition-colors text-center"
+                                className="flex-1 text-[11px] text-green-600 font-semibold hover:text-green-700 transition-colors text-center inline-flex items-center justify-center gap-1"
                               >
-                                ✓ Gagné
+                                <CheckCircle size={12} /> Gagné
                               </button>
                             )}
                             <button
@@ -535,7 +536,7 @@ export default function CrmPage() {
               set('stage', s);
               set('probability', PROB_BY_STAGE[s]);
             }}
-            options={STAGES.map((s) => ({ value: s.key, label: `${s.emoji} ${s.label}` }))}
+            options={STAGES.map((s) => ({ value: s.key, label: s.label }))}
           />
           <Textarea
             label="Notes"
