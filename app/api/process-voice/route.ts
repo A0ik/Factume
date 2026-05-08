@@ -4,20 +4,6 @@ import { processVoiceTranscript } from '@/lib/groq-translator';
 import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
 import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
-import { z } from 'zod';
-
-// Zod schema for additional validation
-export const ProcessVoiceSchema = z.object({
-  audio: z.instanceof(File),
-  sector: z.string().max(100).optional(),
-  isEdit: z.boolean().default(false),
-  existingItems: z.array(z.object({
-    description: z.string().max(500).optional(),
-    quantity: z.number().nonnegative(),
-    unit_price: z.number().nonnegative(),
-    vat_rate: z.number().min(0).max(100),
-  })).optional(),
-});
 
 export const maxDuration = 60;
 

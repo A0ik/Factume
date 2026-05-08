@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Clients | Factu.me',
-  description: 'Gérez votre portefeuille clients : fiches, historique, CA généré, factures en attente. Import automatique SIRET et IA. CRM intégré pour freelances.',
-  keywords: ['CRM freelance', 'gestion clients', 'portefeuille clients', 'SIRET', 'fiche client', 'base clients TPE'],
-};
-
 'use client';
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';

@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Paramètres | Factu.me',
-  description: 'Configurez votre entreprise, facturation, templates PDF, coordonnées bancaires et paiements Stripe/SumUp. Signature électronique, webhooks et exports FEC.',
-  keywords: ['paramètres facturation', 'configurer entreprise', 'IBAN', 'Stripe', 'template facture PDF', 'webhook facture'],
-};
-
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';

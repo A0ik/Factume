@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Tarifs & Abonnements | Factu.me',
-  description: 'Découvrez nos plans : Solo (14,99€), Pro (29,99€) et Business (59,99€). Factures illimitées, IA, contrats, CRM. Essai gratuit 7 jours, sans engagement.',
-  keywords: ['tarifs facturation', 'prix logiciel facture', 'abonnement facturation', 'logiciel facture gratuit', 'essai gratuit'],
-};
-
 'use client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

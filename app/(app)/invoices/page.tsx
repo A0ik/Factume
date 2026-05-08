@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Factures & Documents | Factu.me',
-  description: 'Gérez vos factures, devis, avoirs, bons de commande et livraison. Créez, envoyez et suivez tous vos documents. Export Factur-X conforme 2026.',
-  keywords: ['logiciel facture', 'gestion factures', 'facture en ligne', 'devis facture', 'Factur-X', 'facture électronique'],
-};
-
 'use client';
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';

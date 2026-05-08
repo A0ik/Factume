@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Contrats de travail | Factu.me',
-  description: 'Créez des contrats CDI, CDD, stage, freelance conformes 2026. Signature électronique eIDAS, vérification IA des clauses. Rapports et suivi.',
-  keywords: ['contrat CDI en ligne', 'contrat CDD', 'modèle contrat travail', 'signature électronique contrat', 'contrat freelance'],
-};
-
 'use client';
 
 import React, { useEffect, useState } from 'react';

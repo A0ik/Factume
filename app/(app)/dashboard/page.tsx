@@ -1,11 +1,3 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Tableau de bord | Factu.me',
-  description: 'Tableau de bord complet : CA mensuel, DSO, factures en retard, encaissements et graphiques d\'évolution. Suivez votre trésorerie et performances en temps réel.',
-  keywords: ['tableau de bord facturation', 'KPI facturation', 'suivi CA', 'trésorerie freelance', 'DSO calcul'],
-};
-
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
