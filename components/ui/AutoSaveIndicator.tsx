@@ -8,8 +8,8 @@ export function AutoSaveIndicator() {
   const { loading } = useDataStore();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [showIndicator, setShowIndicator] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const loadingStartRef = useRef<number>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const loadingStartRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (loading) {
