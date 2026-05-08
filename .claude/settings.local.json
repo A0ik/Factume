@@ -192,7 +192,11 @@
       "Bash(python3)",
       "Bash(python3 scripts/fix-ocr.py)",
       "Bash(python3 scripts/enhance-ocr.py)",
-      "Bash(python3 scripts/add-client-vendor.py)"
+      "Bash(python3 scripts/add-client-vendor.py)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)"
     ]
   },
   "enableAllProjectMcpServers": true,
