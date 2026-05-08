@@ -15,6 +15,7 @@ import {
   Info, AlertCircle, Calculator, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MultiInvoiceUpload } from '@/components/ui/MultiInvoiceUpload';
 
 interface Expense {
   id: string;
@@ -372,6 +373,7 @@ export default function ExpensesPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showMultiInvoiceModal, setShowMultiInvoiceModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -610,9 +612,9 @@ export default function ExpensesPage() {
         e.vendor,
         e.description || '',
         getCat(e.category).label,
-        (e.amount / 100).toFixed(2),
-        (e.vat_amount / 100).toFixed(2),
-        ((e.amount - e.vat_amount) / 100).toFixed(2),
+        e.amount.toFixed(2),
+        (e.vat_amount || 0).toFixed(2),
+        ((e.amount || 0) - (e.vat_amount || 0)).toFixed(2),
         e.location_country || '',
         e.location_city || '',
         e.client_id || '',
@@ -704,6 +706,15 @@ export default function ExpensesPage() {
             >
               <Plus size={18} />
               Nouvelle dépense
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowMultiInvoiceModal(true)}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all"
+            >
+              <Sparkles size={18} />
+              Multi-factures
             </motion.button>
           </div>
         </div>
@@ -1270,9 +1281,9 @@ export default function ExpensesPage() {
                   Annuler
                 </motion.button>
                 <motion.button
+                  type="submit"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleSave}
                   disabled={saving}
                   className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all disabled:opacity-60"
                 >
@@ -1372,6 +1383,57 @@ export default function ExpensesPage() {
                   <p className="font-bold text-blue-700 dark:text-blue-300 mb-1">Conforme législation française</p>
                   <p className="text-blue-600/80 dark:text-blue-400/80">Tous les exports incluent les champs légaux: TVA, lieu, client, projet, déductibilité</p>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Multi-Factures */}
+      <AnimatePresence>
+        {showMultiInvoiceModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowMultiInvoiceModal(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-4xl p-6 border border-white/50 dark:border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    Upload Multi-Factures
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    L'IA détecte automatiquement chaque facture dans votre PDF
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowMultiInvoiceModal(false)}
+                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400"
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                <MultiInvoiceUpload
+                  onExtracted={(expenses) => {
+                    // Add extracted expenses to the list
+                    setExpenses(prev => [...expenses, ...prev]);
+                    setShowMultiInvoiceModal(false);
+                    toast.success(`${expenses.length} facture(s) extraite(s) avec succès`);
+                  }}
+                />
               </div>
             </motion.div>
           </motion.div>
