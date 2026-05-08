@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useCrmStore, Opportunity, OpportunityInput, OpportunityStage, OpportunityPriority, CrmTask } from '@/stores/crmStore';
@@ -635,6 +636,7 @@ function DetailPanel({ opp, onClose, onEdit }: { opp: Opportunity; onClose: () =
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function CrmPage() {
+  const router = useRouter();
   const { opportunities, tasks, fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchTasks } = useCrmStore();
   const { clients } = useDataStore();
   const { user } = useAuthStore();
@@ -738,20 +740,32 @@ export default function CrmPage() {
     });
   };
 
-  const filtered = opportunities.filter(o => {
+  // Memoize filtered opportunities - O(n) operation
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !q || o.client_name.toLowerCase().includes(q) || o.title.toLowerCase().includes(q);
-    const matchStage  = filterStage === 'all' || o.stage === filterStage;
-    return matchSearch && matchStage;
-  });
+    return opportunities.filter(o => {
+      const matchSearch = !q || o.client_name.toLowerCase().includes(q) || o.title.toLowerCase().includes(q);
+      const matchStage  = filterStage === 'all' || o.stage === filterStage;
+      return matchSearch && matchStage;
+    });
+  }, [opportunities, search, filterStage]);
 
-  const pipeline   = opportunities.filter(o => o.stage !== 'lost').reduce((s, o) => s + o.value * o.probability / 100, 0);
-  const wonRev     = opportunities.filter(o => o.stage === 'won').reduce((s, o) => s + o.value, 0);
-  const wonCount   = opportunities.filter(o => o.stage === 'won').length;
-  const lostCount  = opportunities.filter(o => o.stage === 'lost').length;
-  const winRate    = wonCount + lostCount > 0 ? Math.round(wonCount / (wonCount + lostCount) * 100) : 0;
-  const hotValue   = opportunities.filter(o => o.stage === 'negotiation').reduce((s, o) => s + o.value, 0);
-  const hotCount   = opportunities.filter(o => o.stage === 'negotiation').length;
+  // Memoize stats calculations - O(n) operations
+  const stats = useMemo(() => {
+    const activeOpps = opportunities.filter(o => o.stage !== 'lost');
+    const pipeline = activeOpps.reduce((s, o) => s + o.value * o.probability / 100, 0);
+    const wonOpps = opportunities.filter(o => o.stage === 'won');
+    const wonRev = wonOpps.reduce((s, o) => s + o.value, 0);
+    const wonCount = wonOpps.length;
+    const lostCount = opportunities.filter(o => o.stage === 'lost').length;
+    const winRate = wonCount + lostCount > 0 ? Math.round(wonCount / (wonCount + lostCount) * 100) : 0;
+    const hotOpps = opportunities.filter(o => o.stage === 'negotiation');
+    const hotValue = hotOpps.reduce((s, o) => s + o.value, 0);
+    const hotCount = hotOpps.length;
+    return { pipeline, wonRev, wonCount, lostCount, winRate, hotValue, hotCount };
+  }, [opportunities]);
+
+  const { pipeline, wonRev, wonCount, lostCount, winRate, hotValue, hotCount } = stats;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">
@@ -776,14 +790,14 @@ export default function CrmPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => window.location.href = '/paywall?plan=pro'}
+                onClick={() => router.push('/paywall?plan=pro')}
                 className="px-8 py-4 bg-gradient-to-r from-purple-600 to-violet-700 hover:from-purple-700 hover:to-violet-800 text-white rounded-2xl font-bold shadow-lg shadow-purple-500/30 transition-all"
               >
                 Découvrir les plans Pro
                 <ArrowRight className="ml-2 w-5 h-5" />
               </button>
               <button
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => router.push('/dashboard')}
                 className="px-8 py-4 bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-500/10 rounded-2xl font-bold transition-all"
               >
                 Retour au tableau de bord

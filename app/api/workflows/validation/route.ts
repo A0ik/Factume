@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { Expense, WorkflowHistoryEntry, ValidationRuleUpdateData } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Validation Rules Engine
@@ -30,7 +31,7 @@ interface ValidationRule {
 // Helper: Check if expense matches rule conditions
 // ---------------------------------------------------------------------------
 
-function matchesRule(expense: any, rule: ValidationRule): boolean {
+function matchesRule(expense: Expense, rule: ValidationRule): boolean {
   const { conditions } = rule;
 
   // Check amount range
@@ -50,7 +51,8 @@ function matchesRule(expense: any, rule: ValidationRule): boolean {
 
   // Check vendor
   if (conditions.vendor && conditions.vendor.length > 0) {
-    if (!expense.vendor || !conditions.vendor.some(v => expense.vendor.toLowerCase().includes(v.toLowerCase()))) {
+    const vendorLower = expense.vendor?.toLowerCase();
+    if (!vendorLower || !conditions.vendor.some(v => vendorLower.includes(v.toLowerCase()))) {
       return false;
     }
   }
@@ -157,11 +159,11 @@ export async function POST(req: NextRequest) {
 
     // Apply rule actions
     let newStatus = expense.validation_status || 'pending';
-    const workflowHistory: any = {
+    const workflowHistory: WorkflowHistoryEntry = {
       user_id: user.id,
       expense_id,
       workflow_type: 'validation',
-      from_status: expense.validation_status,
+      from_status: expense.validation_status || null,
       to_status: null,
       triggered_by: 'auto',
       rule_id: matchedRule.id,
@@ -294,10 +296,11 @@ export async function PUT(req: NextRequest) {
 
     if (existing) {
       // Update existing rule
-      const updateData: any = {
+      const updateData: ValidationRuleUpdateData = {
         conditions: ruleData.conditions,
         actions: ruleData.actions,
         priority: ruleData.priority || 0,
+        is_active: ruleData.is_active,
         updated_at: new Date().toISOString(),
       };
 

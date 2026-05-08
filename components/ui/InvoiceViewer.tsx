@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatCurrency } from '@/lib/utils';
+import { UpdatedExpenseData } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,7 +28,7 @@ interface InvoiceViewerProps {
     ocr_confidence?: number;
   };
   onClose?: () => void;
-  onReanalyzed?: (updatedExpense: Record<string, unknown>) => void;
+  onReanalyzed?: (updatedExpense: UpdatedExpenseData) => void;
   className?: string;
 }
 

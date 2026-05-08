@@ -721,3 +721,139 @@ export interface ContractComment {
   created_at: string;
   updated_at: string;
 }
+
+// ============================
+// TYPES FOR PROCESS VOICE API
+// ============================
+
+export interface VoiceExistingItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  vat_rate: number;
+}
+
+export interface VoiceParsedResponse {
+  action: 'added' | 'modified' | 'removed' | 'replaced';
+  summary: string | null;
+  client_name: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  client_address?: string | null;
+  client_city?: string | null;
+  client_postal_code?: string | null;
+  client_siret?: string | null;
+  client_vat_number?: string | null;
+  items: VoiceExistingItem[];
+  due_days: number | null;
+  notes: string | null;
+  discount_percent?: number;
+}
+
+export interface VoiceProcessResponse {
+  transcript: string;
+  originalTranscript: string;
+  wasTranslated: boolean;
+  originalLanguage: string;
+  parsed: VoiceParsedResponse;
+  action: string;
+  summary: string | null;
+}
+
+// ============================
+// TYPES FOR DATA STORE
+// ============================
+
+export interface UserProfile {
+  id: string;
+  invoice_prefix?: string;
+  invoice_count?: number;
+  [key: string]: any;
+}
+
+export interface InvoiceUpdateData {
+  items?: InvoiceItem[];
+  discount_percent?: number | null;
+  status?: InvoiceStatus;
+  [key: string]: any;
+}
+
+// ============================
+// TYPES FOR WORKFLOWS
+// ============================
+
+export interface Expense {
+  id: string;
+  amount: number;
+  vendor?: string;
+  category?: string;
+  ocr_confidence?: number;
+  category_confidence?: number;
+  receipt_url?: string;
+  line_items_count?: number;
+  ocr_line_items?: Array<{ [key: string]: any }>;
+  validation_status?: string;
+  [key: string]: any;
+}
+
+export interface WorkflowHistoryEntry {
+  user_id: string;
+  expense_id: string;
+  workflow_type: string;
+  from_status: string | null;
+  to_status: string | null;
+  triggered_by: string;
+  rule_id?: string;
+  notes: string;
+  [key: string]: any;
+}
+
+export interface ValidationResult {
+  status: string;
+  confidence: number;
+  rule_used: string | null;
+}
+
+export interface ValidationRuleUpdateData {
+  conditions: {
+    min_amount?: number;
+    max_amount?: number;
+    category?: string[];
+    vendor?: string[];
+    ocr_confidence_min?: number;
+    has_receipt?: boolean;
+    line_items_count_min?: number;
+    [key: string]: any;
+  };
+  actions: {
+    auto_validate?: boolean;
+    require_approval?: boolean;
+    set_status?: string;
+    add_note?: boolean;
+    [key: string]: any;
+  };
+  priority?: number;
+  is_active?: boolean;
+  [key: string]: any;
+}
+
+// ============================
+// ERROR TYPES
+// ============================
+
+export interface APIError extends Error {
+  status?: number;
+  code?: string;
+  message: string;
+}
+
+// ============================
+// TYPES FOR INVOICE VIEWER
+// ============================
+
+export interface UpdatedExpenseData {
+  vendor?: string;
+  amount?: number;
+  date?: string;
+  [key: string]: unknown;
+}

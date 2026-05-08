@@ -21,7 +21,9 @@ import Link from 'next/link';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, initialized, profile } = useAuthStore();
-  const { fetchInvoices, fetchClients, invoices } = useDataStore();
+  const fetchInvoices = useDataStore(state => state.fetchInvoices);
+  const fetchClients = useDataStore(state => state.fetchClients);
+  const invoices = useDataStore(state => state.invoices);
   const { isFree, isTrialActive, invoiceCount } = useSubscription();
   const pathname = usePathname();
   const [showTrialBanner, setShowTrialBanner] = useState(true);
@@ -33,7 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!user) { router.replace('/login'); return; }
     fetchInvoices();
     fetchClients();
-  }, [initialized, user]);
+  }, [initialized, user, fetchInvoices, fetchClients]);
 
   // Handle Stripe payment success redirect — refresh profile to pick up new tier
   useEffect(() => {

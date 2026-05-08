@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Download, Loader2, FileText, CheckCircle, XCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export function FacturXBatchExport({
   className,
   variant = 'button',
 }: FacturXBatchExportProps) {
+  const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -74,7 +76,7 @@ export function FacturXBatchExport({
             description: 'L\'export en masse Factur-X nécessite un abonnement supérieur.',
             action: {
               label: 'Voir les plans',
-              onClick: () => (window.location.href = '/paywall'),
+              onClick: () => router.push('/paywall'),
             },
           });
           return;

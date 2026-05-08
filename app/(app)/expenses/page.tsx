@@ -1,6 +1,6 @@
 'use client';
 import { toast } from 'sonner';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -655,21 +655,31 @@ export default function ExpensesPage() {
     }
   };
 
-  const filtered = expenses.filter((e) => {
+  // Memoize filtered expenses - O(n) operation
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !q || e.vendor.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q);
-    const matchCat = !filterCat || e.category === filterCat;
-    const matchStatus = !filterStatus || e.status === filterStatus;
-    return matchSearch && matchCat && matchStatus;
-  });
+    return expenses.filter((e) => {
+      const matchSearch = !q || e.vendor.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q);
+      const matchCat = !filterCat || e.category === filterCat;
+      const matchStatus = !filterStatus || e.status === filterStatus;
+      return matchSearch && matchCat && matchStatus;
+    });
+  }, [expenses, search, filterCat, filterStatus]);
 
-  const totalMonth = expenses
-    .filter((e) => e.date.startsWith(new Date().toISOString().slice(0, 7)))
-    .reduce((s, e) => s + e.amount, 0);
-  const totalAll = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalVat = expenses.reduce((s, e) => s + (e.vat_amount || 0), 0);
-  const totalMileage = expenses.filter(e => e.category === 'mileage').reduce((s, e) => s + (e.amount || 0), 0);
-  const pending = expenses.filter((e) => e.status === 'pending').length;
+  // Memoize stats calculations - O(n) operations
+  const stats = useMemo(() => {
+    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+    const totalMonth = expenses
+      .filter((e) => e.date.startsWith(currentMonthPrefix))
+      .reduce((s, e) => s + e.amount, 0);
+    const totalAll = expenses.reduce((s, e) => s + e.amount, 0);
+    const totalVat = expenses.reduce((s, e) => s + (e.vat_amount || 0), 0);
+    const totalMileage = expenses.filter(e => e.category === 'mileage').reduce((s, e) => s + (e.amount || 0), 0);
+    const pending = expenses.filter((e) => e.status === 'pending').length;
+    return { totalMonth, totalAll, totalVat, totalMileage, pending };
+  }, [expenses]);
+
+  const { totalMonth, totalAll, totalVat, totalMileage, pending } = stats;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">

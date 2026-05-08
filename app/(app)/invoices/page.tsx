@@ -1,5 +1,13 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Factures & Documents | Factu.me',
+  description: 'Gérez vos factures, devis, avoirs, bons de commande et livraison. Créez, envoyez et suivez tous vos documents. Export Factur-X conforme 2026.',
+  keywords: ['logiciel facture', 'gestion factures', 'facture en ligne', 'devis facture', 'Factur-X', 'facture électronique'],
+};
+
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDataStore } from '@/stores/dataStore';
@@ -114,24 +122,27 @@ export default function InvoicesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Stats
-  const paidInvoices  = invoices.filter((i) => i.status === 'paid');
-  const sentInvoices  = invoices.filter((i) => i.status === 'sent');
-  const overdueInvoices = invoices.filter((i) => i.status === 'overdue');
-  const totalRevenue  = paidInvoices.reduce((s, i) => s + i.total, 0);
-  const pendingAmount = sentInvoices.reduce((s, i) => s + i.total, 0);
-  const overdueAmount = overdueInvoices.reduce((s, i) => s + i.total, 0);
+  // Memoize stats calculations - O(n) operations
+  const paidInvoices = useMemo(() => invoices.filter((i) => i.status === 'paid'), [invoices]);
+  const sentInvoices = useMemo(() => invoices.filter((i) => i.status === 'sent'), [invoices]);
+  const overdueInvoices = useMemo(() => invoices.filter((i) => i.status === 'overdue'), [invoices]);
+  const totalRevenue = useMemo(() => paidInvoices.reduce((s, i) => s + i.total, 0), [paidInvoices]);
+  const pendingAmount = useMemo(() => sentInvoices.reduce((s, i) => s + i.total, 0), [sentInvoices]);
+  const overdueAmount = useMemo(() => overdueInvoices.reduce((s, i) => s + i.total, 0), [overdueInvoices]);
 
-  const filtered = invoices.filter((inv) => {
+  // Memoize filtered invoices - O(n) operation with complex conditions
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !q
-      || inv.number.toLowerCase().includes(q)
-      || (inv.client?.name || '').toLowerCase().includes(q)
-      || (inv.client_name_override || '').toLowerCase().includes(q);
-    const matchStatus = !statusFilter || inv.status === statusFilter;
-    const matchType = !typeFilter || (inv.document_type || 'invoice') === typeFilter;
-    return matchSearch && matchStatus && matchType;
-  });
+    return invoices.filter((inv) => {
+      const matchSearch = !q
+        || inv.number.toLowerCase().includes(q)
+        || (inv.client?.name || '').toLowerCase().includes(q)
+        || (inv.client_name_override || '').toLowerCase().includes(q);
+      const matchStatus = !statusFilter || inv.status === statusFilter;
+      const matchType = !typeFilter || (inv.document_type || 'invoice') === typeFilter;
+      return matchSearch && matchStatus && matchType;
+    });
+  }, [invoices, search, statusFilter, typeFilter]);
 
   // --- Selection helpers ---
   const allFilteredIds = filtered.map((i) => i.id);
@@ -234,15 +245,18 @@ export default function InvoicesPage() {
   ).length;
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
-        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
-      </div>
+    <>
+      <h1 className="sr-only">Factures & Documents - Factu.me</h1>
+      <main aria-label="Factures et documents">
+        <div className="space-y-5 pb-24">
+          {/* Ambient glow */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
+            <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
+          </div>
 
-      {/* Paywall banner */}
-      {sub.isFree && sub.invoiceCount >= 2 && (
+          {/* Paywall banner */}
+          {sub.isFree && sub.invoiceCount >= 2 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -783,5 +797,7 @@ export default function InvoicesPage() {
         )}
       </AnimatePresence>
     </div>
+  </main>
+  </>
   );
 }

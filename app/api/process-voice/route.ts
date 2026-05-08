@@ -1,28 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
+import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// Zod schema for additional validation
+export const ProcessVoiceSchema = z.object({
+  audio: z.instanceof(File),
+  sector: z.string().max(100).optional(),
+  isEdit: z.boolean().default(false),
+  existingItems: z.array(z.object({
+    description: z.string().max(500).optional(),
+    quantity: z.number().nonnegative(),
+    unit_price: z.number().nonnegative(),
+    vat_rate: z.number().min(0).max(100),
+  })).optional(),
+});
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting : 10 requêtes/minute par IP ou user
+    const rateLimitResult = rateLimit(getClientIp(req), 10, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+        }
+      );
+    }
+
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
     }
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const formData = await req.formData();
-    const audio = formData.get('audio') as File;
-    const sector = formData.get('sector') as string || '';
-    const isEdit = formData.get('isEdit') === 'true';
-    const existingItemsRaw = formData.get('existingItems') as string | null;
 
-    let existingItems: any[] = [];
-    if (isEdit && existingItemsRaw) {
-      try { existingItems = JSON.parse(existingItemsRaw); } catch { existingItems = []; }
+    // Valider les données d'entrée
+    let validatedData: ReturnType<typeof validateVoiceData>;
+    try {
+      validatedData = validateVoiceData(formData);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return NextResponse.json(formatValidationError(error), { status: 400 });
+      }
+      throw error;
     }
 
-    if (!audio) return NextResponse.json({ error: 'No audio file' }, { status: 400 });
+    const { audio, sector, isEdit, existingItems } = validatedData;
 
     // Transcription with Groq Whisper (auto-detect language - supports Arabic and French)
     const transcription = await groq.audio.transcriptions.create({
@@ -182,13 +213,21 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       temperature: 0, // Plus déterministe pour éviter les créations non demandées
     });
 
-    let parsed: any = {};
+    let parsed: VoiceParsedResponse = {
+      action: 'replaced',
+      summary: null,
+      client_name: null,
+      items: [],
+      due_days: 30,
+      notes: null,
+      discount_percent: 0,
+    };
     try {
-      parsed = JSON.parse(completion.choices[0].message.content || '{}');
+      parsed = JSON.parse(completion.choices[0].message.content || '{}') as VoiceParsedResponse;
 
       // Post-processing : corriger les expressions mathématiques dans les items
       if (parsed.items && Array.isArray(parsed.items)) {
-        parsed.items = parsed.items.map((item: any) => {
+        parsed.items = parsed.items.map((item: VoiceExistingItem) => {
           // Si unit_price est une expression, on essaie de l'évaluer
           if (typeof item.unit_price === 'string' && /[\d\.\s\+\-\*\/\(\)]/.test(item.unit_price)) {
             try {
@@ -207,7 +246,7 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       }
     } catch (err) {
       console.error('[process-voice] Failed to parse AI response:', err);
-      parsed = {};
+      // Keep the default parsed value, no need to reassign
     }
 
     return NextResponse.json({
@@ -219,13 +258,14 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       action: parsed.action,
       summary: parsed.summary
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Process Voice] Error:', error);
-    const message = error.message || 'Erreur lors du traitement vocal';
-    if (error.status === 401 || error.status === 403) {
+    const apiError = error as APIError;
+    const message = apiError.message || 'Erreur lors du traitement vocal';
+    if (apiError.status === 401 || apiError.status === 403) {
       return NextResponse.json({ error: 'Clé API invalide. Vérifiez GROQ_API_KEY.' }, { status: 500 });
     }
-    if (error.status === 429) {
+    if (apiError.status === 429) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
     }
     return NextResponse.json({ error: message }, { status: 500 });

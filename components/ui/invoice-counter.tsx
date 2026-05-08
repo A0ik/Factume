@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, AlertTriangle, X, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ interface InvoiceCounterProps {
 }
 
 export function InvoiceCounter({ invoiceCount, maxInvoices, onClose, className }: InvoiceCounterProps) {
+  const router = useRouter();
   const [isVisible, setIsVisible] = React.useState(true);
   const [isPulsing, setIsPulsing] = React.useState(false);
 
@@ -151,7 +153,7 @@ export function InvoiceCounter({ invoiceCount, maxInvoices, onClose, className }
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.location.href = '/paywall'}
+              onClick={() => router.push('/paywall')}
               className={cn(
                 "w-full py-2 px-4 rounded-lg font-medium text-sm transition-colors",
                 isAtLimit

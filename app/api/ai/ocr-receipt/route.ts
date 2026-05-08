@@ -16,6 +16,7 @@ import {
   buildOcrPrompt,
   ALLOWED_MIME_TYPES,
 } from '@/lib/ocr-helpers';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
@@ -29,7 +30,21 @@ const OCR_MODEL = 'google/gemini-2.0-flash-exp';
 export async function POST(req: NextRequest) {
   try {
     // ------------------------------------------------------------------
-    // 1. Authentication & subscription check
+    // 1. Rate limiting (IP-based) - Première ligne de défense
+    // ------------------------------------------------------------------
+    const rateLimitResult = rateLimit(getClientIp(req), 10, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+        }
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // 2. Authentication & subscription check
     // ------------------------------------------------------------------
     const supabase = await createServerSupabaseClient();
     const {
@@ -67,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 2. Rate limiting (Supabase-backed, works across serverless instances)
+    // 3. Rate limiting (Supabase-backed, works across serverless instances)
     // ------------------------------------------------------------------
     {
       const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
@@ -86,7 +101,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 3. Validate environment
+    // 4. Validate environment
     // ------------------------------------------------------------------
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json(
@@ -96,7 +111,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 4. Parse & validate the uploaded file
+    // 5. Parse & validate the uploaded file
     // ------------------------------------------------------------------
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
@@ -144,7 +159,7 @@ export async function POST(req: NextRequest) {
     const mimeType = ocrMimeType;
 
     // ------------------------------------------------------------------
-    // 5. Upload to Supabase Storage
+    // 6. Upload to Supabase Storage
     // ------------------------------------------------------------------
     const storagePath = generateStoragePath(user.id, file.name);
 
@@ -167,7 +182,7 @@ export async function POST(req: NextRequest) {
     const receiptPublicUrl = urlData.publicUrl;
 
     // ------------------------------------------------------------------
-    // 6. Call OpenRouter / Gemini 2.0 Flash for OCR
+    // 7. Call OpenRouter / Gemini 2.0 Flash for OCR
     // ------------------------------------------------------------------
     const openrouter = new OpenAI({
       baseURL: 'https://openrouter.ai/api/v1',
@@ -199,7 +214,7 @@ export async function POST(req: NextRequest) {
     });
 
     // ------------------------------------------------------------------
-    // 7. Parse & sanitize the OCR response
+    // 8. Parse & sanitize the OCR response
     // ------------------------------------------------------------------
     const rawContent = completion.choices[0]?.message?.content;
     if (!rawContent) {
@@ -294,7 +309,7 @@ export async function POST(req: NextRequest) {
     };
 
     // ------------------------------------------------------------------
-    // 8. Save to expenses table
+    // 9. Save to expenses table
     // ------------------------------------------------------------------
     const expenseRecord: Record<string, unknown> = {
       user_id: user.id,
@@ -354,7 +369,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 9. Return comprehensive response
+    // 10. Return comprehensive response
     // ------------------------------------------------------------------
     return NextResponse.json(
       {

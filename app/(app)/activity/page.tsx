@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -112,6 +113,7 @@ const itemVariants = {
 /* ================================================================== */
 
 export default function ActivityPage() {
+  const router = useRouter();
   const sub = useSubscription();
   const { user } = useAuthStore();
   const { notifications, fetchNotifications, markRead } = useWorkspaceStore();
@@ -480,7 +482,7 @@ export default function ActivityPage() {
                         }`}
                         onClick={() => {
                           if (isNotif && notif && !notif.read) markRead(notif.id);
-                          if (ev.href) window.location.href = ev.href;
+                          if (ev.href) router.push(ev.href);
                         }}
                       >
                         {/* Icon */}

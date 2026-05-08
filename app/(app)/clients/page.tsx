@@ -1,5 +1,13 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Clients | Factu.me',
+  description: 'Gérez votre portefeuille clients : fiches, historique, CA généré, factures en attente. Import automatique SIRET et IA. CRM intégré pour freelances.',
+  keywords: ['CRM freelance', 'gestion clients', 'portefeuille clients', 'SIRET', 'fiche client', 'base clients TPE'],
+};
+
 'use client';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -101,6 +109,7 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
 }) => {
   const [from, to] = GRADIENT_PAIRS[idx % GRADIENT_PAIRS.length];
   const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const router = useRouter();
 
   if (viewMode === 'list') {
     return (
@@ -109,7 +118,7 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: idx * 0.05 }}
         className="hover:bg-primary/5 cursor-pointer transition-colors group"
-        onClick={() => window.location.href = `/clients/${client.id}`}
+        onClick={() => router.push(`/clients/${client.id}`)}
       >
         <td className="px-5 py-4">
           <div className="flex items-center gap-3">
@@ -294,31 +303,69 @@ export default function ClientsPage() {
   });
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const filtered = clients.filter((c) => {
-    const q = search.toLowerCase();
-    return !q || c.name.toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.city || '').toLowerCase().includes(q);
-  });
+  // Memoize search query to avoid recalculation
+  const searchQuery = useMemo(() => search.toLowerCase(), [search]);
 
-  const clientStats = (clientId: string) => {
-    const clientInvoices = invoices.filter((i) => i.client_id === clientId);
-    const revenue = clientInvoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
-    const pending = clientInvoices.filter((i) => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + i.total, 0);
-    const lastInvoice = clientInvoices.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-    return { count: clientInvoices.length, revenue, pending, lastInvoice };
-  };
+  // Memoize filtered clients - O(n) operation
+  const filtered = useMemo(() =>
+    clients.filter((c) => {
+      return !searchQuery || c.name.toLowerCase().includes(searchQuery) || (c.email || '').toLowerCase().includes(searchQuery) || (c.city || '').toLowerCase().includes(searchQuery);
+    }),
+    [clients, searchQuery]
+  );
 
-  const totalRevenue = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
-  const activeClients = clients.filter((c) => invoices.some((i) => i.client_id === c.id));
+  // Memoize client stats map to avoid recalculating for each client - O(n*m) operation
+  const clientStatsMap = useMemo(() => {
+    const statsMap: Record<string, { count: number; revenue: number; pending: number; lastInvoice: any }> = {};
 
-  const handleExport = () => {
+    // Group invoices by client_id first - O(m)
+    const invoicesByClient: Record<string, any[]> = {};
+    invoices.forEach((inv) => {
+      if (!inv.client_id) return;
+      if (!invoicesByClient[inv.client_id]) {
+        invoicesByClient[inv.client_id] = [];
+      }
+      invoicesByClient[inv.client_id].push(inv);
+    });
+
+    // Calculate stats for each client - O(n*m) but optimized
+    Object.keys(invoicesByClient).forEach((clientId) => {
+      const clientInvoices = invoicesByClient[clientId];
+      const revenue = clientInvoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
+      const pending = clientInvoices.filter((i) => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + i.total, 0);
+      const lastInvoice = clientInvoices.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+      statsMap[clientId] = { count: clientInvoices.length, revenue, pending, lastInvoice };
+    });
+
+    return statsMap;
+  }, [invoices]);
+
+  // Memoize total revenue - O(m) operation
+  const totalRevenue = useMemo(() =>
+    invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0),
+    [invoices]
+  );
+
+  // Memoize active clients - O(n*m) operation
+  const activeClients = useMemo(() =>
+    clients.filter((c) => invoices.some((i) => i.client_id === c.id)),
+    [clients, invoices]
+  );
+
+  // Helper function to get client stats from memoized map
+  const getClientStats = useCallback((clientId: string) => {
+    return clientStatsMap[clientId] || { count: 0, revenue: 0, pending: 0, lastInvoice: null };
+  }, [clientStatsMap]);
+
+  const handleExport = useCallback(() => {
     downloadCSV(
       `clients-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Nom', 'Email', 'Téléphone', 'Adresse', 'Code postal', 'Ville', 'Pays', 'SIRET', 'N° TVA'],
       clients.map((c) => [c.name, c.email, c.phone, c.address, c.postal_code, c.city, c.country, c.siret, c.vat_number]),
     );
-  };
+  }, [clients]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name) { setError('Le nom est requis'); return; }
     if (form.siret && !validateSiret(form.siret)) { setError('SIRET invalide (14 chiffres requis)'); return; }
@@ -331,9 +378,9 @@ export default function ClientsPage() {
       setForm({ name: '', email: '', phone: '', address: '', city: '', postal_code: '', country: 'France', siret: '', vat_number: '', website: '' });
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  };
+  }, [form, createClient]);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (id: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     const client = clients.find((c) => c.id === id);
     toast('Supprimer ce client ?', {
@@ -343,25 +390,28 @@ export default function ClientsPage() {
         onClick: () => deleteClient(id).then(() => toast.success('Client supprimé')).catch((err: any) => toast.error(err.message)),
       },
     });
-  };
+  }, [clients, deleteClient]);
 
   return (
-    <div className="space-y-8">
-      {/* Animated Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-      >
-        <div>
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-3xl sm:text-4xl font-black text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent"
+    <>
+      <h1 className="sr-only">Clients - Factu.me</h1>
+      <main aria-label="Gestion des clients">
+        <div className="space-y-8">
+          {/* Animated Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
+            <div>
+              <motion.h2
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-3xl sm:text-4xl font-black text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent"
+              >
             Clients
-          </motion.h1>
+          </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -522,7 +572,7 @@ export default function ClientsPage() {
               <ClientCard
                 key={client.id}
                 client={client}
-                stats={clientStats(client.id)}
+                stats={getClientStats(client.id)}
                 idx={idx}
                 onDelete={(e) => handleDelete(client.id, e)}
                 viewMode={viewMode}
@@ -574,7 +624,7 @@ export default function ClientsPage() {
                   <ClientCard
                     key={client.id}
                     client={client}
-                    stats={clientStats(client.id)}
+                    stats={getClientStats(client.id)}
                     idx={idx}
                     onDelete={(e) => handleDelete(client.id, e)}
                     viewMode={viewMode}
@@ -654,5 +704,7 @@ export default function ClientsPage() {
         }}
       />
     </div>
+  </main>
+  </>
   );
 }

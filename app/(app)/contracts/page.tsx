@@ -1,3 +1,11 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Contrats de travail | Factu.me',
+  description: 'Créez des contrats CDI, CDD, stage, freelance conformes 2026. Signature électronique eIDAS, vérification IA des clauses. Rapports et suivi.',
+  keywords: ['contrat CDI en ligne', 'contrat CDD', 'modèle contrat travail', 'signature électronique contrat', 'contrat freelance'],
+};
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -183,17 +191,20 @@ export default function ContractsPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contrats</h1>
-          <p className="text-gray-600 dark:text-gray-400">Gérez vos contrats de travail conformes 2026</p>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/contracts/reports" className="px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 text-sm">
-            <BarChart3 className="w-4 h-4" />Rapports
-          </Link>
+    <>
+      <h1 className="sr-only">Contrats de travail - Factu.me</h1>
+      <main aria-label="Gestion des contrats de travail">
+        <div className="w-full space-y-6">
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Contrats</h2>
+              <p className="text-gray-600 dark:text-gray-400">Gérez vos contrats de travail conformes 2026</p>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/contracts/reports" className="px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 text-sm">
+                <BarChart3 className="w-4 h-4" />Rapports
+              </Link>
           <Link href="/contracts/new/cdi" className="px-4 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2 text-sm">
             <Plus className="w-4 h-4" />CDI
           </Link>
@@ -420,5 +431,7 @@ export default function ContractsPage() {
         </div>
       )}
     </div>
+  </main>
+  </>
   );
 }

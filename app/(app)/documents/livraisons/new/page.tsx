@@ -339,6 +339,10 @@ export default function NewLivraisonPage() {
       setError('Ajoutez au moins une prestation avec un montant.');
       return;
     }
+    if (!profile?.id) {
+      setError('Profil introuvable. Veuillez vous reconnecter.');
+      return;
+    }
 
     if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
     setSaving(true);

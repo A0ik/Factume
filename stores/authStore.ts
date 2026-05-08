@@ -106,6 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       for (const [key, val] of Object.entries(saved)) {
         localStorage.setItem(key, val);
       }
+      // Note: window.location.href is intentional here - we want a full page reload after logout
       window.location.href = '/login';
     }
   },

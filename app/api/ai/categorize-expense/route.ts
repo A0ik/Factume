@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { applyIpRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  // Rate limiting: 30 requests per minute per IP
+  const rateLimitError = applyIpRateLimit(req, 30, 60_000);
+  if (rateLimitError) return rateLimitError as NextResponse;
+
   try {
     const { vendor, description } = await req.json();
 

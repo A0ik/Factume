@@ -1,5 +1,13 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Tableau de bord | Factu.me',
+  description: 'Tableau de bord complet : CA mensuel, DSO, factures en retard, encaissements et graphiques d\'évolution. Suivez votre trésorerie et performances en temps réel.',
+  keywords: ['tableau de bord facturation', 'KPI facturation', 'suivi CA', 'trésorerie freelance', 'DSO calcul'],
+};
+
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
@@ -49,74 +57,84 @@ export default function DashboardPage() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-  const recentInvoices = invoices.slice(0, 5);
+  const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
-  // Monthly chart data
-  const chartData = Array.from({ length: period }, (_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - (period - 1 - i));
-    const key = d.toISOString().slice(0, 7);
-    const label = d.toLocaleString('fr-FR', { month: 'short' });
-    return { label, key, paid: 0, pending: 0 };
-  });
-
-  invoices
-    .filter((inv) => inv.document_type === 'invoice' || !inv.document_type)
-    .forEach((inv) => {
-      const refDate = inv.paid_at || inv.issue_date || inv.created_at;
-      if (!refDate) return;
-      const key = refDate.slice(0, 7);
-      const entry = chartData.find((d) => d.key === key);
-      if (!entry) return;
-      if (inv.status === 'paid') entry.paid += inv.total;
-      else if (inv.status === 'sent' || inv.status === 'draft') entry.pending += inv.total;
+  // Memoize monthly chart data - O(n) operation
+  const chartData = useMemo(() => {
+    const data = Array.from({ length: period }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (period - 1 - i));
+      const key = d.toISOString().slice(0, 7);
+      const label = d.toLocaleString('fr-FR', { month: 'short' });
+      return { label, key, paid: 0, pending: 0 };
     });
 
-  // Top clients
-  const clientMap: Record<string, { name: string; id: string; paid: number; count: number }> = {};
-  invoices.filter((inv) => inv.status === 'paid').forEach((inv) => {
-    const name = inv.client?.name || inv.client_name_override || 'Sans nom';
-    const id = inv.client_id || name;
-    if (!clientMap[id]) clientMap[id] = { name, id: inv.client_id || '', paid: 0, count: 0 };
-    clientMap[id].paid += inv.total;
-    clientMap[id].count += 1;
-  });
-  const topClients = Object.values(clientMap).sort((a, b) => b.paid - a.paid).slice(0, 5);
-  const maxPaid = topClients[0]?.paid || 1;
+    invoices
+      .filter((inv) => inv.document_type === 'invoice' || !inv.document_type)
+      .forEach((inv) => {
+        const refDate = inv.paid_at || inv.issue_date || inv.created_at;
+        if (!refDate) return;
+        const key = refDate.slice(0, 7);
+        const entry = data.find((d) => d.key === key);
+        if (!entry) return;
+        if (inv.status === 'paid') entry.paid += inv.total;
+        else if (inv.status === 'sent' || inv.status === 'draft') entry.pending += inv.total;
+      });
 
-  // Comparaison avec le mois dernier
-  const lastMonth = new Date();
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
-  const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-  const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 999);
+    return data;
+  }, [invoices, period]);
 
-  const lastMonthMRR = invoices.filter((inv) => {
-    if (!inv.paid_at) return false;
-    const paidDate = new Date(inv.paid_at);
-    return paidDate >= lastMonthStart && paidDate <= lastMonthEnd;
-  }).reduce((sum, inv) => sum + inv.total, 0);
+  // Memoize top clients calculation - O(n log n) due to sort
+  const { topClients, maxPaid } = useMemo(() => {
+    const clientMap: Record<string, { name: string; id: string; paid: number; count: number }> = {};
+    invoices.filter((inv) => inv.status === 'paid').forEach((inv) => {
+      const name = inv.client?.name || inv.client_name_override || 'Sans nom';
+      const id = inv.client_id || name;
+      if (!clientMap[id]) clientMap[id] = { name, id: inv.client_id || '', paid: 0, count: 0 };
+      clientMap[id].paid += inv.total;
+      clientMap[id].count += 1;
+    });
+    const sortedClients = Object.values(clientMap).sort((a, b) => b.paid - a.paid).slice(0, 5);
+    return { topClients: sortedClients, maxPaid: sortedClients[0]?.paid || 1 };
+  }, [invoices]);
 
-  const monthOverMonthGrowth = lastMonthMRR > 0
-    ? ((stats?.mrr || 0) - lastMonthMRR) / lastMonthMRR * 100
-    : 0;
+  // Memoize month-over-month growth calculation - O(n) operation
+  const monthOverMonthGrowth = useMemo(() => {
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+    const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 999);
 
-  // Recovery rate
-  const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
-  const totalOverdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date()).reduce((s, i) => s + i.total, 0);
-  const recoveryRate = totalPaid + totalOverdue > 0 ? Math.round((totalPaid / (totalPaid + totalOverdue)) * 100) : 100;
+    const lastMonthMRR = invoices.filter((inv) => {
+      if (!inv.paid_at) return false;
+      const paidDate = new Date(inv.paid_at);
+      return paidDate >= lastMonthStart && paidDate <= lastMonthEnd;
+    }).reduce((sum, inv) => sum + inv.total, 0);
 
-  // DSO (Days Sales Outstanding - Délai Moyen de Paiement)
-  const dsoInvoices = invoices.filter((i) => i.status === 'paid' && i.paid_at && i.issue_date);
-  const dso = dsoInvoices.length > 0
-    ? Math.round(
-        dsoInvoices.reduce((sum, inv) => {
-          const issued = new Date(inv.issue_date);
-          const paid = new Date(inv.paid_at!);
-          const days = Math.floor((paid.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24));
-          return sum + days;
-        }, 0) / dsoInvoices.length
-      )
-    : 0;
+    return lastMonthMRR > 0 ? ((stats?.mrr || 0) - lastMonthMRR) / lastMonthMRR * 100 : 0;
+  }, [invoices, stats?.mrr]);
+
+  // Memoize recovery rate calculation - O(n) operation
+  const recoveryRate = useMemo(() => {
+    const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
+    const totalOverdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date()).reduce((s, i) => s + i.total, 0);
+    return totalPaid + totalOverdue > 0 ? Math.round((totalPaid / (totalPaid + totalOverdue)) * 100) : 100;
+  }, [invoices]);
+
+  // Memoize DSO calculation - O(n) operation with date math
+  const dso = useMemo(() => {
+    const dsoInvoices = invoices.filter((i) => i.status === 'paid' && i.paid_at && i.issue_date);
+    return dsoInvoices.length > 0
+      ? Math.round(
+          dsoInvoices.reduce((sum, inv) => {
+            const issued = new Date(inv.issue_date);
+            const paid = new Date(inv.paid_at!);
+            const days = Math.floor((paid.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24));
+            return sum + days;
+          }, 0) / dsoInvoices.length
+        )
+      : 0;
+  }, [invoices]);
 
   const COLORS = ['#1D9E75', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899'];
 
@@ -150,81 +168,88 @@ export default function DashboardPage() {
   const progressWidth = useTransform(progressValue, (v) => `${v}%`);
 
   // ── Cash flow forecast (90 days) ──
-  const today = new Date();
-  const in90 = new Date(today); in90.setDate(in90.getDate() + 90);
+  const cashFlowMonths = useMemo(() => {
+    const today = new Date();
+    const in90 = new Date(today); in90.setDate(in90.getDate() + 90);
 
-  const cashFlowMonths: { key: string; label: string; toCollect: number; recurring: number; cumulative: number }[] = [];
-  for (let m = 0; m < 3; m++) {
-    const d = new Date(today);
-    d.setMonth(d.getMonth() + m);
-    const key = d.toISOString().slice(0, 7);
-    cashFlowMonths.push({
-      key,
-      label: d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' }),
-      toCollect: 0,
-      recurring: 0,
-      cumulative: 0,
-    });
-  }
+    const months: { key: string; label: string; toCollect: number; recurring: number; cumulative: number }[] = [];
+    for (let m = 0; m < 3; m++) {
+      const d = new Date(today);
+      d.setMonth(d.getMonth() + m);
+      const key = d.toISOString().slice(0, 7);
+      months.push({
+        key,
+        label: d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' }),
+        toCollect: 0,
+        recurring: 0,
+        cumulative: 0,
+      });
+    }
 
-  invoices
-    .filter((inv) => inv.document_type === 'invoice' && (inv.status === 'sent' || inv.status === 'overdue'))
-    .forEach((inv) => {
-      const refDate = inv.due_date || inv.issue_date || '';
-      if (!refDate) return;
-      const key = refDate.slice(0, 7);
-      const bucket = cashFlowMonths.find((b) => b.key === key);
-      if (bucket) bucket.toCollect += inv.total;
-    });
+    invoices
+      .filter((inv) => inv.document_type === 'invoice' && (inv.status === 'sent' || inv.status === 'overdue'))
+      .forEach((inv) => {
+        const refDate = inv.due_date || inv.issue_date || '';
+        if (!refDate) return;
+        const key = refDate.slice(0, 7);
+        const bucket = months.find((b) => b.key === key);
+        if (bucket) bucket.toCollect += inv.total;
+      });
 
-  invoices
-    .filter((inv) => inv.document_type === 'invoice' && (inv as any).is_recurring)
-    .forEach((inv) => {
-      const freq: string = (inv as any).recurring_frequency || 'monthly';
-      const lastDate = new Date(inv.issue_date || inv.created_at);
-      let next = new Date(lastDate);
-      const freqDays = freq === 'weekly' ? 7 : freq === 'quarterly' ? 90 : 30;
-      while (next <= in90) {
-        next = new Date(next); next.setDate(next.getDate() + freqDays);
-        if (next >= today && next <= in90) {
-          const key = next.toISOString().slice(0, 7);
-          const bucket = cashFlowMonths.find((b) => b.key === key);
-          if (bucket) bucket.recurring += inv.total;
+    invoices
+      .filter((inv) => inv.document_type === 'invoice' && (inv as any).is_recurring)
+      .forEach((inv) => {
+        const freq: string = (inv as any).recurring_frequency || 'monthly';
+        const lastDate = new Date(inv.issue_date || inv.created_at);
+        let next = new Date(lastDate);
+        const freqDays = freq === 'weekly' ? 7 : freq === 'quarterly' ? 90 : 30;
+        while (next <= in90) {
+          next = new Date(next); next.setDate(next.getDate() + freqDays);
+          if (next >= today && next <= in90) {
+            const key = next.toISOString().slice(0, 7);
+            const bucket = months.find((b) => b.key === key);
+            if (bucket) bucket.recurring += inv.total;
+          }
         }
-      }
+      });
+
+    let cumul = 0;
+    months.forEach((b) => {
+      cumul += b.toCollect + b.recurring;
+      b.cumulative = cumul;
     });
 
-  let cumul = 0;
-  cashFlowMonths.forEach((b) => {
-    cumul += b.toCollect + b.recurring;
-    b.cumulative = cumul;
-  });
+    return months;
+  }, [invoices]);
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6 relative"
-    >
-      {/* Ambient glow effect */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
-        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-purple-500/[0.02] dark:bg-purple-500/[0.03] rounded-full blur-3xl" />
-      </div>
+    <>
+      <h1 className="sr-only">Tableau de bord - {profile?.company_name || 'Factu.me'}</h1>
+      <main aria-label="Tableau de bord">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6 relative"
+        >
+          {/* Ambient glow effect */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
+            <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-purple-500/[0.02] dark:bg-purple-500/[0.03] rounded-full blur-3xl" />
+          </div>
 
-      {/* ── Header ── */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-400 dark:text-gray-500 text-sm font-medium flex items-center gap-2">
-            <Sparkles size={14} className="text-primary animate-pulse" />
-            {greeting}
-          </p>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white mt-0.5">
-            {profile?.company_name || 'Mon entreprise'}
-          </h1>
-        </div>
+          {/* ── Header ── */}
+          <motion.div variants={itemVariants} className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 dark:text-gray-500 text-sm font-medium flex items-center gap-2">
+                <Sparkles size={14} className="text-primary animate-pulse" />
+                {greeting}
+              </p>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white mt-0.5">
+                {profile?.company_name || 'Mon entreprise'}
+              </h2>
+            </div>
         <Link
           href="/documents"
           className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95"
@@ -259,8 +284,9 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ── Stats grid ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* ── Stats grid ── */}
+        <section aria-label="Statistiques clés">
+          <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* CA ce mois — highlight card */}
         <div className="col-span-2 lg:col-span-1 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary-dark rounded-2xl" />
@@ -364,8 +390,10 @@ export default function DashboardPage() {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatCurrency(stats?.pendingRevenue || 0)}</p>
         </motion.div>
       </motion.div>
+    </section>
 
-      {/* ── Quick actions ── */}
+    {/* ── Quick actions ── */}
+    <section aria-label="Création rapide de documents">
       <motion.div variants={itemVariants} className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/10 shadow-lg p-5 sm:p-6">
         <p className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2">
           <Sparkles size={14} className="text-primary" />
@@ -565,6 +593,9 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+    </section>
     </motion.div>
+      </main>
+    </>
   );
 }

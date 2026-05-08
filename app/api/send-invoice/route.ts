@@ -4,6 +4,9 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
 import React from 'react';
 import { PdfDocument } from '@/components/pdf-document';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { SendInvoiceSchema, validateRequest } from '@/lib/validation';
+import { z } from 'zod';
 
 export const maxDuration = 60;
 
@@ -138,14 +141,37 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limiting : 30 requêtes/minute par IP ou user
+  const rateLimitResult = rateLimit(getClientIp(req), 30, 60000);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+      }
+    );
+  }
+
   console.log('[send-invoice] Request received');
   try {
     const body = await req.json();
-    const { invoiceId, email, profile, isReminder, subject: customSubject, message: customMessage } = body;
 
-    if (!invoiceId || !email) {
-      return NextResponse.json({ error: 'invoiceId and email requis' }, { status: 400 });
+    // Valider les données avec Zod
+    let validatedData;
+    try {
+      validatedData = validateRequest(SendInvoiceSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          error: 'Validation failed',
+          details: error.errors
+        }, { status: 400 });
+      }
+      throw error;
     }
+
+    const { invoiceId, email, profile: requestProfile, isReminder, subject: customSubject, message: customMessage } = validatedData;
 
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     if (!RESEND_API_KEY) {
@@ -163,6 +189,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
+    // Fetch full profile if not provided in request
+    let profile = requestProfile;
+    if (!profile || Object.keys(profile).length === 0) {
+      const { data: fetchedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', invoice.user_id)
+        .single();
+      profile = fetchedProfile;
+    }
+
     const senderName = profile?.company_name || 'Factu.me';
     const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
     const replyToEmail = profile?.email || senderEmail;
@@ -170,7 +207,7 @@ export async function POST(req: NextRequest) {
     console.log('[send-invoice] Génération PDF...');
     let pdfBuffer: Buffer;
     try {
-      const element = React.createElement(PdfDocument, { invoice, profile });
+      const element = React.createElement(PdfDocument, { invoice, profile: (profile || {}) as any });
       const pdfBytes = await renderToBuffer(element as any);
       pdfBuffer = Buffer.from(pdfBytes);
       console.log('[send-invoice] PDF généré, taille:', pdfBuffer.length, 'bytes');

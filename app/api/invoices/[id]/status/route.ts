@@ -1,16 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { InvoiceStatusSchema, validateRequest } from '@/lib/validation';
+import { z } from 'zod';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { status } = await req.json();
+    // Rate limiting : 100 requêtes/minute par IP ou user
+    const rateLimitResult = rateLimit(getClientIp(req), 100, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+        }
+      );
+    }
 
-    if (!status) {
-      return NextResponse.json({ error: 'Statut manquant' }, { status: 400 });
+    const { id } = await params;
+
+    // Validation de l'ID de facture
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ error: 'ID de facture invalide' }, { status: 400 });
+    }
+
+    // Récupérer et valider le corps de la requête
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Corps de requête JSON invalide' }, { status: 400 });
+    }
+
+    // Valider le statut avec Zod
+    let validatedData;
+    try {
+      validatedData = validateRequest(InvoiceStatusSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          error: 'Validation failed',
+          details: error.errors
+        }, { status: 400 });
+      }
+      throw error;
     }
 
     const admin = createAdminClient();
@@ -43,13 +80,13 @@ export async function PATCH(
 
     // Préparer les données de mise à jour
     const updateData: any = {
-      status,
+      status: validatedData.status,
       updated_at: new Date().toISOString(),
     };
 
-    if (status === 'paid') {
+    if (validatedData.status === 'paid') {
       updateData.paid_at = new Date().toISOString();
-    } else if (status === 'sent') {
+    } else if (validatedData.status === 'sent') {
       updateData.sent_at = new Date().toISOString();
     }
 

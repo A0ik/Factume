@@ -876,7 +876,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           <p className="text-gray-600 dark:text-gray-400 mb-8">Le contrat a été sauvegardé et est disponible dans vos documents.</p>
           <div className="flex justify-center gap-4">
             <button onClick={() => { setFormData({ ...formData, employee_first_name: '', employee_last_name: '', employee_address: '', employee_postal_code: '', employee_city: '', contract_start_date: '', job_title: '', work_location: '', salary_amount: '' }); setStep('upload'); }} className="px-8 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors">Créer un autre contrat</button>
-            <button onClick={() => window.location.href = '/contracts'} className="px-8 py-3 bg-gray-100 dark:bg-slate-700 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Voir mes contrats</button>
+            <button onClick={() => router.push('/contracts')} className="px-8 py-3 bg-gray-100 dark:bg-slate-700 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">Voir mes contrats</button>
           </div>
         </motion.div>
       )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Download, FileText, Loader2, Sparkles, Info, HelpCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,7 @@ export function FacturXButton({
   variant = 'primary',
   warnings = [],
 }: FacturXButtonProps) {
+  const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -62,7 +64,7 @@ export function FacturXButton({
             description: 'Le format Factur-X nécessite un abonnement supérieur.',
             action: {
               label: 'Voir les plans',
-              onClick: () => (window.location.href = '/paywall'),
+              onClick: () => router.push('/paywall'),
             },
           });
           return;

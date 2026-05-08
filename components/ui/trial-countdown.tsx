@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ interface TrialCountdownProps {
 }
 
 export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
+  const router = useRouter();
   const [timeRemaining, setTimeRemaining] = React.useState<{
     days: number;
     hours: number;
@@ -99,7 +101,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/paywall'}
+                onClick={() => router.push('/paywall')}
                 className="bg-white text-orange-600 px-4 py-1.5 rounded-full font-semibold text-sm hover:bg-orange-50 transition-colors"
               >
                 Passer à Pro maintenant

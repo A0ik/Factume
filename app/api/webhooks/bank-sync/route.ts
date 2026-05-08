@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { applyIpRateLimit } from '@/lib/rate-limit';
 
 // Lazy initialization to avoid build-time execution
 function getSupabaseAdmin() {
@@ -10,6 +11,10 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limiting: 100 requests per minute per IP (webhooks need higher limits)
+  const rateLimitError = applyIpRateLimit(req, 100, 60_000);
+  if (rateLimitError) return rateLimitError as NextResponse;
+
   try {
     const payload = await req.json();
     const email = payload.user_email;

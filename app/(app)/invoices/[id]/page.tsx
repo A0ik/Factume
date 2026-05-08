@@ -320,6 +320,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const handleDuplicate = async () => {
+    if (!profile) {
+      toast.error('Profil introuvable. Veuillez vous reconnecter.');
+      return;
+    }
     try {
       const dup = await duplicateInvoice(id, profile);
       toast.success('Facture dupliquée !');

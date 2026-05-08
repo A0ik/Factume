@@ -1,3 +1,11 @@
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Paramètres | Factu.me',
+  description: 'Configurez votre entreprise, facturation, templates PDF, coordonnées bancaires et paiements Stripe/SumUp. Signature électronique, webhooks et exports FEC.',
+  keywords: ['paramètres facturation', 'configurer entreprise', 'IBAN', 'Stripe', 'template facture PDF', 'webhook facture'],
+};
+
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -1142,23 +1150,26 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-black text-gray-900">Paramètres</h1>
-        {!sub.isFree && (
-          <div className="flex items-center gap-1.5 bg-primary-light px-3 py-1.5 rounded-full">
-            <Crown size={14} className="text-primary" />
-            <span className="text-xs font-bold text-primary capitalize">{sub.tier}</span>
+    <>
+      <h1 className="sr-only">Paramètres - Factu.me</h1>
+      <main aria-label="Paramètres du compte">
+        <div className="space-y-4 max-w-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-gray-900">Paramètres</h2>
+            {!sub.isFree && (
+              <div className="flex items-center gap-1.5 bg-primary-light px-3 py-1.5 rounded-full">
+                <Crown size={14} className="text-primary" />
+                <span className="text-xs font-bold text-primary capitalize">{sub.tier}</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Subscription banner */}
-      {sub.isFree && (
-        <button onClick={() => router.push('/paywall')} className="w-full bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-4 flex items-center gap-3 hover:opacity-95 transition-opacity text-left">
-          <Crown size={22} className="text-yellow-300 flex-shrink-0" />
-          <div>
-            <p className="font-bold text-white">Passer à Solo ou Pro</p>
+          {/* Subscription banner */}
+          {sub.isFree && (
+            <button onClick={() => router.push('/paywall')} className="w-full bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-4 flex items-center gap-3 hover:opacity-95 transition-opacity text-left">
+              <Crown size={22} className="text-yellow-300 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-white">Passer à Solo ou Pro</p>
             <p className="text-sm text-primary-light/80">Factures illimitées, dictée vocale, templates...</p>
           </div>
         </button>
@@ -1608,5 +1619,7 @@ export default function SettingsPage() {
         onClose={() => setShowSumupTutorial(false)}
       />
     </div>
+  </main>
+  </>
   );
 }

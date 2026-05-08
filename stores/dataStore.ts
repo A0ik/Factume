@@ -1,14 +1,14 @@
 'use client';
 import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
-import { Client, Invoice, InvoiceFormData, InvoiceStatus, DashboardStats, RecurringInvoice } from '@/types';
+import { Client, Invoice, InvoiceFormData, InvoiceStatus, DashboardStats, RecurringInvoice, UserProfile, InvoiceUpdateData } from '@/types';
 import { generateId } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 
 interface DataState {
   clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null;
   fetchClients: () => Promise<void>; createClient: (data: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<Client>; bulkCreateClients: (items: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>[]) => Promise<Client[]>; updateClient: (id: string, data: Partial<Client>) => Promise<void>; deleteClient: (id: string) => Promise<void>;
-  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: any, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: any) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
+  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
   fetchRecurringInvoices: () => Promise<void>; createRecurringInvoice: (data: Omit<RecurringInvoice, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<RecurringInvoice>; updateRecurringInvoice: (id: string, data: Partial<RecurringInvoice>) => Promise<void>; deleteRecurringInvoice: (id: string) => Promise<void>;
   computeStats: () => void; clearData: () => void;
 }
@@ -19,12 +19,12 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchClients: async () => {
     set({ loading: true });
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    const timeout = new Promise<Client[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
       const data = await Promise.race([
         getSupabaseClient().from('clients').select('*').order('name'),
         timeout
-      ]) as any;
+      ]) as { data: Client[] };
       set({ clients: data.data || [] });
     } catch (error) {
       console.error('[fetchClients] Error:', error);
@@ -63,12 +63,12 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchInvoices: async () => {
     set({ loading: true });
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    const timeout = new Promise<Invoice[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
       const data = await Promise.race([
         getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false }),
         timeout
-      ]) as any;
+      ]) as { data: Invoice[] };
       set({ invoices: data.data || [] }); get().computeStats();
     } catch (error) {
       console.error('[fetchInvoices] Error:', error);
@@ -81,9 +81,11 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
     const userId = profile.id;
 
-    // Note: The invoice limit is now enforced at the database level by increment_invoice_count RPC
-    // This will throw an error if the free tier limit (5/month) is exceeded
+    // CRITIQUE: Générer systématiquement un idempotencyId pour garantir l'unicité
+    // Cela évite les doublons en cas de retry réseau ou de race condition
+    const finalIdempotencyId = idempotencyId || crypto.randomUUID();
 
+    // Vérifier si cette facture existe déjà (idempotence)
     if (idempotencyId) {
       const { data: existing } = await getSupabaseClient()
         .from('invoices')
@@ -98,70 +100,57 @@ export const useDataStore = create<DataState>((set, get) => ({
     const vatAmount = items.reduce((s, i) => s + i.total * (i.vat_rate / 100), 0);
     const docType = formData.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
-    const currentMonth = new Date().toISOString().slice(0, 7);
-
-    // Incrément atomique via RPC — élimine la race condition sur invoice_count
-    const { data: invoiceCountData, error: rpcError } = await getSupabaseClient()
-      .rpc('increment_invoice_count', { p_user_id: userId, p_month: currentMonth });
-    if (rpcError || invoiceCountData == null) {
-      console.error('[createInvoice] RPC increment error:', rpcError);
-      throw new Error(rpcError?.message || 'Impossible de générer le numéro de document');
-    }
-    const invoiceCount = Array.isArray(invoiceCountData)
-      ? invoiceCountData[0]?.invoice_count
-      : invoiceCountData;
-    if (!invoiceCount) throw new Error('Impossible de générer le numéro de document');
-    const number = get().getNextInvoiceNumber(prefix, invoiceCount);
-
     const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
 
-    // Insert invoice
-    const { data, error } = await getSupabaseClient().from('invoices').insert({
-      ...(idempotencyId ? { id: idempotencyId } : {}),
-      user_id: userId,
-      client_id: formData.client_id || null,
-      client_name_override: formData.client_name_override || null,
-      number,
-      document_type: docType,
-      status: 'draft' as InvoiceStatus,
-      issue_date: formData.issue_date,
-      due_date: formData.due_date || null,
-      items,
-      subtotal,
-      vat_amount: vatAmount,
-      discount_percent: formData.discount_percent || null,
-      discount_amount: discountAmount || null,
-      total: subtotal + vatAmount - discountAmount,
-      notes: formData.notes || null,
-      linked_invoice_id: formData.linked_invoice_id || null,
-      client_email: (formData as any).client_email || null,
-      client_phone: (formData as any).client_phone || null,
-      client_address: (formData as any).client_address || null,
-      client_city: (formData as any).client_city || null,
-      client_postal_code: (formData as any).client_postal_code || null,
-      client_siret: (formData as any).client_siret || null,
-      client_vat_number: (formData as any).client_vat_number || null
-    }).select('*, client:clients(*)').single();
+    // UTILISER LA FONCTION ATOMIQUE POUR ÉVITER TOUTE RACE CONDITION
+    // La fonction create_invoice_atomique:
+    // 1. Verrouille le profil (FOR UPDATE)
+    // 2. Incrémente le compteur
+    // 3. Génère le numéro
+    // 4. Insère la facture
+    // 5. Gère l'unicité via contrainte unique
+    // Tout est atomique - pas de race condition possible
+    const { data: invoiceId, error: rpcError } = await getSupabaseClient()
+      .rpc('create_invoice_atomique', {
+        p_user_id: userId,
+        p_client_id: formData.client_id || null,
+        p_client_name_override: formData.client_name_override || null,
+        p_document_type: docType,
+        p_status: 'draft',
+        p_issue_date: formData.issue_date,
+        p_due_date: formData.due_date || null,
+        p_items: items,
+        p_subtotal: subtotal,
+        p_vat_amount: vatAmount,
+        p_discount_percent: formData.discount_percent || null,
+        p_discount_amount: discountAmount || null,
+        p_total: subtotal + vatAmount - discountAmount,
+        p_notes: formData.notes || null,
+        p_prefix: prefix,
+        p_linked_invoice_id: formData.linked_invoice_id || null,
+        p_idempotency_id: finalIdempotencyId
+      });
 
-    if (error) {
-      // Unique violation (23505): a concurrent retry already inserted with the same idempotencyId.
-      // Fetch and return the existing invoice instead of throwing.
-      if (error.code === '23505' && idempotencyId) {
-        const { data: existing } = await getSupabaseClient()
-          .from('invoices')
-          .select('*, client:clients(*)')
-          .eq('id', idempotencyId)
-          .single();
-        if (existing) return existing;
-      }
-      console.error('[createInvoice] Insert error:', error);
-      throw error;
+    if (rpcError || !invoiceId) {
+      console.error('[createInvoice] Atomic create error:', rpcError);
+      throw new Error(rpcError?.message || 'Impossible de créer la facture');
+    }
+
+    // Récupérer la facture créée avec ses relations
+    const { data, error } = await getSupabaseClient()
+      .from('invoices')
+      .select('*, client:clients(*)')
+      .eq('id', invoiceId)
+      .single();
+
+    if (error || !data) {
+      console.error('[createInvoice] Fetch error:', error);
+      throw new Error('Impossible de récupérer la facture créée');
     }
 
     // Mise à jour des stats mensuelles en background (non critique)
     (async () => {
       try {
-        // RPC already updated invoice_count + monthly_invoice_count, just refresh profile
         const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
         if (freshProfile) {
           try {
@@ -182,7 +171,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   updateInvoice: async (id, updates) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
-    let u: any = { ...updates, updated_at: new Date().toISOString() };
+    let u: InvoiceUpdateData = { ...updates, updated_at: new Date().toISOString() } as InvoiceUpdateData;
     if (updates.items) {
       const items = updates.items.map((i) => ({ ...i, total: i.quantity * i.unit_price }));
       const subtotal = items.reduce((s, i) => s + i.total, 0);
@@ -199,7 +188,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   updateInvoiceStatus: async (id, status) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
-    const u: any = { status, updated_at: new Date().toISOString() };
+    const u: Partial<Invoice> & { updated_at: string; paid_at?: string; sent_at?: string } = { status, updated_at: new Date().toISOString() };
     if (status === 'paid') u.paid_at = new Date().toISOString();
     if (status === 'sent') u.sent_at = new Date().toISOString();
     const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
@@ -235,34 +224,56 @@ export const useDataStore = create<DataState>((set, get) => ({
     const due = new Date(); due.setDate(due.getDate() + 30);
     const docType = original.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
-    const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // RPC call with timeout to prevent infinite hanging
-    let number: string;
-    try {
-      const rpcPromise = getSupabaseClient().rpc('increment_invoice_count', { p_user_id: user.id, p_month: currentMonth });
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout RPC')), 5000)
-      );
-      const { data: counters } = await Promise.race([rpcPromise, timeoutPromise]) as any;
-      number = counters?.invoice_count ? get().getNextInvoiceNumber(prefix, counters.invoice_count) : get().getNextInvoiceNumber(prefix, (profile.invoice_count || 0) + 1);
-    } catch (rpcTimeoutError) {
-      console.warn('[duplicateInvoice] RPC timeout, using fallback:', rpcTimeoutError);
-      number = get().getNextInvoiceNumber(prefix, (profile.invoice_count || 0) + 1);
+    // CRITIQUE: Utiliser la fonction atomique pour garantir l'unicité du numéro
+    // Cela élimine toute race condition lors de la duplication
+    const { data: invoiceId, error: rpcError } = await getSupabaseClient()
+      .rpc('create_invoice_atomique', {
+        p_user_id: user.id,
+        p_client_id: original.client_id || null,
+        p_client_name_override: original.client_name_override || null,
+        p_document_type: docType,
+        p_status: 'draft',
+        p_issue_date: today,
+        p_due_date: due.toISOString().split('T')[0],
+        p_items: original.items,
+        p_subtotal: original.subtotal,
+        p_vat_amount: original.vat_amount,
+        p_discount_percent: original.discount_percent || null,
+        p_discount_amount: original.discount_amount || null,
+        p_total: original.total,
+        p_notes: original.notes || null,
+        p_prefix: prefix,
+        p_linked_invoice_id: null
+      });
+
+    if (rpcError || !invoiceId) {
+      console.error('[duplicateInvoice] Atomic create error:', rpcError);
+      throw new Error(rpcError?.message || 'Impossible de dupliquer la facture');
     }
 
-    const { data, error } = await getSupabaseClient().from('invoices').insert({ user_id: user.id, client_id: original.client_id || null, client_name_override: original.client_name_override || null, number, document_type: docType, status: 'draft' as InvoiceStatus, issue_date: today, due_date: due.toISOString().split('T')[0], items: original.items, subtotal: original.subtotal, vat_amount: original.vat_amount, total: original.total, notes: original.notes || null }).select('*, client:clients(*)').single();
-    if (error) throw error;
+    // Récupérer la facture créée
+    const { data, error } = await getSupabaseClient()
+      .from('invoices')
+      .select('*, client:clients(*)')
+      .eq('id', invoiceId)
+      .single();
+
+    if (error || !data) {
+      console.error('[duplicateInvoice] Fetch error:', error);
+      throw new Error('Impossible de récupérer la facture dupliquée');
+    }
+
     set((s) => ({ invoices: [data, ...s.invoices] })); get().computeStats(); return data;
   },
   fetchRecurringInvoices: async () => {
     set({ loading: true });
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    const timeout = new Promise<RecurringInvoice[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
       const data = await Promise.race([
         getSupabaseClient().from('recurring_invoices').select('*, client:clients(*)').order('next_run_date', { ascending: true }),
         timeout
-      ]) as any;
+      ]) as { data: RecurringInvoice[] };
       set({ recurringInvoices: data.data || [] });
     } catch (error) {
       console.error('[fetchRecurringInvoices] Error:', error);

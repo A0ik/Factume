@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { validateAIGenerateData, formatValidationError, ValidationError, DocumentType, AIGenerateSchema, validateRequest } from '@/lib/validation';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { z } from 'zod';
 
-type DocumentType = 'invoice' | 'quote' | 'credit_note' | 'purchase_order' | 'delivery_note' | 'deposit';
+type LocalDocumentType = DocumentType;
 
-const DOC_TYPE_CONFIG: Record<DocumentType, {
+const DOC_TYPE_CONFIG: Record<LocalDocumentType, {
   label: string;
   defaultDueDays: number;
   defaultNotes: string;
@@ -49,8 +52,46 @@ const DOC_TYPE_CONFIG: Record<DocumentType, {
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, sector, isEdit, existingItems, document_type } = await req.json();
-    if (!prompt?.trim()) return NextResponse.json({ error: 'Prompt requis' }, { status: 400 });
+    // Rate limiting : 20 requêtes/minute par IP
+    const rateLimitResult = rateLimit(getClientIp(req), 20, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+        }
+      );
+    }
+
+    // Récupérer et valider le corps de la requête
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Corps de requête JSON invalide' }, { status: 400 });
+    }
+
+    // Valider les données d'entrée avec Zod
+    let validatedData: ReturnType<typeof validateAIGenerateData>;
+    try {
+      // Double validation : Zod + logique existante
+      const zodValidated = validateRequest(AIGenerateSchema, body);
+      validatedData = validateAIGenerateData(zodValidated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          error: 'Validation failed',
+          details: error.errors
+        }, { status: 400 });
+      }
+      if (error instanceof ValidationError) {
+        return NextResponse.json(formatValidationError(error), { status: 400 });
+      }
+      throw error;
+    }
+
+    const { prompt, sector, isEdit, existingItems, document_type } = validatedData;
 
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
@@ -61,7 +102,7 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.OPENROUTER_API_KEY,
     });
 
-    const docType: DocumentType = document_type || 'invoice';
+    const docType: LocalDocumentType = document_type;
     const docConfig = DOC_TYPE_CONFIG[docType] || DOC_TYPE_CONFIG.invoice;
     const sectorHint = sector ? `L'utilisateur travaille dans le secteur : ${sector}.` : '';
 
