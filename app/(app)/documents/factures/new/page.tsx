@@ -670,7 +670,7 @@ export default function NewFacturePage() {
               )}
 
               {/* Client section */}
-              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm" style={{ overflow: 'visible' }}>
+              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm" style={{ overflow: 'visible', position: 'relative', zIndex: showSuggestions && suggestions.length > 0 ? 10 : 'auto' }}>
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
                   <User size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Client</h3>

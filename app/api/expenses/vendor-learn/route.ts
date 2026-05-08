@@ -16,31 +16,36 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { raw_vendor, corrected_vendor, corrected_category, corrected_payment_method, corrected_vat_rate } = body;
+  const { raw_vendor, corrected_vendor, corrected_category, corrected_payment_method, corrected_vat_rate, account_code, account_name } = body;
 
-  if (!raw_vendor || !corrected_vendor) {
-    return NextResponse.json({ error: 'raw_vendor and corrected_vendor are required' }, { status: 400 });
+  if (!raw_vendor) {
+    return NextResponse.json({ error: 'raw_vendor is required' }, { status: 400 });
   }
 
   // Normalize the raw vendor name for consistent matching
   const normalized = raw_vendor.toLowerCase().trim().replace(/\s+/g, ' ');
 
+  const upsertData: Record<string, unknown> = {
+    user_id: user.id,
+    raw_vendor: normalized,
+    vendor_name_pattern: normalized,
+    corrected_vendor: corrected_vendor || raw_vendor,
+    corrected_category: corrected_category ?? null,
+    corrected_payment_method: corrected_payment_method ?? null,
+    corrected_vat_rate: corrected_vat_rate ?? null,
+    usage_count: 1,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (account_code) {
+    upsertData.account_code = account_code;
+    upsertData.account_name = account_name ?? null;
+  }
+
   // Upsert: if the user already has a mapping for this raw_vendor, update it
   const { data, error } = await supabase
     .from('vendor_mappings')
-    .upsert(
-      {
-        user_id: user.id,
-        raw_vendor: normalized,
-        corrected_vendor,
-        corrected_category: corrected_category ?? null,
-        corrected_payment_method: corrected_payment_method ?? null,
-        corrected_vat_rate: corrected_vat_rate ?? null,
-        usage_count: 1,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,raw_vendor' },
-    )
+    .upsert(upsertData, { onConflict: 'user_id,raw_vendor' })
     .select()
     .single();
 

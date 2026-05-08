@@ -6,9 +6,21 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { MerchantConnection, MERCHANT_PROVIDERS, MerchantProvider } from '@/types';
 import {
   Plus, Link2, RefreshCw, Trash2, CheckCircle2, AlertTriangle,
-  Settings, Download, ChevronDown, Building, ExternalLink as ExternalLinkIcon, X
+  Settings, Download, ChevronDown, Building, ExternalLink as ExternalLinkIcon, X,
+  Package, Zap, Car, Smartphone, LayoutGrid, FileText, MoreHorizontal
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+
+// Map icon names to Lucide components
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  package: Package,
+  zap: Zap,
+  car: Car,
+  smartphone: Smartphone,
+  'layout-grid': LayoutGrid,
+  'file-text': FileText,
+  'more-horizontal': MoreHorizontal,
+};
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,13 +49,22 @@ export default function ConnectionsPage() {
   const fetchConnections = async () => {
     if (!user) return;
     setLoading(true);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), 15000)
+    );
     try {
-      const { data } = await getSupabaseClient()
-        .from('merchant_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data } = await Promise.race([
+        getSupabaseClient()
+          .from('merchant_connections')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        timeout
+      ]) as any;
       setConnections(data || []);
+    } catch (error) {
+      console.error('[fetchConnections] Error:', error);
+      setConnections([]);
     } finally {
       setLoading(false);
     }
@@ -51,11 +72,22 @@ export default function ConnectionsPage() {
 
   const handleSync = async (id: string) => {
     setSyncing(id);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Sync timeout')), 30000)
+    );
     try {
-      const res = await fetch(`/api/merchant/sync?id=${id}`, { method: 'POST' });
+      const res = await Promise.race<Promise<Response>>([
+        fetch(`/api/merchant/sync?id=${id}`, { method: 'POST' }),
+        timeout
+      ]) as any;
       if (res.ok) {
         await fetchConnections();
+      } else {
+        const error = await res.json().catch(() => ({ error: 'Erreur de synchronisation' }));
+        console.error('[handleSync] Error:', error);
       }
+    } catch (error) {
+      console.error('[handleSync] Timeout or error:', error);
     } finally {
       setSyncing(null);
     }
@@ -101,11 +133,11 @@ export default function ConnectionsPage() {
         </div>
       ) : connections.length === 0 ? (
         <div className="text-center py-16 rounded-2xl border-2 border-dashed border-gray-200">
-          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Link2 size={28} className="text-gray-300" />
+          <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+            <Link2 size={28} className="text-gray-400" />
           </div>
-          <p className="text-sm font-bold text-gray-500">Aucune connexion</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-sm font-bold text-gray-900">Aucune connexion</p>
+          <p className="text-xs text-gray-500 mt-1">
             Connectez vos comptes marchands pour importer vos factures automatiquement
           </p>
         </div>
@@ -120,8 +152,8 @@ export default function ConnectionsPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-lg', provider.color)}>
-                      {provider.icon}
+                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', provider.color)}>
+                      <IconComponent name={provider.icon} size={18} className={provider.logoClass} />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{provider.name}</p>
@@ -240,8 +272,8 @@ export default function ConnectionsPage() {
                     onClick={() => handleConnect(key as MerchantProvider)}
                     className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 hover:border-primary/50 hover:bg-gray-50 transition-all group"
                   >
-                    <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-transform group-hover:scale-110', provider.color)}>
-                      {provider.icon}
+                    <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110', provider.color)}>
+                      <IconComponent name={provider.icon} size={22} className={provider.logoClass} />
                     </div>
                     <p className="text-xs font-semibold text-gray-700">{provider.name}</p>
                     <ExternalLinkIcon size={10} className="text-gray-400" />
@@ -254,6 +286,15 @@ export default function ConnectionsPage() {
       )}
     </div>
   );
+
+  // Helper component to render Lucide icons by name
+  function IconComponent({ name, size, className }: { name: string; size?: number; className?: string }) {
+    const IconComp = ICON_MAP[name];
+    if (!IconComp) {
+      return <span className={className}>{name}</span>;
+    }
+    return <IconComp size={size} className={className} />;
+  }
 
   function handleConnect(provider: MerchantProvider) {
     // This would redirect to OAuth flow for the provider

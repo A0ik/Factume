@@ -19,8 +19,16 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchClients: async () => {
     set({ loading: true });
-    try { const { data } = await getSupabaseClient().from('clients').select('*').order('name'); set({ clients: data || [] }); }
-    finally { set({ loading: false }); }
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    try {
+      const data = await Promise.race([
+        getSupabaseClient().from('clients').select('*').order('name'),
+        timeout
+      ]) as any;
+      set({ clients: data.data || [] });
+    } catch (error) {
+      console.error('[fetchClients] Error:', error);
+    } finally { set({ loading: false }); }
   },
   createClient: async (clientData) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
@@ -55,21 +63,23 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   fetchInvoices: async () => {
     set({ loading: true });
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
-      const { data } = await getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false });
-      set({ invoices: data || [] }); get().computeStats();
+      const data = await Promise.race([
+        getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false }),
+        timeout
+      ]) as any;
+      set({ invoices: data.data || [] }); get().computeStats();
+    } catch (error) {
+      console.error('[fetchInvoices] Error:', error);
     } finally { set({ loading: false }); }
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
   createInvoice: async (formData, profile, idempotencyId?: string) => {
-    const { data: { session } } = await getSupabaseClient().auth.getSession();
-    const user = session?.user;
-    if (!user) throw new Error('Non authentifié');
-
-    // Validate profile
-    if (!profile) {
+    if (!profile?.id) {
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
+    const userId = profile.id;
 
     // Note: The invoice limit is now enforced at the database level by increment_invoice_count RPC
     // This will throw an error if the free tier limit (5/month) is exceeded
@@ -91,12 +101,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     const currentMonth = new Date().toISOString().slice(0, 7);
 
     // Incrément atomique via RPC — élimine la race condition sur invoice_count
-    const { data: invoiceCount, error: rpcError } = await getSupabaseClient()
-      .rpc('increment_invoice_count', { p_user_id: user.id });
-    if (rpcError || invoiceCount == null) {
+    const { data: invoiceCountData, error: rpcError } = await getSupabaseClient()
+      .rpc('increment_invoice_count', { p_user_id: userId, p_month: currentMonth });
+    if (rpcError || invoiceCountData == null) {
       console.error('[createInvoice] RPC increment error:', rpcError);
-      throw new Error('Impossible de générer le numéro de document');
+      throw new Error(rpcError?.message || 'Impossible de générer le numéro de document');
     }
+    const invoiceCount = Array.isArray(invoiceCountData)
+      ? invoiceCountData[0]?.invoice_count
+      : invoiceCountData;
+    if (!invoiceCount) throw new Error('Impossible de générer le numéro de document');
     const number = get().getNextInvoiceNumber(prefix, invoiceCount);
 
     const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
@@ -104,7 +118,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     // Insert invoice
     const { data, error } = await getSupabaseClient().from('invoices').insert({
       ...(idempotencyId ? { id: idempotencyId } : {}),
-      user_id: user.id,
+      user_id: userId,
       client_id: formData.client_id || null,
       client_name_override: formData.client_name_override || null,
       number,
@@ -148,7 +162,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     (async () => {
       try {
         // RPC already updated invoice_count + monthly_invoice_count, just refresh profile
-        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', user.id).single();
+        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
         if (freshProfile) {
           try {
             useAuthStore.getState().setProfile(freshProfile);
@@ -243,8 +257,16 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   fetchRecurringInvoices: async () => {
     set({ loading: true });
-    try { const { data } = await getSupabaseClient().from('recurring_invoices').select('*, client:clients(*)').order('next_run_date', { ascending: true }); set({ recurringInvoices: data || [] }); }
-    finally { set({ loading: false }); }
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
+    try {
+      const data = await Promise.race([
+        getSupabaseClient().from('recurring_invoices').select('*, client:clients(*)').order('next_run_date', { ascending: true }),
+        timeout
+      ]) as any;
+      set({ recurringInvoices: data.data || [] });
+    } catch (error) {
+      console.error('[fetchRecurringInvoices] Error:', error);
+    } finally { set({ loading: false }); }
   },
   createRecurringInvoice: async (recData) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();

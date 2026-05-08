@@ -45,6 +45,7 @@ interface ExtractedData {
   client_name?: string;
   project_code?: string;
   accounting_code?: string;
+  account_label?: string;
   is_duplicate?: boolean;
 }
 
@@ -71,6 +72,29 @@ interface HistoryItem {
   confidence: number;
   thumbnail: string;
   status: 'processed' | 'reviewed' | 'archived';
+}
+
+interface DbExpense {
+  id: string;
+  vendor: string;
+  amount: number;
+  vat_amount: number;
+  ht_amount: number;
+  date: string;
+  category: string;
+  description: string;
+  receipt_url: string;
+  status: string;
+  account_code: string;
+  account_label: string;
+  journal_entry: Record<string, unknown>;
+  ocr_confidence: number;
+  payment_method: string;
+  invoice_number: string;
+  client_id: string;
+  project_code: string;
+  document_type: string;
+  created_at: string;
 }
 
 function generateId(): string {
@@ -129,7 +153,7 @@ function getDextStatus(file: ScannedFile): 'processing' | 'to_review' | 'ready' 
 }
 
 // Duplicate detection
-function checkDuplicate(file: ScannedFile, allFiles: ScannedFile[], history: HistoryItem[]): boolean {
+function checkDuplicate(file: ScannedFile, allFiles: ScannedFile[], existingExpenses: DbExpense[]): boolean {
   if (!file.result?.extracted) return false;
   const { vendor, amount, date } = file.result.extracted;
   if (!vendor || !amount || !date) return false;
@@ -141,9 +165,9 @@ function checkDuplicate(file: ScannedFile, allFiles: ScannedFile[], history: His
     if (o.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(o.amount - amount) < 0.01 && o.date === date) return true;
   }
 
-  // Check against history
-  for (const h of history) {
-    if (h.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(h.amount - amount) < 0.01 && h.date === date) return true;
+  // Check against DB expenses
+  for (const e of existingExpenses) {
+    if (e.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(e.amount - amount) < 0.01 && e.date === date) return true;
   }
   return false;
 }
@@ -267,6 +291,7 @@ export default function OCRPage() {
   const [files, setFiles] = useState<ScannedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const [activeTab, setActiveTab] = useState<DextTab>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -288,67 +313,91 @@ export default function OCRPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [projectCode, setProjectCode] = useState<string>('');
 
+  // DB-loaded expenses for history
+  const [dbExpenses, setDbExpenses] = useState<DbExpense[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [reviewingDbExpense, setReviewingDbExpense] = useState<DbExpense | null>(null);
+
   // Clients from dataStore
   const { clients } = useDataStore();
 
-  // Keep a stable ref to history for use inside setFiles callbacks (avoids stale closure)
-  const historyRef = useRef<HistoryItem[]>([]);
+  // Keep a stable ref to dbExpenses for use inside setFiles callbacks
+  const dbExpensesRef = useRef<DbExpense[]>([]);
 
-  // Vendor learning: load rules from Supabase
+  // Vendor learning: load rules from vendor_mappings table
   const [vendorRules, setVendorRules] = useState<Record<string, { category: string; accounting_code: string }>>({});
 
+  const fetchDbExpenses = useCallback(async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    try {
+      const { data } = await getSupabaseClient()
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .not('vendor', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (data) {
+        setDbExpenses(data as DbExpense[]);
+        dbExpensesRef.current = data as DbExpense[];
+      }
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [user]);
+
+  useEffect(() => { fetchDbExpenses(); }, [fetchDbExpenses]);
+
+  // Load vendor mappings
   useEffect(() => {
     if (!user) return;
     getSupabaseClient()
-      .from('expenses')
-      .select('vendor, category, account_code')
+      .from('vendor_mappings')
+      .select('vendor_name_pattern, account_code, account_name, corrected_category')
       .eq('user_id', user.id)
-      .not('vendor', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(200)
       .then(({ data }) => {
         if (!data) return;
         const rules: Record<string, { category: string; accounting_code: string }> = {};
         for (const row of data) {
-          const key = (row.vendor || '').toLowerCase().trim();
-          if (key && !rules[key]) {
-            rules[key] = { category: row.category, accounting_code: row.account_code || '' };
+          const key = (row.vendor_name_pattern || '').toLowerCase().trim();
+          if (key) {
+            rules[key] = {
+              category: row.corrected_category || '',
+              accounting_code: row.account_code || '',
+            };
           }
         }
         setVendorRules(rules);
       });
   }, [user]);
 
-  // History state
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  useEffect(() => { historyRef.current = history; }, [history]);
-
   // Stats
-  const scannedToday = files.filter(f => f.status === 'complete').length + history.length;
+  const scannedToday = files.filter(f => f.status === 'complete').length + dbExpenses.length;
   const totalDetected = files.filter(f => f.status === 'complete' && f.result)
     .reduce((sum, f) => sum + (f.result?.extracted.amount || 0), 0)
-    + history.reduce((sum, h) => sum + h.amount, 0);
+    + dbExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const completedFiles = files.filter(f => f.status === 'complete' && f.result);
   const avgConfidence = completedFiles.length > 0
     ? completedFiles.reduce((sum, f) => sum + (f.result?.extracted.confidence || 0), 0) / completedFiles.length
     : 0;
   const pendingReview = completedFiles.length;
 
-  // Dext-style tab counts
+  // Dext-style tab counts (combine file queue + DB expenses)
   const tabCounts = useMemo(() => ({
-    all: files.length,
+    all: files.length + dbExpenses.filter(e => e.status !== 'pending' || files.every(f => f.result?.expense?.id !== e.id)).length,
     processing: files.filter(f => f.status === 'pending' || f.status === 'uploading' || f.status === 'analyzing').length,
-    to_review: files.filter(f => getDextStatus(f) === 'to_review').length,
-    ready: files.filter(f => getDextStatus(f) === 'ready').length,
-    processed: history.length,
-  }), [files, history]);
+    to_review: files.filter(f => getDextStatus(f) === 'to_review').length + dbExpenses.filter(e => e.status === 'reviewed').length,
+    ready: files.filter(f => getDextStatus(f) === 'ready').length + dbExpenses.filter(e => e.status === 'ready').length,
+    processed: dbExpenses.filter(e => e.status === 'validated' || e.status === 'exported').length,
+  }), [files, dbExpenses]);
 
   const filteredFiles = useMemo(() => {
     if (activeTab === 'all') return files;
     if (activeTab === 'processing') return files.filter(f => f.status === 'pending' || f.status === 'uploading' || f.status === 'analyzing');
     if (activeTab === 'to_review') return files.filter(f => getDextStatus(f) === 'to_review');
     if (activeTab === 'ready') return files.filter(f => getDextStatus(f) === 'ready');
-    if (activeTab === 'processed') return []; // history is rendered separately below
+    if (activeTab === 'processed') return []; // DB expenses rendered separately
     return files;
   }, [files, activeTab]);
 
@@ -465,13 +514,18 @@ export default function OCRPage() {
         );
         return updated.map(f => {
           if (f.status !== 'complete' || !f.result?.extracted) return f;
-          const isDup = checkDuplicate(f, updated, historyRef.current);
+          const isDup = checkDuplicate(f, updated, dbExpensesRef.current);
           if (isDup === f.result.extracted.is_duplicate) return f;
           return { ...f, result: { ...f.result, extracted: { ...f.result.extracted, is_duplicate: isDup } } };
         });
       });
 
-      toast.success(`"${scannedFile.file.name}" analysé avec succès`);
+      const conf = (data as { extracted?: { confidence?: number } } | null)?.extracted?.confidence ?? 1;
+      if (conf < 0.65) {
+        toast.warning(`"${scannedFile.file.name}" — Confiance faible (${Math.round(conf * 100)}%) : vérification requise`);
+      } else {
+        toast.success(`"${scannedFile.file.name}" analysé avec succès`);
+      }
     } catch (err: any) {
       updateFile(scannedFile.id, {
         status: 'error',
@@ -482,6 +536,8 @@ export default function OCRPage() {
     }
   }, [updateFile]);
 
+  const BATCH_SIZE = 3;
+
   const processAllFiles = useCallback(async () => {
     const pending = files.filter(f => f.status === 'pending');
     if (pending.length === 0) {
@@ -490,69 +546,63 @@ export default function OCRPage() {
     }
 
     setIsProcessing(true);
+    setBatchProgress({ current: 0, total: pending.length });
 
     try {
-      // Process files sequentially to avoid API overload
-      for (const file of pending) {
-        await processFile(file);
+      for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+        const chunk = pending.slice(i, i + BATCH_SIZE);
+        await Promise.allSettled(chunk.map(f => processFile(f)));
+        setBatchProgress({ current: Math.min(i + BATCH_SIZE, pending.length), total: pending.length });
       }
       toast.success('Analyse terminée !');
     } finally {
       setIsProcessing(false);
+      setBatchProgress(null);
     }
   }, [files, processFile]);
 
-  // ---------- Save expense ----------
-  const saveExpense = useCallback(async (scannedFile: ScannedFile) => {
+  // ---------- Verify expense (mark as reviewed) ----------
+  const verifyExpense = useCallback(async (scannedFile: ScannedFile) => {
     if (!scannedFile.result?.expense?.id) {
       toast.error('Aucune dépense à sauvegarder');
       return;
     }
     const expenseId = scannedFile.result.expense.id;
 
-    // Persist client assignment if selected
-    if (selectedClientId) {
-      try {
-        const res = await fetch(`/api/expenses/${expenseId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ client_id: selectedClientId }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({})) as { error?: string };
-          toast.error(`Erreur lors de l'affectation client : ${errData.error || 'inconnue'}`);
-          return;
-        }
-      } catch {
-        toast.error("Impossible de contacter le serveur pour l'affectation client.");
+    // Persist client assignment + status change
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'reviewed',
+          ...(selectedClientId && { client_id: selectedClientId }),
+          ...(projectCode && { project_code: projectCode }),
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        toast.error(`Erreur : ${errData.error || 'inconnue'}`);
         return;
       }
+    } catch {
+      toast.error('Impossible de contacter le serveur.');
+      return;
     }
-
-    const extracted = scannedFile.result.extracted;
-    setHistory(prev => [{
-      id: expenseId,
-      vendor: extracted.vendor,
-      amount: extracted.amount,
-      date: extracted.date,
-      category: extracted.category,
-      confidence: extracted.confidence,
-      thumbnail: scannedFile.preview,
-      status: 'processed',
-    }, ...prev]);
 
     removeFile(scannedFile.id);
     setReviewingFile(null);
     setEditMode(false);
-    toast.success('Dépense créée avec succès !');
-  }, [removeFile, selectedClientId]);
+    fetchDbExpenses();
+    toast.success('Document vérifié !');
+  }, [removeFile, selectedClientId, projectCode, fetchDbExpenses]);
 
+  // ---------- Save with edits (correct + verify) ----------
   const saveWithEdits = useCallback(async (scannedFile: ScannedFile) => {
     if (!editData) return;
 
     const expenseId = scannedFile.result?.expense?.id;
 
-    // If the expense exists in DB, persist the corrections via PATCH
     if (expenseId) {
       try {
         const res = await fetch(`/api/expenses/${expenseId}`, {
@@ -565,7 +615,11 @@ export default function OCRPage() {
             date: editData.date,
             category: editData.category,
             description: editData.description,
+            status: 'reviewed',
+            ...(editData.accounting_code && { account_code: editData.accounting_code }),
+            ...(editData.account_label && { account_label: editData.account_label }),
             ...(selectedClientId && { client_id: selectedClientId }),
+            ...(projectCode && { project_code: projectCode }),
           }),
         });
         if (!res.ok) {
@@ -577,24 +631,61 @@ export default function OCRPage() {
         toast.error('Impossible de contacter le serveur pour sauvegarder les corrections.');
         return;
       }
-    }
 
-    setHistory(prev => [{
-      id: expenseId || generateId(),
-      vendor: editData.vendor,
-      amount: editData.amount,
-      date: editData.date,
-      category: editData.category,
-      confidence: editData.confidence,
-      thumbnail: scannedFile.preview,
-      status: 'processed',
-    }, ...prev]);
+      // Save vendor mapping whenever vendor is known (learns category + account code corrections)
+      if (editData.vendor) {
+        try {
+          await getSupabaseClient().from('vendor_mappings').upsert({
+            user_id: user?.id,
+            vendor_name_pattern: editData.vendor.toLowerCase().trim(),
+            raw_vendor: editData.vendor.toLowerCase().trim(),
+            account_code: editData.accounting_code || null,
+            account_name: editData.account_label || null,
+            corrected_vendor: editData.vendor,
+            corrected_category: editData.category,
+          }, { onConflict: 'user_id,raw_vendor' });
+        } catch {
+          // Non-critical: vendor mapping save failure shouldn't block the user
+        }
+      }
+    }
 
     removeFile(scannedFile.id);
     setReviewingFile(null);
     setEditMode(false);
-    toast.success('Dépense corrigée et sauvegardée !');
-  }, [editData, removeFile, selectedClientId]);
+    fetchDbExpenses();
+    toast.success('Dépense corrigée et vérifiée !');
+  }, [editData, removeFile, selectedClientId, projectCode, user, fetchDbExpenses]);
+
+  // ---------- Update DB expense status ----------
+  const updateExpenseStatus = useCallback(async (expenseId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        toast.error(`Erreur : ${errData.error || 'inconnue'}`);
+        return;
+      }
+      fetchDbExpenses();
+      toast.success('Statut mis à jour !');
+    } catch {
+      toast.error('Impossible de mettre à jour le statut.');
+    }
+  }, [fetchDbExpenses]);
+
+  // ---------- Load DB expense for review ----------
+  const loadExpenseForReview = useCallback(async (expenseId: string) => {
+    const expense = dbExpenses.find(e => e.id === expenseId);
+    if (!expense) return;
+    setReviewingDbExpense(expense);
+    setSelectedClientId(expense.client_id || '');
+    setProjectCode(expense.project_code || '');
+    setEditMode(false);
+  }, [dbExpenses]);
 
   // ---------- Paywall guard ----------
   if (!isBusiness) {
@@ -792,7 +883,9 @@ export default function OCRPage() {
                     {isProcessing ? (
                       <>
                         <Loader2 size={18} className="animate-spin" />
-                        Analyse en cours...
+                        {batchProgress
+                          ? `${batchProgress.current}/${batchProgress.total} traités...`
+                          : 'Analyse en cours...'}
                       </>
                     ) : (
                       <>
@@ -903,7 +996,12 @@ export default function OCRPage() {
                                     <Eye size={12} />
                                     À vérifier
                                     {scannedFile.result?.extracted && (
-                                      <span className="ml-1 text-amber-500">- {formatCurrency(scannedFile.result.extracted.amount)}</span>
+                                      <span className="ml-1 text-amber-500">
+                                        - {formatCurrency(scannedFile.result.extracted.amount, scannedFile.result.extracted.currency || 'EUR')}
+                                        {scannedFile.result.extracted.currency && scannedFile.result.extracted.currency !== 'EUR' && (
+                                          <span className="ml-1 text-[10px] font-bold opacity-70">{scannedFile.result.extracted.currency}</span>
+                                        )}
+                                      </span>
                                     )}
                                   </span>
                                 )}
@@ -912,7 +1010,12 @@ export default function OCRPage() {
                                     <CheckCircle2 size={12} />
                                     Prêt
                                     {scannedFile.result?.extracted && (
-                                      <span className="ml-1 text-emerald-500">- {formatCurrency(scannedFile.result.extracted.amount)}</span>
+                                      <span className="ml-1 text-emerald-500">
+                                        - {formatCurrency(scannedFile.result.extracted.amount, scannedFile.result.extracted.currency || 'EUR')}
+                                        {scannedFile.result.extracted.currency && scannedFile.result.extracted.currency !== 'EUR' && (
+                                          <span className="ml-1 text-[10px] font-bold opacity-70">{scannedFile.result.extracted.currency}</span>
+                                        )}
+                                      </span>
                                     )}
                                   </span>
                                 )}
@@ -1064,6 +1167,16 @@ export default function OCRPage() {
                     </div>
                   </div>
 
+                  {/* Low confidence warning banner */}
+                  {reviewingFile.result.extracted.confidence < 0.65 && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50">
+                      <AlertCircle size={14} className="text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs font-semibold text-red-700 dark:text-red-400">
+                        Données peu fiables — vérifiez chaque champ avant de valider
+                      </p>
+                    </div>
+                  )}
+
                   <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
                   {/* Vendor */}
@@ -1083,6 +1196,14 @@ export default function OCRPage() {
                   </div>
 
                   {/* Amount + VAT */}
+                  {reviewingFile.result.extracted.currency && reviewingFile.result.extracted.currency !== 'EUR' && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50">
+                      <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        Devise étrangère ({reviewingFile.result.extracted.currency}) — vérifiez la conversion en EUR
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Montant TTC</label>
@@ -1099,7 +1220,7 @@ export default function OCRPage() {
                         </div>
                       ) : (
                         <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">
-                          {formatCurrency(reviewingFile.result.extracted.amount)}
+                          {formatCurrency(reviewingFile.result.extracted.amount, reviewingFile.result.extracted.currency || 'EUR')}
                         </p>
                       )}
                     </div>
@@ -1194,15 +1315,39 @@ export default function OCRPage() {
                     </div>
                   )}
 
-                  {/* Accounting code suggestion */}
-                  {reviewingFile.result.extracted.category && CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category] && (
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Compte comptable suggéré</label>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">
-                        {CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category].code} — {CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category].label}
+                  {/* Accounting code - editable */}
+                  <div className="p-3 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200/60 dark:border-amber-800/60">
+                    <label className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1 mb-2">
+                      <Sparkles size={10} /> Compte de charge
+                    </label>
+                    {editMode ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editData?.accounting_code || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, accounting_code: e.target.value } : null)}
+                          placeholder="Code PCG (ex: 606400)"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                        />
+                        <input
+                          type="text"
+                          value={editData?.account_label || ''}
+                          onChange={(e) => setEditData(prev => prev ? { ...prev, account_label: e.target.value } : null)}
+                          placeholder="Libellé du compte"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">
+                        {editData?.accounting_code || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.code || 'Non assigné'}
+                        {((editData?.account_label || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.label)) && (
+                          <span className="font-normal text-gray-500 dark:text-gray-400 ml-1">
+                            — {editData?.account_label || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.label}
+                          </span>
+                        )}
                       </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Duplicate warning */}
                   {reviewingFile.result.extracted.is_duplicate && (
@@ -1349,11 +1494,11 @@ export default function OCRPage() {
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => saveExpense(reviewingFile)}
+                        onClick={() => verifyExpense(reviewingFile)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all"
                       >
                         <Check size={16} />
-                        Valider et traiter
+                        Vérifier
                       </motion.button>
                       <div className="flex gap-2">
                         <motion.button
@@ -1389,6 +1534,101 @@ export default function OCRPage() {
                   </Link>
                 </div>
               </motion.div>
+            ) : reviewingDbExpense ? (
+              /* DB Expense Review Panel */
+              <motion.div
+                key={reviewingDbExpense.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden"
+              >
+                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Détail de la dépense</h3>
+                    <motion.button whileHover={{ rotate: 90, scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setReviewingDbExpense(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
+                      <X size={16} />
+                    </motion.button>
+                  </div>
+                  {reviewingDbExpense.receipt_url && (
+                    <div className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
+                      <img src={reviewingDbExpense.receipt_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 space-y-4">
+                  <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold',
+                    reviewingDbExpense.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                    reviewingDbExpense.status === 'ready' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                    reviewingDbExpense.status === 'validated' || reviewingDbExpense.status === 'exported' ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' :
+                    'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                  )}>
+                    {reviewingDbExpense.status === 'reviewed' ? 'Vérifié' :
+                     reviewingDbExpense.status === 'ready' ? 'Prêt' :
+                     reviewingDbExpense.status === 'validated' || reviewingDbExpense.status === 'exported' ? 'Traité' : 'En attente'}
+                  </span>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fournisseur</label>
+                    <p className="text-base font-bold text-gray-900 dark:text-white mt-0.5">{reviewingDbExpense.vendor || 'Non détecté'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Montant TTC</label>
+                      <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">{formatCurrency(reviewingDbExpense.amount)}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TVA</label>
+                      <p className="text-base font-bold text-gray-700 dark:text-gray-300 mt-0.5">{reviewingDbExpense.vat_amount > 0 ? formatCurrency(reviewingDbExpense.vat_amount) : 'Non détecté'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Date</label>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">{reviewingDbExpense.date ? new Date(reviewingDbExpense.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Non détecté'}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Catégorie</label>
+                    <div className="mt-0.5">{(() => { const cat = CATEGORIES.find(c => c.value === reviewingDbExpense.category); return cat ? (<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-sm font-bold text-gray-900 dark:text-white"><cat.Icon size={14} />{cat.label}</span>) : (<p className="text-sm text-gray-500">Non catégorisé</p>); })()}</div>
+                  </div>
+                  <div className="p-3 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200/60 dark:border-amber-800/60">
+                    <label className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1 mb-1"><Sparkles size={10} /> Compte de charge</label>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {reviewingDbExpense.account_code || 'Non assigné'}
+                      {reviewingDbExpense.account_label && (<span className="font-normal text-gray-500 dark:text-gray-400 ml-1">— {reviewingDbExpense.account_label}</span>)}
+                    </p>
+                  </div>
+                  {reviewingDbExpense.description && (
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Description</label>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{reviewingDbExpense.description}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Workflow</p>
+                    <div className="flex gap-2">
+                      {[
+                        { key: 'pending', label: 'Attente' },
+                        { key: 'reviewed', label: 'Vérifié' },
+                        { key: 'ready', label: 'Prêt' },
+                        { key: 'validated', label: 'Traité' },
+                      ].map(s => (
+                        <button key={s.key} onClick={() => updateExpenseStatus(reviewingDbExpense.id, s.key)}
+                          className={cn('flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors',
+                            reviewingDbExpense.status === s.key ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600'
+                          )}>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Link href="/expenses">
+                    <motion.button whileHover={{ scale: 1.01 }} className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-violet-500 transition-colors py-1">
+                      Voir toutes les dépenses <ArrowRight size={12} />
+                    </motion.button>
+                  </Link>
+                </div>
+              </motion.div>
             ) : (
               /* No file selected for review */
               <motion.div
@@ -1413,7 +1653,7 @@ export default function OCRPage() {
         </div>
       </div>
 
-      {/* ===== History Section ===== */}
+      {/* ===== History Section (DB-loaded) ===== */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1424,22 +1664,23 @@ export default function OCRPage() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             Historique des scans
           </h2>
-          {history.length > 0 && (
+          {dbExpenses.length > 0 && (
             <span className="text-sm text-gray-400">
-              {history.length} justificatif{history.length > 1 ? 's' : ''} traité{history.length > 1 ? 's' : ''}
+              {dbExpenses.length} justificatif{dbExpenses.length > 1 ? 's' : ''}
             </span>
           )}
         </div>
 
-        {history.length === 0 ? (
-          /* Empty state */
+        {loadingHistory ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={24} className="animate-spin text-violet-500" />
+          </div>
+        ) : dbExpenses.length === 0 ? (
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-12 text-center">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-6">
               <Clock size={36} className="text-gray-300 dark:text-gray-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-              Aucun scan récent
-            </h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Aucun scan récent</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
               Vos justificatifs scannés apparaîtront ici. Commencez par glisser un fichier dans la zone ci-dessus.
             </p>
@@ -1454,21 +1695,26 @@ export default function OCRPage() {
             </motion.button>
           </div>
         ) : (
-          /* History list */
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden">
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {history.map((item, idx) => (
+              {dbExpenses.slice(0, 30).map((expense, idx) => (
                 <motion.div
-                  key={item.id}
+                  key={expense.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors"
+                  transition={{ delay: Math.min(idx * 0.03, 0.5) }}
+                  onClick={() => loadExpenseForReview(expense.id)}
+                  className={cn(
+                    'flex items-center gap-4 p-4 transition-colors cursor-pointer',
+                    reviewingDbExpense?.id === expense.id
+                      ? 'bg-violet-50/50 dark:bg-violet-900/20'
+                      : 'hover:bg-gray-50/50 dark:hover:bg-slate-700/30'
+                  )}
                 >
                   {/* Thumbnail */}
                   <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {item.thumbnail ? (
-                      <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
+                    {expense.receipt_url ? (
+                      <img src={expense.receipt_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <FileText size={20} className="text-gray-400" />
                     )}
@@ -1477,40 +1723,46 @@ export default function OCRPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                      {item.vendor || 'Fournisseur inconnu'}
+                      {expense.vendor || 'Fournisseur inconnu'}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {expense.date
+                        ? new Date(expense.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : 'Date inconnue'}
                     </p>
                   </div>
 
-                  {/* Category */}
+                  {/* Category icon */}
                   {(() => {
-                    const cat = CATEGORIES.find(c => c.value === item.category);
-                    return cat ? (
-                      <cat.Icon size={16} className="text-gray-500 dark:text-gray-400" />
-                    ) : null;
+                    const cat = CATEGORIES.find(c => c.value === expense.category);
+                    return cat ? <cat.Icon size={16} className="text-gray-500 dark:text-gray-400" /> : null;
                   })()}
 
                   {/* Amount */}
                   <span className="text-sm font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(item.amount)}
+                    {formatCurrency(expense.amount)}
                   </span>
 
-                  {/* Confidence */}
-                  <ConfidenceBadge confidence={item.confidence} />
+                  {/* Account code */}
+                  {expense.account_code && (
+                    <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/20 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                      {expense.account_code}
+                    </span>
+                  )}
 
                   {/* Status */}
                   <span className={cn(
                     'px-2.5 py-1 rounded-lg text-xs font-bold',
-                    item.status === 'processed' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
-                      item.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                    expense.status === 'validated' || expense.status === 'exported' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                      expense.status === 'ready' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                      expense.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                      'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
                   )}>
-                    {item.status === 'processed' ? 'Traité' : item.status === 'reviewed' ? 'Vérifié' : 'Archivé'}
+                    {expense.status === 'validated' || expense.status === 'exported' ? 'Traité' :
+                     expense.status === 'ready' ? 'Prêt' :
+                     expense.status === 'reviewed' ? 'Vérifié' : 'Attente'}
                   </span>
 
-                  {/* Arrow */}
                   <ChevronRight size={16} className="text-gray-300 dark:text-gray-600" />
                 </motion.div>
               ))}
