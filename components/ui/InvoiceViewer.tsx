@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import {
-  X, ZoomIn, ZoomOut, Download, RotateCw, Maximize2, ChevronLeft, ChevronRight,
-  FileText, Calendar, Building2, CreditCard, AlertCircle, CheckCircle
+  X, ZoomIn, ZoomOut, Download, RotateCw, FileText, Calendar,
+  AlertCircle, CheckCircle, RefreshCw, Edit2, Save, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -27,6 +27,7 @@ interface InvoiceViewerProps {
     ocr_confidence?: number;
   };
   onClose?: () => void;
+  onReanalyzed?: (updatedExpense: Record<string, unknown>) => void;
   className?: string;
 }
 
@@ -34,277 +35,297 @@ interface InvoiceViewerProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function InvoiceViewer({ expense, onClose, className }: InvoiceViewerProps) {
+export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: InvoiceViewerProps) {
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [imgError, setImgError] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
 
-  // Load image
-  const loadImage = useCallback(async () => {
-    if (!expense.receipt_url) return;
+  // Inline edit state
+  const [editing, setEditing] = useState(false);
+  const [editVendor, setEditVendor] = useState(expense.vendor);
+  const [editAmount, setEditAmount] = useState(String(expense.amount));
+  const [editDate, setEditDate] = useState(expense.date);
+  const [saving, setSaving] = useState(false);
 
-    setLoading(true);
-    setError(null);
+  const isPdf = Boolean(
+    expense.receipt_storage_path?.toLowerCase().endsWith('.pdf') ||
+    expense.receipt_url?.toLowerCase().includes('.pdf')
+  );
 
-    try {
-      // Create a cache-busting URL
-      const url = `${expense.receipt_url}?t=${Date.now()}`;
-
-      // Fetch with auth header
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Impossible de charger l\'image');
-
-      const blob = await response.blob();
-      const src = URL.createObjectURL(blob);
-      setImageSrc(src);
-    } catch (err) {
-      console.error('Error loading image:', err);
-      setError(err instanceof Error ? err.message : 'Erreur de chargement');
-      toast.error('Impossible de charger la facture');
-    } finally {
-      setLoading(false);
-    }
-  }, [expense.receipt_url]);
-
-  // Load image on mount and revoke object URL on unmount
-  useEffect(() => {
-    loadImage();
-    return () => {
-      if (imageSrc) URL.revokeObjectURL(imageSrc);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadImage]);
-
-  // Zoom controls
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  // Zoom / rotate
+  const handleZoomIn = () => setZoom(p => Math.min(p + 0.25, 4));
+  const handleZoomOut = () => setZoom(p => Math.max(p - 0.25, 0.25));
   const handleResetZoom = () => setZoom(1);
-  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
+  const handleRotate = () => setRotation(p => (p + 90) % 360);
 
-  // Download
-  const handleDownload = async () => {
-    if (!imageSrc) return;
+  // Download — direct link
+  const handleDownload = () => {
+    if (!expense.receipt_url) return;
+    const a = document.createElement('a');
+    a.href = expense.receipt_url;
+    a.download = `facture_${expense.vendor}_${expense.date}${isPdf ? '.pdf' : '.jpg'}`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success('Téléchargement lancé');
+  };
 
+  // Re-analyze with OCR
+  const handleReanalyze = async () => {
+    if (!expense.receipt_url) return;
+    setReanalyzing(true);
     try {
-      const response = await fetch(imageSrc);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `facture_${expense.vendor}_${expense.date}.${blob.type.includes('pdf') ? 'pdf' : 'png'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Téléchargement réussi');
+      const res = await fetch('/api/ai/ocr-reanalyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expense_id: expense.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur re-analyse');
+      toast.success('Facture re-analysée avec succès');
+      onReanalyzed?.(data.expense);
     } catch (err) {
-      console.error('Download error:', err);
-      toast.error('Erreur lors du téléchargement');
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la re-analyse');
+    } finally {
+      setReanalyzing(false);
     }
   };
 
-  // Confidence indicator
-  const getConfidenceColor = (confidence?: number) => {
-    if (!confidence) return 'text-gray-500';
-    if (confidence >= 0.8) return 'text-green-500';
-    if (confidence >= 0.6) return 'text-amber-500';
-    return 'text-red-500';
+  // Save inline edits
+  const handleSaveEdits = async () => {
+    setSaving(true);
+    try {
+      const { getSupabaseClient } = await import('@/lib/supabase');
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          vendor: editVendor.trim(),
+          amount: parseFloat(editAmount) || expense.amount,
+          date: editDate,
+        })
+        .eq('id', expense.id);
+      if (error) throw error;
+      toast.success('Modifications enregistrées');
+      setEditing(false);
+      onReanalyzed?.({ ...expense, vendor: editVendor, amount: parseFloat(editAmount), date: editDate });
+    } catch (err) {
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const getConfidenceIcon = (confidence?: number) => {
-    if (!confidence) return AlertCircle;
-    if (confidence >= 0.8) return CheckCircle;
-    if (confidence >= 0.6) return AlertCircle;
-    return AlertCircle;
-  };
-
-  const ConfidenceIcon = getConfidenceIcon(expense.ocr_confidence);
+  // Confidence helpers
+  const confidenceColor = !expense.ocr_confidence ? 'text-gray-400'
+    : expense.ocr_confidence >= 0.8 ? 'text-green-400'
+    : expense.ocr_confidence >= 0.6 ? 'text-amber-400'
+    : 'text-red-400';
+  const ConfidenceIcon = expense.ocr_confidence && expense.ocr_confidence >= 0.8 ? CheckCircle : AlertCircle;
 
   return (
-    <div className={cn('fixed inset-0 z-50 bg-black', className)}>
-      {/* Header */}
+    <div className={cn('fixed inset-0 z-50 bg-black/95 flex flex-col', className)}>
+      {/* ── Header ── */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4"
+        className="flex-shrink-0 bg-gradient-to-b from-black to-transparent px-4 py-3"
       >
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          {/* Invoice Info */}
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between max-w-7xl mx-auto gap-4">
+          {/* Invoice info / inline edit */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-white" />
             </div>
 
-            <div>
-              <h3 className="text-white font-bold text-lg">{expense.vendor}</h3>
-              <div className="flex items-center gap-3 text-white/70 text-sm">
-                <span className="flex items-center gap-1">
-                  <Calendar size={14} />
-                  {new Date(expense.date).toLocaleDateString('fr-FR')}
-                </span>
-                <span>•</span>
-                <span className="font-semibold text-white">{formatCurrency(expense.amount)}</span>
-                {expense.ocr_confidence && (
-                  <>
-                    <span>•</span>
-                    <span className={cn('flex items-center gap-1', getConfidenceColor(expense.ocr_confidence))}>
-                      <ConfidenceIcon size={14} />
-                      {Math.round(expense.ocr_confidence * 100)}% confiance
-                    </span>
-                  </>
-                )}
+            {editing ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={editVendor}
+                  onChange={e => setEditVendor(e.target.value)}
+                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-40 focus:outline-none focus:ring-1 focus:ring-white/40"
+                  placeholder="Fournisseur"
+                />
+                <input
+                  value={editAmount}
+                  onChange={e => setEditAmount(e.target.value)}
+                  type="number"
+                  step="0.01"
+                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-white/40"
+                  placeholder="Montant"
+                />
+                <input
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  type="date"
+                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-white/40"
+                />
               </div>
-            </div>
+            ) : (
+              <div className="min-w-0">
+                <h3 className="text-white font-bold text-base truncate">{expense.vendor}</h3>
+                <div className="flex items-center gap-2 text-white/60 text-xs flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Calendar size={12} />
+                    {new Date(expense.date).toLocaleDateString('fr-FR')}
+                  </span>
+                  <span>•</span>
+                  <span className="font-semibold text-white">{formatCurrency(expense.amount)}</span>
+                  {expense.invoice_number && <><span>•</span><span>{expense.invoice_number}</span></>}
+                  {expense.ocr_confidence && (
+                    <>
+                      <span>•</span>
+                      <span className={cn('flex items-center gap-1', confidenceColor)}>
+                        <ConfidenceIcon size={12} />
+                        {Math.round(expense.ocr_confidence * 100)}% confiance
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleZoomOut}
-              className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              title="Zoom arrière"
-            >
-              <ZoomOut size={20} />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleResetZoom}
-              className="px-3 py-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 font-mono text-sm"
-            >
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Zoom */}
+            <button onClick={handleZoomOut} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Zoom -">
+              <ZoomOut size={18} />
+            </button>
+            <button onClick={handleResetZoom} className="px-2.5 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 font-mono text-xs min-w-[3rem] text-center">
               {Math.round(zoom * 100)}%
-            </motion.button>
+            </button>
+            <button onClick={handleZoomIn} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Zoom +">
+              <ZoomIn size={18} />
+            </button>
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleZoomIn}
-              className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              title="Zoom avant"
+            <div className="w-px h-6 bg-white/20 mx-1" />
+
+            {/* Rotate */}
+            <button onClick={handleRotate} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Pivoter">
+              <RotateCw size={18} />
+            </button>
+
+            {/* Download */}
+            <button onClick={handleDownload} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Télécharger">
+              <Download size={18} />
+            </button>
+
+            <div className="w-px h-6 bg-white/20 mx-1" />
+
+            {/* Edit inline */}
+            {editing ? (
+              <button
+                onClick={handleSaveEdits}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-2 bg-green-500 rounded-lg text-white hover:bg-green-600 text-xs font-semibold disabled:opacity-60"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Enregistrer
+              </button>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 text-xs font-semibold"
+                title="Modifier"
+              >
+                <Edit2 size={14} />
+                Modifier
+              </button>
+            )}
+
+            {/* Re-analyze */}
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzing || !expense.receipt_url}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/80 rounded-lg text-white hover:bg-blue-500 text-xs font-semibold disabled:opacity-50"
+              title="Re-analyser avec l'IA"
             >
-              <ZoomIn size={20} />
-            </motion.button>
+              {reanalyzing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              Re-analyser
+            </button>
 
-            <div className="w-px h-8 bg-white/20 mx-2" />
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleRotate}
-              className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              title="Pivoter"
-            >
-              <RotateCw size={20} />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleDownload}
-              className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              title="Télécharger"
-            >
-              <Download size={20} />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onClose}
-              className="p-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              title="Fermer"
-            >
-              <X size={20} />
-            </motion.button>
+            {/* Close */}
+            <button onClick={onClose} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20 ml-1" title="Fermer">
+              <X size={18} />
+            </button>
           </div>
         </div>
       </motion.div>
 
-      {/* Image Container */}
-      <div
-        ref={containerRef}
-        className="absolute inset-0 flex items-center justify-center overflow-hidden"
-      >
-        <AnimatePresence mode="wait">
-          {loading && (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-4"
+      {/* ── Document viewer ── */}
+      <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
+        {!expense.receipt_url ? (
+          <div className="flex flex-col items-center gap-3 text-white/50">
+            <FileText size={64} />
+            <p className="text-sm">Aucune image associée à cette facture</p>
+          </div>
+        ) : imgError ? (
+          <div className="flex flex-col items-center gap-4 text-center">
+            <AlertCircle className="w-16 h-16 text-red-400" />
+            <div>
+              <p className="text-white font-semibold">Impossible de charger la facture</p>
+              <p className="text-white/50 text-sm mt-1">L'image a peut-être été supprimée du stockage</p>
+            </div>
+            <a
+              href={expense.receipt_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 text-sm"
             >
-              <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-              <p className="text-white/70 text-sm">Chargement de la facture...</p>
-            </motion.div>
-          )}
-
-          {error && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center gap-4 text-center max-w-md"
-            >
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-8 h-8 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">Erreur de chargement</h3>
-                <p className="text-white/70 text-sm mt-1">{error}</p>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={loadImage}
-                className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20"
-              >
-                Réessayer
-              </motion.button>
-            </motion.div>
-          )}
-
-          {imageSrc && !loading && !error && (
-            <motion.div
-              key="image"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative"
-              style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              <img
-                src={imageSrc}
-                alt={`Facture ${expense.vendor}`}
-                className="max-w-none max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                draggable={false}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Ouvrir dans un nouvel onglet
+            </a>
+          </div>
+        ) : isPdf ? (
+          <motion.iframe
+            key="pdf"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            src={expense.receipt_url}
+            className="w-full h-full rounded-lg border border-white/10"
+            style={{
+              transform: `scale(${zoom}) rotate(${rotation}deg)`,
+              transition: 'transform 0.3s ease',
+              transformOrigin: 'center center',
+              maxHeight: '100%',
+            }}
+            title={`Facture ${expense.vendor}`}
+          />
+        ) : (
+          <motion.div
+            key="image"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{
+              transform: `scale(${zoom}) rotate(${rotation}deg)`,
+              transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={expense.receipt_url}
+              alt={`Facture ${expense.vendor}`}
+              className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
+              draggable={false}
+              onError={() => setImgError(true)}
+            />
+          </motion.div>
+        )}
       </div>
 
-      {/* Footer Info */}
+      {/* ── Footer description ── */}
       {expense.description && (
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4"
+          className="flex-shrink-0 bg-gradient-to-t from-black to-transparent px-4 py-3"
         >
           <div className="max-w-7xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <p className="text-white text-sm">
-                <span className="font-semibold">Description :</span> {expense.description}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
+              <p className="text-white text-sm truncate">
+                <span className="font-semibold text-white/70">Description :</span> {expense.description}
               </p>
             </div>
           </div>

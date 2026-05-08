@@ -66,20 +66,10 @@ export function InvoiceGallery({ expenses, onExpenseDeleted, onExpenseUpdated, c
     });
   }, [expenses, search, filterCategory, filterStatus]);
 
-  // Load thumbnail
-  const loadThumbnail = async (expense: Expense): Promise<string | null> => {
-    if (!expense.receipt_url || thumbnails[expense.id]) return thumbnails[expense.id] || null;
-
-    try {
-      const response = await fetch(`${expense.receipt_url}?t=thumbnail`);
-      if (!response.ok) return null;
-
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('Error loading thumbnail:', err);
-      return null;
-    }
+  // Thumbnail URL — uses the real /api/thumbnails endpoint (Sharp-generated, 7-day cache)
+  const thumbnailSrc = (expense: Expense): string | null => {
+    if (!expense.receipt_url) return null;
+    return `/api/thumbnails?id=${expense.id}`;
   };
 
   // View expense
@@ -274,11 +264,13 @@ export function InvoiceGallery({ expenses, onExpenseDeleted, onExpenseUpdated, c
                   >
                     {/* Thumbnail */}
                     <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-900 overflow-hidden">
-                      {expense.receipt_url ? (
+                      {thumbnailSrc(expense) ? (
                         <img
-                          src={`${expense.receipt_url}?t=thumbnail`}
+                          src={thumbnailSrc(expense)!}
                           alt={expense.vendor}
+                          loading="lazy"
                           className="w-full h-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).src = expense.receipt_url ?? ''; }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -359,9 +351,11 @@ export function InvoiceGallery({ expenses, onExpenseDeleted, onExpenseUpdated, c
                     <div className="w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden flex-shrink-0">
                       {expense.receipt_url ? (
                         <img
-                          src={`${expense.receipt_url}?t=thumbnail`}
+                          src={thumbnailSrc(expense)!}
                           alt={expense.vendor}
+                          loading="lazy"
                           className="w-full h-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).src = expense.receipt_url ?? ''; }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
