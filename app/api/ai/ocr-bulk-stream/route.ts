@@ -27,6 +27,9 @@ const ALLOWED_MIME_TYPES = new Set([
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+  // Track start time for timeout
+  const startTime = Date.now();
+
   // ------------------------------------------------------------------
   // 1. Authentication & subscription check
   // ------------------------------------------------------------------
@@ -340,9 +343,6 @@ export async function POST(req: NextRequest) {
     },
   });
 }
-
-// Track start time for timeout
-const startTime = Date.now();
 
 // ---------------------------------------------------------------------------
 // GET handler - Get queue status

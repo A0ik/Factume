@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { extractWithTesseract, isTesseractResultReliable, tesseractResultToExpense } from './ocr-tesseract';
+import { convertPdfToImages, isPDFBuffer } from './pdf-to-image';
 import OpenAI from 'openai';
 import { buildOcrPrompt } from './ocr-helpers';
 import { generateStoragePath, sanitizeCategory, sanitizeString, sanitizeNumeric, sanitizeDate, sanitizePaymentMethod } from './ocr-helpers';
@@ -57,8 +58,8 @@ const JOB_TIMEOUT_MS = 120000; // 2 minutes per job max
 
 // Cost estimation (OpenRouter pricing)
 const OPENROUTER_COST_PER_1M_TOKENS = {
-  input: 0.15, // GPT-4o-mini pricing
-  output: 0.60,
+  input: 0.30, // Gemini 2.5 Flash pricing
+  output: 2.50,
 };
 
 // ---------------------------------------------------------------------------
@@ -225,64 +226,72 @@ export class OCRQueueManager {
       const buffer = Buffer.from(await fileData.arrayBuffer());
       const mimeType = job.mimeType || 'image/jpeg';
 
-      // Step 1: Try Tesseract (FREE)
-      console.log(`[OCR Queue] Processing ${job.fileName} with Tesseract...`);
-      const tesseractResult = await Promise.race([
-        extractWithTesseract(buffer, mimeType),
-        timeoutPromise,
-      ]);
+      // Check if it's a PDF
+      const isPDF = isPDFBuffer(buffer);
+      console.log(`[OCR Queue] Processing ${job.fileName} (${isPDF ? 'PDF' : 'Image'})...`);
 
-      let expense: Record<string, unknown> | undefined;
+      let expenses: Record<string, unknown>[] = [];
       let method: 'tesseract' | 'openrouter' | 'hybrid' = 'tesseract';
-      let confidence = tesseractResult.confidence;
+      let confidence = 0;
       let costUsd = 0;
 
-      // Step 2: Check if Tesseract is reliable enough
-      if (isTesseractResultReliable(tesseractResult)) {
-        console.log(`[OCR Queue] Tesseract result reliable (${confidence}), using it`);
-        expense = tesseractResultToExpense(tesseractResult, {
-          userId: job.userId,
-          receiptUrl: job.fileUrl,
-          storagePath: job.storagePath,
-        });
-        method = 'tesseract';
-      } else {
-        console.log(`[OCR Queue] Tesseract confidence low (${confidence}), falling back to OpenRouter`);
-        method = 'hybrid';
+      if (isPDF) {
+        // PDF: Convert to images first, then process each page
+        console.log(`[OCR Queue] PDF detected, converting to images...`);
+        const conversionResult = await convertPdfToImages(buffer, { maxPages: 10 });
 
-        // Fallback to OpenRouter
-        const openrouterResult = await Promise.race([
-          this.processWithOpenRouter(buffer, mimeType, job.userId, job.fileUrl, job.storagePath),
-          timeoutPromise,
-        ]);
-
-        expense = openrouterResult.expense;
-        confidence = openrouterResult.confidence;
-        costUsd = openrouterResult.costUsd;
-
-        // Use Tesseract basic data as fallback for missing fields
-        if (expense) {
-          expense.ocr_raw_response = {
-            openrouter: expense.ocr_raw_response,
-            tesseract: {
-              text: tesseractResult.text,
-              confidence: tesseractResult.confidence,
-              basicData: tesseractResult.basicData,
-            },
-          };
+        if (!conversionResult.success || conversionResult.pages.length === 0) {
+          throw new Error(`PDF conversion failed: ${conversionResult.error}`);
         }
+
+        console.log(`[OCR Queue] PDF converted to ${conversionResult.pages.length} pages`);
+
+        // Process each page
+        for (const page of conversionResult.pages) {
+          const pageResult = await this.processImagePage(
+            page.imageBuffer,
+            'image/png',
+            job.userId,
+            job.fileUrl,
+            job.storagePath,
+            page.pageNumber
+          );
+
+          expenses.push(pageResult.expense);
+          costUsd += pageResult.costUsd;
+
+          if (pageResult.method === 'openrouter') {
+            method = 'hybrid'; // At least one page used OpenRouter
+          }
+
+          // Use average confidence
+          confidence += pageResult.confidence;
+        }
+
+        confidence = confidence / expenses.length;
+
+        console.log(`[OCR Queue] PDF processing complete: ${expenses.length} pages, avg confidence: ${confidence.toFixed(2)}, cost: $${costUsd.toFixed(4)}`);
+
+      } else {
+        // Single image: Process directly
+        const result = await this.processImagePage(buffer, mimeType, job.userId, job.fileUrl, job.storagePath);
+        expenses.push(result.expense);
+        confidence = result.confidence;
+        costUsd = result.costUsd;
+        method = result.method;
       }
 
-      // Step 3: Save expense to database
-      if (expense) {
-        const { data: savedExpense, error: insertError } = await this.supabase
+      // Step 3: Save expenses to database
+      if (expenses.length > 0) {
+        console.log(`[OCR Queue] Saving ${expenses.length} expense(s) to database...`);
+
+        const { data: savedExpenses, error: insertError } = await this.supabase
           .from('expenses')
-          .insert(expense)
-          .select()
-          .single();
+          .insert(expenses)
+          .select();
 
         if (insertError) {
-          throw new Error(`Failed to save expense: ${insertError.message}`);
+          throw insertError;
         }
 
         // Update job with success
@@ -295,11 +304,11 @@ export class OCRQueueManager {
               success: true,
               method,
               confidence,
-              expense_id: savedExpense.id,
+              expense_ids: savedExpenses.map((e: any) => e.id),
             },
             ocr_method: method,
             confidence,
-            expense_id: savedExpense.id,
+            expense_id: savedExpenses[0]?.id, // Primary expense ID
           })
           .eq('id', job.id);
 
@@ -313,7 +322,7 @@ export class OCRQueueManager {
           confidence,
           processingTimeMs: Date.now() - startTime,
           costUsd,
-          expense: savedExpense,
+          expense: savedExpenses[0], // Return first saved expense
         };
       }
 
@@ -349,6 +358,94 @@ export class OCRQueueManager {
         errorCode: 'PROCESSING_ERROR',
       };
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // Process a single image page with Tesseract + OpenRouter fallback
+  // --------------------------------------------------------------------------
+
+  private async processImagePage(
+    buffer: Buffer,
+    mimeType: string,
+    userId: string,
+    receiptUrl: string,
+    storagePath: string,
+    pageNumber?: number
+  ): Promise<{
+    expense: Record<string, unknown>;
+    confidence: number;
+    costUsd: number;
+    method: 'tesseract' | 'openrouter' | 'hybrid';
+  }> {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Page processing timeout')), JOB_TIMEOUT_MS / 2)
+    );
+
+    // Step 1: Try Tesseract (FREE)
+    const pageLabel = pageNumber ? `Page ${pageNumber}` : 'Image';
+    console.log(`[OCR Queue] Processing ${pageLabel} with Tesseract...`);
+
+    const tesseractResult = await Promise.race([
+      extractWithTesseract(buffer, mimeType),
+      timeoutPromise,
+    ]);
+
+    let expense: Record<string, unknown> | undefined;
+    let method: 'tesseract' | 'openrouter' | 'hybrid' = 'tesseract';
+    let confidence = tesseractResult.confidence;
+    let costUsd = 0;
+
+    // Step 2: Check if Tesseract is reliable enough
+    if (isTesseractResultReliable(tesseractResult)) {
+      console.log(`[OCR Queue] ${pageLabel} Tesseract result reliable (${confidence}), using it`);
+      expense = tesseractResultToExpense(tesseractResult, {
+        userId,
+        receiptUrl,
+        storagePath,
+      });
+
+      // Add page number info if multipage PDF
+      if (pageNumber) {
+        expense.page_number = pageNumber;
+        expense.description = `${expense.description || 'Dépense'} (page ${pageNumber})`;
+      }
+
+      method = 'tesseract';
+    } else {
+      console.log(`[OCR Queue] ${pageLabel} Tesseract confidence low (${confidence}), falling back to OpenRouter`);
+      method = 'openrouter';
+
+      // Fallback to OpenRouter
+      const openrouterResult = await Promise.race([
+        this.processWithOpenRouter(buffer, mimeType, userId, receiptUrl, storagePath),
+        timeoutPromise,
+      ]);
+
+      expense = openrouterResult.expense;
+      confidence = openrouterResult.confidence;
+      costUsd = openrouterResult.costUsd;
+
+      // Add page number info if multipage PDF
+      if (pageNumber && expense) {
+        expense.page_number = pageNumber;
+        const baseDesc = expense.description || 'Dépense';
+        expense.description = `${baseDesc} (page ${pageNumber})`;
+      }
+
+      // Use Tesseract basic data as fallback for missing fields
+      if (expense) {
+        expense.ocr_raw_response = {
+          openrouter: expense.ocr_raw_response,
+          tesseract: {
+            text: tesseractResult.text,
+            confidence: tesseractResult.confidence,
+            basicData: tesseractResult.basicData,
+          },
+        };
+      }
+    }
+
+    return { expense, confidence, costUsd, method };
   }
 
   // --------------------------------------------------------------------------

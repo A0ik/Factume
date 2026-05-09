@@ -46,6 +46,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.7.284",
+    "pdftoimg-js": "^0.2.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.5.2",

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { extractWithTesseract, isTesseractResultReliable, tesseractResultToExpense } from '@/lib/ocr-tesseract';
+import { convertPdfToImages, isPDFBuffer } from '@/lib/pdf-to-image';
 import OpenAI from 'openai';
 import { buildOcrPrompt } from '@/lib/ocr-helpers';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
@@ -155,87 +156,22 @@ export async function POST(req: NextRequest) {
       };
     };
 
-    // Skip Tesseract for PDFs (not supported)
+    // For PDFs, convert to images first for Tesseract
+    let ocrBuffer: Buffer = originalBuffer;
+    let ocrMimeType = file.type;
+
     if (isPdf) {
-      console.log('[OCR Hybrid] PDF detected, using OpenRouter directly');
-      result = await processWithOpenRouter(
-        originalBuffer,
-        file.type,
-        user.id,
-        supabase,
-        receiptPublicUrl,
-        storagePath,
-        startTime
-      );
-    } else {
-      // Step 1: Try Tesseract (FREE)
-      console.log('[OCR Hybrid] Step 1: Trying Tesseract OCR...');
-      const tesseractResult = await extractWithTesseract(originalBuffer, file.type);
+      console.log('[OCR Hybrid] PDF detected, converting to images for Tesseract...');
+      const conversionResult = await convertPdfToImages(originalBuffer, { maxPages: 1 });
 
-      result = {
-        success: true,
-        method: 'tesseract',
-        confidence: tesseractResult.confidence,
-        processingTimeMs: Date.now() - startTime,
-        costUsd: 0,
-        tesseractData: {
-          confidence: tesseractResult.confidence,
-          basicData: tesseractResult.basicData,
-        },
-      };
-
-      // Step 2: Check if Tesseract is reliable enough
-      if (isTesseractResultReliable(tesseractResult)) {
-        console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} >= ${TESSERACT_CONFIDENCE_THRESHOLD}, using it`);
-
-        result.extracted = tesseractResultToExpense(tesseractResult, {
-          userId: user.id,
-          receiptUrl: receiptPublicUrl,
-          storagePath: storagePath,
-          category: 'other',
-        });
-
-        // Add vendor mappings check
-        if (result.extracted.vendor) {
-          await applyVendorMappings(supabase, user.id, result.extracted);
-        }
-
-        // Save to database
-        const { data: savedExpense, error: dbError } = await supabase
-          .from('expenses')
-          .insert({ ...result.extracted, ocr_method: 'tesseract' })
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error('[OCR Hybrid] DB insert error:', dbError);
-          return NextResponse.json(
-            {
-              warning: 'Extraction réussie mais erreur lors de la sauvegarde en base.',
-              extracted: result.extracted,
-              db_error: dbError.message,
-            },
-            { status: 207 }
-          );
-        }
-
-        return NextResponse.json({
-          success: true,
-          method: 'tesseract',
-          confidence: result.confidence,
-          processingTimeMs: result.processingTimeMs,
-          costUsd: 0,
-          expense: savedExpense,
-          extracted: result.extracted,
-          receipt_url: receiptPublicUrl,
-          tesseract_data: result.tesseractData,
-        });
-
+      if (conversionResult.success && conversionResult.pages.length > 0) {
+        // Use first page for Tesseract
+        ocrBuffer = conversionResult.pages[0].imageBuffer as Buffer;
+        ocrMimeType = 'image/png';
+        console.log('[OCR Hybrid] PDF first page converted, trying Tesseract...');
       } else {
-        console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} < ${TESSERACT_CONFIDENCE_THRESHOLD}, falling back to OpenRouter`);
-
-        // Fallback to OpenRouter
-        const openrouterResult = await processWithOpenRouter(
+        console.log('[OCR Hybrid] PDF conversion failed, using OpenRouter directly');
+        result = await processWithOpenRouter(
           originalBuffer,
           file.type,
           user.id,
@@ -245,26 +181,106 @@ export async function POST(req: NextRequest) {
           startTime
         );
 
-        result = {
-          ...openrouterResult,
-          method: 'hybrid',
-          tesseractData: {
+        return NextResponse.json(result);
+      }
+    }
+
+    // Step 1: Try Tesseract (FREE)
+    console.log('[OCR Hybrid] Step 1: Trying Tesseract OCR...');
+    const tesseractResult = await extractWithTesseract(ocrBuffer, ocrMimeType);
+
+    result = {
+      success: true,
+      method: 'tesseract',
+      confidence: tesseractResult.confidence,
+      processingTimeMs: Date.now() - startTime,
+      costUsd: 0,
+      tesseractData: {
+        confidence: tesseractResult.confidence,
+        basicData: tesseractResult.basicData,
+      },
+    };
+
+    // Step 2: Check if Tesseract is reliable enough
+    if (isTesseractResultReliable(tesseractResult)) {
+      console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} >= ${TESSERACT_CONFIDENCE_THRESHOLD}, using it`);
+
+      result.extracted = tesseractResultToExpense(tesseractResult, {
+        userId: user.id,
+        receiptUrl: receiptPublicUrl,
+        storagePath: storagePath,
+        category: 'other',
+      });
+
+      // Add vendor mappings check
+      if (result.extracted.vendor) {
+        await applyVendorMappings(supabase, user.id, result.extracted);
+      }
+
+      // Save to database
+      const { data: savedExpense, error: dbError } = await supabase
+        .from('expenses')
+        .insert({ ...result.extracted, ocr_method: 'tesseract' })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('[OCR Hybrid] DB insert error:', dbError);
+        return NextResponse.json(
+          {
+            warning: 'Extraction réussie mais erreur lors de la sauvegarde en base.',
+            extracted: result.extracted,
+            db_error: dbError.message,
+          },
+          { status: 207 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        method: 'tesseract',
+        confidence: result.confidence,
+        processingTimeMs: result.processingTimeMs,
+        costUsd: 0,
+        expense: savedExpense,
+        extracted: result.extracted,
+        receipt_url: receiptPublicUrl,
+        tesseract_data: result.tesseractData,
+      });
+
+    } else {
+      console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} < ${TESSERACT_CONFIDENCE_THRESHOLD}, falling back to OpenRouter`);
+
+      // Fallback to OpenRouter
+      const openrouterResult = await processWithOpenRouter(
+        originalBuffer,
+        file.type,
+        user.id,
+        supabase,
+        receiptPublicUrl,
+        storagePath,
+        startTime
+      );
+
+      result = {
+        ...openrouterResult,
+        method: 'hybrid',
+        tesseractData: {
+          confidence: tesseractResult.confidence,
+          basicData: tesseractResult.basicData,
+        },
+      };
+
+      // Merge Tesseract basic data as fallback
+      if (result.extracted) {
+        (result.extracted as Record<string, unknown>).ocr_raw_response = {
+          openrouter: (result.extracted as Record<string, unknown>).ocr_raw_response,
+          tesseract: {
+            text: tesseractResult.text,
             confidence: tesseractResult.confidence,
             basicData: tesseractResult.basicData,
           },
         };
-
-        // Merge Tesseract basic data as fallback
-        if (result.extracted) {
-          (result.extracted as Record<string, unknown>).ocr_raw_response = {
-            openrouter: (result.extracted as Record<string, unknown>).ocr_raw_response,
-            tesseract: {
-              text: tesseractResult.text,
-              confidence: tesseractResult.confidence,
-              basicData: tesseractResult.basicData,
-            },
-          };
-        }
       }
     }
 
@@ -430,7 +446,7 @@ async function processWithOpenRouter(
   // Estimate cost (rough calculation)
   const inputTokens = base64.length / 4;
   const outputTokens = JSON.stringify(parsed).length / 4;
-  const costUsd = (inputTokens / 1_000_000) * 0.15 + (outputTokens / 1_000_000) * 0.6;
+  const costUsd = (inputTokens / 1_000_000) * 0.30 + (outputTokens / 1_000_000) * 2.50;
 
   return {
     success: true,
