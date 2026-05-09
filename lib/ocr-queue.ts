@@ -5,9 +5,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { extractWithTesseract, isTesseractResultReliable, tesseractResultToExpense } from './ocr-tesseract';
-import { convertPdfToImages, isPDFBuffer } from './pdf-to-image';
+import { convertPdfToImages, isPDFBuffer, getPDFPageCount } from './pdf-to-image';
 import OpenAI from 'openai';
-import { buildOcrPrompt } from './ocr-helpers';
+import { buildOcrPrompt, buildMultiPagePDFPrompt } from './ocr-helpers';
 import { generateStoragePath, sanitizeCategory, sanitizeString, sanitizeNumeric, sanitizeDate, sanitizePaymentMethod } from './ocr-helpers';
 import { getAccountCode, generateJournalEntry } from './plan-comptable';
 import { validatePCGCode } from './ocr-helpers';
@@ -236,42 +236,51 @@ export class OCRQueueManager {
       let costUsd = 0;
 
       if (isPDF) {
-        // PDF: Convert to images first, then process each page
-        console.log(`[OCR Queue] PDF detected, converting to images...`);
-        const conversionResult = await convertPdfToImages(buffer, { maxPages: 10 });
+        // Get page count first
+        const totalPages = await getPDFPageCount(buffer);
 
-        if (!conversionResult.success || conversionResult.pages.length === 0) {
-          throw new Error(`PDF conversion failed: ${conversionResult.error}`);
-        }
+        if (totalPages > 1) {
+          // Multi-page PDF: Use OpenRouter directly (can handle multipage PDFs with multiple invoices)
+          console.log(`[OCR Queue] Multi-page PDF detected (${totalPages} pages), using OpenRouter for intelligent extraction...`);
 
-        console.log(`[OCR Queue] PDF converted to ${conversionResult.pages.length} pages`);
+          const multipageResult = await this.processMultiPagePDF(
+            buffer,
+            job.userId,
+            job.fileUrl,
+            job.storagePath,
+            totalPages
+          );
 
-        // Process each page
-        for (const page of conversionResult.pages) {
-          const pageResult = await this.processImagePage(
-            page.imageBuffer,
+          expenses = multipageResult.expenses;
+          costUsd = multipageResult.costUsd;
+          confidence = multipageResult.confidence;
+          method = 'openrouter';
+
+          console.log(`[OCR Queue] Multi-page PDF processing complete: ${expenses.length} invoice(s) extracted, confidence: ${confidence.toFixed(2)}, cost: $${costUsd.toFixed(4)}`);
+        } else {
+          // Single-page PDF: Convert to image and try Tesseract first
+          console.log(`[OCR Queue] Single-page PDF detected, converting to image for Tesseract...`);
+          const conversionResult = await convertPdfToImages(buffer, { maxPages: 1 });
+
+          if (!conversionResult.success || conversionResult.pages.length === 0) {
+            throw new Error(`PDF conversion failed: ${conversionResult.error}`);
+          }
+
+          const firstPage = conversionResult.pages[0];
+          const result = await this.processImagePage(
+            firstPage.imageBuffer,
             'image/png',
             job.userId,
             job.fileUrl,
             job.storagePath,
-            page.pageNumber
+            1
           );
 
-          expenses.push(pageResult.expense);
-          costUsd += pageResult.costUsd;
-
-          if (pageResult.method === 'openrouter') {
-            method = 'hybrid'; // At least one page used OpenRouter
-          }
-
-          // Use average confidence
-          confidence += pageResult.confidence;
+          expenses.push(result.expense);
+          confidence = result.confidence;
+          costUsd = result.costUsd;
+          method = result.method;
         }
-
-        confidence = confidence / expenses.length;
-
-        console.log(`[OCR Queue] PDF processing complete: ${expenses.length} pages, avg confidence: ${confidence.toFixed(2)}, cost: $${costUsd.toFixed(4)}`);
-
       } else {
         // Single image: Process directly
         const result = await this.processImagePage(buffer, mimeType, job.userId, job.fileUrl, job.storagePath);
@@ -552,6 +561,140 @@ export class OCRQueueManager {
     return {
       expense,
       confidence: normalizeConfidence(parsed.confidence),
+      costUsd,
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // Process multi-page PDF - extract multiple invoices with OpenRouter
+  // --------------------------------------------------------------------------
+
+  private async processMultiPagePDF(
+    buffer: Buffer,
+    userId: string,
+    receiptUrl: string,
+    storagePath: string,
+    totalPages: number
+  ): Promise<{
+    expenses: Record<string, unknown>[];
+    confidence: number;
+    costUsd: number;
+  }> {
+    const base64 = buffer.toString('base64');
+
+    console.log(`[OCR Queue] Sending ${totalPages}-page PDF to OpenRouter for multi-invoice extraction...`);
+
+    const completion = await this.openrouter.chat.completions.create({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: buildMultiPagePDFPrompt(totalPages) },
+            { type: 'image_url', image_url: { url: `data:application/pdf;base64,${base64}` } },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.1,
+    });
+
+    const rawContent = completion.choices[0]?.message?.content;
+    if (!rawContent) {
+      throw new Error('OpenRouter returned empty response for multi-page PDF');
+    }
+
+    const parsed = JSON.parse(rawContent);
+
+    // Calculate cost
+    const inputTokens = base64.length / 4;
+    const outputTokens = JSON.stringify(parsed).length / 4;
+    const costUsd = (inputTokens / 1_000_000) * OPENROUTER_COST_PER_1M_TOKENS.input +
+                    (outputTokens / 1_000_000) * OPENROUTER_COST_PER_1M_TOKENS.output;
+
+    // Parse response - should contain an array of invoices
+    const invoicesArray = Array.isArray(parsed.invoices) ? parsed.invoices :
+                          (Array.isArray(parsed) ? parsed : [parsed]);
+
+    console.log(`[OCR Queue] Extracted ${invoicesArray.length} invoice(s) from ${totalPages}-page PDF`);
+
+    // Convert each invoice to an expense record
+    const expenses: Record<string, unknown>[] = [];
+    let totalConfidence = 0;
+
+    for (const invoice of invoicesArray) {
+      const category = sanitizeCategory(invoice.category);
+      const supplierCategory = sanitizeString(invoice.supplier_category);
+      const extractedAccountCode = sanitizeString(invoice.account_code);
+      const extractedAccountLabel = sanitizeString(invoice.account_label);
+
+      const accountMapping = getAccountCode(category, supplierCategory);
+      const finalAccountCode = (validatePCGCode(extractedAccountCode) ? extractedAccountCode : null) ?? accountMapping.code;
+      const finalAccountLabel = extractedAccountLabel ?? accountMapping.label;
+
+      const journalEntry = generateJournalEntry({
+        category,
+        supplierCategory,
+        amountTtc: sanitizeNumeric(invoice.amount) ?? 0,
+        amountHt: sanitizeNumeric(invoice.ht_amount),
+        vatAmount: sanitizeNumeric(invoice.vat_amount),
+        vatRate: sanitizeNumeric(invoice.vat_rate),
+        paymentMethod: sanitizePaymentMethod(invoice.payment_method),
+      });
+
+      const expense: Record<string, unknown> = {
+        user_id: userId,
+        vendor: sanitizeString(invoice.vendor),
+        amount: sanitizeNumeric(invoice.amount),
+        vat_amount: sanitizeNumeric(invoice.vat_amount),
+        category,
+        date: sanitizeDate(invoice.date),
+        due_date: sanitizeDate(invoice.due_date),
+        description: sanitizeString(invoice.description) || `Facture ${invoicesArray.indexOf(invoice) + 1}/${invoicesArray.length}`,
+        receipt_url: receiptUrl,
+        receipt_storage_path: storagePath,
+        payment_method: sanitizePaymentMethod(invoice.payment_method),
+        status: 'pending',
+        ocr_raw_response: invoice,
+        ocr_confidence: normalizeConfidence(invoice.confidence),
+        ocr_line_items: sanitizeLineItems(invoice.line_items),
+        ocr_supplier_siret: sanitizeString(invoice.vendor_siret),
+        ocr_invoice_number: sanitizeString(invoice.invoice_number),
+        ocr_currency: sanitizeString(invoice.currency) ?? 'EUR',
+        ocr_payment_due_date: sanitizeDate(invoice.due_date),
+        account_code: finalAccountCode,
+        account_label: finalAccountLabel,
+        journal_type: journalEntry.journalType,
+        journal_entry: {
+          debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
+          credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
+          vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
+        },
+        vat_account: journalEntry.vatAccount || null,
+        document_type: sanitizeString(invoice.document_type),
+        supplier_category: supplierCategory,
+        is_professional_expense: typeof invoice.is_professional_expense === 'boolean' ? invoice.is_professional_expense : true,
+        vat_details: sanitizeVatDetails(invoice.vat_details),
+        ocr_method: 'openrouter',
+        page_number: invoice.page_number,
+      };
+
+      // Remove null keys
+      for (const key of Object.keys(expense)) {
+        if (expense[key] === null || expense[key] === undefined) {
+          delete expense[key];
+        }
+      }
+
+      expenses.push(expense);
+      totalConfidence += normalizeConfidence(invoice.confidence) || 0.8;
+    }
+
+    const avgConfidence = expenses.length > 0 ? totalConfidence / expenses.length : 0.8;
+
+    return {
+      expenses,
+      confidence: avgConfidence,
       costUsd,
     };
   }

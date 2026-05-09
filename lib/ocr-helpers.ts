@@ -264,6 +264,72 @@ Analyse maintenant ce document et produis l'écriture comptable avec la plus gra
 }
 
 // ---------------------------------------------------------------------------
+// Multi-page PDF OCR prompt — extract ALL invoices from a multi-page PDF
+// ---------------------------------------------------------------------------
+
+export function buildMultiPagePDFPrompt(totalPages: number): string {
+  return `Tu es un expert-comptable français spécialisé dans l'extraction de MULTIPLES factures depuis des PDFs multipages.
+
+CONTEXTE : Le document PDF que tu vas analyser contient ${totalPages} pages. Il peut y avoir :
+- UNE SEULE facture répartie sur plusieurs pages
+- PLUSIEURS factures différentes sur des pages différentes
+- Un mélange de factures et d'autres documents
+
+CONSIGNES CRITIQUES :
+1. Analyse TOUTES les pages du PDF systématiquement
+2. Identifie TOUTES les factures présentes (peut être 1, 2, 3, ou plus)
+3. Pour CHAQUE facture détectée, crée un objet d'extraction complet
+4. Si UNE facture est répartie sur plusieurs pages, regroupe les informations
+5. Ne devine JAMAIS une information non visible — mets null si absent
+6. Les montants doivent être des NOMBRES, sans symbole monétaire
+7. Les dates doivent être au format YYYY-MM-DD (ISO 8601)
+
+FORMAT DE SORTIE OBLIGATOIRE :
+Retourne UNIQUEMENT du JSON valide avec cette structure exacte :
+
+{
+  "invoices": [
+    {
+      "vendor": "Nom du fournisseur",
+      "vendor_siret": "SIRET si visible",
+      "vendor_vat_number": "TVA si visible",
+      "invoice_number": "Numéro de facture",
+      "date": "YYYY-MM-DD",
+      "due_date": "YYYY-MM-DD ou null",
+      "amount": 120.00,
+      "ht_amount": 100.00,
+      "vat_amount": 20.00,
+      "vat_rate": 20.0,
+      "vat_details": [{"rate": 20.0, "base": 100.00, "amount": 20.00}],
+      "description": "Description des achats",
+      "category": "transport|meals|accommodation|equipment|office|shopping|mileage|telecom|insurance|software|other",
+      "currency": "EUR",
+      "line_items": [{"description": "Article", "quantity": 1, "unit_price": 100.00, "total": 100.00, "vat_rate": 20.0}],
+      "confidence": 85,
+      "payment_method": "card|cash|transfer|check|null",
+      "supplier_category": "restaurant|gas_station|hotel|supermarket|other",
+      "account_code": "606400",
+      "account_label": "Fournitures de bureau",
+      "document_type": "invoice|receipt|other",
+      "is_professional_expense": true,
+      "vat_details": [{"rate": 20.0, "base": 100.00, "amount": 20.00}],
+      "page_number": 1
+    }
+  ],
+  "total_invoices": 1,
+  "pages_analyzed": ${totalPages}
+}
+
+IMPORTANT :
+- Le tableau "invoices" doit contenir TOUTES les factures extraites
+- Si 0 facture n'est trouvée, retourne un tableau vide
+- "total_invoices" doit indiquer le nombre total de factures trouvées
+- "pages_analyzed" doit indiquer le nombre de pages analysées (${totalPages})
+
+Analyse maintenant ce PDF multipage et extrait TOUTES les factures présentes.`;
+}
+
+// ---------------------------------------------------------------------------
 // Concurrency helper — queue-based, race-condition-free
 // ---------------------------------------------------------------------------
 
