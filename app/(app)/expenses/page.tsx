@@ -277,7 +277,13 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
 
             <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               {expense.receipt_url && (
-                <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+                <a
+                  href={expense.receipt_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
+                  aria-label={`Voir le justificatif pour ${expense.vendor}`}
+                >
                   <FileImage size={14} />
                 </a>
               )}
@@ -286,10 +292,20 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
                   <Check size={14} />
                 </button>
               )}
-              <button onClick={() => onEdit(expense)} className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all">
+              <button
+                data-action="edit-expense"
+                onClick={() => onEdit(expense)}
+                className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
+                aria-label={`Modifier la dépense: ${expense.vendor}`}
+              >
                 <Edit2 size={14} />
               </button>
-              <button onClick={() => onDelete(expense.id)} className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
+              <button
+                data-action="delete-expense"
+                onClick={() => onDelete(expense.id)}
+                className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                aria-label={`Supprimer la dépense: ${expense.vendor}`}
+              >
                 <Trash2 size={14} />
               </button>
             </div>

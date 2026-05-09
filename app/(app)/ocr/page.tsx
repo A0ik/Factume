@@ -467,9 +467,12 @@ export default function OCRPage() {
   const processFile = useCallback(async (scannedFile: ScannedFile) => {
     updateFile(scannedFile.id, { status: 'uploading', progress: 10 });
 
+    // Cleanup function for interval
+    let progressInterval: NodeJS.Timeout | null = null;
+
     try {
       // Simulate upload progress
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setFiles(prev => prev.map(f => {
           if (f.id !== scannedFile.id) return f;
           const newProgress = Math.min(f.progress + 8, 45);
@@ -487,7 +490,11 @@ export default function OCRPage() {
         body: formData,
       });
 
-      clearInterval(progressInterval);
+      // Clear interval in all cases (success or error)
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
 
       const data = await response.json().catch(() => null);
 
@@ -527,6 +534,12 @@ export default function OCRPage() {
         toast.success(`"${scannedFile.file.name}" analysé avec succès`);
       }
     } catch (err: any) {
+      // Clear interval on error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+
       updateFile(scannedFile.id, {
         status: 'error',
         progress: 0,
@@ -1133,6 +1146,7 @@ export default function OCRPage() {
                       Résultat de l'analyse
                     </h3>
                     <motion.button
+                      data-action="close-panel"
                       whileHover={{ rotate: 90, scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => { setReviewingFile(null); setEditMode(false); }}
@@ -1144,7 +1158,7 @@ export default function OCRPage() {
                   {/* Thumbnail preview */}
                   {reviewingFile.preview && (
                     <div className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
-                      <img src={reviewingFile.preview} alt="" className="w-full h-full object-cover" />
+                      <img src={reviewingFile.preview} alt={`Aperçu du justificatif: ${reviewingFile.result.extracted.vendor || 'Document'}`} className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -1492,6 +1506,7 @@ export default function OCRPage() {
                   ) : (
                     <>
                       <motion.button
+                        data-action="verify-expense"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => verifyExpense(reviewingFile)}
@@ -1502,6 +1517,7 @@ export default function OCRPage() {
                       </motion.button>
                       <div className="flex gap-2">
                         <motion.button
+                          data-action="edit-expense"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setEditMode(true)}
@@ -1511,6 +1527,7 @@ export default function OCRPage() {
                           Corriger
                         </motion.button>
                         <motion.button
+                          data-action="delete-expense"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => removeFile(reviewingFile.id)}
@@ -1546,13 +1563,19 @@ export default function OCRPage() {
                 <div className="p-5 border-b border-gray-100 dark:border-gray-700">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Détail de la dépense</h3>
-                    <motion.button whileHover={{ rotate: 90, scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => setReviewingDbExpense(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
+                    <motion.button
+                      data-action="close-panel"
+                      whileHover={{ rotate: 90, scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setReviewingDbExpense(null)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors"
+                    >
                       <X size={16} />
                     </motion.button>
                   </div>
                   {reviewingDbExpense.receipt_url && (
                     <div className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
-                      <img src={reviewingDbExpense.receipt_url} alt="" className="w-full h-full object-cover" />
+                      <img src={reviewingDbExpense.receipt_url} alt={`Justificatif: ${reviewingDbExpense.vendor || 'Document'}`} className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -1714,7 +1737,7 @@ export default function OCRPage() {
                   {/* Thumbnail */}
                   <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {expense.receipt_url ? (
-                      <img src={expense.receipt_url} alt="" className="w-full h-full object-cover" />
+                      <img src={expense.receipt_url} alt={`Miniature: ${expense.vendor || 'Document'}`} className="w-full h-full object-cover" />
                     ) : (
                       <FileText size={20} className="text-gray-400" />
                     )}

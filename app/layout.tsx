@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from '@/components/Providers';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import DOMPurify from 'isomorphic-dompurify';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -308,12 +309,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ],
   };
 
+  // Sanitize JSON-LD to prevent XSS
+  const sanitizedJsonLd = DOMPurify.sanitize(JSON.stringify(jsonLdGraph), {
+    ALLOWED_TAGS: ['script', 'meta', 'link'],
+    ALLOWED_ATTR: ['type', 'name', 'content', 'href', 'itemprop', 'property'],
+  });
+
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph) }}
+          dangerouslySetInnerHTML={{ __html: sanitizedJsonLd }}
         />
       </head>
       <body className={inter.className}>

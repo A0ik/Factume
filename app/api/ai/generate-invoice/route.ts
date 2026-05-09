@@ -234,13 +234,15 @@ IMPORTANT — DEUX CHAMPS SÉPARÉS pour les conditions :
 
       // Post-processing : corriger les expressions mathématiques dans les items
       if (parsed.items && Array.isArray(parsed.items)) {
+        const { safeMathEvaluate } = await import('@/lib/safe-math');
         parsed.items = parsed.items.map((item: any) => {
           if (typeof item.unit_price === 'string' && /[\d\.\s\+\-\*\/\(\)]/.test(item.unit_price)) {
             try {
-              const result = Function(`"use strict"; return (${item.unit_price})`)();
-              if (typeof result === 'number' && !isNaN(result)) {
-                console.log(`[ai-generate-invoice] Corrected unit_price from "${item.unit_price}" to ${result}`);
-                item.unit_price = Math.round(result * 100) / 100;
+              const result = safeMathEvaluate(item.unit_price);
+
+              if (result.success && typeof result.result === 'number') {
+                console.log(`[ai-generate-invoice] Corrected unit_price from "${item.unit_price}" to ${result.result}`);
+                item.unit_price = result.result;
               }
             } catch (e) {
               console.error(`[ai-generate-invoice] Failed to evaluate unit_price: ${item.unit_price}`, e);

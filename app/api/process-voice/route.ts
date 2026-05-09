@@ -213,22 +213,23 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
 
       // Post-processing : corriger les expressions mathématiques dans les items
       if (parsed.items && Array.isArray(parsed.items)) {
-        parsed.items = parsed.items.map((item: VoiceExistingItem) => {
+        const { safeMathEvaluate } = await import('@/lib/safe-math');
+        parsed.items = await Promise.all(parsed.items.map(async (item: VoiceExistingItem) => {
           // Si unit_price est une expression, on essaie de l'évaluer
           if (typeof item.unit_price === 'string' && /[\d\.\s\+\-\*\/\(\)]/.test(item.unit_price)) {
             try {
-              // Évaluation sécurisée d'expressions simples
-              const result = Function(`"use strict"; return (${item.unit_price})`)();
-              if (typeof result === 'number' && !isNaN(result)) {
-                console.log(`[process-voice] Corrected unit_price from "${item.unit_price}" to ${result}`);
-                item.unit_price = Math.round(result * 100) / 100; // Arrondir à 2 décimales
+              const result = safeMathEvaluate(item.unit_price);
+
+              if (result.success && typeof result.result === 'number') {
+                console.log(`[process-voice] Corrected unit_price from "${item.unit_price}" to ${result.result}`);
+                item.unit_price = result.result;
               }
             } catch (e) {
               console.error(`[process-voice] Failed to evaluate unit_price: ${item.unit_price}`, e);
             }
           }
           return item;
-        });
+        }));
       }
     } catch (err) {
       console.error('[process-voice] Failed to parse AI response:', err);
