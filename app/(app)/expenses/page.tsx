@@ -337,7 +337,7 @@ function CustomDropdown({ label, value, onChange, options, icon: Icon }: {
       >
         <div className="flex items-center gap-3">
           {Icon && <Icon size={16} className="text-gray-400" />}
-          <span className="text-sm font-medium text-gray-900 dark:text-white">{options.find(o => o.value === value)?.label || label}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-white">{(options || []).find(o => o.value === value)?.label || label}</span>
         </div>
         <ChevronDown size={16} className={cn('text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
       </motion.button>
@@ -359,7 +359,7 @@ function CustomDropdown({ label, value, onChange, options, icon: Icon }: {
               transition={{ duration: 0.2 }}
               className="absolute z-20 w-full mt-2 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden max-h-60 overflow-y-auto"
             >
-              {options.map((option) => (
+              {(options || []).map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -381,7 +381,7 @@ function CustomDropdown({ label, value, onChange, options, icon: Icon }: {
 
 export default function ExpensesPage() {
   const { user } = useAuthStore();
-  const { clients } = useDataStore();
+  const { clients, fetchClients } = useDataStore();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -402,7 +402,13 @@ export default function ExpensesPage() {
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    if (user) fetchExpenses();
+    if (user) {
+      fetchExpenses();
+      // Charger les clients si pas encore chargés
+      if (!clients || clients.length === 0) {
+        fetchClients();
+      }
+    }
   }, [user]);
 
   // Calcul automatique IK
@@ -1211,7 +1217,7 @@ export default function ExpensesPage() {
                       className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
                     >
                       <option value="">Sans client</option>
-                      {clients.map((c) => (
+                      {clients?.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
                     </select>
