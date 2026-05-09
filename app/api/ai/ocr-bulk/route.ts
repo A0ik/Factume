@@ -27,7 +27,7 @@ const MAX_CONCURRENT_OCR = 3;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-const OCR_MODEL = 'google/gemini-2.0-flash-exp';
+const OCR_MODEL = 'google/gemini-2.5-flash';
 
 // ---------------------------------------------------------------------------
 // Types

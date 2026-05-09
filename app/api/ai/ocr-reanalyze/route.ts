@@ -15,7 +15,7 @@ import {
   buildOcrPrompt,
 } from '@/lib/ocr-helpers';
 
-const OCR_MODEL = 'google/gemini-2.0-flash-exp';
+const OCR_MODEL = 'google/gemini-2.5-flash';
 
 // ---------------------------------------------------------------------------
 // POST /api/ai/ocr-reanalyze

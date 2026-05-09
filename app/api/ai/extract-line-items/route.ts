@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
     });
 
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -319,7 +319,7 @@ export async function POST(req: NextRequest) {
         file_size: file.size,
         file_type: file.type,
         line_items_count: lineItems.length,
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
       },
     });
   } catch (error: unknown) {
