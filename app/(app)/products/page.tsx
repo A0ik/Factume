@@ -938,7 +938,7 @@ export default function ProductsPage() {
             {viewMode === 'grid' && (
               <button
                 onClick={openCreate}
-                className="bg-white/50 backdrop-blur border-2 border-dashed border-gray-200 rounded-3xl p-4 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-primary/5 transition-all group min-h-[220px]"
+                className="bg-white/50 dark:bg-slate-800/50 backdrop-blur border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl p-4 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-primary/5 transition-all group min-h-[220px]"
               >
                 <div className="w-14 h-14 rounded-2xl bg-gray-50 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
                   <Plus size={24} className="text-gray-300 group-hover:text-primary transition-colors" />
@@ -1123,7 +1123,7 @@ export default function ProductsPage() {
                             'flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold border-2 transition-all',
                             isSelected
                               ? 'border-primary bg-gradient-to-r from-primary/10 to-purple-600/10 text-primary'
-                              : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white/50'
+                              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 bg-white/50 dark:bg-slate-800/50'
                           )}
                         >
                           <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', cat.bg, isSelected && cat.color.replace('from-', 'to-').split(' ')[0])}>
@@ -1219,7 +1219,7 @@ export default function ProductsPage() {
                           'flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all',
                           String(rate) === form.vat_rate
                             ? 'bg-gradient-to-r from-primary to-purple-600 text-white border-primary'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white/50'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 bg-white/50 dark:bg-slate-800/50'
                         )}
                       >
                         {rate}%

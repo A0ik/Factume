@@ -438,11 +438,41 @@ export default function ExpensesPage() {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const { data } = await getSupabaseClient()
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+
+      // Check if expenses table exists first
+      const { error: checkError } = await supabase
+        .from('expenses')
+        .select('id')
+        .limit(1);
+
+      if (checkError && checkError.code === '42P01') {
+        // Table doesn't exist
+        console.warn('expenses table not available for this user');
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
         .from('expenses')
         .select('*')
         .order('date', { ascending: false });
-      setExpenses(data || []);
+
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        setExpenses([]);
+      } else {
+        setExpenses(data || []);
+      }
+    } catch (e) {
+      console.error('Error fetching expenses:', e);
+      setExpenses([]);
     } finally {
       setLoading(false);
     }

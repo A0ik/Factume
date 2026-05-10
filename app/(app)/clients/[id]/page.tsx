@@ -82,7 +82,23 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     const fetchNotes = async () => {
       setLoadingNotes(true);
       try {
-        const { data, error } = await getSupabaseClient()
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        // Check if table exists first
+        const { error: checkError } = await supabase
+          .from('client_notes')
+          .select('id')
+          .limit(1);
+
+        // If table doesn't exist or other error, silently fail
+        if (checkError) {
+          console.warn('client_notes table not available');
+          setLoadingNotes(false);
+          return;
+        }
+
+        const { data, error } = await supabase
           .from('client_notes')
           .select('*')
           .eq('client_id', id)
@@ -90,6 +106,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         if (!error && data) setNotes(data);
       } catch (e) {
         // silently fail
+        console.warn('Error fetching notes:', e);
       } finally {
         setLoadingNotes(false);
       }

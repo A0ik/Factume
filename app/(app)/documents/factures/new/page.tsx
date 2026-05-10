@@ -356,6 +356,7 @@ export default function NewFacturePage() {
     }
 
     if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
+    const currentIdempotencyId = pendingIdRef.current;
     setSaving(true);
     setError('');
     try {
@@ -376,10 +377,9 @@ export default function NewFacturePage() {
           client_postal_code: clientId ? undefined : clientPostalCode || undefined,
           client_siret: clientId ? undefined : clientSiret || undefined,
           client_vat_number: clientId ? undefined : clientVatNumber || undefined,
-        }, profile, pendingIdRef.current),
+        }, profile, currentIdempotencyId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
       ]);
-      pendingIdRef.current = null;
       toast.success('Document créé avec succès !');
       router.push(`/invoices/${newInvoice.id}`);
     } catch (e: any) {
@@ -394,6 +394,7 @@ export default function NewFacturePage() {
       }
     } finally {
       setSaving(false);
+      pendingIdRef.current = null;
     }
   };
 

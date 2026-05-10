@@ -4,7 +4,7 @@
  * Teste la logique de gestion des abonnements et des limites
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSubscription } from '../useSubscription';
 import { useAuthStore } from '@/stores/authStore';

@@ -163,10 +163,10 @@ export default function Sidebar() {
         href: '/ocr',
         icon: ScanLine,
         label: 'Scan OCR',
-        enabled: sub.isBusiness || sub.isTrialActive,
-        lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
-        unlockTier: 'business',
-        badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
+        enabled: false,
+        lockReason: 'Fonctionnalité temporairement désactivée',
+        unlockTier: undefined,
+        badge: 'Bientôt',
       },
       { href: '/integrations', icon: Plug,     label: 'Connexions',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
       { href: '/data-health',  icon: Shield,   label: 'Santé des données', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
@@ -468,40 +468,32 @@ export default function Sidebar() {
 
       {/* Profile */}
       <div className="flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20 px-4 py-4">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-emerald-50/50 dark:hover:bg-emerald-900/5 transition-colors cursor-pointer group">
-          <UserDropdown
-            user={{
-              name: profile?.company_name || profile?.first_name || 'Mon compte',
-              email: profile?.email || '',
-              initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
-              avatar: profile?.logo_url || undefined,
-              status: 'online',
-              tier: profile?.subscription_tier || 'free',
-            }}
-            onAction={async (action) => {
-              if (action === 'logout') {
-                try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
-                catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
-              }
-              if (action === 'settings')      router.push('/settings');
-              if (action === 'profile')       router.push('/settings');
-              if (action === 'notifications') router.push('/notifications');
-              if (action === 'help')          router.push('/help');
-              if (action === 'add-account' || action.startsWith('switch:')) {
-                try { await signOut(); router.push('/login'); } catch {}
-              }
-            }}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">
-              {profile?.company_name || profile?.first_name || 'Mon compte'}
-            </p>
-            <p className="text-[11px] text-gray-400 capitalize font-medium mt-0.5">{tierConfig.name}</p>
-          </div>
-          <div className="flex items-center gap-1">
-            <KeyboardShortcutsHelp />
-            <ThemeToggle />
-          </div>
+        <UserDropdown
+          user={{
+            name: profile?.company_name || profile?.first_name || 'Mon compte',
+            email: profile?.email || '',
+            initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
+            avatar: profile?.logo_url || undefined,
+            status: 'online',
+            tier: profile?.subscription_tier || 'free',
+          }}
+          onAction={async (action) => {
+            if (action === 'logout') {
+              try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
+              catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
+            }
+            if (action === 'settings')      router.push('/settings');
+            if (action === 'profile')       router.push('/settings');
+            if (action === 'notifications') router.push('/notifications');
+            if (action === 'help')          router.push('/help');
+            if (action === 'add-account' || action.startsWith('switch:')) {
+              try { await signOut(); router.push('/login'); } catch {}
+            }
+          }}
+        />
+        <div className="flex items-center gap-2 mt-2 px-2">
+          <KeyboardShortcutsHelp />
+          <ThemeToggle />
         </div>
       </div>
     </aside>

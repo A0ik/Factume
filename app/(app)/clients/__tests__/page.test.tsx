@@ -4,7 +4,7 @@
  * Teste le rendu et les fonctionnalités de la page de gestion des clients
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ClientsPage from '../page';

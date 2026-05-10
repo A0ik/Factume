@@ -80,8 +80,8 @@ export function MagnificentCalendarGrid({
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="relative grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-2">
+      {/* Calendar grid - responsive */}
+      <div className="relative grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-2 overflow-x-auto">
         {cells.map((day, index) => {
           const dayNumber = day as number | null;
           const isSelected = selectedDay === dayNumber;

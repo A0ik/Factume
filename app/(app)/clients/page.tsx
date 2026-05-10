@@ -151,9 +151,9 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
           </span>
         </td>
         <td className="px-4 py-4 text-right">
-          <p className="text-sm font-bold text-primary">{formatCurrency(stats.revenue)}</p>
+          <p className="text-sm font-bold text-primary truncate">{formatCurrency(stats.revenue)}</p>
           {stats.pending > 0 && (
-            <p className="text-xs text-amber-600 font-medium">{formatCurrency(stats.pending)} en att.</p>
+            <p className="text-xs text-amber-600 font-medium truncate">{formatCurrency(stats.pending)} en att.</p>
           )}
         </td>
         <td className="px-4 py-4">
@@ -234,19 +234,19 @@ const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
               <p className="text-lg font-black text-gray-900">{stats.count}</p>
               <p className="text-[10px] text-gray-500 font-medium">Facture{stats.count !== 1 ? 's' : ''}</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5">
-              <p className="text-lg font-black text-primary">{formatCurrency(stats.revenue)}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Encaissé</p>
+            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 min-w-0">
+              <p className="text-lg font-black text-primary truncate">{formatCurrency(stats.revenue)}</p>
+              <p className="text-[10px] text-gray-500 font-medium truncate">Encaissé</p>
             </div>
             {stats.pending > 0 ? (
-              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20">
-                <p className="text-lg font-black text-amber-600">{formatCurrency(stats.pending)}</p>
-                <p className="text-[10px] text-gray-500 font-medium">En attente</p>
+              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 min-w-0">
+                <p className="text-lg font-black text-amber-600 truncate">{formatCurrency(stats.pending)}</p>
+                <p className="text-[10px] text-gray-500 font-medium truncate">En attente</p>
               </div>
             ) : (
-              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 min-w-0">
                 <p className="text-lg font-black text-green-600"><Check size={20} /></p>
-                <p className="text-[10px] text-gray-500 font-medium">À jour</p>
+                <p className="text-[10px] text-gray-500 font-medium truncate">À jour</p>
               </div>
             )}
           </div>
