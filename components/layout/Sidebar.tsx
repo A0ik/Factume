@@ -62,8 +62,8 @@ const TIER_CONFIG = {
   },
   business: {
     name: 'Business', nextTier: 'business',
-    gradient: 'from-amber-500 to-orange-600',
-    iconBg: 'from-amber-600 to-orange-700',
+    gradient: 'from-violet-600 to-purple-700',
+    iconBg: 'from-violet-600 to-purple-700',
     icon: Sparkles, iconColor: 'text-white',
     message: 'Tout inclus',
     subtext: 'Fonctionnalités illimitées',
@@ -627,7 +627,7 @@ export default function Sidebar() {
             sub.tier === 'free' && 'bg-gradient-to-br from-gray-100 to-gray-50 border-gray-200 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700',
             sub.tier === 'trial' && 'bg-gradient-to-br from-purple-100 to-purple-50 border-purple-200 dark:from-purple-900/30 dark:to-purple-800/20 dark:border-purple-700',
             (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-gradient-to-br from-blue-100 to-blue-50 border-blue-200 dark:from-blue-900/30 dark:to-blue-800/20 dark:border-blue-700',
-            sub.tier === 'business' && 'bg-gradient-to-br from-amber-100 to-amber-50 border-amber-200 dark:from-amber-900/30 dark:to-amber-800/20 dark:border-amber-700',
+            sub.tier === 'business' && 'bg-gradient-to-br from-violet-100 to-violet-50 border-violet-200 dark:from-violet-900/30 dark:to-violet-800/20 dark:border-violet-700',
           )}
         >
           <div className="flex items-center gap-3">
@@ -636,7 +636,7 @@ export default function Sidebar() {
               sub.tier === 'free' && 'bg-gray-200 dark:bg-gray-700',
               sub.tier === 'trial' && 'bg-purple-200 dark:bg-purple-800',
               (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-blue-200 dark:bg-blue-800',
-              sub.tier === 'business' && 'bg-amber-200 dark:bg-amber-800',
+              sub.tier === 'business' && 'bg-violet-200 dark:bg-violet-800',
             )}>
               <tierConfig.icon size={18} className={tierConfig.iconColor} strokeWidth={2.5} />
             </div>

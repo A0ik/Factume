@@ -308,11 +308,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         return s + Math.max(0, (paid - due) / (1000 * 60 * 60 * 24));
       }, 0) / paidInvoices.length
     : null;
-  const paymentRate = clientInvoices.length > 0
-    ? (clientInvoices.filter((i) => i.status === 'paid').length / clientInvoices.filter((i) => i.status !== 'draft').length) * 100
+  const nonDraftCount = clientInvoices.filter((i) => i.status !== 'draft').length;
+  const paymentRate = clientInvoices.length > 0 && nonDraftCount > 0
+    ? (clientInvoices.filter((i) => i.status === 'paid').length / nonDraftCount) * 100
     : null;
   const clientScore = (() => {
-    if (clientInvoices.filter((i) => i.status !== 'draft').length === 0) return null;
+    if (nonDraftCount === 0) return null;
     let score = 100;
     if (avgPaymentDays !== null) score -= Math.min(40, avgPaymentDays * 2);
     if (paymentRate !== null) score -= (100 - paymentRate) * 0.5;

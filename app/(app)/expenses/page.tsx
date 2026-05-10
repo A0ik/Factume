@@ -98,6 +98,7 @@ const STATUS_STYLES: Record<string, { label: string; class: string; icon: any }>
   pending: { label: 'En attente', class: 'bg-amber-50/80 text-amber-600 border-amber-200/50', icon: Clock },
   validated: { label: 'Validée', class: 'bg-green-50/80 text-green-600 border-green-200/50', icon: Check },
   rejected: { label: 'Rejetée', class: 'bg-red-50/80 text-red-600 border-red-200/50', icon: X },
+  reviewed: { label: 'Revue', class: 'bg-blue-50/80 text-blue-600 border-blue-200/50', icon: Check },
 };
 
 const EMPTY_FORM: {
@@ -188,7 +189,8 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
 }) {
   const cat = getCat(expense.category);
   const Icon = cat.icon;
-  const StatusIcon = STATUS_STYLES[expense.status].icon;
+  const statusStyle = STATUS_STYLES[expense.status] || STATUS_STYLES['pending'];
+  const StatusIcon = statusStyle.icon;
 
   return (
     <motion.div
@@ -226,9 +228,9 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
                     </div>
                   )}
                 </div>
-                <span className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', STATUS_STYLES[expense.status].class)}>
+                <span className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', statusStyle.class)}>
                   <StatusIcon size={12} />
-                  {STATUS_STYLES[expense.status].label}
+                  {statusStyle.label}
                 </span>
               </div>
 

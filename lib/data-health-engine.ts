@@ -53,13 +53,13 @@ const CHECKS: HealthCheck[] = [
     check: async (admin, userId) => {
       const { data } = await admin
         .from('expenses')
-        .select('label, amount, date')
+        .select('vendor, amount, date')
         .eq('user_id', userId);
 
       const seen = new Map<string, number>();
       let duplicates = 0;
       (data || []).forEach((exp) => {
-        const key = `${(exp.label || '').toLowerCase().trim()}-${exp.amount}-${exp.date}`;
+        const key = `${(exp.vendor || '').toLowerCase().trim()}-${exp.amount}-${exp.date}`;
         const count = (seen.get(key) || 0) + 1;
         seen.set(key, count);
         if (count === 2) duplicates++;
@@ -105,17 +105,19 @@ const CHECKS: HealthCheck[] = [
     check: async (admin, userId) => {
       const { data: expenses } = await admin
         .from('expenses')
-        .select('amount, vat_amount, vat_rate, label')
+        .select('amount, vat_amount')
         .eq('user_id', userId)
         .gt('amount', 0);
 
       let inconsistencies = 0;
+      // Check if vat_amount is consistent with known French TVA rates (0%, 5.5%, 10%, 20%)
+      const validInclusiveRatios = [0, 0.052, 0.091, 0.167]; // vat/amount TTC ratios
+      const tolerance = 0.015;
       (expenses || []).forEach((exp) => {
-        if (!exp.vat_rate || exp.vat_rate === 0) return;
-        const expectedVat = Math.round((exp.amount * exp.vat_rate / 100) * 100) / 100;
-        if (exp.vat_amount && Math.abs(exp.vat_amount - expectedVat) > 1) {
-          inconsistencies++;
-        }
+        if (!exp.vat_amount || exp.vat_amount === 0) return;
+        const ratio = exp.vat_amount / exp.amount;
+        const isValid = validInclusiveRatios.some((r) => Math.abs(ratio - r) < tolerance);
+        if (!isValid) inconsistencies++;
       });
 
       const total = (expenses || []).length;
@@ -239,13 +241,13 @@ const CHECKS: HealthCheck[] = [
     check: async (admin, userId) => {
       const { data } = await admin
         .from('expenses')
-        .select('label')
+        .select('vendor')
         .eq('user_id', userId)
-        .not('label', 'is', null);
+        .not('vendor', 'is', null);
 
       const vendors = new Map<string, Set<string>>();
       (data || []).forEach((exp) => {
-        const name = (exp.label || '').toLowerCase().trim();
+        const name = (exp.vendor || '').toLowerCase().trim();
         if (!name) return;
         const first3 = name.substring(0, 3);
         if (!vendors.has(first3)) vendors.set(first3, new Set());

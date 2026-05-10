@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, RefreshCw, Download, Shield, AlertTriangle, CheckCircle, Info, Loader2, BarChart3 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -18,7 +19,7 @@ interface Scan {
   scanned_at: string;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {};
+const CATEGORY_ICONS: Record<string, LucideIcon> = {};
 CHECK_METADATA.forEach((c) => { CATEGORY_ICONS[c.id] = c.icon; });
 const CATEGORY_LABELS: Record<string, string> = {};
 CHECK_METADATA.forEach((c) => { CATEGORY_LABELS[c.id] = c.label; });
@@ -181,19 +182,21 @@ export default function DataHealthPage() {
           {/* Score circulaire */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-1 rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-gray-200/60 dark:border-gray-700/30 p-6 flex flex-col items-center justify-center">
-              <svg width="140" height="140" className="transform -rotate-90">
-                <circle cx="70" cy="70" r="60" fill="none" stroke="currentColor" strokeWidth="10" className="text-gray-100 dark:text-gray-800" />
-                <circle
-                  cx="70" cy="70" r="60" fill="none" strokeWidth="10" strokeLinecap="round"
-                  className={getScoreRing(score)}
-                  strokeDasharray={circumference}
-                  strokeDashoffset={offset}
-                  style={{ transition: 'stroke-dashoffset 1s ease-out' }}
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center" style={{ marginTop: '-100px' }}>
-                <span className={cn('text-4xl font-black', getScoreColor(score))}>{score}</span>
-                <span className="text-xs text-gray-400 font-medium">/ 100</span>
+              <div className="relative" style={{ width: 140, height: 140 }}>
+                <svg width="140" height="140" className="transform -rotate-90">
+                  <circle cx="70" cy="70" r="60" fill="none" stroke="currentColor" strokeWidth="10" className="text-gray-100 dark:text-gray-800" />
+                  <circle
+                    cx="70" cy="70" r="60" fill="none" strokeWidth="10" strokeLinecap="round"
+                    className={getScoreRing(score)}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={cn('text-4xl font-black', getScoreColor(score))}>{score}</span>
+                  <span className="text-xs text-gray-400 font-medium">/ 100</span>
+                </div>
               </div>
               <p className="mt-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {score >= 80 ? 'Excellent' : score >= 50 ? 'À améliorer' : 'Attention requise'}
@@ -209,9 +212,11 @@ export default function DataHealthPage() {
             <div className="lg:col-span-2 rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-gray-200/60 dark:border-gray-700/30 p-5">
               <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-sm">Détail par catégorie</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries(scan.category_scores).map(([key, catScore]) => (
+                {Object.entries(scan.category_scores).map(([key, catScore]) => {
+                  const CategoryIcon = CATEGORY_ICONS[key] || BarChart3;
+                  return (
                   <div key={key} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                    <span className="text-lg flex items-center justify-center">{CATEGORY_ICONS[key] || <BarChart3 size={20} className="text-gray-400" />}</span>
+                    <CategoryIcon size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{CATEGORY_LABELS[key] || key}</p>
                       <div className="mt-1 w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -223,7 +228,8 @@ export default function DataHealthPage() {
                     </div>
                     <span className={cn('text-sm font-bold', getScoreColor(catScore))}>{catScore}%</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

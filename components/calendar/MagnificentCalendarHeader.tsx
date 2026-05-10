@@ -50,7 +50,7 @@ export function MagnificentCalendarHeader({
         'backdrop-blur-2xl bg-white/40 dark:bg-slate-900/40',
         'border border-white/30 dark:border-white/10 shadow-2xl',
         'rounded-[2rem]',
-        'p-4 sm:p-6 lg:p-8',
+        'p-4 sm:p-6 lg:p-5 xl:p-8',
         className
       )}
     >
@@ -60,7 +60,7 @@ export function MagnificentCalendarHeader({
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-gradient-to-tr from-accent/30 to-orange-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
 
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         {/* Row 1: Icon + title + Google button + desktop "Nouveau" */}
         <div className="flex items-center justify-between gap-3 w-full lg:w-auto">
           <motion.div variants={itemVariants} className="flex items-center gap-3">
@@ -88,7 +88,7 @@ export function MagnificentCalendarHeader({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
-                'hidden lg:flex items-center gap-2.5 px-5 py-3 rounded-2xl min-h-[48px]',
+                'hidden xl:flex items-center gap-2.5 px-5 py-3 rounded-2xl min-h-[48px]',
                 'bg-gradient-to-r from-primary to-emerald-600',
                 'text-white text-sm font-bold shadow-lg shadow-primary/30',
                 'hover:shadow-xl hover:shadow-primary/40 transition-all duration-300'
@@ -176,7 +176,7 @@ export function MagnificentCalendarHeader({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={cn(
-              'lg:hidden flex-shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl',
+              'xl:hidden flex-shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl',
               'bg-gradient-to-r from-primary to-emerald-600',
               'text-white text-xs sm:text-sm font-bold shadow-lg shadow-primary/30'
             )}

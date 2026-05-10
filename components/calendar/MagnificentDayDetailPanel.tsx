@@ -52,7 +52,7 @@ export function MagnificentDayDetailPanel({
           exit={{ opacity: 0, x: 20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           className={cn(
-            'lg:w-[400px] xl:w-[440px]',
+            'lg:w-[320px] xl:w-[400px]',
             'backdrop-blur-2xl bg-white/30 dark:bg-slate-900/30',
             'border border-white/20 dark:border-white/10 shadow-xl',
             'rounded-[2rem]',
@@ -89,7 +89,7 @@ export function MagnificentDayDetailPanel({
           exit="exit"
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
           className={cn(
-            'lg:w-[400px] xl:w-[440px]',
+            'lg:w-[320px] xl:w-[400px]',
             'relative',
             'before:absolute before:inset-0 before:rounded-[2rem] before:bg-gradient-to-br before:from-white/80 before:to-white/60 before:dark:from-slate-900/80 before:dark:to-slate-900/60 before:blur-2xl before:-z-10',
             'backdrop-blur-2xl bg-white/40 dark:bg-slate-900/40',
