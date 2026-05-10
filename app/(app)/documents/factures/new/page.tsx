@@ -342,6 +342,12 @@ export default function NewFacturePage() {
   };
 
   const handleSave = async () => {
+    // Protection contre les soumissions multiples
+    if (saving) {
+      console.log('[handleSave] Already saving, ignoring click');
+      return;
+    }
+
     if (!clientName && !items[0].description) {
       setError('Renseignez au moins un client ou une prestation.');
       return;
@@ -359,6 +365,7 @@ export default function NewFacturePage() {
     const currentIdempotencyId = pendingIdRef.current;
     setSaving(true);
     setError('');
+
     try {
       const newInvoice = await Promise.race([
         createInvoice({
@@ -380,17 +387,24 @@ export default function NewFacturePage() {
         }, profile, currentIdempotencyId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
       ]);
-      toast.success('Document créé avec succès !');
-      router.push(`/invoices/${newInvoice.id}`);
+
+      // Succès - rediriger vers la facture
+      toast.success('Document créé avec succès !', { id: 'invoice-created' });
+      setTimeout(() => {
+        router.push(`/invoices/${newInvoice.id}`);
+      }, 100);
     } catch (e: any) {
       if ((e as Error).message === '__timeout__') {
-        toast.error('Délai dépassé — réessayez');
+        toast.error('Délai dépassé — réessayez', { id: 'timeout-error' });
+        setError('Le délai de création a été dépassé. Veuillez réessayer.');
       } else if ((e as Error).message?.includes('Limite de 10 factures')) {
-        toast.error('Limite atteinte ! Vous avez utilisé vos 10 factures mensuelles gratuites. Passez à un plan supérieur pour des factures illimitées.');
+        toast.error('Limite atteinte ! Vous avez utilisé vos 10 factures mensuelles gratuites. Passez à un plan supérieur pour des factures illimitées.', { id: 'limit-error' });
+        setError('Limite de factures atteinte.');
         setTimeout(() => router.push('/paywall'), 1500);
       } else {
         console.error('[new invoice] createInvoice error:', e);
         setError(e.message || 'Erreur lors de la création.');
+        toast.error(e.message || 'Erreur lors de la création', { id: 'create-error' });
       }
     } finally {
       setSaving(false);

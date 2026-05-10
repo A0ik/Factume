@@ -217,6 +217,23 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const handleAddNote = async () => {
     const content = noteInput.trim();
     if (!content || !user) return;
+
+    // Vérifier si la table existe avant d'essayer d'insérer
+    try {
+      const { error: checkError } = await getSupabaseClient()
+        .from('client_notes')
+        .select('id')
+        .limit(1);
+
+      if (checkError) {
+        toast.warn('La fonctionnalité de notes n\'est pas disponible');
+        return;
+      }
+    } catch (e) {
+      toast.warn('La fonctionnalité de notes n\'est pas disponible');
+      return;
+    }
+
     setAddingNote(true);
     try {
       const { data, error } = await getSupabaseClient()
@@ -233,6 +250,22 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleDeleteNote = async (noteId: string) => {
+    // Vérifier si la table existe avant d'essayer de supprimer
+    try {
+      const { error: checkError } = await getSupabaseClient()
+        .from('client_notes')
+        .select('id')
+        .limit(1);
+
+      if (checkError) {
+        toast.warn('La fonctionnalité de notes n\'est pas disponible');
+        return;
+      }
+    } catch (e) {
+      toast.warn('La fonctionnalité de notes n\'est pas disponible');
+      return;
+    }
+
     try {
       const { error } = await getSupabaseClient()
         .from('client_notes')

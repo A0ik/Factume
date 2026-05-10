@@ -401,40 +401,7 @@ export default function ExpensesPage() {
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  useEffect(() => {
-    if (user) {
-      fetchExpenses();
-      // Charger les clients si pas encore chargés
-      if (!clients || clients.length === 0) {
-        fetchClients();
-      }
-    }
-  }, [user]);
-
-  // Calcul automatique IK
-  useEffect(() => {
-    if (form.category === 'mileage' && form.distance_km && form.vehicle_cv) {
-      const distance = parseFloat(form.distance_km);
-      const cv = parseInt(form.vehicle_cv);
-      if (distance > 0 && cv > 0) {
-        const amount = calculateMileage(distance, cv);
-        set('amount', String(amount));
-        set('vat_amount', '0'); // Les IK sont sans TVA
-      }
-    }
-  }, [form.distance_km, form.vehicle_cv, form.category]);
-
-  // Calcul automatique plafond repas
-  useEffect(() => {
-    if (form.category === 'meals' && form.amount) {
-      const amount = parseFloat(form.amount);
-      if (amount > 0) {
-        const { tax_free } = calculateMealAllowance(amount, form.meal_type);
-        set('tax_free_amount', String(tax_free));
-      }
-    }
-  }, [form.amount, form.meal_type, form.category]);
-
+  // Définir fetchExpenses AVANT les useEffect
   const fetchExpenses = async () => {
     setLoading(true);
     try {
@@ -477,6 +444,40 @@ export default function ExpensesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchExpenses();
+      // Charger les clients si pas encore chargés
+      if (!clients || clients.length === 0) {
+        fetchClients();
+      }
+    }
+  }, [user]);
+
+  // Calcul automatique IK
+  useEffect(() => {
+    if (form.category === 'mileage' && form.distance_km && form.vehicle_cv) {
+      const distance = parseFloat(form.distance_km);
+      const cv = parseInt(form.vehicle_cv);
+      if (distance > 0 && cv > 0) {
+        const amount = calculateMileage(distance, cv);
+        set('amount', String(amount));
+        set('vat_amount', '0'); // Les IK sont sans TVA
+      }
+    }
+  }, [form.distance_km, form.vehicle_cv, form.category]);
+
+  // Calcul automatique plafond repas
+  useEffect(() => {
+    if (form.category === 'meals' && form.amount) {
+      const amount = parseFloat(form.amount);
+      if (amount > 0) {
+        const { tax_free } = calculateMealAllowance(amount, form.meal_type);
+        set('tax_free_amount', String(tax_free));
+      }
+    }
+  }, [form.amount, form.meal_type, form.category]);
 
   const openCreate = () => {
     setForm(EMPTY_FORM);

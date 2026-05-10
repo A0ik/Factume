@@ -90,8 +90,8 @@ export const useDataStore = create<DataState>((set, get) => ({
       const { data: existing } = await getSupabaseClient()
         .from('invoices')
         .select('*, client:clients(*)')
-        .eq('id', idempotencyId)
-        .single();
+        .eq('idempotency_id', idempotencyId)
+        .maybeSingle();
       if (existing) return existing;
     }
 

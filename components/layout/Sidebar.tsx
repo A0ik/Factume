@@ -374,7 +374,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Advanced tools - Always visible and prominent */}
+        {/* Advanced tools - Organisés par catégorie */}
         {NAV_ADVANCED.some(item => item.enabled || item.lockReason) && (
           <div className="pb-3">
             <div className="px-4 mb-3">
@@ -383,55 +383,205 @@ export default function Sidebar() {
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Fonctionnalités Premium</p>
               </div>
             </div>
-            <div className="space-y-1">
-              {NAV_ADVANCED.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
-                const isActive = pathname.startsWith(href);
-                return enabled ? (
-                  <Link key={href} href={href}
-                    className={cn(
-                      'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
-                    )}
-                  >
-                    <span className={cn(
-                      'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
-                      isActive
-                        ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
-                        : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
-                    )}>
-                      <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
-                    </span>
-                    <span className="flex-1 font-medium">{label}</span>
-                  </Link>
-                ) : (
-                  <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
-                      <Icon size={15} className="text-gray-300 dark:text-gray-600" />
-                    </span>
-                    <span className="flex-1 font-medium">{label}</span>
-                    {badge ? (
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
-                    ) : unlockTier ? (
-                      <button
-                        onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+
+            {/* Gestion & Comptabilité */}
+            {(NAV_ADVANCED.some(i => i.href === '/expenses' || i.href === '/accounting' || i.href === '/activity')) && (
+              <>
+                <div className="px-4 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gestion & Comptabilité</p>
+                </div>
+                <div className="space-y-0.5 mb-3">
+                  {NAV_ADVANCED.filter(i => i.href === '/expenses' || i.href === '/accounting' || i.href === '/activity').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                    const isActive = pathname.startsWith(href);
+                    return enabled ? (
+                      <Link key={href} href={href}
                         className={cn(
-                          'text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide transition-all',
-                          unlockTier === 'pro'
-                            ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
-                            : 'bg-amber-100 text-amber-600 border border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+                          'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
                         )}
                       >
-                        {unlockTier === 'pro' ? 'PRO' : 'BUSINESS'}
-                      </button>
+                        <span className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                          isActive
+                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                        )}>
+                          <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                      </Link>
                     ) : (
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
+                          <Icon size={15} className="text-gray-300 dark:text-gray-600" />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                        <button
+                          onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+                          className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 uppercase tracking-wide transition-all"
+                        >
+                          PRO
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* CRM & Ventes */}
+            {NAV_ADVANCED.some(i => i.href === '/crm' || i.href === '/pipeline') && (
+              <>
+                <div className="px-4 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">CRM & Ventes</p>
+                </div>
+                <div className="space-y-0.5 mb-3">
+                  {NAV_ADVANCED.filter(i => i.href === '/crm' || i.href === '/pipeline').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                    const isActive = pathname.startsWith(href);
+                    return enabled ? (
+                      <Link key={href} href={href}
+                        className={cn(
+                          'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                        )}
+                      >
+                        <span className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                          isActive
+                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                        )}>
+                          <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                      </Link>
+                    ) : (
+                      <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
+                          <Icon size={15} className="text-gray-300 dark:text-gray-600" />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                        <button
+                          onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+                          className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 uppercase tracking-wide transition-all"
+                        >
+                          PRO
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Automatisation & Connexions */}
+            {(NAV_ADVANCED.some(i => i.href === '/ocr' || i.href === '/integrations' || i.href === '/banking' || i.href === '/data-health')) && (
+              <>
+                <div className="px-4 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Automatisation & Connexions</p>
+                </div>
+                <div className="space-y-0.5">
+                  {NAV_ADVANCED.filter(i => i.href === '/ocr' || i.href === '/integrations' || i.href === '/banking' || i.href === '/data-health').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                    const isActive = pathname.startsWith(href);
+                    return enabled ? (
+                      <Link key={href} href={href}
+                        className={cn(
+                          'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                        )}
+                      >
+                        <span className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                          isActive
+                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                        )}>
+                          <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                      </Link>
+                    ) : (
+                      <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
+                          <Icon size={15} className="text-gray-300 dark:text-gray-600" />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                        {badge ? (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                        ) : unlockTier ? (
+                          <button
+                            onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+                            className={cn(
+                              'text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide transition-all',
+                              unlockTier === 'pro'
+                                ? 'bg-blue-100 text-blue-600 border border-blue-200 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                                : 'bg-amber-100 text-amber-600 border border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+                            )}
+                          >
+                            {unlockTier === 'pro' ? 'PRO' : 'BUSINESS'}
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 border border-gray-200 uppercase tracking-wide">Bientôt</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Cabinet (Business) */}
+            {NAV_ADVANCED.some(i => i.href === '/cabinet') && (
+              <>
+                <div className="px-4 mb-1 mt-3">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cabinet</p>
+                </div>
+                <div className="space-y-0.5">
+                  {NAV_ADVANCED.filter(i => i.href === '/cabinet').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                    const isActive = pathname.startsWith(href);
+                    return enabled ? (
+                      <Link key={href} href={href}
+                        className={cn(
+                          'group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                          isActive
+                            ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+                        )}
+                      >
+                        <span className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                          isActive
+                            ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                        )}>
+                          <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                      </Link>
+                    ) : (
+                      <div key={href} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={lockReason}>
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
+                          <Icon size={15} className="text-gray-300 dark:text-gray-600" />
+                        </span>
+                        <span className="flex-1 font-medium">{label}</span>
+                        <button
+                          onClick={() => router.push(unlockTier === 'pro' ? '/paywall?plan=pro' : '/paywall?plan=business')}
+                          className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 uppercase tracking-wide transition-all"
+                        >
+                          BUSINESS
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -466,31 +616,99 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Profile */}
+      {/* Profile avec abonnement visible */}
       <div className="flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20 px-4 py-4">
-        <UserDropdown
-          user={{
-            name: profile?.company_name || profile?.first_name || 'Mon compte',
-            email: profile?.email || '',
-            initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
-            avatar: profile?.logo_url || undefined,
-            status: 'online',
-            tier: profile?.subscription_tier || 'free',
-          }}
-          onAction={async (action) => {
-            if (action === 'logout') {
-              try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
-              catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
-            }
-            if (action === 'settings')      router.push('/settings');
-            if (action === 'profile')       router.push('/settings');
-            if (action === 'notifications') router.push('/notifications');
-            if (action === 'help')          router.push('/help');
-            if (action === 'add-account' || action.startsWith('switch:')) {
-              try { await signOut(); router.push('/login'); } catch {}
-            }
-          }}
-        />
+        {/* Carte abonnement */}
+        <div
+          onClick={() => router.push(sub.tier === 'free' ? '/paywall' : '/settings')}
+          className={cn(
+            'relative overflow-hidden rounded-2xl p-3 mb-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg',
+            'border',
+            sub.tier === 'free' && 'bg-gradient-to-br from-gray-100 to-gray-50 border-gray-200 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700',
+            sub.tier === 'trial' && 'bg-gradient-to-br from-purple-100 to-purple-50 border-purple-200 dark:from-purple-900/30 dark:to-purple-800/20 dark:border-purple-700',
+            (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-gradient-to-br from-blue-100 to-blue-50 border-blue-200 dark:from-blue-900/30 dark:to-blue-800/20 dark:border-blue-700',
+            sub.tier === 'business' && 'bg-gradient-to-br from-amber-100 to-amber-50 border-amber-200 dark:from-amber-900/30 dark:to-amber-800/20 dark:border-amber-700',
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
+              sub.tier === 'free' && 'bg-gray-200 dark:bg-gray-700',
+              sub.tier === 'trial' && 'bg-purple-200 dark:bg-purple-800',
+              (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-blue-200 dark:bg-blue-800',
+              sub.tier === 'business' && 'bg-amber-200 dark:bg-amber-800',
+            )}>
+              <tierConfig.icon size={18} className={tierConfig.iconColor} strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{tierConfig.name}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                {sub.tier === 'free' ? '10 factures gratuites/mois' : tierConfig.subtext}
+              </p>
+            </div>
+            {sub.tier !== 'business' && (
+              <ArrowUpRight size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
+            )}
+          </div>
+        </div>
+
+        {/* UserDropdown */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              const dropdown = document.querySelector('[data-user-dropdown-trigger]') as HTMLButtonElement;
+              dropdown?.click();
+            }}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
+          >
+            <div className="relative flex-shrink-0">
+              <div className={cn(
+                'w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold',
+                'bg-gradient-to-br from-primary to-primary-dark text-white',
+                'border-2 border-white/20 shadow-md transition-transform group-hover:scale-105'
+              )}>
+                {getInitials(profile?.company_name || profile?.first_name || 'U')}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-400" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {profile?.company_name || profile?.first_name || 'Mon compte'}
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                Changer de compte →
+              </p>
+            </div>
+          </button>
+
+          {/* Dropdown caché mais cliquable */}
+          <div className="absolute inset-0 opacity-0 pointer-events-none">
+            <UserDropdown
+              user={{
+                name: profile?.company_name || profile?.first_name || 'Mon compte',
+                email: profile?.email || '',
+                initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
+                avatar: profile?.logo_url || undefined,
+                status: 'online',
+                tier: profile?.subscription_tier || 'free',
+              }}
+              onAction={async (action) => {
+                if (action === 'logout') {
+                  try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
+                  catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
+                }
+                if (action === 'settings')      router.push('/settings');
+                if (action === 'profile')       router.push('/settings');
+                if (action === 'notifications') router.push('/notifications');
+                if (action === 'help')          router.push('/help');
+                if (action === 'add-account' || action.startsWith('switch:')) {
+                  try { await signOut(); router.push('/login'); } catch {}
+                }
+              }}
+            />
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 mt-2 px-2">
           <KeyboardShortcutsHelp />
           <ThemeToggle />
