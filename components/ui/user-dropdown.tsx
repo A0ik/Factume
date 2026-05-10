@@ -1,6 +1,7 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/Badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,21 +15,62 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import {
-  User, Settings, Bell, Moon, Wifi, HelpCircle,
-  LogOut, ArrowLeftRight, UserCircle2, Plus, Crown,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { Icon } from "@iconify/react";
+import { useAuthStore } from "@/stores/authStore";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { getInitials } from "@/lib/utils";
+import { Crown, Sparkles, ArrowUpRight } from "lucide-react";
+
+const MENU_ITEMS = {
+  status: [
+    { value: "online", icon: "solar:emoji-funny-circle-line-duotone", label: "En ligne" },
+    { value: "offline", icon: "solar:moon-sleep-line-duotone", label: "Hors ligne" }
+  ],
+  profile: [
+    { icon: "solar:user-circle-line-duotone", label: "Mon profil", action: "profile" },
+    { icon: "solar:settings-line-duotone", label: "Paramètres", action: "settings" },
+    { icon: "solar:bell-line-duotone", label: "Notifications", action: "notifications" },
+    { icon: "solar:question-circle-line-duotone", label: "Aide", action: "help" }
+  ],
+  premium: [
+    {
+      icon: "solar:star-bold",
+      label: "Passer à Pro",
+      action: "upgrade",
+      iconClass: "text-amber-600",
+      badge: { text: "Promo", className: "bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px]" }
+    }
+  ],
+  account: [
+    {
+      icon: "solar:users-group-rounded-bold-duotone",
+      label: "Changer de compte",
+      action: "switch",
+      showAvatar: false
+    },
+    { icon: "solar:logout-2-bold-duotone", label: "Se déconnecter", action: "logout" }
+  ]
+};
+
+const TIER_CONFIG = {
+  free: { name: 'Gratuit', gradient: 'from-gray-500 to-gray-600', iconBg: 'bg-gray-100' },
+  trial: { name: 'Essai', gradient: 'from-purple-500 to-violet-600', iconBg: 'bg-purple-100' },
+  solo: { name: 'Solo', gradient: 'from-blue-500 to-indigo-600', iconBg: 'bg-blue-100' },
+  pro: { name: 'Pro', gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-violet-100' },
+  business: { name: 'Business', gradient: 'from-amber-500 to-orange-600', iconBg: 'bg-amber-100' },
+};
 
 export interface UserDropdownUser {
   name: string;
-  email: string;
+  email?: string;
   initials: string;
-  avatar?: string;   // profile logo_url
+  avatar?: string;
   status: 'online' | 'offline' | 'busy';
   tier?: string;
+  username?: string;
 }
 
 export interface UserDropdownProps {
@@ -36,219 +78,164 @@ export interface UserDropdownProps {
   onAction?: (action: string) => void;
   onStatusChange?: (status: string) => void;
   selectedStatus?: string;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  online: 'En ligne',
-  offline: 'Hors ligne',
-  busy: 'Occupé',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  online: 'bg-green-400',
-  offline: 'bg-gray-400',
-  busy: 'bg-amber-400',
-};
-
-const TIER_LABELS: Record<string, string> = {
-  free: 'Plan Gratuit',
-  solo: 'Plan Solo',
-  pro: 'Plan Pro',
-  business: 'Plan Business',
-};
-
-interface SavedAccount {
-  email: string;
-  name: string;
-  initials: string;
-  lastUsed: string;
-}
-
-function getSavedAccounts(): SavedAccount[] {
-  if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem('savedAccounts') || '[]'); }
-  catch { return []; }
-}
-
-export function saveCurrentAccount(email: string, name: string, initials: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    const accounts = getSavedAccounts();
-    const filtered = accounts.filter((a) => a.email !== email);
-    const updated: SavedAccount[] = [
-      { email, name, initials, lastUsed: new Date().toISOString() },
-      ...filtered,
-    ].slice(0, 5);
-    localStorage.setItem('savedAccounts', JSON.stringify(updated));
-  } catch { }
+  promoDiscount?: string;
 }
 
 export const UserDropdown = ({
-  user = { name: 'Mon compte', email: 'compte@factu.me', initials: 'FC', status: 'online' },
+  user,
   onAction = () => { },
   onStatusChange = () => { },
-  selectedStatus = 'online',
+  selectedStatus = "online",
+  promoDiscount = "Promo",
 }: UserDropdownProps) => {
-  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const router = useRouter();
+  const { signOut, profile } = useAuthStore();
 
-  useEffect(() => {
-    setSavedAccounts(getSavedAccounts().filter((a) => a.email !== user.email));
-  }, [user.email]);
+  // Utiliser les données du profil si user non fourni
+  const userData = user || {
+    name: profile?.company_name || profile?.first_name || 'Mon compte',
+    email: profile?.email,
+    initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
+    avatar: profile?.logo_url,
+    status: 'online' as const,
+    tier: profile?.subscription_tier || 'free',
+  };
+
+  const tierConfig = TIER_CONFIG[userData.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.free;
+
+  const handleAction = async (action: string) => {
+    if (action === 'logout') {
+      try {
+        toast.loading('Déconnexion...', { id: 'logout' });
+        await signOut();
+        toast.success('Déconnecté', { id: 'logout' });
+        router.push('/login');
+      } catch {
+        toast.error('Erreur déconnexion', { id: 'logout' });
+      }
+    } else if (action === 'settings') {
+      router.push('/settings');
+    } else if (action === 'profile') {
+      router.push('/settings');
+    } else if (action === 'notifications') {
+      router.push('/notifications');
+    } else if (action === 'help') {
+      router.push('/help');
+    } else if (action === 'upgrade') {
+      router.push('/paywall');
+    } else if (action === 'switch') {
+      await signOut();
+      router.push('/login');
+    }
+    onAction(action);
+  };
+
+  const renderMenuItem = (item: any, index: number) => (
+    <DropdownMenuItem
+      key={index}
+      className={cn((item.badge || item.showAvatar) ? "justify-between" : "", "p-2 rounded-lg cursor-pointer")}
+      onClick={() => handleAction(item.action)}
+    >
+      <span className="flex items-center gap-1.5 font-medium">
+        <Icon
+          icon={item.icon}
+          className={`size-5 ${item.iconClass || "text-gray-500 dark:text-gray-400"}`}
+        />
+        {item.label}
+      </span>
+      {item.badge && (
+        <Badge className={item.badge.className}>
+          {promoDiscount || item.badge.text}
+        </Badge>
+      )}
+      {item.showAvatar && (
+        <Avatar className="cursor-pointer size-6 shadow border border-white dark:border-gray-700">
+          <AvatarImage src={userData.avatar} alt={userData.name} />
+          <AvatarFallback>{userData.initials}</AvatarFallback>
+        </Avatar>
+      )}
+    </DropdownMenuItem>
+  );
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      online: "text-green-600 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-900/30 dark:border-green-500/50",
+      offline: "text-gray-600 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600",
+      busy: "text-red-600 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-900/30 dark:border-red-500/50"
+    };
+    return colors[status.toLowerCase()] || colors.online;
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative focus:outline-none group">
-          <Avatar className="size-9 border-2 border-white/20 shadow-md transition-transform group-hover:scale-105">
-            {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-            <AvatarFallback className="bg-primary text-white text-xs font-bold">
-              {user.initials}
+        <button className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-all cursor-pointer group">
+          <Avatar className="size-8 border border-gray-200 dark:border-gray-700 transition-transform group-hover:scale-105">
+            <AvatarImage src={userData.avatar} alt={userData.name} />
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-white text-xs font-bold">
+              {userData.initials}
             </AvatarFallback>
           </Avatar>
-          <span className={cn(
-            'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900',
-            STATUS_COLORS[user.status],
-          )} />
+          <div className="flex-1 min-w-0 text-left hidden lg:block">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary transition-colors">
+              {userData.name}
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
+              <Crown size={9} className={userData.tier === 'free' ? 'text-gray-400' : 'text-amber-500'} />
+              {tierConfig.name}
+            </p>
+          </div>
+          <ArrowUpRight size={14} className="text-gray-400 group-hover:text-primary transition-colors hidden lg:block" />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        className="w-72 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-0 shadow-2xl shadow-black/10"
-        align="end"
-        sideOffset={12}
-      >
-        {/* ── Header with avatar ── */}
-        <div className="p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-2xl border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Avatar className="size-12 border-2 border-white shadow-sm">
-                {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-                <AvatarFallback className="bg-primary text-white font-bold">
-                  {user.initials}
+      <DropdownMenuContent className="no-scrollbar w-[320px] rounded-2xl bg-gray-50 dark:bg-black/90 p-0" align="end" sideOffset={12}>
+        <section className="bg-white dark:bg-gray-100/10 backdrop-blur-lg rounded-2xl p-1 shadow border border-gray-200 dark:border-gray-700/20">
+          <div className="flex items-center p-3">
+            <div className="flex-1 flex items-center gap-3">
+              <Avatar className="size-12 border border-gray-200 dark:border-gray-700">
+                <AvatarImage src={userData.avatar} alt={userData.name} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-white font-bold">
+                  {userData.initials}
                 </AvatarFallback>
               </Avatar>
-              <span className={cn(
-                'absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white',
-                STATUS_COLORS[user.status],
-              )} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate leading-tight">{user.name}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{user.email}</p>
-              {user.tier && (
-                <div className="flex items-center gap-1 mt-1">
-                  <Crown size={9} className={user.tier === 'free' ? 'text-gray-400' : 'text-amber-500'} />
-                  <span className="text-[10px] text-gray-500 font-medium">
-                    {TIER_LABELS[user.tier] ?? user.tier}
-                  </span>
+              <div>
+                <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">{userData.name}</h3>
+                {userData.email && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{userData.email}</p>
+                )}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold", tierConfig.gradient, "bg-gradient-to-r text-white")}>
+                    {tierConfig.name}
+                  </div>
+                  <Badge className={`${getStatusColor(userData.status)} border-[0.5px] text-[10px] rounded-sm capitalize`}>
+                    {userData.status === 'online' ? 'En ligne' : userData.status === 'busy' ? 'Occupé' : 'Hors ligne'}
+                  </Badge>
                 </div>
-              )}
+              </div>
             </div>
-            <span className={cn(
-              'text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
-              user.status === 'online' ? 'bg-green-100 text-green-700' :
-                user.status === 'busy' ? 'bg-amber-100 text-amber-700' :
-                  'bg-gray-100 text-gray-500',
-            )}>
-              {STATUS_LABELS[user.status]}
-            </span>
           </div>
-        </div>
 
-        <div className="p-1.5">
-          {/* ── Main actions ── */}
+          <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem
-              className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-              onClick={() => onAction('profile')}
-            >
-              <User size={15} className="text-gray-400" />
-              <span className="text-sm font-medium">Mon profil</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-              onClick={() => onAction('settings')}
-            >
-              <Settings size={15} className="text-gray-400" />
-              <span className="text-sm font-medium">Paramètres</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-              onClick={() => onAction('notifications')}
-            >
-              <Bell size={15} className="text-gray-400" />
-              <span className="text-sm font-medium">Notifications</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-              onClick={() => onAction('help')}
-            >
-              <HelpCircle size={15} className="text-gray-400" />
-              <span className="text-sm font-medium">Aide</span>
-            </DropdownMenuItem>
+            {MENU_ITEMS.profile.map(renderMenuItem)}
           </DropdownMenuGroup>
 
-          <DropdownMenuSeparator className="my-1.5 bg-gray-100" />
+          {userData.tier === 'free' && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {MENU_ITEMS.premium.map(renderMenuItem)}
+              </DropdownMenuGroup>
+            </>
+          )}
+        </section>
 
-          {/* ── Switch account ── */}
+        <section className="mt-1 p-1 rounded-2xl">
           <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 cursor-pointer">
-                <ArrowLeftRight size={15} className="text-gray-400" />
-                <span>Changer de compte</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl p-1.5 min-w-[230px]">
-                  {savedAccounts.length > 0 && (
-                    <>
-                      <p className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        Comptes récents
-                      </p>
-                      {savedAccounts.map((acc) => (
-                        <DropdownMenuItem
-                          key={acc.email}
-                          className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-                          onClick={() => onAction(`switch:${acc.email}`)}
-                        >
-                          <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-primary">{acc.initials}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{acc.name}</p>
-                            <p className="text-xs text-gray-400 truncate">{acc.email}</p>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                    </>
-                  )}
-                  <DropdownMenuItem
-                    className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer"
-                    onClick={() => onAction('add-account')}
-                  >
-                    <div className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center flex-shrink-0">
-                      <Plus size={12} className="text-gray-400" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">Ajouter un compte</span>
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
+            {MENU_ITEMS.account.map(renderMenuItem)}
           </DropdownMenuGroup>
-
-          <DropdownMenuSeparator className="my-1.5 bg-gray-100" />
-
-          {/* ── Sign out ── */}
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              className="gap-2.5 px-3 py-2 rounded-xl cursor-pointer text-red-500 hover:bg-red-50 hover:text-red-600"
-              onClick={() => onAction('logout')}
-            >
-              <LogOut size={15} />
-              <span className="text-sm font-medium">Se déconnecter</span>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </div>
+        </section>
       </DropdownMenuContent>
     </DropdownMenu>
   );

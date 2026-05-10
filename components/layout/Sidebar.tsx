@@ -652,62 +652,31 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* UserDropdown */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              const dropdown = document.querySelector('[data-user-dropdown-trigger]') as HTMLButtonElement;
-              dropdown?.click();
-            }}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
-          >
-            <div className="relative flex-shrink-0">
-              <div className={cn(
-                'w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold',
-                'bg-gradient-to-br from-primary to-primary-dark text-white',
-                'border-2 border-white/20 shadow-md transition-transform group-hover:scale-105'
-              )}>
-                {getInitials(profile?.company_name || profile?.first_name || 'U')}
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white bg-green-400" />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {profile?.company_name || profile?.first_name || 'Mon compte'}
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                Changer de compte →
-              </p>
-            </div>
-          </button>
-
-          {/* Dropdown caché mais cliquable */}
-          <div className="absolute inset-0 opacity-0 pointer-events-none">
-            <UserDropdown
-              user={{
-                name: profile?.company_name || profile?.first_name || 'Mon compte',
-                email: profile?.email || '',
-                initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
-                avatar: profile?.logo_url || undefined,
-                status: 'online',
-                tier: profile?.subscription_tier || 'free',
-              }}
-              onAction={async (action) => {
-                if (action === 'logout') {
-                  try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
-                  catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
-                }
-                if (action === 'settings')      router.push('/settings');
-                if (action === 'profile')       router.push('/settings');
-                if (action === 'notifications') router.push('/notifications');
-                if (action === 'help')          router.push('/help');
-                if (action === 'add-account' || action.startsWith('switch:')) {
-                  try { await signOut(); router.push('/login'); } catch {}
-                }
-              }}
-            />
-          </div>
-        </div>
+        {/* UserDropdown - New Design */}
+        <UserDropdown
+          user={{
+            name: profile?.company_name || profile?.first_name || 'Mon compte',
+            email: profile?.email || '',
+            initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
+            avatar: profile?.logo_url || undefined,
+            status: 'online',
+            tier: profile?.subscription_tier || 'free',
+          }}
+          onAction={async (action) => {
+            if (action === 'logout') {
+              try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
+              catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
+            }
+            if (action === 'settings')      router.push('/settings');
+            if (action === 'profile')       router.push('/settings');
+            if (action === 'notifications') router.push('/notifications');
+            if (action === 'help')          router.push('/help');
+            if (action === 'upgrade')       router.push('/paywall');
+            if (action === 'switch') {
+              try { await signOut(); router.push('/login'); } catch {}
+            }
+          }}
+        />
 
         <div className="flex items-center gap-2 mt-2 px-2">
           <KeyboardShortcutsHelp />
