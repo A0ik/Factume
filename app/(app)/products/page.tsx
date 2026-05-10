@@ -966,13 +966,13 @@ export default function ProductsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 dark:border-white/10"
             >
               {/* Modal header */}
-              <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Modifier' : 'Nouveau produit'}</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Ajoutez-le directement à vos factures</p>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Modifier' : 'Nouveau produit'}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Ajoutez-le directement à vos factures</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {canUseVoice && !editingId && (
@@ -983,7 +983,7 @@ export default function ProductsPage() {
                           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
                           mode === 'voice'
                             ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                         )}
                       >
                         <Mic size={14} />
@@ -995,7 +995,7 @@ export default function ProductsPage() {
                           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
                           mode === 'manual'
                             ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                         )}
                       >
                         <FileText size={14} />

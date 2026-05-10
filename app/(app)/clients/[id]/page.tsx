@@ -226,11 +226,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         .limit(1);
 
       if (checkError) {
-        toast.warn('La fonctionnalité de notes n\'est pas disponible');
+        // Silencieusement retourner sans erreur
         return;
       }
     } catch (e) {
-      toast.warn('La fonctionnalité de notes n\'est pas disponible');
+      // Silencieusement retourner sans erreur
       return;
     }
 
@@ -258,11 +258,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         .limit(1);
 
       if (checkError) {
-        toast.warn('La fonctionnalité de notes n\'est pas disponible');
+        // Silencieusement retourner sans erreur
         return;
       }
     } catch (e) {
-      toast.warn('La fonctionnalité de notes n\'est pas disponible');
+      // Silencieusement retourner sans erreur
       return;
     }
 
