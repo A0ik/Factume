@@ -180,7 +180,7 @@ function calculateMealAllowance(amount: number, type: 'full_day' | 'half_day'): 
   return { tax_free, taxable };
 }
 
-// 3D Card Component amélioré
+// Card Component - clean layout with bottom actions
 function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
   expense: Expense;
   onEdit: (e: Expense) => void;
@@ -196,122 +196,106 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="group relative"
-      style={{ perspective: "1000px" }}
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      className="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
     >
-      <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden">
-        <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', cat.color)} />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5" />
-
-        <div className="relative p-5">
-          <div className="flex items-start gap-4">
-            <motion.div
-              whileHover={{ rotate: 360, scale: 1.1 }}
-              transition={{ duration: 0.6 }}
-              className={cn('relative w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg', cat.color)}
-            >
-              <Icon size={24} className="text-white" strokeWidth={2.5} />
-            </motion.div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-white transition-colors">{expense.vendor}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{expense.description || cat.label}</p>
-                  {/* Nouveau: Lieu */}
-                  {(expense.location_city || expense.location_country) && (
-                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                      <MapPin size={10} />
-                      <span>{expense.location_city}{expense.location_city && expense.location_country && ', '}{expense.location_country}</span>
-                    </div>
-                  )}
-                </div>
-                <span className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm', statusStyle.class)}>
-                  <StatusIcon size={12} />
-                  {statusStyle.label}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 mt-3">
-                <div>
-                  <p className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">{formatCurrency(expense.amount)}</p>
-                  {expense.vat_amount > 0 && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500">TVA {formatCurrency(expense.vat_amount)}</p>
-                  )}
-                </div>
-                {/* Nouveau: Affichage IK ou Tax Free */}
-                {expense.category === 'mileage' && (
-                  <div className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-lg">
-                    <Gauge size={10} />
-                    <span>{expense.distance_km} km</span>
-                  </div>
-                )}
-                {expense.tax_free_amount && expense.tax_free_amount > 0 && (
-                  <div className="flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-2 py-1 rounded-lg">
-                    <Check size={10} />
-                    <span>{formatCurrency(expense.tax_free_amount)} exonéré</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                  <Calendar size={12} />
-                  {new Date(expense.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                </div>
-              </div>
-
-              {/* Nouveau: Client/Projet */}
-              {(expense.client_id || expense.project_code) && (
-                <div className="flex items-center gap-2 mt-2">
-                  {expense.client_id && (
-                    <span className="text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-lg">
-                      Client
-                    </span>
-                  )}
-                  {expense.project_code && (
-                    <span className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-lg">
-                      {expense.project_code}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              {expense.receipt_url && (
-                <a
-                  href={expense.receipt_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
-                  aria-label={`Voir le justificatif pour ${expense.vendor}`}
-                >
-                  <FileImage size={14} />
-                </a>
-              )}
-              {expense.status === 'pending' && (
-                <button onClick={() => onValidate(expense.id, 'validated')} className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-green-500 hover:bg-green-50 transition-all">
-                  <Check size={14} />
-                </button>
-              )}
-              <button
-                data-action="edit-expense"
-                onClick={() => onEdit(expense)}
-                className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
-                aria-label={`Modifier la dépense: ${expense.vendor}`}
-              >
-                <Edit2 size={14} />
-              </button>
-              <button
-                data-action="delete-expense"
-                onClick={() => onDelete(expense.id)}
-                className="p-2 rounded-xl bg-white/80 dark:bg-slate-700/80 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                aria-label={`Supprimer la dépense: ${expense.vendor}`}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+      <div className="p-5">
+        {/* Top row: icon + vendor + status */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className={cn('w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md flex-shrink-0', cat.color)}>
+            <Icon size={20} className="text-white" strokeWidth={2.5} />
           </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-base font-bold text-gray-900 dark:text-white truncate">{expense.vendor}</p>
+              <span className={cn('flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border flex-shrink-0', statusStyle.class)}>
+                <StatusIcon size={10} />
+                {statusStyle.label}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{expense.description || cat.label}</p>
+          </div>
+        </div>
+
+        {/* Amount + details row */}
+        <div className="flex items-baseline gap-3 mb-2">
+          <p className="text-2xl font-black text-gray-900 dark:text-white">{formatCurrency(expense.amount)}</p>
+          {expense.vat_amount > 0 && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">TVA {formatCurrency(expense.vat_amount)}</span>
+          )}
+        </div>
+
+        {/* Tags row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <Calendar size={12} />
+            {new Date(expense.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+          </div>
+          {(expense.location_city || expense.location_country) && (
+            <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+              <MapPin size={10} />
+              <span>{expense.location_city}{expense.location_city && expense.location_country && ', '}{expense.location_country}</span>
+            </div>
+          )}
+          {expense.category === 'mileage' && expense.distance_km && (
+            <span className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md">
+              <Gauge size={10} />
+              {expense.distance_km} km
+            </span>
+          )}
+          {expense.tax_free_amount && expense.tax_free_amount > 0 && (
+            <span className="flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-md">
+              <Check size={10} />
+              {formatCurrency(expense.tax_free_amount)} exonéré
+            </span>
+          )}
+          {expense.client_id && (
+            <span className="text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-md">Client</span>
+          )}
+          {expense.project_code && (
+            <span className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-md">{expense.project_code}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom actions bar - always visible */}
+      <div className="flex items-center justify-between px-5 py-2.5 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
+        <div className="flex items-center gap-1">
+          {expense.receipt_url && (
+            <a
+              href={expense.receipt_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
+              aria-label={`Voir le justificatif pour ${expense.vendor}`}
+            >
+              <FileImage size={14} />
+            </a>
+          )}
+          {expense.status === 'pending' && (
+            <button onClick={() => onValidate(expense.id, 'validated')} className="p-1.5 rounded-lg text-gray-400 hover:text-green-500 hover:bg-green-50 transition-all" title="Valider">
+              <Check size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            data-action="edit-expense"
+            onClick={() => onEdit(expense)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
+            aria-label={`Modifier la dépense: ${expense.vendor}`}
+          >
+            <Edit2 size={14} />
+          </button>
+          <button
+            data-action="delete-expense"
+            onClick={() => onDelete(expense.id)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+            aria-label={`Supprimer la dépense: ${expense.vendor}`}
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
     </motion.div>
@@ -744,49 +728,49 @@ export default function ExpensesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
       >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Notes de Frais</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">100% Légal FR • Indemnités Kilométriques • Plafonds Repas</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">100% Légal FR • Indemnités Kilométriques • Plafonds Repas</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/expenses/analytics" className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-700 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-violet-500/20 hover:shadow-xl transition-all hover:scale-105 active:scale-95">
-              <TrendingDown size={18} />
-              Analytics
-            </Link>
+          <div className="flex items-center gap-2 flex-wrap">
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowExportModal(true)}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all"
-            >
-              <Download size={18} />
-              Export
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={openCreate}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               Nouvelle dépense
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowMultiInvoiceModal(true)}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl transition-all"
             >
-              <Sparkles size={18} />
-              Multi-factures
+              <Sparkles size={16} />
+              <span className="hidden sm:inline">Multi-factures</span>
+            </motion.button>
+            <Link href="/expenses/analytics" className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-700 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-violet-500/20 hover:shadow-xl transition-all">
+              <TrendingDown size={16} />
+              <span className="hidden sm:inline">Analytics</span>
+            </Link>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Export</span>
             </motion.button>
           </div>
         </div>
       </motion.div>
 
-      {/* Stats Grid amélioré */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {[
           { label: 'Ce mois', value: formatCurrency(totalMonth), sub: 'dépensé', icon: TrendingDown, color: 'from-red-500 to-rose-500' },
           { label: 'Total cumulé', value: formatCurrency(totalAll), sub: 'toutes périodes', icon: Receipt, color: 'from-blue-500 to-indigo-500' },
@@ -825,25 +809,25 @@ export default function ExpensesPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 mb-8"
+        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 mb-8"
       >
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-row gap-3 items-center">
           <div className="relative flex-1">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un fournisseur, ville, client..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
+              placeholder="Rechercher un fournisseur, ville..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+          <div className="flex gap-1.5 flex-shrink-0">
             {['', 'pending', 'validated'].map((s) => (
               <button
                 key={s}
                 onClick={() => setFilterStatus(s)}
-                className={cn('flex-shrink-0 px-4 py-3 rounded-2xl text-sm font-bold transition-all border', filterStatus === s
-                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary shadow-lg shadow-primary/30'
+                className={cn('px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border', filterStatus === s
+                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary shadow-md shadow-primary/20'
                   : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-gray-300'
                 )}
               >
@@ -853,23 +837,26 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Category Pills avec IK en plus */}
-        <div className="flex gap-2 flex-wrap mt-4">
-          <button onClick={() => setFilterCat('')} className={cn('px-4 py-2 rounded-xl text-xs font-bold transition-all border', filterCat === ''
+        {/* Category Pills - horizontal scroll */}
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
+          <button onClick={() => setFilterCat('')} className={cn('px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border flex-shrink-0', filterCat === ''
             ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary'
             : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'
           )}>
-            Toutes catégories
+            Toutes
           </button>
-          {CATEGORIES.map((cat) => (
-            <button key={cat.value} onClick={() => setFilterCat(cat.value === filterCat ? '' : cat.value)} className={cn('px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5', filterCat === cat.value
-              ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary'
-              : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'
-            )}>
-              <cat.icon size={12} />
-              {cat.label}
-            </button>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button key={cat.value} onClick={() => setFilterCat(cat.value === filterCat ? '' : cat.value)} className={cn('px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 flex-shrink-0', filterCat === cat.value
+                ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary'
+                : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'
+              )}>
+                <Icon size={11} />
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
 
@@ -899,7 +886,7 @@ export default function ExpensesPage() {
           </motion.button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {filtered.map((expense) => (
             <Expense3DCard
               key={expense.id}

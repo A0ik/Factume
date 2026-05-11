@@ -36,10 +36,59 @@ interface ClientNote {
   created_at: string;
 }
 
+// Extracted outside render to avoid recreating component references
+const GlassCard = ({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay }}
+    className={cn(
+      'relative bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden',
+      'shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300',
+      className
+    )}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
+    {children}
+  </motion.div>
+);
+
+const StatCard = ({ title, value, subtitle, icon: Icon, gradient, delay = 0 }: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: any;
+  gradient: string;
+  delay?: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ duration: 0.3, delay }}
+    className={cn('relative overflow-hidden rounded-3xl p-5 border border-white/20 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group', gradient)}
+  >
+    <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
+    <div className="relative">
+      <div className="flex items-center justify-between mb-2">
+        <Icon size={18} className="text-white/80" />
+        <motion.div
+          animate={{ rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 3 }}
+        >
+          <FileCheck size={16} className="text-white/60" />
+        </motion.div>
+      </div>
+      <p className="text-2xl font-black text-white">{value}</p>
+      <p className="text-xs text-white/70 mt-0.5">{title}</p>
+      <p className="text-[10px] text-white/50 mt-1">{subtitle}</p>
+    </div>
+  </motion.div>
+);
+
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { clients, invoices, updateClient, deleteClient } = useDataStore();
+  const { clients, invoices, updateClient, deleteClient, loading: dataLoading } = useDataStore();
   const { user } = useAuthStore();
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -85,19 +134,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
-        // Check if table exists first
-        const { error: checkError } = await supabase
-          .from('client_notes')
-          .select('id')
-          .limit(1);
-
-        // If table doesn't exist or other error, silently fail
-        if (checkError) {
-          console.warn('client_notes table not available');
-          setLoadingNotes(false);
-          return;
-        }
-
         const { data, error } = await supabase
           .from('client_notes')
           .select('*')
@@ -105,7 +141,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           .order('created_at', { ascending: false });
         if (!error && data) setNotes(data);
       } catch (e) {
-        // silently fail
         console.warn('Error fetching notes:', e);
       } finally {
         setLoadingNotes(false);
@@ -114,10 +149,24 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     fetchNotes();
   }, [id]);
 
+  // Loading state while clients are being fetched
+  if (clients.length === 0 && dataLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-gray-400">Chargement du client...</p>
+      </div>
+    </div>
+  );
+
   if (!client) return (
     <div className="text-center py-20">
-      <p className="text-gray-500">Client introuvable</p>
-      <Link href="/clients" className="mt-3 text-primary font-semibold text-sm hover:underline block">Retour</Link>
+      <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+        <AlertCircle size={32} className="text-gray-300 dark:text-gray-600" />
+      </div>
+      <p className="text-gray-500 font-medium">Client introuvable</p>
+      <p className="text-gray-400 text-sm mt-1">Ce client n'existe pas ou a été supprimé.</p>
+      <Link href="/clients" className="mt-4 text-primary font-semibold text-sm hover:underline block">Retour aux clients</Link>
     </div>
   );
 
@@ -299,78 +348,36 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const clientTags: string[] = (client as any).tags || [];
 
-  // Scoring client
-  const paidInvoices = clientInvoices.filter((i) => i.status === 'paid' && i.paid_at && i.due_date);
-  const avgPaymentDays = paidInvoices.length > 0
-    ? paidInvoices.reduce((s, inv) => {
-        const paid = new Date(inv.paid_at!).getTime();
-        const due = new Date(inv.due_date!).getTime();
-        return s + Math.max(0, (paid - due) / (1000 * 60 * 60 * 24));
-      }, 0) / paidInvoices.length
-    : null;
-  const nonDraftCount = clientInvoices.filter((i) => i.status !== 'draft').length;
-  const paymentRate = clientInvoices.length > 0 && nonDraftCount > 0
-    ? (clientInvoices.filter((i) => i.status === 'paid').length / nonDraftCount) * 100
-    : null;
-  const clientScore = (() => {
-    if (nonDraftCount === 0) return null;
-    let score = 100;
-    if (avgPaymentDays !== null) score -= Math.min(40, avgPaymentDays * 2);
-    if (paymentRate !== null) score -= (100 - paymentRate) * 0.5;
-    if (clientInvoices.some((i) => i.status === 'overdue')) score -= 15;
-    return Math.max(0, Math.round(score));
-  })();
+  // Scoring client — wrapped in try-catch to prevent crash
+  let clientScore: number | null = null;
+  let avgPaymentDays: number | null = null;
+  let paymentRate: number | null = null;
+  try {
+    const paidInvoices = clientInvoices.filter((i) => i.status === 'paid' && i.paid_at && i.due_date);
+    avgPaymentDays = paidInvoices.length > 0
+      ? paidInvoices.reduce((s, inv) => {
+          const paid = new Date(inv.paid_at!).getTime();
+          const due = new Date(inv.due_date!).getTime();
+          return s + Math.max(0, (paid - due) / (1000 * 60 * 60 * 24));
+        }, 0) / paidInvoices.length
+      : null;
+    const nonDraftCount = clientInvoices.filter((i) => i.status !== 'draft').length;
+    paymentRate = clientInvoices.length > 0 && nonDraftCount > 0
+      ? (clientInvoices.filter((i) => i.status === 'paid').length / nonDraftCount) * 100
+      : null;
+    if (nonDraftCount > 0) {
+      let score = 100;
+      if (avgPaymentDays !== null) score -= Math.min(40, avgPaymentDays * 2);
+      if (paymentRate !== null) score -= (100 - paymentRate) * 0.5;
+      if (clientInvoices.some((i) => i.status === 'overdue')) score -= 15;
+      clientScore = Math.max(0, Math.round(score));
+    }
+  } catch (e) {
+    console.warn('Score calculation error:', e);
+  }
   const scoreColor = clientScore === null ? '' : clientScore >= 80 ? 'text-green-600' : clientScore >= 60 ? 'text-amber-600' : 'text-red-600';
   const scoreBg = clientScore === null ? '' : clientScore >= 80 ? 'bg-green-50 border-green-100' : clientScore >= 60 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100';
   const scoreLabel = clientScore === null ? '—' : clientScore >= 80 ? 'Excellent' : clientScore >= 60 ? 'Moyen' : 'Risqué';
-
-  const GlassCard = ({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className={cn(
-        'relative bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden',
-        'shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300',
-        className
-      )}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
-      {children}
-    </motion.div>
-  );
-
-  const StatCard = ({ title, value, subtitle, icon: Icon, gradient, delay = 0 }: {
-    title: string;
-    value: string | number;
-    subtitle: string;
-    icon: any;
-    gradient: string;
-    delay?: number;
-  }) => (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay }}
-      className={cn('relative overflow-hidden rounded-3xl p-5 border border-white/20 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group', gradient)}
-    >
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <Icon size={18} className="text-white/80" />
-          <motion.div
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 3 }}
-          >
-            <FileCheck size={16} className="text-white/60" />
-          </motion.div>
-        </div>
-        <p className="text-2xl font-black text-white">{value}</p>
-        <p className="text-xs text-white/70 mt-0.5">{title}</p>
-        <p className="text-[10px] text-white/50 mt-1">{subtitle}</p>
-      </div>
-    </motion.div>
-  );
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-8">
