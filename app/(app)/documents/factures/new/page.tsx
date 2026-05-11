@@ -342,7 +342,6 @@ export default function NewFacturePage() {
   };
 
   const handleSave = async () => {
-    // Protection contre les soumissions multiples
     if (saving) {
       console.log('[handleSave] Already saving, ignoring click');
       return;
@@ -365,6 +364,11 @@ export default function NewFacturePage() {
     const currentIdempotencyId = pendingIdRef.current;
     setSaving(true);
     setError('');
+
+    console.log('[handleSave] Starting invoice creation...', {
+      clientId, clientName, docType, issueDate, itemsCount: items.length,
+      profileId: profile.id, idempotencyId: currentIdempotencyId
+    });
 
     try {
       const newInvoice = await Promise.race([
@@ -394,15 +398,15 @@ export default function NewFacturePage() {
         router.push(`/invoices/${newInvoice.id}`);
       }, 100);
     } catch (e: any) {
+      console.error('[handleSave] CAUGHT ERROR:', e?.message, e);
       if ((e as Error).message === '__timeout__') {
         toast.error('Délai dépassé — réessayez', { id: 'timeout-error' });
         setError('Le délai de création a été dépassé. Veuillez réessayer.');
-      } else if ((e as Error).message?.includes('Limite de 10 factures')) {
-        toast.error('Limite atteinte ! Vous avez utilisé vos 10 factures mensuelles gratuites. Passez à un plan supérieur pour des factures illimitées.', { id: 'limit-error' });
+      } else if ((e as Error).message?.includes('Limite de')) {
+        toast.error('Limite atteinte !', { id: 'limit-error' });
         setError('Limite de factures atteinte.');
         setTimeout(() => router.push('/paywall'), 1500);
       } else {
-        console.error('[new invoice] createInvoice error:', e);
         setError(e.message || 'Erreur lors de la création.');
         toast.error(e.message || 'Erreur lors de la création', { id: 'create-error' });
       }

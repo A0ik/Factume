@@ -76,24 +76,11 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
   createInvoice: async (formData, profile, idempotencyId?: string) => {
+    console.log('[createInvoice] START', { hasProfile: !!profile, profileId: profile?.id, idempotencyId });
     if (!profile?.id) {
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
     const userId = profile.id;
-
-    // CRITIQUE: Générer systématiquement un idempotencyId pour garantir l'unicité
-    // Cela évite les doublons en cas de retry réseau ou de race condition
-    const finalIdempotencyId = idempotencyId || crypto.randomUUID();
-
-    // Vérifier si cette facture existe déjà (idempotence)
-    if (idempotencyId) {
-      const { data: existing } = await getSupabaseClient()
-        .from('invoices')
-        .select('*, client:clients(*)')
-        .eq('idempotency_id', idempotencyId)
-        .maybeSingle();
-      if (existing) return existing;
-    }
 
     const items = formData.items.map((item) => ({ ...item, id: generateId(), total: item.quantity * item.unit_price }));
     const subtotal = items.reduce((s, i) => s + i.total, 0);
@@ -101,72 +88,110 @@ export const useDataStore = create<DataState>((set, get) => ({
     const docType = formData.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
     const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
+    const finalIdempotencyId = idempotencyId || crypto.randomUUID();
+    const finalTotal = subtotal + vatAmount - discountAmount;
 
-    // UTILISER LA FONCTION ATOMIQUE POUR ÉVITER TOUTE RACE CONDITION
-    // La fonction create_invoice_atomique:
-    // 1. Verrouille le profil (FOR UPDATE)
-    // 2. Incrémente le compteur
-    // 3. Génère le numéro
-    // 4. Insère la facture
-    // 5. Gère l'unicité via contrainte unique
-    // Tout est atomique - pas de race condition possible
-    const { data: invoiceId, error: rpcError } = await getSupabaseClient()
-      .rpc('create_invoice_atomique', {
-        p_user_id: userId,
-        p_client_id: formData.client_id || null,
-        p_client_name_override: formData.client_name_override || null,
-        p_document_type: docType,
-        p_status: 'draft',
-        p_issue_date: formData.issue_date,
-        p_due_date: formData.due_date || null,
-        p_items: items,
-        p_subtotal: subtotal,
-        p_vat_amount: vatAmount,
-        p_discount_percent: formData.discount_percent || null,
-        p_discount_amount: discountAmount || null,
-        p_total: subtotal + vatAmount - discountAmount,
-        p_notes: formData.notes || null,
-        p_prefix: prefix,
-        p_linked_invoice_id: formData.linked_invoice_id || null,
-        p_idempotency_id: finalIdempotencyId
+    // Approche 1: Server-side API (fiable, pas de problème Web Locks)
+    console.log('[createInvoice] Using server-side API route...');
+    try {
+      const response = await fetch('/api/invoices/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: formData.client_id || null,
+          client_name_override: formData.client_name_override || null,
+          document_type: docType,
+          issue_date: formData.issue_date,
+          due_date: formData.due_date || null,
+          items,
+          subtotal,
+          vat_amount: vatAmount,
+          discount_percent: formData.discount_percent || null,
+          discount_amount: discountAmount || null,
+          total: finalTotal,
+          notes: formData.notes || null,
+          prefix,
+          linked_invoice_id: formData.linked_invoice_id || null,
+          idempotency_id: finalIdempotencyId,
+        }),
       });
 
-    if (rpcError || !invoiceId) {
-      console.error('[createInvoice] Atomic create error:', rpcError);
-      throw new Error(rpcError?.message || 'Impossible de créer la facture');
-    }
+      const result = await response.json();
+      console.log('[createInvoice] Server API response:', { status: response.status, hasInvoice: !!result.invoice, error: result.error });
 
-    // Récupérer la facture créée avec ses relations
-    const { data, error } = await getSupabaseClient()
-      .from('invoices')
-      .select('*, client:clients(*)')
-      .eq('id', invoiceId)
-      .single();
-
-    if (error || !data) {
-      console.error('[createInvoice] Fetch error:', error);
-      throw new Error('Impossible de récupérer la facture créée');
-    }
-
-    // Mise à jour des stats mensuelles en background (non critique)
-    (async () => {
-      try {
-        const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
-        if (freshProfile) {
-          try {
-            useAuthStore.getState().setProfile(freshProfile);
-          } catch (e) {
-            console.warn('[createInvoice] Could not update auth store:', e);
-          }
-        }
-      } catch (e) {
-        console.warn('[createInvoice] Stats update failed (non-critical):', e);
+      if (!response.ok || result.error) {
+        throw new Error(result.error || `Erreur serveur (${response.status})`);
       }
-    })();
 
-    set((s) => ({ invoices: [data, ...s.invoices] }));
-    get().computeStats();
-    return data;
+      const data = result.invoice;
+
+      (async () => {
+        try {
+          const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
+          if (freshProfile) useAuthStore.getState().setProfile(freshProfile);
+        } catch {}
+      })();
+
+      set((s) => ({ invoices: [data, ...s.invoices] }));
+      get().computeStats();
+      console.log('[createInvoice] SUCCESS via server API', data.id);
+      return data;
+    } catch (serverError: any) {
+      console.warn('[createInvoice] Server API failed:', serverError?.message, '— trying direct RPC...');
+
+      // Approche 2: Direct RPC (fallback)
+      try {
+        const { data: invoiceId, error: rpcError } = await getSupabaseClient()
+          .rpc('create_invoice_atomique', {
+            p_user_id: userId,
+            p_client_id: formData.client_id || null,
+            p_client_name_override: formData.client_name_override || null,
+            p_document_type: docType,
+            p_status: 'draft',
+            p_issue_date: formData.issue_date,
+            p_due_date: formData.due_date || null,
+            p_items: items,
+            p_subtotal: subtotal,
+            p_vat_amount: vatAmount,
+            p_discount_percent: formData.discount_percent || null,
+            p_discount_amount: discountAmount || null,
+            p_total: finalTotal,
+            p_notes: formData.notes || null,
+            p_prefix: prefix,
+            p_linked_invoice_id: formData.linked_invoice_id || null,
+            p_idempotency_id: finalIdempotencyId,
+          });
+
+        if (rpcError || !invoiceId) {
+          throw new Error(rpcError?.message || 'Impossible de créer la facture');
+        }
+
+        const { data, error } = await getSupabaseClient()
+          .from('invoices')
+          .select('*, client:clients(*)')
+          .eq('id', invoiceId)
+          .single();
+
+        if (error || !data) {
+          throw new Error('Impossible de récupérer la facture créée');
+        }
+
+        (async () => {
+          try {
+            const { data: freshProfile } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
+            if (freshProfile) useAuthStore.getState().setProfile(freshProfile);
+          } catch {}
+        })();
+
+        set((s) => ({ invoices: [data, ...s.invoices] }));
+        get().computeStats();
+        console.log('[createInvoice] SUCCESS via direct RPC', data.id);
+        return data;
+      } catch (rpcError: any) {
+        console.error('[createInvoice] Both methods failed. Server:', serverError?.message, 'RPC:', rpcError?.message);
+        throw new Error(serverError?.message || rpcError?.message || 'Impossible de créer la facture');
+      }
+    }
   },
   updateInvoice: async (id, updates) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
