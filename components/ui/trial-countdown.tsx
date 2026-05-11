@@ -23,15 +23,51 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
   const [isVisible, setIsVisible] = React.useState(true);
 
   React.useEffect(() => {
-    // Fetch trial end date once from server
+    // Check sessionStorage cache first to avoid re-fetching on every navigation
+    const cached = sessionStorage.getItem('trial-status');
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        if (!data.isTrialActive || !data.trialEndDate) {
+          setIsVisible(false);
+          return;
+        }
+        // Use cached end date for countdown
+        const endDate = new Date(data.trialEndDate);
+        const diff = endDate.getTime() - Date.now();
+        if (diff <= 0) {
+          setIsVisible(false);
+          return;
+        }
+        const tick = () => {
+          const now = Date.now();
+          const d = endDate.getTime() - now;
+          if (d <= 0) { setIsVisible(false); return; }
+          setTimeRemaining({
+            days: Math.floor(d / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((d % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((d % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((d % (1000 * 60)) / 1000),
+          });
+        };
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+      } catch {
+        // Invalid cache, continue to fetch
+      }
+    }
+
+    // No cache or invalid cache, fetch from server
     const fetchTrialEnd = async () => {
       try {
         const response = await fetch('/api/subscription/trial-status');
         if (response.ok) {
           const data = await response.json();
-          if (data.trialEndDate) {
+          // Cache the result
+          sessionStorage.setItem('trial-status', JSON.stringify(data));
+          if (data.trialEndDate && data.isTrialActive) {
             const endDate = new Date(data.trialEndDate);
-            // Client-side countdown, synced to server end date
             const tick = () => {
               const now = Date.now();
               const diff = endDate.getTime() - now;

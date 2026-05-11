@@ -122,8 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error && error.code !== 'PGRST116') return;
     if (data) {
       if (data.is_trial_active && data.trial_end_date && new Date(data.trial_end_date) < new Date()) {
-        // Appel RPC en arrière-plan — on n'attend pas pour éviter le race condition
-        void getSupabaseClient().rpc('expire_trials');
+        // Trial expiré : update local uniquement (le RPC expire_trials est restreint à service_role)
         set({ profile: { ...data, is_trial_active: false, subscription_tier: 'free' } });
       } else {
         set({ profile: data });

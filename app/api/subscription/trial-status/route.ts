@@ -28,14 +28,16 @@ export async function GET() {
       const now = new Date();
       const endDate = new Date(profile.trial_end_date);
       if (endDate < now) {
-        // Trial has expired, update database
-        await supabase
-          .from('profiles')
-          .update({
-            is_trial_active: false,
-            subscription_tier: 'free'
-          })
-          .eq('id', user.id);
+        // Only PATCH if not already marked as inactive (idempotent)
+        if (profile?.is_trial_active !== false || profile?.subscription_tier !== 'free') {
+          await supabase
+            .from('profiles')
+            .update({
+              is_trial_active: false,
+              subscription_tier: 'free'
+            })
+            .eq('id', user.id);
+        }
         isActive = false;
       }
     }
