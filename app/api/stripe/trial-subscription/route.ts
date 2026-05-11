@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Profil introuvable. Veuillez vous reconnecter.' }, { status: 404 });
 
+    // Prevent trial abuse: reject if user already had a trial
+    if (profile.trial_start_date) {
+      return NextResponse.json({ error: 'Vous avez déjà utilisé votre période d\'essai.' }, { status: 400 });
+    }
+
     // 1. Créer ou récupérer le client Stripe
     let customerId = profile?.stripe_customer_id;
     if (!customerId) {

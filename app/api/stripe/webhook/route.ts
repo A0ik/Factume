@@ -127,6 +127,13 @@ export async function POST(req: NextRequest) {
               .update({ subscription_tier: plan })
               .eq('stripe_subscription_id', sub.id);
           }
+        } else if (['past_due', 'canceled', 'unpaid'].includes(sub.status)) {
+          await supabase.from('profiles')
+            .update({
+              subscription_tier: 'free',
+              is_trial_active: false,
+            })
+            .eq('stripe_subscription_id', sub.id);
         }
         break;
       }
@@ -252,7 +259,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const e = err as Error;
     console.error('[webhook]', e.message);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Webhook processing error' }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

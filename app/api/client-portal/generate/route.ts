@@ -18,6 +18,16 @@ export async function POST(req: NextRequest) {
     );
     if (authError || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
+    // Verify user owns this client
+    const { data: client } = await supabase
+      .from('clients')
+      .select('user_id')
+      .eq('id', clientId)
+      .single();
+    if (!client || client.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
+    }
+
     // Return existing token if present
     const { data: existing } = await supabase
       .from('client_portal_tokens')
@@ -38,6 +48,7 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ token: data.token });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[client-portal/generate]', error);
+    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
   }
 }

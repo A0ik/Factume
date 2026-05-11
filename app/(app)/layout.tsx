@@ -7,7 +7,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import MobileDrawer from '@/components/layout/MobileDrawer';
 import { Logo } from '@/components/ui/Logo';
 import { ServiceWorkerRegistration } from '@/components/ui/ServiceWorkerRegistration';
-import CommandPalette from '@/components/ui/CommandPalette';
+import dynamic from 'next/dynamic';
+const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 import { TrialCountdown } from '@/components/ui/trial-countdown';
 import { InvoiceCounter } from '@/components/ui/invoice-counter';
 import { UpgradeBanner } from '@/components/ui/upgrade-banner';
@@ -89,7 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {isFree && showInvoiceCounter && !hideBanners && (
         <InvoiceCounter
           invoiceCount={invoiceCount}
-          maxInvoices={5}
+          maxInvoices={10}
           onClose={() => setShowInvoiceCounter(false)}
         />
       )}

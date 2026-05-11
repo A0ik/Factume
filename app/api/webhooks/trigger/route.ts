@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const INTERNAL_SECRET = process.env.WEBHOOK_INTERNAL_SECRET || 'internal-webhook-secret';
+function getInternalSecret() {
+  const secret = process.env.WEBHOOK_INTERNAL_SECRET;
+  if (!secret) throw new Error('WEBHOOK_INTERNAL_SECRET environment variable is required');
+  return secret;
+}
 
 // Internal endpoint to trigger outgoing webhooks for invoice events.
 // Called by internal server code (not exposed to end users directly).
@@ -9,7 +13,7 @@ const INTERNAL_SECRET = process.env.WEBHOOK_INTERNAL_SECRET || 'internal-webhook
 export async function POST(req: NextRequest) {
   // Validate internal secret header
   const secret = req.headers.get('x-internal-secret');
-  if (secret !== INTERNAL_SECRET) {
+  if (secret !== getInternalSecret()) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

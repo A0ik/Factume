@@ -291,44 +291,22 @@ const mainPages = [
     priority: 1,
   },
   {
-    url: `${baseUrl}/paywall`,
-    lastModified: currentDate,
-    changeFrequency: 'weekly' as const,
-    priority: 0.5,
-  },
-  {
     url: `${baseUrl}/demo`,
     lastModified: currentDate,
     changeFrequency: 'monthly' as const,
     priority: 0.9,
   },
   {
-    url: `${baseUrl}/integrations`,
+    url: `${baseUrl}/login`,
     lastModified: currentDate,
     changeFrequency: 'monthly' as const,
-    priority: 0.6,
-  },
-];
-
-// Pages d'aide
-const helpPages = [
-  {
-    url: `${baseUrl}/help`,
-    lastModified: currentDate,
-    changeFrequency: 'monthly' as const,
-    priority: 0.6,
+    priority: 0.7,
   },
   {
-    url: `${baseUrl}/help/factur-x`,
+    url: `${baseUrl}/register`,
     lastModified: currentDate,
     changeFrequency: 'monthly' as const,
-    priority: 0.5,
-  },
-  {
-    url: `${baseUrl}/help/pdp`,
-    lastModified: currentDate,
-    changeFrequency: 'monthly' as const,
-    priority: 0.5,
+    priority: 0.7,
   },
 ];
 
@@ -339,6 +317,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...featurePages,
     ...comparisonPages,
     ...legalPages,
-    ...helpPages,
   ];
 }

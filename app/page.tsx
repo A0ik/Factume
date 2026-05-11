@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet
 } from 'lucide-react';
@@ -146,6 +146,14 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showStickyCta, setShowStickyCta] = useState(false);
+  const [showSocialProof, setShowSocialProof] = useState(false);
+
+  // Social proof notification: appears after 5s, disappears after 8s
+  useEffect(() => {
+    const showTimer = setTimeout(() => setShowSocialProof(true), 5000);
+    const hideTimer = setTimeout(() => setShowSocialProof(false), 13000);
+    return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => { setScrolled(window.scrollY > 50); setShowStickyCta(window.scrollY > 600); };
@@ -231,6 +239,40 @@ export default function LandingPage() {
           <Zap className="w-4 h-4" />Essai gratuit 7 jours
         </a>
       </div>
+
+      {/* Sticky desktop CTA */}
+      {showStickyCta && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="hidden sm:block fixed bottom-6 right-6 z-40"
+        >
+          <Link href="/register" className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm transition-all active:scale-95">
+            <Zap className="w-4 h-4" />Essai gratuit 7 jours
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Social proof notification */}
+      <AnimatePresence>
+        {showSocialProof && (
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.4 }}
+            className="fixed bottom-6 left-6 z-50 hidden sm:flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-brand-100 rounded-2xl px-4 py-3 shadow-xl shadow-black/10 max-w-xs"
+          >
+            <div className="w-9 h-9 rounded-full bg-brand-50 flex items-center justify-center flex-shrink-0">
+              <Users className="w-4 h-4 text-brand-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">47 entrepreneurs cette semaine</p>
+              <p className="text-xs text-slate-500">ont rejoint Factu.me</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════ NAVBAR ═══════════ */}
       <nav className={`fixed top-2 sm:top-3 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto z-50 backdrop-blur-2xl bg-white/90 rounded-full border transition-all duration-300 sm:max-w-[680px] lg:max-w-[800px] xl:max-w-[900px] px-3 sm:px-5 py-2 sm:py-2.5 ${scrolled ? 'border-brand-200/60 shadow-lg shadow-brand-500/8' : 'border-brand-100/30 shadow-md shadow-black/[0.03]'}`}>

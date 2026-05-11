@@ -17,6 +17,21 @@ export async function POST(
     const { signatureDataUrl, signerName, signerEmail } = await req.json();
     const { id } = await params;
 
+    // Auth: verify caller identity
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ error: 'Authentification requise' }, { status: 401 });
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentification invalide' }, { status: 401 });
+    }
+
     // Récupérer l'adresse IP pour traçabilité
     const ip =
       req.headers.get('x-forwarded-for')?.split(',')[0] ||
@@ -25,12 +40,6 @@ export async function POST(
 
     // User Agent pour identification du dispositif
     const userAgent = req.headers.get('user-agent') || 'unknown';
-
-    // Récupérer les infos de la facture pour le contexte
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     const { data: invoice } = await supabase
       .from('invoices')
@@ -43,6 +52,11 @@ export async function POST(
         { error: 'Facture introuvable' },
         { status: 404 }
       );
+    }
+
+    // Ownership check: only the invoice owner can request signing
+    if (invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     // Créer la signature conforme eIDAS (AdES - GRATUIT)
@@ -82,7 +96,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Erreur signature facture:', error);
     return NextResponse.json(
-      { error: error.message || 'Erreur lors de la signature' },
+      { error: 'Erreur lors de la signature' },
       { status: 500 }
     );
   }
