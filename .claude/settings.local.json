@@ -196,7 +196,10 @@
       "Bash(git fetch *)",
       "Bash(git stash *)",
       "Bash(git pull *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(npm ls *)",
+      "Bash(node -e \"const lock = require\\('./package-lock.json'\\); Object.entries\\(lock.packages || {}\\).forEach\\(\\([path, info]\\) => { if \\(info.dependencies && info.dependencies['html-encoding-sniffer']\\) console.log\\(path, '→ requires html-encoding-sniffer'\\); }\\);\")",
+      "Bash(node -e \"const lock = require\\('./package-lock.json'\\); Object.entries\\(lock.packages || {}\\).forEach\\(\\([path, info]\\) => { if \\(info.dependencies && info.dependencies['jsdom']\\) console.log\\(path, '→ requires jsdom'\\); if \\(info.peerDependencies && info.peerDependencies['jsdom']\\) console.log\\(path, '→ peerRequires jsdom'\\); }\\);\")"
     ]
   },
   "enableAllProjectMcpServers": true,
