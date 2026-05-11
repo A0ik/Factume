@@ -85,9 +85,6 @@ export const metadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL('https://factu.me'),
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',

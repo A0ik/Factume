@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /invoices
+Disallow: /documents
+Disallow: /clients
+Disallow: /settings
+Disallow: /expenses
+Disallow: /contracts
+Disallow: /crm
+Disallow: /recurring
+Disallow: /notifications
+Disallow: /accounting
+Disallow: /activity
+Disallow: /banking
+Disallow: /capture
+Disallow: /cabinet
+Disallow: /products
+Disallow: /calendar
+Disallow: /workspace
+Disallow: /paywall
+Disallow: /trial
+Disallow: /data-health
+Disallow: /integrations
+Disallow: /api/
+
+Sitemap: https://factu.me/sitemap.xml

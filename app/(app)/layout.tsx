@@ -67,6 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <meta name="robots" content="noindex, nofollow" />
       <script dangerouslySetInnerHTML={{
         __html: `
         try {
