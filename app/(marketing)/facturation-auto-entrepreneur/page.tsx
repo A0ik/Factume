@@ -12,6 +12,8 @@ const ogImageUrl = getOgImageUrl({
   theme: pageThemes['facturation-auto-entrepreneur'],
 });
 
+const faqs = getFAQsForPage('facturation-auto-entrepreneur');
+
 export const metadata: Metadata = {
   title,
   description,
@@ -45,6 +47,20 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://factu.me/facturation-auto-entrepreneur',
+  },
+  other: {
+    'application/ld+json': JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: faq.answer,
+        },
+      })),
+    }),
   },
 };
 

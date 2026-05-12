@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
-import { checkApiRateLimit, checkAuthRateLimit, checkPageRateLimit } from '@/lib/upstash-rate-limit';
 
 // Routes publiques explicites (pas besoin d'auth)
 const PUBLIC_PATHS = [
@@ -88,49 +87,19 @@ export async function middleware(req: NextRequest) {
   // Expose nonce so layout can read it via headers()
   res.headers.set('x-nonce', nonce);
 
-  // Rate limiting - Try Upstash first, fallback to in-memory
+  // Rate limiting
   const ip = getClientIp(req);
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 
-  let rlSuccess = true;
-  let rlReset = 0;
+  let rlLimit = 300;
+  let rlWindow = 60_000;
+  if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
+  if (isAuthRoute) { rlLimit = 10; rlWindow = 60_000; }
 
-  try {
-    let rl;
-    if (isApiRoute) {
-      rl = await checkApiRateLimit(ip);
-    } else if (isAuthRoute) {
-      rl = await checkAuthRateLimit(ip);
-    } else {
-      rl = await checkPageRateLimit(ip);
-    }
-
-    if (rl) {
-      rlSuccess = rl.success;
-      rlReset = rl.reset;
-    }
-  } catch (error) {
-    // Fallback to in-memory rate limiting
-    console.warn('Upstash rate limiting failed, using fallback:', error);
-
-    let rlLimit = 300;
-    let rlWindow = 60_000;
-    if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
-    if (isAuthRoute) { rlLimit = 10; rlWindow = 60_000; }
-
-    const rl = rateLimit({
-      key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`,
-      limit: rlLimit,
-      windowMs: rlWindow
-    });
-
-    rlSuccess = rl.success;
-    rlReset = rl.resetTime;
-  }
-
-  if (!rlSuccess) {
-    const retryAfter = Math.ceil((rlReset - Date.now()) / 1000);
+  const rl = rateLimit({ key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`, limit: rlLimit, windowMs: rlWindow });
+  if (!rl.success) {
+    const retryAfter = Math.ceil((rl.resetTime - Date.now()) / 1000);
     return new Response('Too Many Requests', {
       status: 429,
       headers: { 'Retry-After': String(retryAfter) },
