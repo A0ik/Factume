@@ -6,9 +6,10 @@ import { useDataStore } from '@/stores/dataStore';
 import { getSupabaseClient } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag } from 'lucide-react';
+import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag, Maximize2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const CATEGORIES = [
   { value: 'transport', label: 'Transport', Icon: Car },
@@ -146,10 +147,9 @@ type DextTab = 'all' | 'processing' | 'to_review' | 'ready' | 'processed';
 function getDextStatus(file: ScannedFile): 'processing' | 'to_review' | 'ready' | 'error' {
   if (file.status === 'error') return 'error';
   if (file.status !== 'complete') return 'processing';
-  if (!file.result?.extracted) return 'to_review';
-  const { confidence, vendor, amount, date } = file.result.extracted;
-  if (confidence < 0.65 || !vendor || !amount || !date) return 'to_review';
-  return 'ready';
+  // ✅ WORKFLOW DEXT: TOUS les documents scannés vont dans "À vérifier"
+  // Seuls les documents explicitement marqués comme "ready" vont dans "Prêts"
+  return 'to_review';
 }
 
 // Duplicate detection
@@ -205,11 +205,11 @@ function PaywallSection() {
         className="relative max-w-lg w-full"
       >
         {/* Glow effect */}
-        <div className="absolute -inset-4 bg-gradient-to-r from-violet-500/20 via-purple-500/20 to-fuchsia-500/20 rounded-[2rem] blur-2xl" />
+        <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 via-green-500/20 to-teal-500/20 rounded-[2rem] blur-2xl" />
 
         <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl overflow-hidden">
           {/* Gradient header bar */}
-          <div className="h-2 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500" />
+          <div className="h-2 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500" />
 
           <div className="p-8 md:p-10 text-center">
             {/* Icon */}
@@ -217,7 +217,7 @@ function PaywallSection() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-violet-500/30"
+              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30"
             >
               <Scan size={44} className="text-white" />
             </motion.div>
@@ -229,9 +229,9 @@ function PaywallSection() {
               Analysez vos justificatifs en un clic avec l'IA
             </p>
 
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-50 to-fuchsia-50 dark:from-violet-900/30 dark:to-fuchsia-900/30 border border-violet-200 dark:border-violet-800 mb-8">
-              <Sparkles size={14} className="text-violet-500" />
-              <span className="text-sm font-bold text-violet-700 dark:text-violet-300">Propulsé par Gemini 2.0</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 border border-emerald-200 dark:border-emerald-800 mb-8">
+              <Sparkles size={14} className="text-emerald-500" />
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Propulsé par Gemini 2.0</span>
             </div>
 
             {/* Features list */}
@@ -250,7 +250,7 @@ function PaywallSection() {
                   transition={{ delay: 0.3 + i * 0.1 }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center flex-shrink-0">
                     <Check size={14} className="text-white" strokeWidth={3} />
                   </div>
                   <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{feature}</span>
@@ -263,7 +263,7 @@ function PaywallSection() {
               <motion.button
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                className="w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white font-bold text-base shadow-xl shadow-violet-500/30 hover:shadow-2xl hover:shadow-violet-500/40 transition-shadow"
+                className="w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-bold text-base shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 transition-shadow"
               >
                 <Crown size={20} />
                 Passer au plan Business
@@ -326,6 +326,9 @@ export default function OCRPage() {
 
   // Vendor learning: load rules from vendor_mappings table
   const [vendorRules, setVendorRules] = useState<Record<string, { category: string; accounting_code: string }>>({});
+
+  // Image preview state
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   const fetchDbExpenses = useCallback(async () => {
     if (!user) return;
@@ -441,6 +444,29 @@ export default function OCRPage() {
     }
   }, [reviewingFile]);
 
+  // ===========================================================================
+  // HELPER: Détecter si un fichier est un PDF multi-pages
+  // ===========================================================================
+
+  const detectPdfType = useCallback(async (file: File): Promise<{ isPdf: boolean; pageCount: number }> => {
+    if (file.type !== 'application/pdf') {
+      return { isPdf: false, pageCount: 0 };
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfBuffer = Buffer.from(arrayBuffer);
+
+      // Utiliser la fonction existante du pdf-splitter
+      const { getPDFPageCount } = await import('@/lib/pdf-splitter');
+      const pageCount = await getPDFPageCount(pdfBuffer);
+
+      return { isPdf: true, pageCount };
+    } catch {
+      return { isPdf: false, pageCount: 0 };
+    }
+  }, []);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -467,11 +493,9 @@ export default function OCRPage() {
   const processFile = useCallback(async (scannedFile: ScannedFile) => {
     updateFile(scannedFile.id, { status: 'uploading', progress: 10 });
 
-    // Cleanup function for interval
     let progressInterval: NodeJS.Timeout | null = null;
 
     try {
-      // Simulate upload progress
       progressInterval = setInterval(() => {
         setFiles(prev => prev.map(f => {
           if (f.id !== scannedFile.id) return f;
@@ -479,6 +503,101 @@ export default function OCRPage() {
           return { ...f, progress: newProgress };
         }));
       }, 200);
+
+      // =========================================================================
+      // ÉTAPE 1: Détecter le type de fichier
+      // =========================================================================
+      const { isPdf, pageCount } = await detectPdfType(scannedFile.file);
+
+      // =========================================================================
+      // CAS 1: PDF multi-pages avec potentiellement plusieurs factures
+      // =========================================================================
+      if (isPdf && pageCount > 1) {
+        updateFile(scannedFile.id, { status: 'analyzing', progress: 30 });
+
+        // ÉTAPE 2: Détecter les factures dans le PDF
+        const detectFormData = new FormData();
+        detectFormData.append('file', scannedFile.file);
+
+        const detectResponse = await fetch('/api/ai/detect-invoices', {
+          method: 'POST',
+          body: detectFormData,
+        });
+
+        if (!detectResponse.ok) {
+          throw new Error('Détection des factures échouée');
+        }
+
+        const detectData = await detectResponse.json() as {
+          segments: Array<{
+            startPage: number;
+            endPage: number;
+            vendor: string | null;
+            invoiceNumber: string | null;
+          }>;
+          needsManualReview: boolean;
+        };
+
+        updateFile(scannedFile.id, { status: 'analyzing', progress: 50 });
+
+        // ÉTAPE 3: Traiter chaque facture détectée
+        const multiPageFormData = new FormData();
+        multiPageFormData.append('file', scannedFile.file);
+        multiPageFormData.append('segments', JSON.stringify(detectData.segments));
+
+        const ocrResponse = await fetch('/api/ai/ocr-multi-page', {
+          method: 'POST',
+          body: multiPageFormData,
+        });
+
+        if (!ocrResponse.ok) {
+          throw new Error('Traitement multi-factures échoué');
+        }
+
+        const ocrData = await ocrResponse.json() as {
+          results: Array<{
+            success: boolean;
+            expense?: Record<string, unknown>;
+            segment?: { startPage: number; endPage: number };
+          }>;
+          summary: { succeeded: number; failed: number };
+        };
+
+        // ÉTAPE 4: Créer une entrée ScannedFile pour chaque facture
+        const newFiles: ScannedFile[] = [];
+
+        for (let i = 0; i < ocrData.results.length; i++) {
+          const result = ocrData.results[i];
+          if (result.success && result.expense) {
+            const extracted = (result.expense.extracted || result.expense) as unknown as ExtractedData;
+
+            newFiles.push({
+              id: generateId(),
+              file: new File([], `Facture ${i + 1}${extracted.invoice_number ? ` - ${extracted.invoice_number}` : ''}`),
+              preview: scannedFile.preview || '',
+              status: 'complete' as const,
+              progress: 100,
+              result: {
+                extracted,
+                expense: result.expense as { id: string; [key: string]: unknown },
+              },
+            });
+          }
+        }
+
+        // Remplacer le fichier original par les factures détectées
+        setFiles(prev => {
+          const filtered = prev.filter(f => f.id !== scannedFile.id);
+          return [...filtered, ...newFiles];
+        });
+
+        toast.success(`${ocrData.summary.succeeded} facture(s) extraite(s) du PDF`);
+        return;
+      }
+
+      // =========================================================================
+      // CAS 2: Traitement normal (image ou PDF 1 page)
+      // =========================================================================
 
       const formData = new FormData();
       formData.append('file', scannedFile.file);
@@ -490,7 +609,6 @@ export default function OCRPage() {
         body: formData,
       });
 
-      // Clear interval in all cases (success or error)
       if (progressInterval) {
         clearInterval(progressInterval);
         progressInterval = null;
@@ -502,17 +620,14 @@ export default function OCRPage() {
         throw new Error((data as { error?: string } | null)?.error || 'Erreur lors de l\'analyse');
       }
 
-      // 207 = extraction OK but DB save failed — show warning, still display results
       if (response.status === 207) {
         toast.warning('Extraction réussie mais sauvegarde partielle. Vérifiez vos dépenses.');
       }
 
       updateFile(scannedFile.id, { status: 'analyzing', progress: 70 });
 
-      // Small delay for UX
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      // Mark complete then recalculate is_duplicate for all completed files
       setFiles(prev => {
         const updated = prev.map(f =>
           f.id === scannedFile.id
@@ -528,13 +643,8 @@ export default function OCRPage() {
       });
 
       const conf = (data as { extracted?: { confidence?: number } } | null)?.extracted?.confidence ?? 1;
-      if (conf < 0.65) {
-        toast.warning(`"${scannedFile.file.name}" — Confiance faible (${Math.round(conf * 100)}%) : vérification requise`);
-      } else {
-        toast.success(`"${scannedFile.file.name}" analysé avec succès`);
-      }
+      toast.success(`"${scannedFile.file.name}" analysé avec succès`);
     } catch (err: any) {
-      // Clear interval on error
       if (progressInterval) {
         clearInterval(progressInterval);
         progressInterval = null;
@@ -547,7 +657,7 @@ export default function OCRPage() {
       });
       toast.error(`Erreur: ${scannedFile.file.name} - ${err.message || 'analyse échouée'}`);
     }
-  }, [updateFile]);
+  }, [updateFile, detectPdfType]);
 
   const BATCH_SIZE = 3;
 
@@ -715,20 +825,20 @@ export default function OCRPage() {
         className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8 overflow-hidden"
       >
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-bl-full" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-fuchsia-500/10 to-transparent rounded-tr-full" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-green-500/10 to-transparent rounded-tr-full" />
 
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent">
                 Scan intelligent
               </h1>
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', delay: 0.3 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-bold shadow-lg shadow-violet-500/20"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20"
               >
                 <Sparkles size={12} />
                 Propulsé par Gemini
@@ -757,9 +867,9 @@ export default function OCRPage() {
       {/* ===== Quick Stats Bar ===== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Scannés aujourd\'hui', value: String(scannedToday), icon: Scan, color: 'from-violet-500 to-purple-600' },
-          { label: 'Montant détecté', value: formatCurrency(totalDetected), icon: Zap, color: 'from-amber-500 to-orange-500' },
-          { label: 'Confiance moyenne', value: avgConfidence > 0 ? `${Math.round(avgConfidence * 100)}%` : '-', icon: Shield, color: 'from-emerald-500 to-teal-500' },
+          { label: 'Scannés aujourd\'hui', value: String(scannedToday), icon: Scan, color: 'from-emerald-500 to-green-600' },
+          { label: 'Montant détecté', value: formatCurrency(totalDetected), icon: Zap, color: 'from-blue-500 to-indigo-600' },
+          { label: 'Confiance moyenne', value: avgConfidence > 0 ? `${Math.round(avgConfidence * 100)}%` : '-', icon: Shield, color: 'from-teal-500 to-cyan-600' },
           { label: 'À vérifier', value: String(tabCounts.to_review), icon: Eye, color: 'from-amber-500 to-orange-500' },
         ].map(({ label, value, icon: Icon, color }, i) => (
           <motion.div
@@ -803,8 +913,8 @@ export default function OCRPage() {
               className={cn(
                 'relative cursor-pointer group rounded-3xl border-2 border-dashed transition-all duration-300 overflow-hidden',
                 isDragging
-                  ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-900/20 scale-[1.01]'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50/30 dark:hover:bg-violet-900/10',
+                  ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 scale-[1.01]'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10',
                 'bg-white/50 dark:bg-slate-800/50'
               )}
               style={{ minHeight: '280px' }}
@@ -814,7 +924,7 @@ export default function OCRPage() {
                 'absolute inset-0 rounded-3xl transition-opacity duration-500',
                 isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               )}>
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-green-500/5 to-teal-500/5" />
               </div>
 
               {/* Animated dashed border pulse */}
@@ -828,7 +938,7 @@ export default function OCRPage() {
                 <motion.div
                   animate={isDragging ? { scale: 1.15, y: -4 } : { scale: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 300 }}
-                  className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center mb-6 shadow-xl shadow-violet-500/20 group-hover:shadow-2xl group-hover:shadow-violet-500/30 transition-shadow"
+                  className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/20 group-hover:shadow-2xl group-hover:shadow-emerald-500/30 transition-shadow"
                 >
                   {isDragging ? (
                     <ImagePlus size={36} className="text-white" />
@@ -841,7 +951,7 @@ export default function OCRPage() {
                   {isDragging ? 'Déposez vos fichiers ici' : 'Glissez vos justificatifs ici'}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
-                  ou <span className="text-violet-600 dark:text-violet-400 font-semibold">cliquez pour parcourir</span>
+                  ou <span className="text-emerald-600 dark:text-emerald-400 font-semibold">cliquez pour parcourir</span>
                 </p>
 
                 {/* File type badges */}
@@ -851,7 +961,7 @@ export default function OCRPage() {
                       {type}
                     </span>
                   ))}
-                  <span className="px-2.5 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                     Max 20 Mo
                   </span>
                 </div>
@@ -890,7 +1000,7 @@ export default function OCRPage() {
                     disabled={isProcessing || files.filter(f => f.status === 'pending').length === 0}
                     className={cn(
                       'flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed',
-                      'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40'
+                      'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40'
                     )}
                   >
                     {isProcessing ? (
@@ -1046,7 +1156,7 @@ export default function OCRPage() {
                                   <motion.div
                                     initial={{ width: '0%' }}
                                     animate={{ width: `${scannedFile.progress}%` }}
-                                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"
                                     transition={{ duration: 0.3 }}
                                   />
                                 </div>
@@ -1079,7 +1189,7 @@ export default function OCRPage() {
                                     setSelectedClientId('');
                                     setProjectCode('');
                                   }}
-                                  className="p-2 rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
+                                  className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
                                 >
                                   <Eye size={14} />
                                 </motion.button>
@@ -1157,8 +1267,14 @@ export default function OCRPage() {
                   </div>
                   {/* Thumbnail preview */}
                   {reviewingFile.preview && (
-                    <div className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
-                      <img src={reviewingFile.preview} alt={`Aperçu du justificatif: ${reviewingFile.result.extracted.vendor || 'Document'}`} className="w-full h-full object-cover" />
+                    <div
+                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
+                      onClick={() => setPreviewImage({ url: reviewingFile.preview!, title: reviewingFile.result?.extracted?.vendor || 'Document' })}
+                    >
+                      <img src={reviewingFile.preview} alt={`Aperçu du justificatif: ${reviewingFile.result?.extracted?.vendor || 'Document'}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                        <Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1488,7 +1604,7 @@ export default function OCRPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => saveWithEdits(reviewingFile)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30 hover:shadow-xl transition-all"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 hover:shadow-xl transition-all"
                       >
                         <Check size={16} />
                         Sauvegarder les corrections
@@ -1510,7 +1626,7 @@ export default function OCRPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => verifyExpense(reviewingFile)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/30 hover:shadow-xl hover:shadow-violet-500/40 transition-all"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all"
                       >
                         <Check size={16} />
                         Vérifier
@@ -1574,8 +1690,14 @@ export default function OCRPage() {
                     </motion.button>
                   </div>
                   {reviewingDbExpense.receipt_url && (
-                    <div className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700">
+                    <div
+                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
+                      onClick={() => setPreviewImage({ url: reviewingDbExpense.receipt_url!, title: reviewingDbExpense.vendor || 'Document' })}
+                    >
                       <img src={reviewingDbExpense.receipt_url} alt={`Justificatif: ${reviewingDbExpense.vendor || 'Document'}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                        <Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1711,7 +1833,7 @@ export default function OCRPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-bold shadow-lg shadow-violet-500/20"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/20"
             >
               <Upload size={16} />
               Scanner un justificatif
@@ -1793,6 +1915,22 @@ export default function OCRPage() {
           </div>
         )}
       </motion.div>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={previewImage !== null} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl w-full">
+          <DialogHeader>
+            <DialogTitle>{previewImage?.title || 'Aperçu du document'}</DialogTitle>
+          </DialogHeader>
+          <div className="relative w-full">
+            <img
+              src={previewImage?.url}
+              alt={previewImage?.title || 'Aperçu du document'}
+              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
