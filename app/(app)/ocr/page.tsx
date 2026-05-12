@@ -445,7 +445,7 @@ export default function OCRPage() {
   }, [reviewingFile]);
 
   // ===========================================================================
-  // HELPER: Détecter si un fichier est un PDF multi-pages
+  // HELPER: Détecter si un fichier est un PDF multi-pages (sans sharp côté client)
   // ===========================================================================
 
   const detectPdfType = useCallback(async (file: File): Promise<{ isPdf: boolean; pageCount: number }> => {
@@ -454,16 +454,23 @@ export default function OCRPage() {
     }
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfBuffer = Buffer.from(arrayBuffer);
+      // Utiliser l'endpoint detect-invoices qui gère tout côté serveur
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Utiliser la fonction existante du pdf-splitter
-      const { getPDFPageCount } = await import('@/lib/pdf-splitter');
-      const pageCount = await getPDFPageCount(pdfBuffer);
+      const response = await fetch('/api/ai/detect-invoices', {
+        method: 'POST',
+        body: formData,
+      });
 
-      return { isPdf: true, pageCount };
+      if (response.ok) {
+        const data = await response.json();
+        return { isPdf: true, pageCount: data.totalPages || 0 };
+      }
+
+      return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
     } catch {
-      return { isPdf: false, pageCount: 0 };
+      return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
     }
   }, []);
 
