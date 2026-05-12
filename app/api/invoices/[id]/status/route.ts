@@ -10,13 +10,13 @@ export async function PATCH(
 ) {
   try {
     // Rate limiting : 100 requêtes/minute par IP ou user
-    const rateLimitResult = rateLimit(getClientIp(req), 100, 60000);
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 100, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
         {
           status: 429,
-          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)) }
         }
       );
     }

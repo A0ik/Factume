@@ -53,13 +53,13 @@ const DOC_TYPE_CONFIG: Record<LocalDocumentType, {
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting : 20 requêtes/minute par IP
-    const rateLimitResult = rateLimit(getClientIp(req), 20, 60000);
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 20, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
         {
           status: 429,
-          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)) }
         }
       );
     }

@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { getAllBlogSlugs } from '@/lib/blog-data';
 
 const baseUrl = 'https://factu.me';
 const currentDate = new Date();
@@ -310,6 +311,22 @@ const mainPages = [
   },
 ];
 
+// Blog
+const blogPages = [
+  {
+    url: `${baseUrl}/blog`,
+    lastModified: currentDate,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  },
+  ...getAllBlogSlugs().map((slug) => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified: currentDate,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  })),
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...mainPages,
@@ -317,5 +334,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...featurePages,
     ...comparisonPages,
     ...legalPages,
+    ...blogPages,
   ];
 }

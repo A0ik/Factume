@@ -142,13 +142,13 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
 
 export async function POST(req: NextRequest) {
   // Rate limiting : 30 requêtes/minute par IP ou user
-  const rateLimitResult = rateLimit(getClientIp(req), 30, 60000);
+  const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 30, windowMs: 60000 });
   if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
       {
         status: 429,
-        headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+        headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)) }
       }
     );
   }

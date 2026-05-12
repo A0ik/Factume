@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkApiRateLimit, checkAuthRateLimit, checkPageRateLimit } from '@/lib/upstash-rate-limit';
 
 // Routes publiques explicites (pas besoin d'auth)
 const PUBLIC_PATHS = [
@@ -52,6 +54,7 @@ const PROTECTED_PREFIXES = [
 ];
 
 export async function middleware(req: NextRequest) {
+  const nonce = crypto.randomUUID();
   const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
@@ -62,6 +65,76 @@ export async function middleware(req: NextRequest) {
   res.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=()');
   if (process.env.NODE_ENV === 'production') {
     res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
+
+  // Content Security Policy
+  const isDev = process.env.NODE_ENV === 'development';
+  const csp = [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval'`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+    `img-src 'self' data: blob: https://factu.me https://*.supabase.co https://lh3.googleusercontent.com`,
+    `font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com`,
+    `connect-src 'self' https://*.supabase.co https://supabase.co https://api.stripe.com https://maps.googleapis.com${isDev ? ' ws://localhost:*' : ''}`,
+    `frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com`,
+    `form-action 'self'`,
+    `base-uri 'self'`,
+    `object-src 'none'`,
+    `frame-ancestors 'none'`,
+  ].join('; ');
+
+  res.headers.set('Content-Security-Policy', csp);
+
+  // Expose nonce so layout can read it via headers()
+  res.headers.set('x-nonce', nonce);
+
+  // Rate limiting - Try Upstash first, fallback to in-memory
+  const ip = getClientIp(req);
+  const isApiRoute = pathname.startsWith('/api/');
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
+
+  let rlSuccess = true;
+  let rlReset = 0;
+
+  try {
+    let rl;
+    if (isApiRoute) {
+      rl = await checkApiRateLimit(ip);
+    } else if (isAuthRoute) {
+      rl = await checkAuthRateLimit(ip);
+    } else {
+      rl = await checkPageRateLimit(ip);
+    }
+
+    if (rl) {
+      rlSuccess = rl.success;
+      rlReset = rl.reset;
+    }
+  } catch (error) {
+    // Fallback to in-memory rate limiting
+    console.warn('Upstash rate limiting failed, using fallback:', error);
+
+    let rlLimit = 300;
+    let rlWindow = 60_000;
+    if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
+    if (isAuthRoute) { rlLimit = 10; rlWindow = 60_000; }
+
+    const rl = rateLimit({
+      key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`,
+      limit: rlLimit,
+      windowMs: rlWindow
+    });
+
+    rlSuccess = rl.success;
+    rlReset = rl.resetTime;
+  }
+
+  if (!rlSuccess) {
+    const retryAfter = Math.ceil((rlReset - Date.now()) / 1000);
+    return new Response('Too Many Requests', {
+      status: 429,
+      headers: { 'Retry-After': String(retryAfter) },
+    });
   }
 
   // Racine toujours publique

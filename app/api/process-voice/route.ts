@@ -10,13 +10,13 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting : 10 requêtes/minute par IP ou user
-    const rateLimitResult = rateLimit(getClientIp(req), 10, 60000);
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
         {
           status: 429,
-          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)) }
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)) }
         }
       );
     }
