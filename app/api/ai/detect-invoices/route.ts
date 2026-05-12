@@ -25,26 +25,37 @@ const MAX_PAGES = 50; // Limit pages to prevent abuse
 
 const DETECTION_PROMPT = `Tu es un expert en analyse de documents comptables. Ta mission est d'identifier si cette page contient le DÉBUT ou la FIN d'une facture.
 
+⚠️ RÈGLE LA PLUS IMPORTANTE:
+- Par défaut, considère CHAQUE PAGE comme le DÉBUT d'une NOUVELLE facture
+- Seulement marque "is_invoice_start: false" si c'est clairement une continuation (texte coupé, tableau qui continue, "suite...")
+- Même une page avec juste du contenu sans marqueur explicite = NOUVELLE facture par défaut
+
 ANALYSE :
-1. DÉBUT de facture si :
+1. DÉBUT de facture (is_invoice_start: true) si :
+   - Par défaut: TOUJOURS true sauf cas exceptionnel ci-dessous
    - Nouveau nom de fournisseur visible
    - Nouveau numéro de facture visible
    - En-tête avec "FACTURE", "DEVIS", "BON DE COMMANDE", etc.
    - Logo d'entreprise en haut
    - Tableau de lignes qui commence
+   - IMPORTANT: Même si aucun marqueur explicite, considère comme true par défaut
 
-2. FIN de facture si :
+2. DÉBUT = false (continuation) SEULEMENT si :
+   - Texte visuellement coupé en bas de page précédente
+   - Mention explicite "suite...", "page X/Y", "suite au verso"
+   - Tableau de produits qui continue clairement
+   - Pas de nouveau fournisseur/numéro de facture
+
+3. FIN de facture (is_invoice_end: true) si :
    - Ligne "Total TTC", "Montant à payer", "Net à payer", "À payer"
    - Mention de TVA, HT, TTC en bas
    - Informations de paiement (IBAN, SWIFT, RIB)
    - Pied de page avec conditions de paiement
    - Mention "TVA FR", "SIRET" en bas
 
-3. CONTINUATION si :
-   - Ligne de détails qui se poursuit sur la page
-   - Tableau de produits/pages suivantes ("suite...", "page X/Y")
-   - Pas de marqueur de début ou fin explicite
-   - Détails de lignes de produits/services
+4. Si tu vois des données de facture (montant, fournisseur, date) mais pas de marqueurs:
+   - is_invoice_start: true (nouvelle facture par défaut)
+   - is_invoice_end: true (considère comme facture complète)
 
 Retourne UNIQUEMENT du JSON valide (pas de markdown) :
 {
@@ -138,85 +149,93 @@ function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
     return [];
   }
 
-  const segments: InvoiceSegment[] = [];
-  let currentSegment: Partial<InvoiceSegment> | null = null;
+  console.log('[Detect Invoices] buildSegments - Analyses reçues:', analyses.length);
 
+  const segments: InvoiceSegment[] = [];
+
+  // ✅ NOUVELLE LOGIQUE: Traiter chaque page comme une facture potentielle par défaut
+  // Sauf si l'IA détecte explicitement que c'est une continuation
   for (let i = 0; i < analyses.length; i++) {
     const analysis = analyses[i];
     const pageNumber = analysis.pageNumber;
 
-    // Start of a new invoice
+    console.log(`[Detect Invoices] Page ${pageNumber}: isInvoiceStart=${analysis.isInvoiceStart}, isInvoiceEnd=${analysis.isInvoiceEnd}`);
+
+    // CAS 1: Début explicite d'une nouvelle facture
     if (analysis.isInvoiceStart) {
-      // Close previous segment if open
-      if (currentSegment && currentSegment.startPage) {
-        currentSegment.endPage = pageNumber - 1;
-        if (currentSegment.startPage <= currentSegment.endPage) {
-          segments.push({
-            startPage: currentSegment.startPage!,
-            endPage: currentSegment.endPage,
-            vendor: currentSegment.vendor || null,
-            invoiceNumber: currentSegment.invoiceNumber || null,
-            date: currentSegment.date || null,
-            confidence: currentSegment.confidence || 50,
-          });
-        }
+      // Fermer le segment précédent s'il est ouvert
+      if (segments.length > 0 && segments[segments.length - 1].endPage === null) {
+        segments[segments.length - 1].endPage = pageNumber - 1;
+        console.log(`[Detect Invoices] Fermeture segment précédent à la page ${pageNumber - 1}`);
       }
 
-      // Start new segment
-      currentSegment = {
-        startPage: pageNumber,
-        vendor: analysis.vendor,
-        invoiceNumber: analysis.invoiceNumber,
-        date: analysis.invoiceDate,
-        confidence: analysis.confidence,
-      };
-    }
-
-    // End of an invoice
-    if (analysis.isInvoiceEnd && currentSegment && currentSegment.startPage) {
-      currentSegment.endPage = pageNumber;
-      if (currentSegment.startPage <= currentSegment.endPage) {
-        segments.push({
-          startPage: currentSegment.startPage,
-          endPage: currentSegment.endPage,
-          vendor: currentSegment.vendor || null,
-          invoiceNumber: currentSegment.invoiceNumber || null,
-          date: currentSegment.date || null,
-          confidence: currentSegment.confidence || 50,
-        });
-      }
-      currentSegment = null;
-    }
-  }
-
-  // Close any remaining segment
-  if (currentSegment && currentSegment.startPage) {
-    currentSegment.endPage = analyses.length;
-    if (currentSegment.startPage <= currentSegment.endPage) {
+      // Créer nouveau segment
       segments.push({
-        startPage: currentSegment.startPage,
-        endPage: currentSegment.endPage,
-        vendor: currentSegment.vendor || null,
-        invoiceNumber: currentSegment.invoiceNumber || null,
-        date: currentSegment.date || null,
-        confidence: currentSegment.confidence || 50,
+        startPage: pageNumber,
+        endPage: analysis.isInvoiceEnd ? pageNumber : null, // Sera fermé plus tard si pas de fin explicite
+        vendor: analysis.vendor || null,
+        invoiceNumber: analysis.invoiceNumber || null,
+        date: analysis.invoiceDate || null,
+        confidence: analysis.confidence || 70,
       });
+
+      console.log(`[Detect Invoices] Nouveau segment créé: page ${pageNumber}`);
+    }
+    // CAS 2: Pas de début explicite = Nouvelle facture par défaut (PRINCIPE DEXT)
+    else if (segments.length === 0 || (segments.length > 0 && segments[segments.length - 1].endPage !== null)) {
+      // Aucun segment ouvert ou le dernier est fermé = créer nouveau segment
+      segments.push({
+        startPage: pageNumber,
+        endPage: analysis.isInvoiceEnd ? pageNumber : null,
+        vendor: analysis.vendor || null,
+        invoiceNumber: analysis.invoiceNumber || null,
+        date: analysis.invoiceDate || null,
+        confidence: analysis.confidence || 60, // Confiance plus basse car détection implicite
+      });
+
+      console.log(`[Detect Invoices] Segment implicite créé (pas de isInvoiceStart): page ${pageNumber}`);
+    }
+    // CAS 3: Continuation d'une facture existante
+    else {
+      const currentSegment = segments[segments.length - 1];
+      if (analysis.isInvoiceEnd && currentSegment.endPage === null) {
+        currentSegment.endPage = pageNumber;
+        console.log(`[Detect Invoices] Fin de facture détectée à la page ${pageNumber}`);
+      }
+      // Sinon, la facture continue sur cette page (ne pas fermer endPage)
     }
   }
 
-  // If no segments detected, treat entire PDF as one invoice
-  if (segments.length === 0 && analyses.length > 0) {
-    return [{
-      startPage: 1,
-      endPage: analyses.length,
-      vendor: null,
-      invoiceNumber: null,
-      date: null,
-      confidence: 30, // Low confidence since we're guessing
-    }];
+  // Fermer tous les segments restants
+  for (const segment of segments) {
+    if (segment.endPage === null) {
+      segment.endPage = analyses[analyses.length - 1].pageNumber;
+      console.log(`[Detect Invoices] Fermeture finale du segment ${segment.startPage}-${segment.endPage}`);
+    }
   }
 
-  return segments;
+  // Validation et nettoyage
+  const validSegments = segments.filter(s => s.endPage !== null && s.startPage <= s.endPage);
+
+  console.log(`[Detect Invoices] Segments créés: ${validSegments.length}`);
+  validSegments.forEach((s, i) => {
+    console.log(`[Detect Invoices] Segment ${i + 1}: pages ${s.startPage}-${s.endPage}, vendor: ${s.vendor || 'N/A'}`);
+  });
+
+  // Si toujours aucun segment (ne devrait pas arriver avec la nouvelle logique), créer un segment par page
+  if (validSegments.length === 0 && analyses.length > 0) {
+    console.log('[Detect Invoices] ⚠️ Aucun segment créé, fallback: 1 segment par page');
+    return analyses.map(a => ({
+      startPage: a.pageNumber,
+      endPage: a.pageNumber,
+      vendor: a.vendor || null,
+      invoiceNumber: a.invoiceNumber || null,
+      date: a.invoiceDate || null,
+      confidence: 50,
+    }));
+  }
+
+  return validSegments;
 }
 
 // ---------------------------------------------------------------------------

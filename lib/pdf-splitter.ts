@@ -34,7 +34,7 @@ export interface PageAnalysis {
 
 export interface InvoiceSegment {
   startPage: number;
-  endPage: number;
+  endPage: number | null; // null si la facture continue sur les pages suivantes
   vendor: string | null;
   invoiceNumber: string | null;
   date: string | null;
@@ -164,7 +164,8 @@ export async function splitPdfBySegments(
 
     // Copy pages from original (0-indexed in pdf-lib)
     const pageIndices = [];
-    for (let i = segment.startPage - 1; i < segment.endPage; i++) {
+    const endPage = segment.endPage ?? segment.startPage; // Fallback si null
+    for (let i = segment.startPage - 1; i < endPage; i++) {
       if (i >= 0 && i < pdfDoc.getPageCount()) {
         pageIndices.push(i);
       }

@@ -6,7 +6,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { getSupabaseClient } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag, Maximize2 } from 'lucide-react';
+import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag, Maximize2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -330,6 +330,13 @@ export default function OCRPage() {
   // Image preview state
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
+  // Manual segment correction state
+  const [segmentEditor, setSegmentEditor] = useState<{
+    file: ScannedFile;
+    segments: Array<{ startPage: number; endPage: number | null }>;
+    totalPages: number;
+  } | null>(null);
+
   const fetchDbExpenses = useCallback(async () => {
     if (!user) return;
     setLoadingHistory(true);
@@ -450,8 +457,11 @@ export default function OCRPage() {
 
   const detectPdfType = useCallback(async (file: File): Promise<{ isPdf: boolean; pageCount: number }> => {
     if (file.type !== 'application/pdf') {
+      console.log(`[OCR DEBUG] 📄 Fichier non-PDF détecté: ${file.name} (${file.type})`);
       return { isPdf: false, pageCount: 0 };
     }
+
+    console.log(`[OCR DEBUG] 📑 PDF détecté: ${file.name}, tentative de détection du nombre de pages...`);
 
     try {
       // Utiliser l'endpoint detect-invoices qui gère tout côté serveur
@@ -465,11 +475,14 @@ export default function OCRPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log(`[OCR DEBUG] ✅ Nombre de pages détecté: ${data.totalPages}`);
         return { isPdf: true, pageCount: data.totalPages || 0 };
       }
 
+      console.warn(`[OCR DEBUG] ⚠️ Échec détection pages: ${response.status}`);
       return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
-    } catch {
+    } catch (error) {
+      console.error(`[OCR DEBUG] ❌ Erreur détection PDF:`, error);
       return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
     }
   }, []);
@@ -522,6 +535,8 @@ export default function OCRPage() {
       if (isPdf && pageCount > 1) {
         updateFile(scannedFile.id, { status: 'analyzing', progress: 30 });
 
+        console.log(`[OCR DEBUG] 🔍 PDF multipage détecté: ${pageCount} pages dans "${scannedFile.file.name}"`);
+
         // ÉTAPE 2: Détecter les factures dans le PDF
         const detectFormData = new FormData();
         detectFormData.append('file', scannedFile.file);
@@ -532,20 +547,52 @@ export default function OCRPage() {
         });
 
         if (!detectResponse.ok) {
+          console.error(`[OCR DEBUG] ❌ Erreur détection factures: ${detectResponse.status}`);
           throw new Error('Détection des factures échouée');
         }
 
         const detectData = await detectResponse.json() as {
           segments: Array<{
             startPage: number;
-            endPage: number;
+            endPage: number | null;
             vendor: string | null;
             invoiceNumber: string | null;
           }>;
           needsManualReview: boolean;
         };
 
-        updateFile(scannedFile.id, { status: 'analyzing', progress: 50 });
+        console.log(`[OCR DEBUG] ✅ Segments détectés: ${detectData.segments.length}`);
+        detectData.segments.forEach((seg, i) => {
+          console.log(`[OCR DEBUG]    Segment ${i + 1}: pages ${seg.startPage}-${seg.endPage}, vendor: ${seg.vendor || 'N/A'}`);
+        });
+
+        // ⚠️ Validation: Si aucun segment détecté, avertir l'utilisateur
+        if (detectData.segments.length === 0) {
+          console.warn(`[OCR DEBUG] ⚠️ Aucun segment détecté pour "${scannedFile.file.name}"`);
+          toast.error('Aucune facture détectée dans ce PDF. Vérifiez que les pages contiennent des factures valides.');
+          updateFile(scannedFile.id, {
+            status: 'error',
+            error: 'Aucune facture détectée. Essayez de séparer les factures en fichiers distincts.'
+          });
+          return;
+        }
+
+        // ✅ NOUVEAU: Ouvrir l'éditeur de segments pour correction manuelle
+        console.log(`[OCR DEBUG] 📝 Ouverture de l'éditeur de segments pour "${scannedFile.file.name}"`);
+
+        setSegmentEditor({
+          file: scannedFile,
+          segments: detectData.segments.map(seg => ({
+            startPage: seg.startPage,
+            endPage: seg.endPage,
+          })),
+          totalPages: pageCount,
+        });
+
+        toast.info(`${detectData.segments.length} facture(s) détectée(s). Vous pouvez ajuster les pages avant l'extraction.`, {
+          duration: 5000,
+        });
+        return;
 
         // ÉTAPE 3: Traiter chaque facture détectée
         const multiPageFormData = new FormData();
@@ -573,10 +620,17 @@ export default function OCRPage() {
         // ÉTAPE 4: Créer une entrée ScannedFile pour chaque facture
         const newFiles: ScannedFile[] = [];
 
+        console.log(`[OCR DEBUG] 🔄 Traitement des résultats: ${ocrData.results.length} segments`);
+
         for (let i = 0; i < ocrData.results.length; i++) {
           const result = ocrData.results[i];
+
+          console.log(`[OCR DEBUG] Segment ${i + 1}: success=${result.success}, hasExpense=${!!result.expense}`);
+
           if (result.success && result.expense) {
-            const extracted = (result.expense.extracted || result.expense) as unknown as ExtractedData;
+            const extracted = ((result.expense as any).extracted || result.expense) as unknown as ExtractedData;
+
+            console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€`);
 
             newFiles.push({
               id: generateId(),
@@ -589,8 +643,12 @@ export default function OCRPage() {
                 expense: result.expense as { id: string; [key: string]: unknown },
               },
             });
+          } else {
+            console.warn(`[OCR DEBUG]    ❌ Segment ${i + 1} échoué`);
           }
         }
+
+        console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);
 
         // Remplacer le fichier original par les factures détectées
         setFiles(prev => {
@@ -598,7 +656,13 @@ export default function OCRPage() {
           return [...filtered, ...newFiles];
         });
 
-        toast.success(`${ocrData.summary.succeeded} facture(s) extraite(s) du PDF`);
+        if (newFiles.length === 0) {
+          toast.error('Aucune facture n\'a pu être extraite. Vérifiez la qualité du PDF.');
+        } else if (newFiles.length < ocrData.results.length) {
+          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. Certaines pages n\'ont pas pu être analysées.`);
+        } else {
+          toast.success(`${newFiles.length} facture(s) extraite(s) du PDF avec succès !`);
+        }
         return;
       }
 
@@ -690,6 +754,101 @@ export default function OCRPage() {
       setBatchProgress(null);
     }
   }, [files, processFile]);
+
+  // ✅ NOUVEAU: Traiter les segments après correction manuelle
+  const processSegmentedFile = useCallback(async (file: ScannedFile, segments: Array<{ startPage: number; endPage: number | null }>) => {
+    if (!file) return;
+
+    updateFile(file.id, { status: 'analyzing', progress: 60 });
+
+    try {
+      console.log(`[OCR DEBUG] 🔄 Traitement de ${segments.length} segments corrigés manuellement`);
+
+      const multiPageFormData = new FormData();
+      multiPageFormData.append('file', file.file);
+      multiPageFormData.append('segments', JSON.stringify(segments.map(seg => ({
+        startPage: seg.startPage,
+        endPage: seg.endPage ?? seg.startPage, // Fallback si null
+        vendor: null,
+        invoiceNumber: null,
+        date: null,
+        confidence: 100, // Confiance maximale car correction manuelle
+      }))));
+
+      const ocrResponse = await fetch('/api/ai/ocr-multi-page', {
+        method: 'POST',
+        body: multiPageFormData,
+      });
+
+      if (!ocrResponse.ok) {
+        throw new Error('Traitement multi-factures échoué');
+      }
+
+      const ocrData = await ocrResponse.json() as {
+        results: Array<{
+          success: boolean;
+          expense?: Record<string, unknown>;
+          segment?: { startPage: number; endPage: number };
+        }>;
+        summary: { succeeded: number; failed: number };
+      };
+
+      console.log(`[OCR DEBUG] ✅ Résultats OCR: ${ocrData.results.length} segments traités`);
+
+      // Créer une entrée ScannedFile pour chaque facture
+      const newFiles: ScannedFile[] = [];
+
+      for (let i = 0; i < ocrData.results.length; i++) {
+        const result = ocrData.results[i];
+
+        console.log(`[OCR DEBUG] Segment ${i + 1}: success=${result.success}, hasExpense=${!!result.expense}`);
+
+        if (result.success && result.expense) {
+          const extracted = (result.expense.extracted || result.expense) as unknown as ExtractedData;
+
+          console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€`);
+
+          newFiles.push({
+            id: generateId(),
+            file: new File([], `Facture ${i + 1}${extracted.invoice_number ? ` - ${extracted.invoice_number}` : ''}`),
+            preview: file.preview || '',
+            status: 'complete' as const,
+            progress: 100,
+            result: {
+              extracted,
+              expense: result.expense as { id: string; [key: string]: unknown },
+            },
+          });
+        } else {
+          console.warn(`[OCR DEBUG]    ❌ Segment ${i + 1} échoué: ${result.segment?.startPage}-${result.segment?.endPage}`);
+        }
+      }
+
+      console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);
+
+      // Remplacer le fichier original par les factures détectées
+      setFiles(prev => {
+        const filtered = prev.filter(f => f.id !== file.id);
+        return [...filtered, ...newFiles];
+      });
+
+      if (newFiles.length === 0) {
+        toast.error('Aucune facture n\'a pu être extraite.');
+      } else {
+        toast.success(`${newFiles.length} facture(s) extraite(s) avec succès !`);
+      }
+
+      // Fermer l'éditeur de segments
+      setSegmentEditor(null);
+    } catch (err: any) {
+      updateFile(file.id, {
+        status: 'error',
+        error: err.message || 'Erreur lors du traitement',
+      });
+      toast.error(`Erreur: ${err.message || 'Traitement échoué'}`);
+      setSegmentEditor(null);
+    }
+  }, [updateFile, setFiles]);
 
   // ---------- Verify expense (mark as reviewed) ----------
   const verifyExpense = useCallback(async (scannedFile: ScannedFile) => {
@@ -1936,6 +2095,158 @@ export default function OCRPage() {
               className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
             />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ NOUVEAU: Segment Editor Dialog */}
+      <Dialog open={segmentEditor !== null} onOpenChange={() => setSegmentEditor(null)}>
+        <DialogContent className="max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText size={20} />
+              Ajuster les factures détectées
+            </DialogTitle>
+            <p className="text-sm text-gray-500">
+              Le système a détecté {segmentEditor?.segments.length || 0} facture(s) dans ce PDF de {segmentEditor?.totalPages || 0} pages.
+              Ajustez les pages si nécessaire avant l'extraction.
+            </p>
+          </DialogHeader>
+
+          {segmentEditor && (
+            <div className="space-y-4">
+              {/* Segments list */}
+              <div className="space-y-3">
+                {segmentEditor.segments.map((segment, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white font-bold text-sm">
+                      {index + 1}
+                    </div>
+
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        Facture {index + 1} - Pages
+                      </label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                          Page {segment.startPage}
+                        </span>
+                        <span className="text-gray-400">→</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                          Page {segment.endPage ?? segmentEditor.totalPages}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({segment.endPage ?? segmentEditor.totalPages - segment.startPage + 1} page(s))
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Remove segment button */}
+                    {segmentEditor.segments.length > 1 && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setSegmentEditor(prev => {
+                            if (!prev) return null;
+                            const newSegments = prev.segments.filter((_, i) => i !== index);
+                            return newSegments.length === 0 ? null : { ...prev, segments: newSegments };
+                          });
+                        }}
+                        className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </motion.button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add segment button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (!segmentEditor) return;
+                  const usedPages = new Set<number>();
+                  segmentEditor.segments.forEach(seg => {
+                    for (let p = seg.startPage; p <= (seg.endPage ?? seg.startPage); p++) {
+                      usedPages.add(p);
+                    }
+                  });
+
+                  // Find first unused page
+                  let firstUnused = 1;
+                  while (usedPages.has(firstUnused) && firstUnused <= segmentEditor.totalPages) {
+                    firstUnused++;
+                  }
+
+                  if (firstUnused <= segmentEditor.totalPages) {
+                    setSegmentEditor({
+                      ...segmentEditor,
+                      segments: [
+                        ...segmentEditor.segments,
+                        { startPage: firstUnused, endPage: firstUnused }
+                      ]
+                    });
+                  } else {
+                    toast.error('Toutes les pages sont déjà utilisées');
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-emerald-500 hover:text-emerald-500 transition-colors"
+              >
+                <Plus size={16} />
+                Ajouter une facture
+              </motion.button>
+
+              {/* Auto-split button: 1 segment per page */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (!segmentEditor) return;
+                  setSegmentEditor({
+                    ...segmentEditor,
+                    segments: Array.from({ length: segmentEditor.totalPages }, (_, i) => ({
+                      startPage: i + 1,
+                      endPage: i + 1,
+                    }))
+                  });
+                  toast.info(`Créé ${segmentEditor.totalPages} factures (1 par page)`);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors font-semibold"
+              >
+                <Sparkles size={16} />
+                1 facture par page ({segmentEditor.totalPages} factures)
+              </motion.button>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSegmentEditor(null)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold transition-colors"
+                >
+                  Annuler
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (segmentEditor) {
+                      processSegmentedFile(segmentEditor.file, segmentEditor.segments);
+                    }
+                  }}
+                  disabled={segmentEditor.segments.length === 0}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold shadow-lg shadow-emerald-500/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Check size={18} />
+                  Extraire {segmentEditor.segments.length} facture(s)
+                </motion.button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

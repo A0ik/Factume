@@ -113,7 +113,12 @@ async function processSegments(
       const [idx, segment] = item;
 
       try {
-        const imageBuffer = await mergePagesToImage(pdfBuffer, segment.startPage, segment.endPage);
+        // ✅ Validation de sécurité: endPage ne doit pas être null
+        const endPage = segment.endPage ?? segment.startPage;
+
+        console.log(`[OCR Multi-Page] Processing segment: pages ${segment.startPage}-${endPage}`);
+
+        const imageBuffer = await mergePagesToImage(pdfBuffer, segment.startPage, endPage);
         results[idx] = await extractInvoiceFromImage(imageBuffer, segment, userCookie);
       } catch (error) {
         console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage}:`, error);
