@@ -7,9 +7,12 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const resolvedParams = await params;
+    const orderId = resolvedParams.orderId;
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -28,7 +31,7 @@ export async function POST(
     const { data: amazonOrder, error: orderError } = await supabase
       .from('amazon_orders')
       .select('*, amazon_order_items(*)')
-      .eq('id', params.orderId)
+      .eq('id', orderId)
       .eq('user_id', user.id)
       .single();
 
@@ -98,7 +101,7 @@ export async function POST(
         invoice_id: invoice.id,
         invoice_generated: true,
       })
-      .eq('id', params.orderId);
+      .eq('id', orderId);
 
     return NextResponse.json({
       success: true,

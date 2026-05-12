@@ -202,7 +202,8 @@
       "Bash(node -e \"const lock = require\\('./package-lock.json'\\); Object.entries\\(lock.packages || {}\\).forEach\\(\\([path, info]\\) => { if \\(info.dependencies && info.dependencies['jsdom']\\) console.log\\(path, '→ requires jsdom'\\); if \\(info.peerDependencies && info.peerDependencies['jsdom']\\) console.log\\(path, '→ peerRequires jsdom'\\); }\\);\")",
       "mcp__claude_ai_Supabase__get_logs",
       "Bash(chmod +x /tmp/check_tables.sh)",
-      "Bash(/tmp/check_tables.sh)"
+      "Bash(/tmp/check_tables.sh)",
+      "Bash(tee /tmp/build_output.log)"
     ]
   },
   "enableAllProjectMcpServers": true,
