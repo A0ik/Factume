@@ -634,10 +634,19 @@ export default function OCRPage() {
 
             console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€`);
 
+            // Construire un nom intelligent basé sur les données extraites
+            const vendor = extracted.vendor || 'Fournisseur inconnu';
+            const invoiceNum = extracted.invoice_number || '';
+            const date = extracted.date ? new Date(extracted.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '';
+            const name = `${vendor}${invoiceNum ? ` - ${invoiceNum}` : ''}${date ? ` (${date})` : ''}`;
+
+            // Récupérer receipt_url pour le preview
+            const receiptUrl = (result.expense as any)?.receipt_url || '';
+
             newFiles.push({
               id: generateId(),
-              file: new File([], `Facture ${i + 1}${extracted.invoice_number ? ` - ${extracted.invoice_number}` : ''}`),
-              preview: scannedFile.preview || '',
+              file: new File([], name),
+              preview: receiptUrl || scannedFile.preview || '',
               status: 'complete' as const,
               progress: 100,
               result: {
@@ -1200,6 +1209,19 @@ export default function OCRPage() {
                               <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                                 {scannedFile.file.name}
                               </p>
+                              {/* Montant et date pour factures complètes */}
+                              {scannedFile.status === 'complete' && scannedFile.result?.extracted && (
+                                <div className="mt-1 flex flex-wrap items-center gap-x-2">
+                                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {formatCurrency(scannedFile.result.extracted.amount || 0)}
+                                  </span>
+                                  {scannedFile.result.extracted.date && (
+                                    <span className="text-xs text-gray-400">
+                                      {new Date(scannedFile.result.extracted.date).toLocaleDateString('fr-FR')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               <p className="text-xs text-gray-400 mt-0.5">
                                 {(scannedFile.file.size / 1024).toFixed(0)} Ko
                               </p>
