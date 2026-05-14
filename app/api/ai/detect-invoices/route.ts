@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import '@/lib/pdfjs-polyfill'; // Import polyfill first
 import {
-  extractPageAsImage,
+  extractPageRange,
   getPDFPageCount,
   type PageAnalysis,
   type InvoiceSegment,
@@ -94,15 +93,15 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown) :
 // ---------------------------------------------------------------------------
 
 async function analyzePage(
-  imageBuffer: Buffer,
+  pdfBuffer: Buffer,
   pageNumber: number,
   openrouter: OpenAI
 ): Promise<PageAnalysis> {
-  const base64 = imageBuffer.toString('base64');
+  const base64 = pdfBuffer.toString('base64');
 
   try {
     const completion = await openrouter.chat.completions.create({
-      model: 'google/gemini-2.5-flash', // ✅ Modèle Gemini 2.5 Flash existant
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -110,7 +109,7 @@ async function analyzePage(
             { type: 'text', text: DETECTION_PROMPT },
             {
               type: 'image_url',
-              image_url: { url: `data:image/png;base64,${base64}` },
+              image_url: { url: `data:application/pdf;base64,${base64}` },
             },
           ],
         },
@@ -406,8 +405,9 @@ export async function POST(req: NextRequest) {
         batchPromises.push(
           (async () => {
             try {
-              const imageBuffer = await extractPageAsImage(pdfBuffer, pageNumber);
-              return await analyzePage(imageBuffer, pageNumber, openrouter);
+              // Extraire la page PDF et l'envoyer directement à Gemini
+              const pagePdfBuffer = await extractPageRange(pdfBuffer, pageNumber, pageNumber);
+              return await analyzePage(pagePdfBuffer, pageNumber, openrouter);
             } catch (error) {
               console.error(`[Detect Invoices] Failed to analyze page ${pageNumber}:`, error);
               return {
