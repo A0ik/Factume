@@ -122,10 +122,26 @@ async function processSegments(
         results[idx] = await extractInvoiceFromImage(imageBuffer, segment, userCookie);
       } catch (error) {
         console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage}:`, error);
+
+        // ✅ Gestion améliorée des erreurs avec messages plus clairs
+        let errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+
+        // Détecter les erreurs spécifiques pour donner des conseils
+        if (errorMessage.includes('IMAGE_TAILLE_TROP_GRANDE')) {
+          const match = errorMessage.match(/IMAGE_TAILLE_TROP_GRANDE:(\d+)×(\d+)\|(.+)/);
+          if (match) {
+            errorMessage = `Segment trop volumineux (${match[1]}×${match[2]}px). ${match[3]}`;
+          }
+        } else if (errorMessage.includes('canvas') || errorMessage.includes('Canvas')) {
+          errorMessage = 'Erreur de rendu PDF. Le fichier peut être corrompu ou utiliser un format non supporté.';
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
+          errorMessage = 'Délai d\'analyse dépassé. Le segment contient peut-être trop de pages ou des images complexes.';
+        }
+
         results[idx] = {
           success: false,
           segment,
-          error: error instanceof Error ? error.message : 'Erreur inconnue',
+          error: errorMessage,
         };
       }
     }

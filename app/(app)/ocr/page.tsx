@@ -572,6 +572,28 @@ export default function OCRPage() {
 
         // ✅ AUTOMATIQUE: Traiter chaque facture détectée sans intervention manuelle
         console.log(`[OCR DEBUG] 🔄 Traitement automatique de ${detectData.segments.length} facture(s)`);
+
+        updateFile(scannedFile.id, {
+          status: 'analyzing',
+          progress: 60,
+          result: {
+            extracted: {
+              vendor: '',
+              amount: 0,
+              ht_amount: 0,
+              vat_amount: 0,
+              confidence: 0,
+              category: '',
+              date: '',
+              description: `Traitement de ${detectData.segments.length} facture(s)...`,
+              currency: 'EUR',
+              invoice_number: '',
+              line_items: []
+            } as ExtractedData
+          }
+        });
+
+        toast.info(`Extraction de ${detectData.segments.length} facture(s) en cours...`, { duration: 5000 });
         const multiPageFormData = new FormData();
         multiPageFormData.append('file', scannedFile.file);
         multiPageFormData.append('segments', JSON.stringify(detectData.segments));
@@ -627,18 +649,39 @@ export default function OCRPage() {
 
         console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);
 
+        if (newFiles.length === 0) {
+          // ⚠️ TOUS les segments ont échoué - garder le fichier original avec message d'erreur détaillé
+          updateFile(scannedFile.id, {
+            status: 'error',
+            error: 'Aucune facture n\'a pu être extraite de ce PDF. Causes possibles : qualité d\'image insuffisante, format non supporté, ou pages qui ne contiennent pas de factures.'
+          });
+
+          toast.error(`Extraction échouée pour les ${ocrData.results.length} facture(s). Essayez de : (1) Améliorer la qualité du scan, (2) Séparer les factures en fichiers distincts, (3) Vérifier que les pages contiennent bien des factures lisibles.`, {
+            duration: 10000,
+          });
+
+          return;
+        }
+
         // Remplacer le fichier original par les factures détectées
         setFiles(prev => {
           const filtered = prev.filter(f => f.id !== scannedFile.id);
           return [...filtered, ...newFiles];
         });
 
-        if (newFiles.length === 0) {
-          toast.error('Aucune facture n\'a pu être extraite. Vérifiez la qualité du PDF.');
-        } else if (newFiles.length < ocrData.results.length) {
-          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. Certaines pages n\'ont pas pu être analysées.`);
+        if (newFiles.length < ocrData.results.length) {
+          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. ${ocrData.results.length - newFiles.length} facture(s) n'ont pas pu être analysées. Vérifiez la qualité des pages correspondantes.`, {
+            duration: 8000,
+          });
         } else {
-          toast.success(`${newFiles.length} facture(s) extraite(s) du PDF avec succès !`);
+          // ✅ Message de succès détaillé avec les fournisseurs détectés
+          const vendors = newFiles.map(f => f.result?.extracted?.vendor).filter(Boolean).join(', ');
+          const vendorText = vendors ? `Fournisseurs: ${vendors}` : 'Chaque facture a été détectée et extraite automatiquement.';
+
+          toast.success(`${newFiles.length} facture(s) extraite(s) du PDF avec succès !`, {
+            description: vendorText,
+            duration: 6000,
+          });
         }
         return;
       }

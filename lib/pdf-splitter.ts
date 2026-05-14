@@ -113,7 +113,7 @@ export async function mergePagesToImage(
   // Reject oversized compositions before allocating memory
   if (rawWidth > MAX_MERGED_WIDTH || rawHeight > MAX_MERGED_HEIGHT) {
     throw new Error(
-      `Image résultante trop grande (${rawWidth}×${rawHeight}px). Réduisez le nombre de pages par segment.`,
+      `IMAGE_TAILLE_TROP_GRANDE:${rawWidth}×${rawHeight}|Le segment de pages ${startPage}-${endPage} est trop volumineux pour être fusionné en une seule image (${rawWidth}×${rawHeight}px). Essayez de traiter ces pages séparément.`,
     );
   }
 
