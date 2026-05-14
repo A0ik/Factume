@@ -12,7 +12,9 @@ import './pdfjs-polyfill';
 
 // Set worker for pdfjs
 if (typeof window === 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  // En Node.js, utiliser le worker local depuis node_modules
+  const workerUrl = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url);
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl.toString();
 }
 
 // ---------------------------------------------------------------------------
