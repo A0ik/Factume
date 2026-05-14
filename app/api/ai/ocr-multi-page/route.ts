@@ -73,20 +73,25 @@ async function extractInvoiceFromImage(
       signal: controller.signal,
     });
 
-    console.log(`[OCR Multi-Page] 📥 Réponse OCR: status=${response.status}`);
+    console.log(`[OCR Multi-Page] 📥 Réponse OCR: status=${response.status}, ok=${response.ok}`);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Erreur OCR inconnue' }));
+      const errorData = await response.json().catch(() => {
+        console.error(`[OCR Multi-Page] ❌ Impossible de parser l'erreur JSON`);
+        return { error: 'Erreur OCR inconnue (réponse non JSON)' };
+      });
       console.error(`[OCR Multi-Page] ❌ Erreur OCR segment ${segment.startPage}-${segment.endPage}:`, errorData);
+
+      const errorMessage = errorData.error || `Erreur HTTP ${response.status}`;
       return {
         success: false,
         segment,
-        error: errorData.error || `Erreur HTTP ${response.status} lors de l'extraction OCR`,
+        error: errorMessage,
       };
     }
 
     const data = await response.json();
-    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${segment.endPage}`);
+    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${segment.endPage}, has expense=${!!data.expense || !!data.extracted}`);
 
     return {
       success: true,
@@ -143,7 +148,44 @@ async function processSegments(
         if (errorMessage.includes('IMAGE_TAILLE_TROP_GRANDE')) {
           const match = errorMessage.match(/IMAGE_TAILLE_TROP_GRANDE:(\d+)×(\d+)\|(.+)/);
           if (match) {
-            errorMessage = `Segment trop volumineux (${match[1]}×${match[2]}px). ${match[3]}`;
+            // ✅ AUTOMATIC FALLBACK: Traiter page par page si trop volumineux
+            const pageCount = (segment.endPage ?? segment.startPage) - segment.startPage + 1;
+            console.warn(`[OCR Multi-Page] ⚠️ Segment trop volumineux (${pageCount} pages), fallback: traitement page par page`);
+
+            // Traiter chaque page individuellement
+            let pageResults = [];
+            for (let page = segment.startPage; page <= (segment.endPage ?? segment.startPage); page++) {
+              try {
+                console.log(`[OCR Multi-Page] 📄 Traitement page ${page} individuellement`);
+                const singlePageBuffer = await mergePagesToImage(pdfBuffer, page, page);
+                const pageResult = await extractInvoiceFromImage(
+                  singlePageBuffer,
+                  { ...segment, startPage: page, endPage: page },
+                  userCookie,
+                  req
+                );
+
+                if (pageResult.success) {
+                  pageResults.push(pageResult);
+                }
+              } catch (pageError) {
+                console.error(`[OCR Multi-Page] ❌ Erreur page ${page}:`, pageError);
+              }
+            }
+
+            // Si au moins une page a réussi, marquer le segment comme succès
+            if (pageResults.length > 0) {
+              console.log(`[OCR Multi-Page] ✅ Fallback réussi: ${pageResults.length}/${pageCount} pages traitées`);
+              // Prendre la première page réussie comme résultat principal
+              results[idx] = pageResults[0];
+            } else {
+              results[idx] = {
+                success: false,
+                segment,
+                error: `Segment trop volumineux (${pageCount} pages). Le traitement page par page a également échoué.`,
+              };
+            }
+            return; // Skip the error handling below since we handled it here
           }
         } else if (errorMessage.includes('canvas') || errorMessage.includes('Canvas')) {
           errorMessage = 'Erreur de rendu PDF. Le fichier peut être corrompu ou utiliser un format non supporté.';

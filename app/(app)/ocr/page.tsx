@@ -612,6 +612,7 @@ export default function OCRPage() {
             success: boolean;
             expense?: Record<string, unknown>;
             segment?: { startPage: number; endPage: number };
+            error?: string;
           }>;
           summary: { succeeded: number; failed: number };
         };
