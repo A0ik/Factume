@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import '@/lib/pdfjs-polyfill'; // Import polyfill first
 import {
-  splitPdfBySegments,
-  mergePagesToImage,
   extractPageRange,
   type DetectionResult,
   type InvoiceSegment,
@@ -44,8 +41,8 @@ interface MultiPageOCRResponse {
 
 const INTERNAL_FETCH_TIMEOUT_MS = 60_000;
 
-async function extractInvoiceFromImage(
-  imageBuffer: Buffer,
+async function extractInvoiceFromPDF(
+  pdfBuffer: Buffer,
   segment: InvoiceSegment,
   userCookie: string,
   req: Request,
@@ -54,17 +51,24 @@ async function extractInvoiceFromImage(
   const timeoutId = setTimeout(() => controller.abort(), INTERNAL_FETCH_TIMEOUT_MS);
 
   try {
-    console.log(`[OCR Multi-Page] 🔍 Extraction segment ${segment.startPage}-${segment.endPage} (${imageBuffer.length} bytes)`);
+    const endPage = segment.endPage ?? segment.startPage;
+    console.log(`[OCR Multi-Page] 🔍 Extraction segment PDF ${segment.startPage}-${endPage}`);
+
+    // Extraire le segment PDF (sans conversion en image)
+    const { extractPageRange } = await import('@/lib/pdf-splitter');
+    const segmentPdfBuffer = await extractPageRange(pdfBuffer, segment.startPage, endPage);
+
+    console.log(`[OCR Multi-Page] 📦 Segment PDF extrait: ${segmentPdfBuffer.length} bytes`);
 
     const formData = new FormData();
-    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
-    formData.append('file', blob, `segment_${segment.startPage}-${segment.endPage}.png`);
+    const blob = new Blob([new Uint8Array(segmentPdfBuffer)], { type: 'application/pdf' });
+    formData.append('file', blob, `segment_${segment.startPage}-${endPage}.pdf`);
 
-    // ✅ CORRECTION: Utiliser une requête interne Next.js au lieu de fetch HTTP
-    // Cela évite les problèmes d'URL en production et gère mieux l'authentification
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('host') ? `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('host')}` : 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('host')
+      ? `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('host')}`
+      : 'http://localhost:3000';
 
-    console.log(`[OCR Multi-Page] 📡 Appel interne OCR vers: ${baseUrl}/api/ai/ocr-receipt`);
+    console.log(`[OCR Multi-Page] 📡 Appel OCR vers: ${baseUrl}/api/ai/ocr-receipt`);
 
     const response = await fetch(`${baseUrl}/api/ai/ocr-receipt`, {
       method: 'POST',
@@ -76,22 +80,18 @@ async function extractInvoiceFromImage(
     console.log(`[OCR Multi-Page] 📥 Réponse OCR: status=${response.status}, ok=${response.ok}`);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => {
-        console.error(`[OCR Multi-Page] ❌ Impossible de parser l'erreur JSON`);
-        return { error: 'Erreur OCR inconnue (réponse non JSON)' };
-      });
-      console.error(`[OCR Multi-Page] ❌ Erreur OCR segment ${segment.startPage}-${segment.endPage}:`, errorData);
+      const errorData = await response.json().catch(() => ({ error: 'Erreur OCR inconnue' }));
+      console.error(`[OCR Multi-Page] ❌ Erreur OCR segment ${segment.startPage}-${endPage}:`, errorData);
 
-      const errorMessage = errorData.error || `Erreur HTTP ${response.status}`;
       return {
         success: false,
         segment,
-        error: errorMessage,
+        error: errorData.error || `Erreur HTTP ${response.status}`,
       };
     }
 
     const data = await response.json();
-    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${segment.endPage}, has expense=${!!data.expense || !!data.extracted}`);
+    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${endPage}`);
 
     return {
       success: true,
@@ -101,7 +101,7 @@ async function extractInvoiceFromImage(
   } catch (error) {
     console.error(`[OCR Multi-Page] 💥 Exception segment ${segment.startPage}-${segment.endPage}:`, error);
     const message = error instanceof Error
-      ? (error.name === 'AbortError' ? 'Délai dépassé pour ce segment (timeout 60s).' : error.message)
+      ? (error.name === 'AbortError' ? 'Délai dépassé (timeout 60s).' : error.message)
       : 'Erreur inconnue';
     return { success: false, segment, error: message };
   } finally {
@@ -131,68 +131,14 @@ async function processSegments(
       const [idx, segment] = item;
 
       try {
-        // ✅ Validation de sécurité: endPage ne doit pas être null
-        const endPage = segment.endPage ?? segment.startPage;
+        console.log(`[OCR Multi-Page] Worker ${idx}: Processing segment pages ${segment.startPage}-${segment.endPage ?? segment.startPage}`);
 
-        console.log(`[OCR Multi-Page] Worker ${idx}: Processing segment pages ${segment.startPage}-${endPage}`);
-
-        const imageBuffer = await mergePagesToImage(pdfBuffer, segment.startPage, endPage);
-        results[idx] = await extractInvoiceFromImage(imageBuffer, segment, userCookie, req);
+        // Utiliser extractInvoiceFromPDF au lieu de mergePagesToImage + extractInvoiceFromImage
+        results[idx] = await extractInvoiceFromPDF(pdfBuffer, segment, userCookie, req);
       } catch (error) {
-        console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage}:`, error);
+        console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage ?? segment.startPage}:`, error);
 
-        // ✅ Gestion améliorée des erreurs avec messages plus clairs
-        let errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-
-        // Détecter les erreurs spécifiques pour donner des conseils
-        if (errorMessage.includes('IMAGE_TAILLE_TROP_GRANDE')) {
-          const match = errorMessage.match(/IMAGE_TAILLE_TROP_GRANDE:(\d+)×(\d+)\|(.+)/);
-          if (match) {
-            // ✅ AUTOMATIC FALLBACK: Traiter page par page si trop volumineux
-            const pageCount = (segment.endPage ?? segment.startPage) - segment.startPage + 1;
-            console.warn(`[OCR Multi-Page] ⚠️ Segment trop volumineux (${pageCount} pages), fallback: traitement page par page`);
-
-            // Traiter chaque page individuellement
-            let pageResults = [];
-            for (let page = segment.startPage; page <= (segment.endPage ?? segment.startPage); page++) {
-              try {
-                console.log(`[OCR Multi-Page] 📄 Traitement page ${page} individuellement`);
-                const singlePageBuffer = await mergePagesToImage(pdfBuffer, page, page);
-                const pageResult = await extractInvoiceFromImage(
-                  singlePageBuffer,
-                  { ...segment, startPage: page, endPage: page },
-                  userCookie,
-                  req
-                );
-
-                if (pageResult.success) {
-                  pageResults.push(pageResult);
-                }
-              } catch (pageError) {
-                console.error(`[OCR Multi-Page] ❌ Erreur page ${page}:`, pageError);
-              }
-            }
-
-            // Si au moins une page a réussi, marquer le segment comme succès
-            if (pageResults.length > 0) {
-              console.log(`[OCR Multi-Page] ✅ Fallback réussi: ${pageResults.length}/${pageCount} pages traitées`);
-              // Prendre la première page réussie comme résultat principal
-              results[idx] = pageResults[0];
-            } else {
-              results[idx] = {
-                success: false,
-                segment,
-                error: `Segment trop volumineux (${pageCount} pages). Le traitement page par page a également échoué.`,
-              };
-            }
-            return; // Skip the error handling below since we handled it here
-          }
-        } else if (errorMessage.includes('canvas') || errorMessage.includes('Canvas')) {
-          errorMessage = 'Erreur de rendu PDF. Le fichier peut être corrompu ou utiliser un format non supporté.';
-        } else if (errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
-          errorMessage = 'Délai d\'analyse dépassé. Le segment contient peut-être trop de pages ou des images complexes.';
-        }
-
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         results[idx] = {
           success: false,
           segment,
