@@ -621,8 +621,10 @@ export default function OCRPage() {
 
         console.log(`[OCR DEBUG] 🔄 Traitement des résultats: ${ocrData.results.length} segments`);
 
+        const failedSegments: Array<{index: number; error?: string}> = [];
+
         for (let i = 0; i < ocrData.results.length; i++) {
-          const result = ocrData.results[i];
+          const result = ocrData.results[i] as { success: boolean; expense?: Record<string, unknown>; error?: string };
 
           console.log(`[OCR DEBUG] Segment ${i + 1}: success=${result.success}, hasExpense=${!!result.expense}`);
 
@@ -643,21 +645,35 @@ export default function OCRPage() {
               },
             });
           } else {
-            console.warn(`[OCR DEBUG]    ❌ Segment ${i + 1} échoué`);
+            const errorMsg = result.error || 'Erreur inconnue';
+            console.warn(`[OCR DEBUG]    ❌ Segment ${i + 1} échoué: ${errorMsg}`);
+            failedSegments.push({ index: i + 1, error: errorMsg });
           }
+        }
+
+        // Afficher les erreurs spécifiques dans la console pour debug
+        if (failedSegments.length > 0) {
+          console.error(`[OCR DEBUG] 💥 Segments échoués:`, failedSegments);
         }
 
         console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);
 
         if (newFiles.length === 0) {
-          // ⚠️ TOUS les segments ont échoué - garder le fichier original avec message d'erreur détaillé
+          // ⚠️ TOUS les segments ont échoué - afficher les erreurs spécifiques
+          const errorDetails = failedSegments.map(f => `Segment ${f.index}: ${f.error}`).join('\n');
+
+          console.error(`[OCR DEBUG] 💥 Toutes les extractions ont échoué:\n${errorDetails}`);
+
           updateFile(scannedFile.id, {
             status: 'error',
-            error: 'Aucune facture n\'a pu être extraite de ce PDF. Causes possibles : qualité d\'image insuffisante, format non supporté, ou pages qui ne contiennent pas de factures.'
+            error: `Aucune facture n'a pu être extraite. Erreurs:\n${errorDetails}`
           });
 
-          toast.error(`Extraction échouée pour les ${ocrData.results.length} facture(s). Essayez de : (1) Améliorer la qualité du scan, (2) Séparer les factures en fichiers distincts, (3) Vérifier que les pages contiennent bien des factures lisibles.`, {
-            duration: 10000,
+          // Créer un message d'erreur plus informatif
+          const firstError = failedSegments[0]?.error || 'Erreur inconnue';
+          toast.error(`Extraction échouée: ${firstError}`, {
+            description: `Vérifiez la console (F12) pour voir les erreurs détaillées des ${failedSegments.length} segments.`,
+            duration: 12000,
           });
 
           return;
@@ -670,8 +686,9 @@ export default function OCRPage() {
         });
 
         if (newFiles.length < ocrData.results.length) {
-          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. ${ocrData.results.length - newFiles.length} facture(s) n'ont pas pu être analysées. Vérifiez la qualité des pages correspondantes.`, {
-            duration: 8000,
+          const failedErrors = failedSegments.map(f => `Segment ${f.index}: ${f.error}`).join('; ');
+          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. Erreurs: ${failedErrors}`, {
+            duration: 10000,
           });
         } else {
           // ✅ Message de succès détaillé avec les fournisseurs détectés

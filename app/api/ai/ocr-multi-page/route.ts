@@ -48,16 +48,23 @@ async function extractInvoiceFromImage(
   imageBuffer: Buffer,
   segment: InvoiceSegment,
   userCookie: string,
+  req: Request,
 ): Promise<OCRResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), INTERNAL_FETCH_TIMEOUT_MS);
 
   try {
+    console.log(`[OCR Multi-Page] 🔍 Extraction segment ${segment.startPage}-${segment.endPage} (${imageBuffer.length} bytes)`);
+
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
     formData.append('file', blob, `segment_${segment.startPage}-${segment.endPage}.png`);
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // ✅ CORRECTION: Utiliser une requête interne Next.js au lieu de fetch HTTP
+    // Cela évite les problèmes d'URL en production et gère mieux l'authentification
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('host') ? `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('host')}` : 'http://localhost:3000';
+
+    console.log(`[OCR Multi-Page] 📡 Appel interne OCR vers: ${baseUrl}/api/ai/ocr-receipt`);
 
     const response = await fetch(`${baseUrl}/api/ai/ocr-receipt`, {
       method: 'POST',
@@ -66,25 +73,30 @@ async function extractInvoiceFromImage(
       signal: controller.signal,
     });
 
+    console.log(`[OCR Multi-Page] 📥 Réponse OCR: status=${response.status}`);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Erreur OCR inconnue' }));
+      console.error(`[OCR Multi-Page] ❌ Erreur OCR segment ${segment.startPage}-${segment.endPage}:`, errorData);
       return {
         success: false,
         segment,
-        error: errorData.error || "Erreur lors de l'extraction OCR",
+        error: errorData.error || `Erreur HTTP ${response.status} lors de l'extraction OCR`,
       };
     }
 
     const data = await response.json();
+    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${segment.endPage}`);
+
     return {
       success: true,
       segment,
       expense: data.expense ?? data.extracted,
     };
   } catch (error) {
-    console.error(`[OCR Multi-Page] Error processing segment ${segment.startPage}-${segment.endPage}:`, error);
+    console.error(`[OCR Multi-Page] 💥 Exception segment ${segment.startPage}-${segment.endPage}:`, error);
     const message = error instanceof Error
-      ? (error.name === 'AbortError' ? 'Délai dépassé pour ce segment.' : error.message)
+      ? (error.name === 'AbortError' ? 'Délai dépassé pour ce segment (timeout 60s).' : error.message)
       : 'Erreur inconnue';
     return { success: false, segment, error: message };
   } finally {
@@ -100,6 +112,7 @@ async function processSegments(
   pdfBuffer: Buffer,
   segments: InvoiceSegment[],
   userCookie: string,
+  req: Request,
   limit: number = 2,
 ): Promise<OCRResult[]> {
   const results = new Array<OCRResult>(segments.length);
@@ -116,10 +129,10 @@ async function processSegments(
         // ✅ Validation de sécurité: endPage ne doit pas être null
         const endPage = segment.endPage ?? segment.startPage;
 
-        console.log(`[OCR Multi-Page] Processing segment: pages ${segment.startPage}-${endPage}`);
+        console.log(`[OCR Multi-Page] Worker ${idx}: Processing segment pages ${segment.startPage}-${endPage}`);
 
         const imageBuffer = await mergePagesToImage(pdfBuffer, segment.startPage, endPage);
-        results[idx] = await extractInvoiceFromImage(imageBuffer, segment, userCookie);
+        results[idx] = await extractInvoiceFromImage(imageBuffer, segment, userCookie, req);
       } catch (error) {
         console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage}:`, error);
 
@@ -301,7 +314,7 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = Buffer.from(arrayBuffer);
 
     const userCookie = req.headers.get('cookie') ?? '';
-    const results = await processSegments(pdfBuffer, segments, userCookie, 2);
+    const results = await processSegments(pdfBuffer, segments, userCookie, req, 2);
 
     // ------------------------------------------------------------------
     // 6. Return results
