@@ -110,7 +110,14 @@ RÈGLES ABSOLUES :
 - vat_rate par défaut = 20
 - CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
-- summary doit être en français, court et précis`;
+- summary doit être en français, court et précis
+
+⚠️ CALCUL JOURNALIER - MODIFICATION :
+- "X jours à Y€/jour" → quantity = X, unit_price = Y
+- "X jours à Y€ par jour" → quantity = X, unit_price = Y
+- "X days at Y€/day" → quantity = X, unit_price = Y (après conversion devise)
+- "modifie la ligne 1 à 3 jours à 600€ par jour" → quantity: 3, unit_price: 600
+- TOUJOURS appliquer le calcul journalier quand "par jour" ou "/jour" est mentionné`;
     } else {
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
@@ -167,6 +174,23 @@ RÈGLES POUR LES MONTANTS :
 - vat_rate par défaut = 20
 - CORRECT: unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
 - FAUX: unit_price: 400 / 1.10
+
+⚠️ CALCUL JOURNALIER CRITIQUE - À APPLIQUER EN PRIORITÉ :
+- "X jours à Y€/jour" ou "X jours à Y€ par jour" → quantity = X, unit_price = Y
+- "X days at Y€/day" ou "X days at Y€ per day" → quantity = X, unit_price = Y
+- "X jours de travail à Y€ journalier" → quantity = X, unit_price = Y
+- "une semaine à Y€/jour" → quantity = 5, unit_price = Y
+- "3 jours de dev à 500€ par jour" → quantity: 3, unit_price: 500
+- "5 days consulting at £800 per day" → quantity: 5, unit_price: 928 (après conversion £→€)
+- TOUJOURS interpréter "montant par jour" ou "montant/jour" comme unit_price
+- TOUJOURS interpréter le nombre de jours/semaines comme quantity
+- Si un prix total est donné sans précision "par jour", diviser par le nombre de jours
+
+EXEMPLES DE CALCUL JOURNALIER :
+- "5 jours de développement à 500€ par jour" → {description: "Développement", quantity: 5, unit_price: 500, vat_rate: 20}
+- "3 jours de conseil à 800€/j" → {description: "Prestation de conseil", quantity: 3, unit_price: 800, vat_rate: 20}
+- "Une semaine de formation à 1000€ par jour" → {description: "Formation", quantity: 5, unit_price: 1000, vat_rate: 20}
+- "2 jours de design à £600 per day" → {description: "Design", quantity: 2, unit_price: 696, vat_rate: 20} (£600 × 1.16)
 
 INFORMATIONS CLIENT :
 - SIRET: 14 chiffres sans espaces ni points
