@@ -25,37 +25,56 @@ const MAX_PAGES = 50; // Limit pages to prevent abuse
 
 const DETECTION_PROMPT = `Tu es un expert en analyse de documents comptables. Ta mission est d'identifier si cette page contient le DÉBUT ou la FIN d'une facture.
 
-⚠️ RÈGLE LA PLUS IMPORTANTE:
-- Par défaut, considère CHAQUE PAGE comme le DÉBUT d'une NOUVELLE facture
-- Seulement marque "is_invoice_start: false" si c'est clairement une continuation (texte coupé, tableau qui continue, "suite...")
-- Même une page avec juste du contenu sans marqueur explicite = NOUVELLE facture par défaut
+⚠️ RÈGLE LA PLUS IMPORTANTE - COMME DEXT:
+- Regarde le contexte visuel complet de la page
+- Détermine si cette page EST UN CONTINUATION d'une facture précédente ou une NOUVELLE facture
+- Ne suppose pas "nouvelle facture" par défaut - analyse les marqueurs visuels
 
-ANALYSE :
-1. DÉBUT de facture (is_invoice_start: true) si :
-   - Par défaut: TOUJOURS true sauf cas exceptionnel ci-dessous
-   - Nouveau nom de fournisseur visible
-   - Nouveau numéro de facture visible
-   - En-tête avec "FACTURE", "DEVIS", "BON DE COMMANDE", etc.
-   - Logo d'entreprise en haut
-   - Tableau de lignes qui commence
-   - IMPORTANT: Même si aucun marqueur explicite, considère comme true par défaut
+ANALYSE - DÉBUT de facture (is_invoice_start: true) :
+MARQUEURS VISUELS DE DÉBUT (un ou plusieurs requis):
+1. En-tête visible avec logo d'entreprise en haut de page
+2. Nouveau nom de fournisseur différent de la page précédente
+3. Nouveau numéro de facture visible
+4. Mots-clés d'en-tête: "FACTURE", "DEVIS", "BON DE COMMANDE", "INVOICE", "REÇU"
+5. Tableau de lignes de produits/services qui COMMENCE (avec en-têtes de colonnes)
+6. Adresse du fournisseur / coordonnées en haut de page
 
-2. DÉBUT = false (continuation) SEULEMENT si :
-   - Texte visuellement coupé en bas de page précédente
-   - Mention explicite "suite...", "page X/Y", "suite au verso"
-   - Tableau de produits qui continue clairement
-   - Pas de nouveau fournisseur/numéro de facture
+IMPORTANT: is_invoice_start = true SEULEMENT si un ou plusieurs de ces marqueurs sont présents
 
-3. FIN de facture (is_invoice_end: true) si :
-   - Ligne "Total TTC", "Montant à payer", "Net à payer", "À payer"
-   - Mention de TVA, HT, TTC en bas
-   - Informations de paiement (IBAN, SWIFT, RIB)
-   - Pied de page avec conditions de paiement
-   - Mention "TVA FR", "SIRET" en bas
+ANALYSE - CONTINUATION (is_invoice_start: false) :
+MARQUEURS VISUELS DE CONTINUATION (un ou plusieurs requis):
+1. Tableau de produits qui continue SANS en-têtes de colonnes (lignes de données uniquement)
+2. Texte qui semble coupé / continuation évidente du contenu précédent
+3. Mentions explicites: "suite...", "page X/Y", "suite au verso", "continued"
+4. AUCUN logo ou en-tête de fournisseur visible
+5. Même numéro de facture que la page précédente (si visible)
+6. Format de tableau identique à la page précédente
 
-4. Si tu vois des données de facture (montant, fournisseur, date) mais pas de marqueurs:
-   - is_invoice_start: true (nouvelle facture par défaut)
-   - is_invoice_end: true (considère comme facture complète)
+IMPORTANT: Si tu vois un tableau SANS en-têtes de colonnes et SANS logo/en-tête → c'est une CONTINUATION
+
+ANALYSE - FIN de facture (is_invoice_end: true) :
+MARQUEURS VISUELS DE FIN (un ou plusieurs requis):
+1. Ligne "Total TTC", "Montant à payer", "Net à payer", "À payer", "Balance due"
+2. Mentions de TVA en bas: "TVA", "HT", "TTC", "VAT"
+3. Informations de paiement: IBAN, SWIFT, RIB, "Virement à", "Payment to"
+4. Pied de page avec conditions de paiement, échéance
+5. Mentions légales: "TVA FR", "SIRET", "Registration number"
+6. Signature ou tampon en bas
+
+IMPORTANT: is_invoice_end = true SEULEMENT si un ou plusieurs de ces marqueurs sont présents
+
+CONTEXTE SPÉCIAL - Page unique avec contenu de facture:
+- Si la page contient des infos de fournisseur ET un total → is_invoice_start: true, is_invoice_end: true
+- Si la page contient un tableau SANS en-têtes et SANS total → is_invoice_start: false, is_invoice_end: false
+
+DONNÉES À EXTRAIRE (sur toutes les pages):
+- vendor: nom du fournisseur (visible en haut ou dans le pied de page)
+- invoice_number: numéro de facture (ex: "FAC-2024-001", "INV-12345")
+- invoice_date: date de facture en format YYYY-MM-DD
+- total_amount: montant total TTC visible (nombre uniquement)
+- has_payment_info: true si infos bancaires présentes
+- page_type: "header" (en-tête), "detail" (tableau lignes), "footer" (pied avec total), "mixed" (plusieurs types)
+- confidence: 0-100 basé sur la clarté des marqueurs
 
 Retourne UNIQUEMENT du JSON valide (pas de markdown) :
 {
@@ -153,15 +172,16 @@ function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
 
   const segments: InvoiceSegment[] = [];
 
-  // ✅ NOUVELLE LOGIQUE: Traiter chaque page comme une facture potentielle par défaut
-  // Sauf si l'IA détecte explicitement que c'est une continuation
+  // LOGIQUE DEXT: Regrouper les pages qui appartiennent à la même facture
+  // Une facture commence si is_invoice_start=true ou si c'est la 1ère page
+  // Une facture continue tant qu'on n'a pas de marqueur de fin explicite
   for (let i = 0; i < analyses.length; i++) {
     const analysis = analyses[i];
     const pageNumber = analysis.pageNumber;
 
-    console.log(`[Detect Invoices] Page ${pageNumber}: isInvoiceStart=${analysis.isInvoiceStart}, isInvoiceEnd=${analysis.isInvoiceEnd}`);
+    console.log(`[Detect Invoices] Page ${pageNumber}: isInvoiceStart=${analysis.isInvoiceStart}, isInvoiceEnd=${analysis.isInvoiceEnd}, vendor=${analysis.vendor || 'N/A'}, invoiceNumber=${analysis.invoiceNumber || 'N/A'}`);
 
-    // CAS 1: Début explicite d'une nouvelle facture
+    // CAS 1: Début explicite d'une nouvelle facture (isInvoiceStart=true)
     if (analysis.isInvoiceStart) {
       // Fermer le segment précédent s'il est ouvert
       if (segments.length > 0 && segments[segments.length - 1].endPage === null) {
@@ -172,7 +192,7 @@ function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
       // Créer nouveau segment
       segments.push({
         startPage: pageNumber,
-        endPage: analysis.isInvoiceEnd ? pageNumber : null, // Sera fermé plus tard si pas de fin explicite
+        endPage: analysis.isInvoiceEnd ? pageNumber : null,
         vendor: analysis.vendor || null,
         invoiceNumber: analysis.invoiceNumber || null,
         date: analysis.invoiceDate || null,
@@ -181,28 +201,41 @@ function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
 
       console.log(`[Detect Invoices] Nouveau segment créé: page ${pageNumber}`);
     }
-    // CAS 2: Pas de début explicite = Nouvelle facture par défaut (PRINCIPE DEXT)
-    else if (segments.length === 0 || (segments.length > 0 && segments[segments.length - 1].endPage !== null)) {
-      // Aucun segment ouvert ou le dernier est fermé = créer nouveau segment
+    // CAS 2: Continuation d'une facture existante (isInvoiceStart=false)
+    else if (segments.length > 0 && segments[segments.length - 1].endPage === null) {
+      // Un segment est ouvert → cette page appartient à la facture précédente
+      const currentSegment = segments[segments.length - 1];
+
+      // Fusionner les infos si l'IA détecte des données sur cette page
+      if (analysis.vendor && !currentSegment.vendor) {
+        currentSegment.vendor = analysis.vendor;
+      }
+      if (analysis.invoiceNumber && !currentSegment.invoiceNumber) {
+        currentSegment.invoiceNumber = analysis.invoiceNumber;
+      }
+      if (analysis.invoiceDate && !currentSegment.date) {
+        currentSegment.date = analysis.invoiceDate;
+      }
+
+      // Fermer si c'est la fin de la facture
+      if (analysis.isInvoiceEnd) {
+        currentSegment.endPage = pageNumber;
+        console.log(`[Detect Invoices] Fin de facture détectée à la page ${pageNumber}`);
+      }
+      // Sinon, la facture continue (ne pas fermer endPage)
+    }
+    // CAS 3: Aucun segment ouvert et pas de début explicite → créer nouveau segment (cas de la 1ère page ou fallback)
+    else {
       segments.push({
         startPage: pageNumber,
         endPage: analysis.isInvoiceEnd ? pageNumber : null,
         vendor: analysis.vendor || null,
         invoiceNumber: analysis.invoiceNumber || null,
         date: analysis.invoiceDate || null,
-        confidence: analysis.confidence || 60, // Confiance plus basse car détection implicite
+        confidence: analysis.confidence || 60,
       });
 
-      console.log(`[Detect Invoices] Segment implicite créé (pas de isInvoiceStart): page ${pageNumber}`);
-    }
-    // CAS 3: Continuation d'une facture existante
-    else {
-      const currentSegment = segments[segments.length - 1];
-      if (analysis.isInvoiceEnd && currentSegment.endPage === null) {
-        currentSegment.endPage = pageNumber;
-        console.log(`[Detect Invoices] Fin de facture détectée à la page ${pageNumber}`);
-      }
-      // Sinon, la facture continue sur cette page (ne pas fermer endPage)
+      console.log(`[Detect Invoices] Segment créé (pas de début explicite): page ${pageNumber}`);
     }
   }
 
@@ -222,7 +255,7 @@ function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
     console.log(`[Detect Invoices] Segment ${i + 1}: pages ${s.startPage}-${s.endPage}, vendor: ${s.vendor || 'N/A'}`);
   });
 
-  // Si toujours aucun segment (ne devrait pas arriver avec la nouvelle logique), créer un segment par page
+  // Fallback: si aucun segment (ne devrait pas arriver), créer un segment par page
   if (validSegments.length === 0 && analyses.length > 0) {
     console.log('[Detect Invoices] ⚠️ Aucun segment créé, fallback: 1 segment par page');
     return analyses.map(a => ({
