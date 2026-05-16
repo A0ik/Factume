@@ -27,6 +27,7 @@ export function VoiceInput({
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef('');
 
   useEffect(() => {
     // Vérifier si l'API Web Speech est disponible
@@ -55,12 +56,15 @@ export function VoiceInput({
           }
         }
 
-        setTranscript(interimTranscript || finalTranscript);
+        const currentTranscript = interimTranscript || finalTranscript;
+        setTranscript(currentTranscript);
+        transcriptRef.current = currentTranscript;
       };
 
       recognitionRef.current.onend = () => {
-        if (transcript) {
-          onTranscript(transcript);
+        if (transcriptRef.current) {
+          onTranscript(transcriptRef.current);
+          transcriptRef.current = '';
           setTranscript('');
         }
         setIsListening(false);
@@ -193,9 +197,23 @@ export function VoiceInput({
           <>
             <Mic size={16} />
             <span className="hidden sm:inline">Dictée vocale</span>
+            <span className="text-[10px] text-gray-300 ml-0.5">(7 langues)</span>
           </>
         )}
       </button>
+
+      {/* Language flags indicator */}
+      {!isListening && (
+        <div className="flex items-center justify-center gap-0.5 mt-1">
+          <span className="text-[10px]" title="Français">🇫🇷</span>
+          <span className="text-[10px]" title="English">🇬🇧</span>
+          <span className="text-[10px]" title="العربية">🇸🇦</span>
+          <span className="text-[10px]" title="Español">🇪🇸</span>
+          <span className="text-[10px]" title="Deutsch">🇩🇪</span>
+          <span className="text-[10px]" title="Italiano">🇮🇹</span>
+          <span className="text-[10px]" title="Português">🇵🇹</span>
+        </div>
+      )}
 
       {/* Animated sound waves when listening */}
       <AnimatePresence>

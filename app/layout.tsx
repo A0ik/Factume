@@ -4,6 +4,11 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from '@/components/Providers';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { GoogleAnalytics } from '@/components/seo/GoogleAnalytics';
+import { CookieConsent } from '@/components/legal/CookieConsent';
+import { AIChatWidget } from '@/components/support/AIChatWidget';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -86,6 +91,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   metadataBase: new URL('https://factu.me'),
+  alternates: {
+    canonical: 'https://factu.me',
+  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
@@ -235,6 +243,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         },
       },
       {
+        '@type': 'LocalBusiness',
+        '@id': 'https://factu.me/#business',
+        name: 'Factu.me',
+        description: 'Logiciel de facturation en ligne pour auto-entrepreneurs et TPE',
+        url: 'https://factu.me',
+        telephone: '+33-1-23-45-67-89',
+        address: {
+          '@type': 'PostalAddress',
+          addressCountry: 'FR',
+          addressLocality: 'Paris',
+        },
+        priceRange: '€€',
+        areaServed: 'FR',
+        serviceType: 'Logiciel de facturation',
+      },
+      {
         '@type': 'FAQPage',
         '@id': 'https://factu.me/#faq',
         mainEntity: [
@@ -320,10 +344,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className={inter.className}>
+        <GoogleAnalytics />
         <Providers>
           {children}
           <OnboardingWizard />
         </Providers>
+        <CookieConsent />
+        <AIChatWidget />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

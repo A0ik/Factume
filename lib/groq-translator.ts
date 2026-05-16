@@ -1,7 +1,7 @@
 /**
- * Groq-powered translation service for Arabic dialects and English to French
- * Supports: Modern Standard Arabic, Moroccan, Algerian, Tunisian, Egyptian, Levantine, Gulf dialects, English (US/UK)
- * Currency conversion: MAD, TND, DZD, GBP, USD, CAD, AUD, CHF, etc. → EUR
+ * Groq-powered translation service for multi-language to French translation
+ * Supports: Arabic (all dialects), English, Spanish, German, Italian, Portuguese → French
+ * Currency conversion: MAD, TND, DZD, GBP, USD, CAD, AUD, CHF, BRL, MXN, TRY, PLN, CZK, SEK, NOK, DKK, etc. → EUR
  */
 import Groq from 'groq-sdk';
 
@@ -29,6 +29,41 @@ function isEnglishText(text: string): boolean {
   // Check for common English indicators
   const englishIndicators = /\b(the|and|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|must|can|cannot|invoice|quote|payment|client|customer|service|product|price|amount|total|vat|tax|euro|dollar|pound)\b/i;
   return englishIndicators.test(text) && !isArabicText(text) && !/[\u00E0\u00E2\u00E4\u00E9\u00E8\u00EA\u00EB\u00EF\u00EE\u00F4\u00F9\u00FB\u00FC\u00E7]/.test(text);
+}
+
+/**
+ * Detect if text is Spanish
+ */
+export function isSpanishText(text: string): boolean {
+  const spanishIndicators = /\b(el|la|los|las|de|del|en|por|con|para|una|uno|que|es|son|factura|precio|total|empresa)\b/i;
+  const spanishChars = /[ñ¿¡]/;
+  return spanishIndicators.test(text) || spanishChars.test(text);
+}
+
+/**
+ * Detect if text is German
+ */
+export function isGermanText(text: string): boolean {
+  const germanIndicators = /\b(der|die|das|und|ist|ein|eine|von|für|mit|rechnung|betrag|unternehmen|rechnungsnummer)\b/i;
+  const germanChars = /[äöüß]/;
+  return germanIndicators.test(text) || germanChars.test(text);
+}
+
+/**
+ * Detect if text is Italian
+ */
+export function isItalianText(text: string): boolean {
+  const italianIndicators = /\b(il|la|lo|le|gli|di|del|in|per|con|una|fattura|prezzo|totale|azienda|numero)\b/i;
+  return italianIndicators.test(text);
+}
+
+/**
+ * Detect if text is Portuguese
+ */
+export function isPortugueseText(text: string): boolean {
+  const portugueseIndicators = /\b(o|a|os|as|de|do|da|em|por|para|uma|fatura|preço|total|empresa|número)\b/i;
+  const portugueseChars = /[ãõç]/;
+  return portugueseIndicators.test(text) || portugueseChars.test(text);
 }
 
 /**
@@ -157,9 +192,44 @@ Exemples :
 }
 
 /**
+ * Language code to French name mapping for prompt context
+ */
+const LANGUAGE_NAMES: Record<string, string> = {
+  ar: 'arabe (tous dialectes)',
+  en: 'anglais',
+  es: 'espagnol',
+  de: 'allemand',
+  it: 'italien',
+  pt: 'portugais',
+};
+
+/**
+ * Generic translation function: any supported language → French
+ */
+export async function translateToFrench(text: string, sourceLang: string): Promise<string> {
+  if (sourceLang === 'fr') return text;
+
+  const langName = LANGUAGE_NAMES[sourceLang] || sourceLang;
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const completion = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: `Traduis le texte suivant de ${langName} vers le français. Conserve les nombres, dates, noms propres et montants. Ne traduis que le texte, sans ajouter de commentaires. Tempérament: précis et professionnel.` },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.1,
+  });
+
+  return completion.choices[0]?.message?.content || text;
+}
+
+/**
  * Convert currencies to EUR in text
  * Supports: MAD (dirham), TND (dinar tunisien), DZD (dinar algérien), GBP (livre), USD (dollar),
- * CAD (dollar canadien), AUD (dollar australien), CHF (franc suisse), SAR (riyal saoudien), EGP (livre égyptienne)
+ * CAD (dollar canadien), AUD (dollar australien), CHF (franc suisse), SAR (riyal saoudien), EGP (livre égyptienne),
+ * BRL (real brésilien), MXN (peso mexicain), TRY (livre turque), PLN (zloty polonais),
+ * CZK (couronne tchèque), SEK (couronne suédoise), NOK (couronne norvégienne), DKK (couronne danoise)
  *
  * Approximate exchange rates (2024):
  * 1 MAD = 0.092 EUR
@@ -172,6 +242,14 @@ Exemples :
  * 1 CHF = 1.06 EUR
  * 1 SAR = 0.25 EUR
  * 1 EGP = 0.019 EUR
+ * 1 BRL = 0.18 EUR
+ * 1 MXN = 0.052 EUR
+ * 1 TRY = 0.028 EUR
+ * 1 PLN = 0.23 EUR
+ * 1 CZK = 0.040 EUR
+ * 1 SEK = 0.088 EUR
+ * 1 NOK = 0.086 EUR
+ * 1 DKK = 0.134 EUR
  */
 export function convertCurrenciesToEur(text: string): string {
   const currencyRates: Record<string, number> = {
@@ -183,9 +261,17 @@ export function convertCurrenciesToEur(text: string): string {
     'USD': 0.92, '$': 0.92, 'dollar': 0.92, 'dollars': 0.92, '$US': 0.92,
     'CAD': 0.67, '$CA': 0.67, 'C$': 0.67,
     'AUD': 0.67, '$AU': 0.67, 'A$': 0.67,
-    'CHF': 1.06, 'franc suisse': 1.06, 'CHF': 1.06,
+    'CHF': 1.06, 'franc suisse': 1.06,
     'SAR': 0.25, 'riyal': 0.25, 'rial': 0.25, 'ر.س': 0.25, '﷼': 0.25,
-    'EGP': 0.019, 'ج.م': 0.019, 'livre égyptienne': 0.019, 'EGP': 0.019,
+    'EGP': 0.019, 'ج.م': 0.019, 'livre égyptienne': 0.019,
+    'BRL': 0.18, 'R$': 0.18, 'real': 0.18, 'réal': 0.18,
+    'MXN': 0.052, 'MX$': 0.052, 'peso mexicain': 0.052,
+    'TRY': 0.028, '₺': 0.028, 'livre turque': 0.028,
+    'PLN': 0.23, 'zł': 0.23, 'zloty': 0.23,
+    'CZK': 0.040, 'Kč': 0.040, 'couronne tchèque': 0.040,
+    'SEK': 0.088, 'kr SEK': 0.088, 'couronne suédoise': 0.088,
+    'NOK': 0.086, 'kr NOK': 0.086, 'couronne norvégienne': 0.086,
+    'DKK': 0.134, 'kr DKK': 0.134, 'couronne danoise': 0.134,
     'EUR': 1, '€': 1, 'euro': 1, 'euros': 1,
   };
 
@@ -237,13 +323,14 @@ export function convertCurrenciesToEur(text: string): string {
 }
 
 /**
- * Process transcript with language detection and translation (Arabic, English → French)
+ * Process transcript with language detection and translation (7 languages → French)
+ * Supported: Arabic, English, Spanish, German, Italian, Portuguese, French
  * Also converts currencies to EUR
  */
 export async function processVoiceTranscript(rawTranscript: string): Promise<{
   transcript: string;
   wasTranslated: boolean;
-  originalLanguage: 'arabic' | 'english' | 'french' | 'unknown';
+  originalLanguage: 'arabic' | 'english' | 'spanish' | 'german' | 'italian' | 'portuguese' | 'french' | 'unknown';
 }> {
   if (!rawTranscript || rawTranscript.trim().length === 0) {
     return { transcript: '', wasTranslated: false, originalLanguage: 'unknown' };
@@ -259,20 +346,48 @@ export async function processVoiceTranscript(rawTranscript: string): Promise<{
   else if (isEnglishText(rawTranscript)) {
     result = await translateEnglishToFrench(rawTranscript);
   }
+  // Step 3: Check for Spanish
+  else if (isSpanishText(rawTranscript)) {
+    const translated = await translateToFrench(rawTranscript, 'es');
+    result = { text: translated, wasTranslated: true };
+  }
+  // Step 4: Check for German
+  else if (isGermanText(rawTranscript)) {
+    const translated = await translateToFrench(rawTranscript, 'de');
+    result = { text: translated, wasTranslated: true };
+  }
+  // Step 5: Check for Italian
+  else if (isItalianText(rawTranscript)) {
+    const translated = await translateToFrench(rawTranscript, 'it');
+    result = { text: translated, wasTranslated: true };
+  }
+  // Step 6: Check for Portuguese
+  else if (isPortugueseText(rawTranscript)) {
+    const translated = await translateToFrench(rawTranscript, 'pt');
+    result = { text: translated, wasTranslated: true };
+  }
 
   // Detect original language
-  let originalLanguage: 'arabic' | 'english' | 'french' | 'unknown' = 'unknown';
+  let originalLanguage: 'arabic' | 'english' | 'spanish' | 'german' | 'italian' | 'portuguese' | 'french' | 'unknown' = 'unknown';
   if (result.wasTranslated) {
     if (isArabicText(rawTranscript)) {
       originalLanguage = 'arabic';
     } else if (isEnglishText(rawTranscript)) {
       originalLanguage = 'english';
+    } else if (isSpanishText(rawTranscript)) {
+      originalLanguage = 'spanish';
+    } else if (isGermanText(rawTranscript)) {
+      originalLanguage = 'german';
+    } else if (isItalianText(rawTranscript)) {
+      originalLanguage = 'italian';
+    } else if (isPortugueseText(rawTranscript)) {
+      originalLanguage = 'portuguese';
     }
   } else if (/[a-zA-Zàâäéèêëïîôùûüç]/.test(rawTranscript)) {
     originalLanguage = 'french';
   }
 
-  // Step 3: Convert currencies to EUR
+  // Step 7: Convert currencies to EUR
   const transcriptWithConversion = convertCurrenciesToEur(result.text);
 
   return {

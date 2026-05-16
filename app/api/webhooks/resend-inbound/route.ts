@@ -42,7 +42,10 @@ function verifySignature(body: string, signatureHeader: string | null): boolean 
       .digest('hex');
 
     // Constant-time comparison to prevent timing attacks
-    if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(match[1]))) {
+    const expectedBuf = Buffer.from(expected);
+    const sigBuf = Buffer.from(match[1]);
+    if (expectedBuf.length !== sigBuf.length) continue;
+    if (crypto.timingSafeEqual(expectedBuf, sigBuf)) {
       return true;
     }
   }

@@ -1,6 +1,7 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { formatCurrency, formatDate, DOC_LABELS } from '@/lib/utils';
 import {
   FileText, Download, CreditCard, CheckCircle2, Clock,
@@ -17,12 +18,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 export default function ClientPortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const searchParams = useSearchParams();
   const [data, setData] = useState<{ client: any; profile: any; invoices: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<any | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     fetch(`/api/client-portal/${token}`)
       .then((r) => r.json())
       .then((d) => {
@@ -32,6 +36,61 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
       .catch(() => setError('Erreur de chargement'))
       .finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Check for payment success in URL params
+  useEffect(() => {
+    if (searchParams.get('payment') === 'success') {
+      setPaymentSuccess(true);
+      // Refresh data to get updated invoice status
+      fetch(`/api/client-portal/${token}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.error) setData(d);
+        })
+        .catch(() => {});
+      // Auto-hide success toast after 5 seconds
+      const timer = setTimeout(() => setPaymentSuccess(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, token]);
+
+  // Poll for invoice status refresh every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch(`/api/client-portal/${token}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.error) setData(d);
+        })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const handlePayNow = async (invoiceId: string) => {
+    setPayingInvoiceId(invoiceId);
+    try {
+      const res = await fetch('/api/client-portal/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId, token }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Erreur lors de la création du paiement');
+      }
+    } catch {
+      alert('Erreur de connexion');
+    } finally {
+      setPayingInvoiceId(null);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -66,6 +125,14 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Payment success toast */}
+      {paymentSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 size={18} />
+          Paiement effectué avec succès !
+        </div>
+      )}
+
       {/* Top accent bar */}
       <div style={{ background: accent }} className="h-1.5 w-full" />
 
@@ -154,34 +221,50 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
                 const Icon = conf.icon;
                 const docLabel = DOC_LABELS[inv.document_type as keyof typeof DOC_LABELS] || 'Facture';
                 const isOverdue = inv.status === 'overdue';
+                const canPay = inv.status === 'sent' || inv.status === 'overdue';
                 return (
                   <div
                     key={inv.id}
-                    onClick={() => setSelected(selected?.id === inv.id ? null : inv)}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors"
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${conf.bg}`}>
-                      <Icon size={15} className={conf.color} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900">{inv.number}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${conf.bg} ${conf.color}`}>
-                          {conf.label}
-                        </span>
-                        <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{docLabel}</span>
+                    <div
+                      onClick={() => setSelected(selected?.id === inv.id ? null : inv)}
+                      className="flex items-center gap-4 flex-1 cursor-pointer min-w-0"
+                    >
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${conf.bg}`}>
+                        <Icon size={15} className={conf.color} />
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {formatDate(inv.issue_date, locale)}
-                        {inv.due_date && ` · Échéance ${formatDate(inv.due_date, locale)}`}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-gray-900">{inv.number}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${conf.bg} ${conf.color}`}>
+                            {conf.label}
+                          </span>
+                          <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">{docLabel}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatDate(inv.issue_date, locale)}
+                          {inv.due_date && ` · Échéance ${formatDate(inv.due_date, locale)}`}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className={`text-sm font-black ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                          {fmt(inv.total)}
+                        </p>
+                        <ChevronRight size={14} className={`text-gray-300 ml-auto mt-0.5 transition-transform ${selected?.id === inv.id ? 'rotate-90' : ''}`} />
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className={`text-sm font-black ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                        {fmt(inv.total)}
-                      </p>
-                      <ChevronRight size={14} className={`text-gray-300 ml-auto mt-0.5 transition-transform ${selected?.id === inv.id ? 'rotate-90' : ''}`} />
-                    </div>
+                    {canPay && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handlePayNow(inv.id); }}
+                        disabled={payingInvoiceId === inv.id}
+                        className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-2 rounded-xl hover:opacity-90 transition-opacity flex-shrink-0 disabled:opacity-50"
+                        style={{ background: accent }}
+                      >
+                        <CreditCard size={13} />
+                        {payingInvoiceId === inv.id ? 'Chargement...' : 'Payer maintenant'}
+                      </button>
+                    )}
                   </div>
                 );
               })}

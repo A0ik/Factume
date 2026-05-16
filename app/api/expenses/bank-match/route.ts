@@ -22,10 +22,54 @@ function businessDaysBetween(a: Date, b: Date): number {
   return a <= b ? count : -count;
 }
 
+/** Compute vendor name similarity score (0-1) */
+function vendorSimilarity(vendor1: string | null, vendor2: string | null): number {
+  if (!vendor1 || !vendor2) return 0;
+  const v1 = vendor1.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const v2 = vendor2.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (v1 === v2) return 1;
+  // Check if one contains the other
+  if (v1.includes(v2) || v2.includes(v1)) return 0.8;
+  // Word overlap
+  const words1 = new Set(v1.split(/\s+/));
+  const words2 = new Set(v2.split(/\s+/));
+  const intersection = [...words1].filter(w => words2.has(w));
+  return intersection.length / Math.max(words1.size, words2.size);
+}
+
+/** Enhanced match scoring combining amount, date, and vendor similarity */
+function matchScore(expense: any, transaction: any): { score: number; confidence: 'high' | 'medium' | 'low' } {
+  let score = 0;
+
+  // Amount match (0-40 points)
+  const amountDiff = Math.abs((expense.amount || 0) - Math.abs(transaction.amount || 0));
+  if (amountDiff === 0) score += 40;
+  else if (amountDiff < 1) score += 35;
+  else if (amountDiff < (expense.amount || 0) * 0.03) score += 25;
+  else if (amountDiff < (expense.amount || 0) * 0.1) score += 10;
+
+  // Date match (0-30 points)
+  const expenseDate = new Date(expense.date);
+  const txDate = new Date(transaction.transaction_date || transaction.date);
+  const daysDiff = Math.abs(Math.round((expenseDate.getTime() - txDate.getTime()) / 86400000));
+  if (daysDiff === 0) score += 30;
+  else if (daysDiff <= 1) score += 25;
+  else if (daysDiff <= 3) score += 15;
+  else if (daysDiff <= 7) score += 5;
+
+  // Vendor match (0-30 points)
+  const vScore = vendorSimilarity(expense.vendor, transaction.description || transaction.label);
+  score += Math.round(vScore * 30);
+
+  return {
+    score,
+    confidence: score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // POST — Auto-match expenses to bank transactions (suggestions only)
 // ---------------------------------------------------------------------------
-
 export async function POST() {
   try {
     const supabase = await createServerSupabaseClient();
@@ -93,6 +137,8 @@ export async function POST() {
       transaction_amount: number;
       date_diff: number;
       amount_diff: number;
+      score: number;
+      confidence: string;
     }> = [];
 
     for (const expense of expenses) {
@@ -112,16 +158,17 @@ export async function POST() {
         const amountDiff = Math.abs(Math.abs(expense.amount) - Math.abs(trx.amount));
         if (amountDiff > amountTolerance) continue;
 
-        // Date match: within ±3 business days
+        // Date match: within +/-3 business days
         const trxDate = new Date(trx.transaction_date + 'T00:00:00Z');
         const dateDiff = Math.abs(businessDaysBetween(expenseDate, trxDate));
         if (dateDiff > DATE_TOLERANCE_DAYS) continue;
 
-        // Score: prefer closest amount, then closest date
-        const score = amountDiff * 1000 + dateDiff;
+        // Score: prefer closest amount, then closest date, plus vendor similarity
+        const enhancedScore = matchScore(expense, trx);
+        const rawScore = amountDiff * 1000 + dateDiff;
 
-        if (score < bestScore) {
-          bestScore = score;
+        if (rawScore < bestScore) {
+          bestScore = rawScore;
           bestMatch = {
             expense_id: expense.id,
             expense_vendor: expense.vendor,
@@ -131,6 +178,8 @@ export async function POST() {
             transaction_amount: trx.amount,
             date_diff: dateDiff,
             amount_diff: Math.round(amountDiff * 100) / 100,
+            score: enhancedScore.score,
+            confidence: enhancedScore.confidence,
           };
         }
       }
@@ -155,7 +204,6 @@ export async function POST() {
 // ---------------------------------------------------------------------------
 // PATCH — Confirm a match between expense and bank transaction
 // ---------------------------------------------------------------------------
-
 export async function PATCH(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -213,7 +261,7 @@ export async function PATCH(req: NextRequest) {
     // ------------------------------------------------------------------
     const { error: updateExpError } = await supabase
       .from('expenses')
-      .update({ bank_transaction_id: transaction_id })
+      .update({ bank_transaction_id: transaction_id, status: 'reconciled' })
       .eq('id', expense_id);
 
     if (updateExpError) {
@@ -243,6 +291,77 @@ export async function PATCH(req: NextRequest) {
     const err = error as { message?: string };
     return NextResponse.json(
       { error: err.message || 'Erreur inattendue lors de la confirmation du rapprochement.' },
+      { status: 500 },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET — Auto-match with enhanced scoring (approved expenses vs unreconciled transactions)
+// ---------------------------------------------------------------------------
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Get unmatched approved expenses and unreconciled transactions
+    const [expensesRes, transactionsRes] = await Promise.all([
+      supabase
+        .from('expenses')
+        .select('id, vendor, amount, date')
+        .eq('user_id', user.id)
+        .is('matched_transaction_id', null)
+        .eq('status', 'approved')
+        .limit(100),
+      supabase
+        .from('bank_transactions')
+        .select('id, amount, transaction_date, label, description')
+        .eq('user_id', user.id)
+        .eq('status', 'unreconciled')
+        .limit(100),
+    ]);
+
+    const expenses = expensesRes.data || [];
+    const transactions = transactionsRes.data || [];
+
+    // Auto-match using enhanced scoring
+    const matches: Array<{
+      expenseId: string;
+      transactionId: string;
+      score: number;
+      confidence: string;
+    }> = [];
+    const matchedExpenseIds = new Set<string>();
+    const matchedTxIds = new Set<string>();
+
+    for (const expense of expenses) {
+      for (const tx of transactions) {
+        if (matchedExpenseIds.has(expense.id) || matchedTxIds.has(tx.id)) continue;
+        const result = matchScore(expense, tx);
+        if (result.confidence === 'high') {
+          matches.push({
+            expenseId: expense.id,
+            transactionId: tx.id,
+            score: result.score,
+            confidence: result.confidence,
+          });
+          matchedExpenseIds.add(expense.id);
+          matchedTxIds.add(tx.id);
+        }
+      }
+    }
+
+    return NextResponse.json({
+      matches,
+      unmatchedExpenses: expenses.length - matchedExpenseIds.size,
+      unmatchedTransactions: transactions.length - matchedTxIds.size,
+    });
+  } catch (error: unknown) {
+    console.error('[bank-match GET] Unhandled error:', error);
+    const err = error as { message?: string };
+    return NextResponse.json(
+      { error: err.message || 'Erreur inattendue.' },
       { status: 500 },
     );
   }

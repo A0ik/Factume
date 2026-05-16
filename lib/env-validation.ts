@@ -56,10 +56,10 @@ const optionalEnvVars = {
   CHORUS_PRO_PASSWORD: 'Chorus Pro Password',
 } as const;
 
-const missingVars: string[] = [];
-const warnings: string[] = [];
-
 function validate() {
+  const missingVars: string[] = [];
+  const warnings: string[] = [];
+
   // Check required variables
   for (const [key, description] of Object.entries(requiredEnvVars)) {
     if (!process.env[key]) {

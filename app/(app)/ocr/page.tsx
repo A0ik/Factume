@@ -24,6 +24,25 @@ const CATEGORIES = [
   { value: 'other', label: 'Autre', Icon: Package },
 ];
 
+// Logging conditionnel (uniquement en développement)
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[OCR DEBUG]', ...args);
+  }
+};
+
+const debugWarn = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('[OCR DEBUG]', ...args);
+  }
+};
+
+const debugError = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.error('[OCR DEBUG]', ...args);
+  }
+};
+
 interface LineItem {
   description: string;
   quantity: number;
@@ -450,11 +469,11 @@ export default function OCRPage() {
 
   const detectPdfType = useCallback(async (file: File): Promise<{ isPdf: boolean; pageCount: number }> => {
     if (file.type !== 'application/pdf') {
-      console.log(`[OCR DEBUG] 📄 Fichier non-PDF détecté: ${file.name} (${file.type})`);
+      debugLog(`📄 Fichier non-PDF détecté: ${file.name} (${file.type})`);
       return { isPdf: false, pageCount: 0 };
     }
 
-    console.log(`[OCR DEBUG] 📑 PDF détecté: ${file.name}, tentative de détection du nombre de pages...`);
+    debugLog(`📑 PDF détecté: ${file.name}, tentative de détection du nombre de pages...`);
 
     try {
       // Utiliser l'endpoint detect-invoices qui gère tout côté serveur
@@ -468,14 +487,14 @@ export default function OCRPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(`[OCR DEBUG] ✅ Nombre de pages détecté: ${data.totalPages}`);
+        debugLog(`✅ Nombre de pages détecté: ${data.totalPages}`);
         return { isPdf: true, pageCount: data.totalPages || 0 };
       }
 
-      console.warn(`[OCR DEBUG] ⚠️ Échec détection pages: ${response.status}`);
+      debugWarn(`⚠️ Échec détection pages: ${response.status}`);
       return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
     } catch (error) {
-      console.error(`[OCR DEBUG] ❌ Erreur détection PDF:`, error);
+      debugError(`❌ Erreur détection PDF:`, error);
       return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
     }
   }, []);
@@ -663,7 +682,7 @@ export default function OCRPage() {
 
         // Afficher les erreurs spécifiques dans la console pour debug
         if (failedSegments.length > 0) {
-          console.error(`[OCR DEBUG] 💥 Segments échoués:`, failedSegments);
+          debugError(`💥 Segments échoués:`, failedSegments);
         }
 
         console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);

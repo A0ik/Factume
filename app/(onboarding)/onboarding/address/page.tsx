@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ArrowLeft } from 'lucide-react';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
+import { FieldTooltip } from '@/components/onboarding/FieldTooltip';
 
 export default function OnboardingAddressPage() {
   const router = useRouter();
@@ -67,11 +69,7 @@ export default function OnboardingAddressPage() {
         </div>
 
         {/* Progress */}
-        <div className="flex gap-1 mb-6">
-          {[1, 2, 3, 4].map((step) => (
-            <div key={step} className={`h-1.5 flex-1 rounded-full ${step <= 2 ? 'bg-primary' : 'bg-gray-200'}`} />
-          ))}
-        </div>
+        <OnboardingProgress currentStep={2} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Adresse" placeholder="123 rue de la Paix" value={form.address} onChange={(e) => set('address', e.target.value)} />
@@ -85,7 +83,13 @@ export default function OnboardingAddressPage() {
             <p className="text-sm font-semibold text-gray-700 mb-3">Coordonnées bancaires <span className="text-xs text-gray-400 font-normal">(optionnel)</span></p>
             <div className="space-y-3">
               <Input label="Banque" placeholder="BNP Paribas" value={form.bank_name} onChange={(e) => set('bank_name', e.target.value)} />
-              <Input label="IBAN" placeholder="FR76 1234 5678..." value={form.iban} onChange={(e) => set('iban', e.target.value)} />
+              <div>
+                <div className="flex items-center mb-1.5">
+                  <span className="text-sm font-semibold text-gray-700">IBAN</span>
+                  <FieldTooltip text="Vos coordonnées bancaires apparaissent sur vos factures pour faciliter les paiements par virement" />
+                </div>
+                <Input placeholder="FR76 1234 5678..." value={form.iban} onChange={(e) => set('iban', e.target.value)} />
+              </div>
               <Input label="BIC/SWIFT" placeholder="BNPAFRPP" value={form.bic} onChange={(e) => set('bic', e.target.value)} />
             </div>
           </div>

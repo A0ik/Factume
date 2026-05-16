@@ -81,6 +81,17 @@ interface EmailPayload {
  */
 export async function POST(request: NextRequest) {
   try {
+    // CRON_SECRET validation for cron job protection
+    const CRON_SECRET = process.env.CRON_SECRET;
+    if (!CRON_SECRET) {
+      console.error('CRON_SECRET not configured');
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    }
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== CRON_SECRET) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = await createRouteHandlerClient();
 
     // Récupérer les factures récurrentes dues (next_run_date <= aujourd'hui)
@@ -366,7 +377,10 @@ function formatCurrency(amount: number): string {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Auth check
     const supabase = await createRouteHandlerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     const { data: recurringInvoices, error } = await supabase
       .from('recurring_invoices')

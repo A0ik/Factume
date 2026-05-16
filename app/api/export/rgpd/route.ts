@@ -1,53 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
+import JSZip from 'jszip';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(_req: NextRequest) {
-  // Auth check
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-  }
+  const uid = user.id;
 
-  const admin = createAdminClient();
-
-  // Fetch all user data in parallel
-  const [
-    { data: profile },
-    { data: clients },
-    { data: invoices },
-    { data: recurringInvoices },
-  ] = await Promise.all([
-    admin.from('profiles').select('*').eq('id', user.id).single(),
-    admin.from('clients').select('*').eq('user_id', user.id),
-    admin.from('invoices').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-    admin.from('recurring_invoices').select('*').eq('user_id', user.id),
+  const [profile, clients, invoices, expenses, recurring, notifications] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', uid).single(),
+    supabase.from('clients').select('*').eq('user_id', uid),
+    supabase.from('invoices').select('*, invoice_items(*)').eq('user_id', uid),
+    supabase.from('expenses').select('*').eq('user_id', uid),
+    supabase.from('recurring_invoices').select('*').eq('user_id', uid),
+    supabase.from('notifications').select('*').eq('user_id', uid).limit(100),
   ]);
 
-  const exportData = {
-    exported_at: new Date().toISOString(),
-    user: {
-      id: user.id,
-      email: user.email,
-    },
-    profile: profile ?? null,
-    clients: clients ?? [],
-    invoices: invoices ?? [],
-    recurring_invoices: recurringInvoices ?? [],
-  };
+  const zip = new JSZip();
+  zip.file('profile.json', JSON.stringify(profile.data, null, 2));
+  zip.file('clients.json', JSON.stringify(clients.data, null, 2));
+  zip.file('invoices.json', JSON.stringify(invoices.data, null, 2));
+  zip.file('expenses.json', JSON.stringify(expenses.data, null, 2));
+  zip.file('recurring_invoices.json', JSON.stringify(recurring.data, null, 2));
+  zip.file('notifications.json', JSON.stringify(notifications.data, null, 2));
 
-  const date = new Date().toISOString().slice(0, 10);
-  const filename = `mes-donnees-${date}.json`;
+  const buffer = await zip.generateAsync({ type: 'uint8array' });
 
-  return new NextResponse(JSON.stringify(exportData, null, 2), {
-    status: 200,
+  return new NextResponse(Buffer.from(buffer), {
     headers: {
-      'Content-Type': 'application/json',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="factume-rgpd-export-${new Date().toISOString().slice(0, 10)}.zip"`,
     },
   });
 }

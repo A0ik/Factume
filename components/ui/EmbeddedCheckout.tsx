@@ -6,7 +6,8 @@ import { Check, CreditCard, Smartphone, Shield, Loader2, Lock, Sparkles, Crown, 
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
+const stripePk = process.env.NEXT_PUBLIC_STRIPE_PK;
+const stripePromise = stripePk ? loadStripe(stripePk) : null;
 
 export interface PlanInfo {
   id: string;
@@ -302,6 +303,10 @@ export default function EmbeddedCheckout({
       },
     },
   };
+
+  if (!stripePromise) {
+    return <div className="p-4 text-red-500">Configuration Stripe manquante.</div>;
+  }
 
   return (
     <Elements options={options} stripe={stripePromise}>

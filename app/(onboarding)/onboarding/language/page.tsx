@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { changeLanguage } from '@/i18n';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 
 export default function OnboardingLanguagePage() {
   const router = useRouter();
@@ -42,6 +43,8 @@ export default function OnboardingLanguagePage() {
           </div>
           <h1 className="text-3xl font-black text-gray-900">Factu.me</h1>
         </div>
+
+        <OnboardingProgress currentStep={0} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
 
         <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Bienvenue / Welcome</h2>
         <p className="text-center text-gray-500 mb-8">Choisissez votre langue<br />Choose your language</p>

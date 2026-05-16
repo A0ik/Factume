@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, CreditCard, Gift, Shield, Clock, Star, TrendingUp } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Gratuit – Jusqu\'à 10 Factures par Mois | Factu.me',
@@ -250,6 +253,40 @@ export default function LogicielFactureGratuitPage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Est-ce vraiment gratuit ?",
+            answer: "Oui, le plan gratuit de Factu.me vous permet de créer jusqu'à 10 factures par mois, sans limite de durée. Il n'y a aucune fonctionnalité cachée derrière un paywall, pas de publicité et pas de filigrane sur vos factures.",
+          },
+          {
+            question: "Combien de factures puis-je créer gratuitement ?",
+            answer: "Vous pouvez créer jusqu'à 10 factures par mois avec le plan gratuit. Ce nombre se réinitialise chaque mois. Les devis et les avoirs sont illimités, même en gratuit.",
+          },
+          {
+            question: "Dois-je entrer ma carte bancaire ?",
+            answer: "Non, aucune carte bancaire n'est requise pour utiliser le plan gratuit. Vous pouvez vous inscrire en 30 secondes avec simplement votre email et commencer à facturer immédiatement.",
+          },
+          {
+            question: "Comment passer au plan payant ?",
+            answer: "Vous pouvez passer au plan Pro à tout moment en un clic depuis votre tableau de bord. Le passage est progressif : vos données, clients et factures existantes sont conservées intactes.",
+          },
+        ]}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel de facture gratuit', url: 'https://factu.me/logiciel-facture-gratuit' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facturation-auto-entrepreneur', label: 'Facturation Auto-entrepreneur' },
+          { href: '/facturation-btp', label: 'Facturation BTP' },
+          { href: '/demo', label: 'Voir une demo' },
+        ]}
+      />
     </div>
   );
 }

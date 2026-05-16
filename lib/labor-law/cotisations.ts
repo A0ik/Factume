@@ -429,7 +429,7 @@ export function getSalaireMinimumAlternance(
 
   // Professionnalisation: minimum 85% du SMIC pour les < 26 ans
   if (age < 26) return salaireBase * 0.85;
-  return salaireBase * SMIC_2026.mensuel_35h;
+  return salaireBase;
 }
 
 // Export des données pour affichage

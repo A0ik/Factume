@@ -149,8 +149,31 @@ export default function CGU() {
       `
     },
     {
+      icon: Shield,
+      title: '8. Conservation des données',
+      color: 'from-teal-500 to-cyan-600',
+      content: `
+        <p class="mb-3">Conformément à la réglementation française, Factu.me conserve les données comptables et commerciales pour les durées légales requises.</p>
+        <div class="space-y-3">
+          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+            <p class="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase mb-1">Durée de conservation</p>
+            <p class="text-sm text-gray-700 dark:text-gray-300">Les factures et documents comptables sont conservés pendant une durée de <strong class="text-primary">10 ans</strong> conformément à l'Article L.123-22 du Code de commerce et l'Article 1649 quater B du CGI (Code Général des Impôts).</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4">
+            <p class="font-semibold text-gray-900 dark:text-white mb-2">Références légales</p>
+            <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>• <strong>Article L.123-22 du Code de commerce</strong> : conservation des documents comptables pendant 10 ans</li>
+              <li>• <strong>Article 1649 quater B du CGI</strong> : conservation des factures et pièces justificatives</li>
+              <li>• <strong>Article 6 de la loi du 21 juin 2004</strong> : conservation des données de trafic</li>
+            </ul>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">À l'issue de ces durées, les données sont supprimées définitivement de nos serveurs, sauf obligation légale contraire.</p>
+        </div>
+      `
+    },
+    {
       icon: Trash2,
-      title: '8. Résiliation et suppression',
+      title: '9. Résiliation et suppression',
       color: 'from-cyan-500 to-blue-600',
       content: `
         <div class="space-y-3">
@@ -171,7 +194,7 @@ export default function CGU() {
     },
     {
       icon: Scale,
-      title: '9. Droit applicable et juridiction',
+      title: '10. Droit applicable et juridiction',
       color: 'from-violet-500 to-purple-600',
       content: `
         <div class="space-y-3">

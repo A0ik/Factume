@@ -42,12 +42,9 @@ uploads/
 # claude settings (may contain sensitive data)
 .claude/settings.local.json
 
+# sentry auth token (sensitive)
+.sentryclirc
+
 .vercel
 .env*.local
 node_modules
-
-.vercel
-.env*.local
-
-.vercel
-.env*.local

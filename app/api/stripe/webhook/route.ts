@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Handle Stripe Connect payment link completion (metadata.invoice_id)
-        if (session.mode === 'payment' && session.metadata?.invoice_id) {
+        else if (session.mode === 'payment' && session.metadata?.invoice_id) {
           const invoiceId = session.metadata.invoice_id;
           const userId = session.metadata.user_id;
 

@@ -55,7 +55,6 @@ async function extractInvoiceFromPDF(
     console.log(`[OCR Multi-Page] 🔍 Extraction segment PDF ${segment.startPage}-${endPage}`);
 
     // Extraire le segment PDF (sans conversion en image)
-    const { extractPageRange } = await import('@/lib/pdf-splitter');
     const segmentPdfBuffer = await extractPageRange(pdfBuffer, segment.startPage, endPage);
 
     console.log(`[OCR Multi-Page] 📦 Segment PDF extrait: ${segmentPdfBuffer.length} bytes`);

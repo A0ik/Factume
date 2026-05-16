@@ -9,7 +9,7 @@ import {
   Calculator, Activity, Landmark, Search, Link2, TrendingUp,
   Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
-  Shield, Plug, Briefcase,
+  Shield, Plug, Briefcase, BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -130,6 +130,7 @@ export default function Sidebar() {
       { href: '/notifications',     icon: Bell,      label: 'Notifications', badge: unreadCount > 0 ? 'notif' : null },
       { href: '/settings',          icon: Settings,  label: 'Paramètres',    badge: null },
       { href: '/help',              icon: HelpCircle,label: 'Aide',           badge: null },
+      { href: '/blog',              icon: BookOpen,  label: 'Blog',          badge: null },
     );
 
     return tools;

@@ -48,6 +48,13 @@ export interface Profile {
   payment_terms?: string;
   legal_mention?: string;
   custom_payment_terms?: string;
+  rcs_number?: string;
+  rm_number?: string;
+  capital_social?: string;
+  naf_code?: string;
+  regime_fiscal?: string;
+  cgv_text?: string;
+  voice_language?: string;
   trial_start_date?: string;
   trial_end_date?: string;
   is_trial_active?: boolean;
@@ -430,6 +437,10 @@ export interface Cabinet {
   logo_url?: string;
   settings: Record<string, any>;
   created_at: string;
+  primary_color?: string;
+  white_label_name?: string;
+  hide_factu_branding?: boolean;
+  custom_domain?: string;
 }
 
 export interface CabinetMember {

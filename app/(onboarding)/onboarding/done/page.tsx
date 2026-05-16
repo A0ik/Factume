@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, FileText, Users, Camera } from 'lucide-react';
+import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/authStore';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 
 export default function OnboardingDonePage() {
   const router = useRouter();
@@ -60,7 +62,9 @@ export default function OnboardingDonePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm text-center space-y-6">
+      <div className="w-full max-w-lg text-center space-y-6">
+        <OnboardingProgress currentStep={4} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
+
         <div className="flex items-center justify-center">
           <div className="w-24 h-24 rounded-full bg-primary-light flex items-center justify-center">
             <CheckCircle size={52} className="text-primary" />
@@ -72,12 +76,27 @@ export default function OnboardingDonePage() {
           <p className="text-gray-500 mt-2">Votre espace est prêt. Créez votre première facture en quelques secondes.</p>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+          <Link href="/invoices/new" className="flex flex-col items-center p-6 bg-white rounded-xl border border-gray-200 hover:border-primary hover:shadow-lg transition-all group">
+            <FileText className="w-8 h-8 text-primary mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-sm">Créer ma première facture</h3>
+            <p className="text-xs text-gray-500 mt-1">En 30 secondes</p>
+          </Link>
+          <Link href="/clients" className="flex flex-col items-center p-6 bg-white rounded-xl border border-gray-200 hover:border-primary hover:shadow-lg transition-all group">
+            <Users className="w-8 h-8 text-primary mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-sm">Ajouter un client</h3>
+            <p className="text-xs text-gray-500 mt-1">Pour vos factures</p>
+          </Link>
+          <Link href="/ocr" className="flex flex-col items-center p-6 bg-white rounded-xl border border-gray-200 hover:border-primary hover:shadow-lg transition-all group">
+            <Camera className="w-8 h-8 text-primary mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-sm">Scanner une facture</h3>
+            <p className="text-xs text-gray-500 mt-1">OCR intelligent</p>
+          </Link>
+        </div>
+
         <div className="space-y-3">
           <Button className="w-full" size="lg" onClick={() => router.push('/dashboard')}>
             Accéder au tableau de bord
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={() => router.push('/invoices/new')}>
-            Créer ma première facture
           </Button>
         </div>
       </div>

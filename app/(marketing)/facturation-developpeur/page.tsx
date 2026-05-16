@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Code, Euro, Shield, Clock, Globe, Terminal, Layers } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Facturation Développeur – Pour les Pros du Code | Factu.me',
@@ -275,6 +278,35 @@ export default function DeveloppeurPage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Comment facturer en TJM ?",
+            answer: "Avec Factu.me, configurez votre taux journalier moyen une seule fois dans votre profil. Ensuite, indiquez le nombre de jours travaillés dans le mois et la facture est calculée automatiquement. Vous pouvez aussi utiliser la dictée vocale : '3 jours à 600€ de TJM'.",
+          },
+          {
+            question: "Puis-je utiliser l'API Factu.me ?",
+            answer: "Factu.me est conçu comme une application web intuitive qui ne nécessite aucune intégration technique. Cependant, l'export automatique via FEC et les webhooks permettent une intégration facile avec vos outils existants.",
+          },
+          {
+            question: "Comment exporter pour mon expert-comptable ?",
+            answer: "Factu.me propose un export FEC (Fichier des Ecritures Comptables) en un clic, compatible avec tous les logiciels comptables français. Vous pouvez aussi partager un accès lecture avec votre expert-comptable.",
+          },
+        ]}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Developpeur', url: 'https://factu.me/facturation-developpeur' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facturation-freelances', label: 'Facturation Freelances' },
+          { href: '/logiciel-facture-gratuit', label: 'Logiciel Facture Gratuit' },
+        ]}
+      />
     </div>
   );
 }

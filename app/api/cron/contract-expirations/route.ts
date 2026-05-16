@@ -3,12 +3,18 @@ import { createAdminClient } from '@/lib/supabase-server';
 import { sendContractNotification, sendContractExpirationEmail } from '@/lib/services/contract-notification-service';
 
 // Cron secret pour sécuriser l'endpoint
-const CRON_SECRET = process.env.CRON_SECRET || '';
+const CRON_SECRET = process.env.CRON_SECRET;
 
 // Seuils d'alerte en jours
 const EXPIRATION_THRESHOLDS = [30, 15, 7];
 
 export async function GET(req: NextRequest) {
+  // Vérifier que CRON_SECRET est configuré
+  if (!CRON_SECRET) {
+    console.error('CRON_SECRET not configured');
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  }
+
   // Vérifier l'authentification cron
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== CRON_SECRET) {

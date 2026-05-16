@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Hammer, Euro, Shield, Clock, Building2, Truck, MessageSquare, BarChart3 } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Facturation BTP – Logiciel Adapté aux Entreprises du Bâtiment | Factu.me',
@@ -141,10 +144,10 @@ export default function BTPPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Facturation BTP – Le Logiciel Adapté aux <span className="text-orange-600">Entreprises du Bâtiment</span>
+              Facturation BTP : <span className="text-orange-600">2h de perdues par semaine</span> sur vos factures de chantier ?
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
-              Acomptes, factures de situation, TVA spécifiques. Gérez toute la facturation de vos <strong>chantiers BTP</strong> depuis votre mobile.
+              Factu.me automatise vos factures de situation, acomptes et relances. <strong>Essai gratuit, conforme loi 2026.</strong>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -168,6 +171,28 @@ export default function BTPPage() {
           </div>
         </div>
       </section>
+
+      {/* Trust Bar / Social Proof */}
+      <div className="bg-gray-50 border-y border-gray-200 py-6">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-8 text-center">
+          <div>
+            <div className="text-2xl font-bold text-orange-600">5 000+</div>
+            <div className="text-xs text-gray-500">Artisans &amp; TPE</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-600">50 000+</div>
+            <div className="text-xs text-gray-500">Factures créées</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-600">4.8/5</div>
+            <div className="text-xs text-gray-500">Note utilisateurs</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-600">15h</div>
+            <div className="text-xs text-gray-500">Économisées/mois</div>
+          </div>
+        </div>
+      </div>
 
       {/* Benefits */}
       <section className="py-16 sm:py-24 bg-white">
@@ -235,6 +260,49 @@ export default function BTPPage() {
         </div>
       </section>
 
+      {/* Comparison Table */}
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mt-16">
+            <h2 className="text-2xl sm:text-3xl font-black text-center text-gray-900 mb-8">Factu.me vs Excel/Word vs Logiciels classiques</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="p-3 text-left">Fonctionnalité</th>
+                    <th className="p-3 text-center">Excel / Word</th>
+                    <th className="p-3 text-center bg-orange-50 text-orange-600 font-bold">Factu.me</th>
+                    <th className="p-3 text-center">Tiime / Pennylane</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['Conformité légale auto', '❌', '✅', '✅'],
+                    ['Mentions TVA automatiques', '❌', '✅', '✅'],
+                    ['Dictée vocale IA', '❌', '✅', '❌'],
+                    ['Factures de situation', '⚠️', '✅', '✅'],
+                    ['OCR scan factures', '❌', '✅', '✅'],
+                    ['Paiement en ligne', '❌', '✅', '✅'],
+                    ['Factur-X 2026', '❌', '✅', '⚠️'],
+                    ['Relances automatiques', '❌', '✅', '✅'],
+                    ['CRM intégré', '❌', '✅', '❌'],
+                    ['Contrats de travail', '❌', '✅', '❌'],
+                    ['Prix/mois', 'Gratuit', '14,99€', '25-35€'],
+                  ].map(([feature, excel, factume, other], i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <td className="p-3 font-medium">{feature}</td>
+                      <td className="p-3 text-center">{excel}</td>
+                      <td className="p-3 text-center bg-orange-50 font-medium">{factume}</td>
+                      <td className="p-3 text-center">{other}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -275,6 +343,41 @@ export default function BTPPage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Qu'est-ce qu'une facture de situation BTP ?",
+            answer: "Une facture de situation BTP est une facture intermédiaire émise en cours de chantier, qui reflète le pourcentage d'avancement des travaux. Elle permet au professionnel du bâtiment d'être réglé régulièrement sans attendre la fin du chantier.",
+          },
+          {
+            question: "Comment fonctionne l'autoliquidation TVA dans le BTP ?",
+            answer: "L'autoliquidation de la TVA dans le BTP s'applique lorsqu'un sous-traitant facture à un assujetti. C'est l'entreprise principale qui déclare et paie la TVA, et non le sous-traitant. Factu.me génère automatiquement les mentions légales adaptées à ce régime.",
+          },
+          {
+            question: "Factu.me gère-t-il les retenues de garantie ?",
+            answer: "Oui, Factu.me permet de configurer automatiquement la retenue de garantie (généralement 5%) sur vos factures de situation. Le montant est déduit et reporté sur la facture de solde à la fin du chantier.",
+          },
+          {
+            question: "Le logiciel est-il conforme Factur-X 2026 ?",
+            answer: "Oui, Factu.me est entièrement conforme au format Factur-X requis par la réforme de la facturation électronique B2B prévue pour 2026. Vos factures sont générées dans le bon format dès maintenant.",
+          },
+        ]}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation BTP', url: 'https://factu.me/facturation-btp' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facturation-artisans', label: 'Facturation Artisans' },
+          { href: '/facturation-electricien', label: 'Facturation Electricien' },
+          { href: '/facturation-plomberie', label: 'Facturation Plomberie' },
+          { href: '/logiciel-facture-gratuit', label: 'Logiciel Facture Gratuit' },
+        ]}
+      />
     </div>
   );
 }

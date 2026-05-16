@@ -106,6 +106,12 @@ export default function SettingsPage() {
     bic: profile?.bic || '',
     payment_terms: profile?.payment_terms || '',
     legal_mention: profile?.legal_mention || '',
+    rcs_number: (profile as any)?.rcs_number || '',
+    rm_number: (profile as any)?.rm_number || '',
+    capital_social: (profile as any)?.capital_social || '',
+    naf_code: (profile as any)?.naf_code || '',
+    regime_fiscal: (profile as any)?.regime_fiscal || 'reel',
+    cgv_text: (profile as any)?.cgv_text || '',
   });
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -631,6 +637,29 @@ export default function SettingsPage() {
           </div>
           <Textarea label="Conditions de paiement" value={form.payment_terms} onChange={(e) => set('payment_terms', e.target.value)} rows={2} placeholder="Payable sous 30 jours par virement..." />
           <Textarea label="Mentions légales" value={form.legal_mention} onChange={(e) => set('legal_mention', e.target.value)} rows={2} placeholder="Numéro RCS, capital social..." />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="RCS" value={form.rcs_number} onChange={(e) => set('rcs_number', e.target.value)} placeholder="RCS Paris 123 456 789" />
+            <div>
+              <Input label="RM" value={form.rm_number} onChange={(e) => set('rm_number', e.target.value)} placeholder="RM 1234567" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Uniquement pour les artisans</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Capital social" value={form.capital_social} onChange={(e) => set('capital_social', e.target.value)} placeholder="10 000" />
+            <Input label="NAF/APE" value={form.naf_code} onChange={(e) => set('naf_code', e.target.value)} placeholder="6202A" />
+          </div>
+          <Select label="Regime fiscal" value={form.regime_fiscal} onChange={(e) => set('regime_fiscal', e.target.value)} options={[
+            { value: 'reel', label: 'Reel normal' },
+            { value: 'reel_simplifie', label: 'Reel simplifie' },
+            { value: 'micro', label: 'Micro-entreprise' },
+            { value: 'micro_bic', label: 'Micro BIC' },
+            { value: 'micro_bnc', label: 'Micro BNC' },
+            { value: 'autoliquidation', label: 'Autoliquidation' },
+          ]} />
+          <div>
+            <Textarea label="Conditions Generales de Vente" value={form.cgv_text} onChange={(e) => set('cgv_text', e.target.value)} rows={4} placeholder="Saisissez vos CGV ici..." />
+            <p className="text-[10px] text-gray-400 mt-0.5">Ces conditions seront ajoutees automatiquement a vos factures et devis</p>
+          </div>
         </div>
       ),
     },
@@ -1436,6 +1465,24 @@ export default function SettingsPage() {
               </>
             )}
           </button>
+        </div>
+
+        {/* RGPD Export */}
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100">
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Exporter mes données (RGPD)</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Téléchargez une archive ZIP contenant toutes vos données personnelles.
+            </p>
+          </div>
+          <a
+            href="/api/export/rgpd"
+            download
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 text-sm font-semibold text-primary hover:bg-primary/5 hover:border-primary/50 transition-all flex-shrink-0"
+          >
+            <Download size={14} />
+            Exporter
+          </a>
         </div>
 
         {/* Delete account */}

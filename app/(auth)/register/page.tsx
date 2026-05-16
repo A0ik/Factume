@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,6 +17,8 @@ const PASSWORD_CHECKS = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get('ref');
   const { signUp, signInWithGoogle, loading } = useAuthStore();
   const [error, setError] = useState('');
   const [confirmEmail, setConfirmEmail] = useState(false);
@@ -40,7 +42,21 @@ export default function RegisterPage() {
 
     try {
       setPendingEmail(email);
-      await signUp(email, password);
+      const { userId } = await signUp(email, password);
+
+      // Track referral if code exists
+      if (referralCode && userId) {
+        try {
+          await fetch('/api/referral/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referredUserId: userId, referralCode }),
+          });
+        } catch {
+          // Referral tracking failure should not block registration
+        }
+      }
+
       router.push('/onboarding/language');
     } catch (err: any) {
       if (err.message === 'CONFIRM_EMAIL') setConfirmEmail(true);

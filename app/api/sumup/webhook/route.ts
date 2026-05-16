@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
     }
     const expected = crypto.createHmac('sha256', webhookSecret).update(body).digest('hex');
-    if (signature !== expected) {
+    const expectedBuf = Buffer.from(expected);
+    const sigBuf = Buffer.from(signature);
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       console.error('[sumup-webhook] Invalid signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Structure des prix
 const PRICE_IDS: Record<string, Record<string, string>> = {
@@ -71,7 +71,13 @@ function calculateProrata(
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId, yearly = false } = await req.json();
+    // Auth check - get userId from session, not from body
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    const userId = user.id;
+
+    const { plan, yearly = false } = await req.json();
     const interval = yearly ? 'yearly' : 'monthly';
 
     if (!PRICE_IDS[plan]) {
@@ -197,12 +203,17 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    // Auth check - get userId from session
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const userId = user.id;
     const newPlan = searchParams.get('plan');
 
-    if (!userId || !newPlan) {
-      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    if (!newPlan) {
+      return NextResponse.json({ error: 'Missing plan parameter' }, { status: 400 });
     }
 
     const supabase = createAdminClient();

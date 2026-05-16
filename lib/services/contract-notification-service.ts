@@ -69,13 +69,13 @@ export async function sendContractNotification(options: ContractNotificationOpti
   const link = `/contracts/${contractId}?type=${contractType}`;
 
   // 1. Insert notification in database
-  const supabase = getSupabaseClient();
+  const supabase = createAdminClient();
   try {
     await supabase.from('notifications').insert({
       user_id: userId,
       type,
       title,
-      message: body,
+      body: body,
       link,
       data: { contractId, contractType, ...metadata },
       read: false,

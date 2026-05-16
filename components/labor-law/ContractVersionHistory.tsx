@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { History, Clock, User, FileText, X, Loader2, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
 
 interface ContractVersion {
   id: string;
@@ -40,10 +40,7 @@ export function ContractVersionHistory({ isOpen, onClose, contractId, contractTy
     setError('');
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-      );
+      const supabase = getSupabaseClient();
 
       const { data, error } = await supabase
         .from('contract_versions')

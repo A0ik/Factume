@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { applyIpRateLimit } from '@/lib/rate-limit';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   // Rate limiting: 30 requests per minute per IP
   const rateLimitError = applyIpRateLimit(req, 30, 60_000);
   if (rateLimitError) return rateLimitError as NextResponse;
+
+  // Auth check
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
   try {
     const { vendor, description } = await req.json();

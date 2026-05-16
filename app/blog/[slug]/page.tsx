@@ -8,12 +8,12 @@ import {
   Calendar,
   Clock,
   User,
-  Tag,
   ChevronRight,
   BookOpen,
 } from 'lucide-react';
 import { blogPosts, getBlogPost, getAllBlogSlugs, getRelatedPosts } from '@/lib/blog-data';
 import { BlogCard } from '@/components/BlogCard';
+import { ShareButtons } from './ShareButtons';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -28,8 +28,10 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const post = getBlogPost(slug);
   if (!post) return {};
 
+  const ogImage = post.image || '/og-default.jpg';
+
   return {
-    title: post.title,
+    title: `${post.title} | Blog Factu.me`,
     description: post.description,
     alternates: {
       canonical: `https://factu.me/blog/${post.slug}`,
@@ -41,6 +43,19 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       type: 'article',
       publishedTime: post.date,
       authors: [post.author],
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.description,
     },
   };
 }
@@ -87,6 +102,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Back to blog button */}
+        <Link
+          href="/blog"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Retour au blog
+        </Link>
+
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-8" aria-label="Fil d'Ariane">
           <Link href="/" className="hover:text-primary transition-colors">
@@ -181,6 +205,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </section>
           ))}
         </article>
+
+        {/* Share buttons */}
+        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-slate-700">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+            Partager cet article
+          </h3>
+          <ShareButtons title={post.title} />
+        </div>
 
         {/* CTA Banner */}
         <div className="mt-12 rounded-3xl bg-gradient-to-r from-primary to-primary-dark p-8 lg:p-10 text-center text-white relative overflow-hidden">

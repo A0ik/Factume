@@ -31,26 +31,93 @@ const CATEGORY_ACCOUNT: Record<string, string> = {
   other: '625000',
 };
 
+const FEC_MANDATORY_FIELDS = [
+  'JournalCode', 'JournalLib', 'EcritureNum', 'EcritureDate', 'CompteNum',
+  'CompteLib', 'CompAuxNum', 'CompAuxLib', 'PieceRef', 'PieceDate',
+  'EcritureLib', 'Debit', 'Credit', 'EcritureLet', 'DateLet',
+  'ValidDate', 'Montantdevise', 'Idevise',
+];
+
+// ── GET handler (export history) ─────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+    }
+
+    // Try to fetch from export_history table (may not exist yet)
+    const { data: history, error: histError } = await supabase
+      .from('export_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // If table doesn't exist, return empty history
+    if (histError) {
+      return NextResponse.json({ history: [] });
+    }
+
+    return NextResponse.json({ history: history || [] });
+  } catch (error: any) {
+    console.error('[export-compta GET] Error:', error);
+    return NextResponse.json({ history: [] });
+  }
+}
+
+// ── Helper: save export history ──────────────────────────────────────────────
+
+async function saveExportHistory(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  userId: string,
+  software: string,
+  expenseIds: string[],
+  status: string,
+) {
+  try {
+    await supabase.from('export_history').insert({
+      user_id: userId,
+      software,
+      expense_ids: expenseIds,
+      status,
+    });
+  } catch {
+    // export_history table may not exist yet; silently skip
+  }
+}
+
 // ── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { software, expense_ids, config } = body as {
-      software: 'pennylane' | 'sage' | 'cegid' | 'csv_fec';
-      expense_ids: string[];
+    const { software, expense_ids, expenseIds, dateFrom, dateTo, config } = body as {
+      software: 'pennylane' | 'sage' | 'cegid' | 'csv_fec' | 'fec' | 'csv';
+      expense_ids?: string[];
+      expenseIds?: string[];
+      dateFrom?: string;
+      dateTo?: string;
       config?: {
         api_key?: string;
         account_code?: string;
       };
     };
 
+    // Normalize expense ids (support both naming conventions)
+    const selectedIds = expense_ids || expenseIds || [];
+
     // ── Validation ──────────────────────────────────────────────────────
-    if (!software || !['pennylane', 'sage', 'cegid', 'csv_fec'].includes(software)) {
-      return NextResponse.json({ error: 'Logiciel non supporte. Utilisez: pennylane, sage, cegid, csv_fec' }, { status: 400 });
+    const validSoftware = ['pennylane', 'sage', 'cegid', 'csv_fec', 'fec', 'csv'];
+    if (!software || !validSoftware.includes(software)) {
+      return NextResponse.json({ error: 'Logiciel non supporte. Utilisez: pennylane, sage, cegid, csv_fec, fec, csv' }, { status: 400 });
     }
 
-    if (!expense_ids || !Array.isArray(expense_ids) || expense_ids.length === 0) {
+    // For fec/csv modes, expense_ids are optional (can use date range instead)
+    const needsIds = !['fec', 'csv', 'csv_fec'].includes(software);
+    if (needsIds && (!selectedIds || selectedIds.length === 0)) {
       return NextResponse.json({ error: 'Aucune depense selectionnee' }, { status: 400 });
     }
 
@@ -85,19 +152,27 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fetch expenses ──────────────────────────────────────────────────
-    const { data: expenses, error: fetchError } = await supabase
+    let query = supabase
       .from('expenses')
       .select('*')
       .eq('user_id', user.id)
-      .in('id', expense_ids)
-      .in('status', ['validated', 'approved']);
+      .in('status', ['validated', 'approved'])
+      .order('date', { ascending: true });
+
+    if (selectedIds.length > 0) {
+      query = query.in('id', selectedIds);
+    }
+    if (dateFrom) query = query.gte('date', dateFrom);
+    if (dateTo) query = query.lte('date', dateTo);
+
+    const { data: expenses, error: fetchError } = await query;
 
     if (fetchError) {
       return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
 
     if (!expenses || expenses.length === 0) {
-      return NextResponse.json({ error: 'Aucune depense validee trouvee parmi la selection' }, { status: 404 });
+      return NextResponse.json({ error: 'Aucune depense validee trouvee' }, { status: 404 });
     }
 
     // ── Fetch profile details for FEC ───────────────────────────────────
@@ -112,6 +187,122 @@ export async function POST(req: NextRequest) {
 
     // ── Route by software ───────────────────────────────────────────────
     switch (software) {
+      // ──────────────────── FEC (standalone enhanced mode) ──────────────
+      case 'fec': {
+        const siren = (fullProfile?.siret || '').slice(0, 9) || '000000000';
+        const year = new Date().getFullYear().toString();
+
+        const headers = FEC_MANDATORY_FIELDS;
+        const rows: string[] = [headers.join('|')];
+        let ecritureSeq = 1;
+
+        for (const expense of expenses) {
+          const vendorName = esc(expense.vendor);
+          const journalCode = expense.journal_type || 'ACH';
+          const journalLib = journalCode === 'ACH' ? 'Achats' : 'Operations diverses';
+          const date = fecDate(expense.date);
+          const pieceRef = esc(expense.invoice_number || `EXP-${expense.id.slice(0, 8).toUpperCase()}`);
+          const pieceDate = date;
+          const libelle = esc(`${expense.vendor || 'Depense'} - ${expense.description || expense.category || ''}`).substring(0, 50);
+          const accountCode = expense.account_code || config?.account_code || CATEGORY_ACCOUNT[expense.category] || '648000';
+          const accountLib = esc(expense.account_label || 'Charges diverses');
+          const htAmount = expense.ht_amount || (expense.amount - (expense.vat_amount || 0));
+          const tva = expense.vat_amount || 0;
+          const ttc = expense.amount || 0;
+          const vatAccount = expense.vat_account || '445660';
+          const eNum = padNum(String(ecritureSeq), 6);
+          const validDate = date;
+          const currency = expense.currency || expense.original_currency || 'EUR';
+          const isForeign = currency !== 'EUR';
+          const montantDevise = isForeign ? fecAmount(ttc) : '';
+          const iDevise = isForeign ? currency : '';
+
+          // Line 1: Debit expense account (HT)
+          rows.push([
+            journalCode, journalLib, eNum, date,
+            accountCode, accountLib, '', '',
+            pieceRef, pieceDate,
+            libelle.substring(0, 50),
+            fecAmount(htAmount), '0,00',
+            '', '', validDate, montantDevise, iDevise,
+          ].join('|'));
+
+          // Line 2: Debit TVA deductible (if applicable)
+          if (tva > 0) {
+            rows.push([
+              journalCode, journalLib, eNum, date,
+              vatAccount, 'TVA deductible', '', '',
+              pieceRef, pieceDate,
+              `TVA ${libelle.substring(0, 40)}`,
+              fecAmount(tva), '0,00',
+              '', '', validDate, '', '',
+            ].join('|'));
+          }
+
+          // Line 3: Credit fournisseur (TTC)
+          rows.push([
+            journalCode, journalLib, eNum, date,
+            '401000', 'Fournisseurs', '', vendorName,
+            pieceRef, pieceDate,
+            libelle.substring(0, 50),
+            '0,00', fecAmount(ttc),
+            '', '', validDate, montantDevise, iDevise,
+          ].join('|'));
+
+          ecritureSeq++;
+          await markExported(supabase, expense.id, 'fec');
+          exported++;
+        }
+
+        const fecContent = rows.join('\n');
+        const filename = `FEC${siren}${year}1231_Depenses.txt`;
+
+        await saveExportHistory(supabase, user.id, 'fec', expenses.map(e => e.id), 'completed');
+
+        return new NextResponse(fecContent, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+          },
+        });
+      }
+
+      // ──────────────────── CSV (generic export) ────────────────────────
+      case 'csv': {
+        const csvHeader = 'Date,Fournisseur,Description,Montant HT,TVA,Montant TTC,Categorie,Compte,Libelle Compte,N° Facture,Mode paiement,Devise';
+        const csvRows = expenses.map(e => [
+          e.date,
+          `"${(e.vendor || '').replace(/"/g, '""')}"`,
+          `"${(e.description || '').replace(/"/g, '""')}"`,
+          (e.ht_amount || (e.amount - (e.vat_amount || 0))).toFixed(2),
+          (e.vat_amount || 0).toFixed(2),
+          (e.amount || 0).toFixed(2),
+          e.category || 'other',
+          e.account_code || CATEGORY_ACCOUNT[e.category] || '625000',
+          `"${(e.account_label || '').replace(/"/g, '""')}"`,
+          e.invoice_number || '',
+          e.payment_method || '',
+          e.currency || e.original_currency || 'EUR',
+        ].join(','));
+
+        const csv = [csvHeader, ...csvRows].join('\n');
+
+        await saveExportHistory(supabase, user.id, 'csv', expenses.map(e => e.id), 'completed');
+
+        // Mark all as exported
+        for (const expense of expenses) {
+          await markExported(supabase, expense.id, 'csv');
+          exported++;
+        }
+
+        return new NextResponse(csv, {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="export_depenses_${new Date().toISOString().slice(0, 10)}.csv"`,
+          },
+        });
+      }
+
       // ──────────────────── PENNYLANE ──────────────────────────────────
       case 'pennylane': {
         const apiKey = config?.api_key;
@@ -181,6 +372,9 @@ export async function POST(req: NextRequest) {
             errors.push(`Pennylane [${expense.vendor}]: ${err.message}`);
           }
         }
+
+        await saveExportHistory(supabase, user.id, 'pennylane', expenses.map(e => e.id),
+          errors.length === 0 ? 'completed' : 'partial');
         break;
       }
 
@@ -243,6 +437,9 @@ export async function POST(req: NextRequest) {
             errors.push(`Sage [${expense.vendor}]: ${err.message}`);
           }
         }
+
+        await saveExportHistory(supabase, user.id, 'sage', expenses.map(e => e.id),
+          errors.length === 0 ? 'completed' : 'partial');
         break;
       }
 
@@ -253,7 +450,7 @@ export async function POST(req: NextRequest) {
         }, { status: 501 });
       }
 
-      // ──────────────────── CSV / FEC ───────────────────────────────────
+      // ──────────────────── CSV / FEC (legacy tab-separated) ────────────
       case 'csv_fec': {
         const siren = (fullProfile?.siret || '').slice(0, 9) || '000000000';
         const year = new Date().getFullYear().toString();
@@ -315,6 +512,8 @@ export async function POST(req: NextRequest) {
 
         const fecContent = rows.join('\r\n');
         const filename = `FEC${siren}${year}1231_Depenses.txt`;
+
+        await saveExportHistory(supabase, user.id, 'csv_fec', expenses.map(e => e.id), 'completed');
 
         return new NextResponse(fecContent, {
           headers: {

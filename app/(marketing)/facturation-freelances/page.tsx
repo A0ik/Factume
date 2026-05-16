@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Globe, Calendar } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
@@ -274,6 +277,40 @@ export default function FreelancePage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Comment facturer en TJM avec Factu.me ?",
+            answer: "Avec Factu.me, vous pouvez configurer votre taux journalier moyen (TJM) une seule fois. Ensuite, il vous suffit d'indiquer le nombre de jours travaillés et la facture est calculée automatiquement. Vous pouvez aussi utiliser la dictée vocale : '3 jours à 600€ TJM'.",
+          },
+          {
+            question: "Puis-je facturer en devises étrangères ?",
+            answer: "Oui, Factu.me supporte la facturation multi-devises : euros, dollars, livres sterling, francs suisses et bien d'autres. Le taux de change est mis à jour automatiquement pour vos factures internationales.",
+          },
+          {
+            question: "Comment fonctionnent les relances automatiques ?",
+            answer: "Factu.me envoie automatiquement des relances à vos clients lorsque vos factures arrivent à échéance. Vous pouvez configurer le nombre de relances, l'intervalle entre chacune et le ton du message.",
+          },
+          {
+            question: "Le plan gratuit est-il vraiment gratuit ?",
+            answer: "Oui, le plan gratuit de Factu.me permet de créer jusqu'à 10 factures par mois sans aucune carte bancaire, sans publicité et sans filigrane. Vous pouvez passer au plan Pro quand votre activité le nécessite.",
+          },
+        ]}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Freelances', url: 'https://factu.me/facturation-freelances' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facturation-auto-entrepreneur', label: 'Facturation Auto-entrepreneur' },
+          { href: '/facturation-developpeur', label: 'Facturation Developpeur' },
+          { href: '/logiciel-facture-gratuit', label: 'Logiciel Facture Gratuit' },
+        ]}
+      />
     </div>
   );
 }

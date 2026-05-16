@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Users, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
   Search, ChevronRight, Crown, Settings, UserPlus, RefreshCw,
-  CheckCircle2, Clock, XCircle, Building2, Euro,
+  CheckCircle2, Clock, XCircle, Building2, Euro, BarChart3, Landmark,
 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -24,7 +25,15 @@ interface ClientStat {
 }
 
 interface CabinetData {
-  cabinet: { id: string; name: string; siret?: string } | null;
+  cabinet: {
+    id: string;
+    name: string;
+    siret?: string;
+    primary_color?: string;
+    logo_url?: string;
+    white_label_name?: string;
+    hide_factu_branding?: boolean;
+  } | null;
   totalClients: number;
   activeClients: number;
   stats: { totalRevenue: number; totalExpenses: number; totalOverdue: number };
@@ -43,6 +52,7 @@ function HealthDot({ health }: { health: string }) {
 export default function CabinetPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
+  const pathname = usePathname();
   const [data, setData] = useState<CabinetData | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -179,6 +189,10 @@ export default function CabinetPage() {
   }
 
   const netBalance = (data.stats.totalRevenue || 0) - (data.stats.totalExpenses || 0);
+  const primaryColor = data.cabinet?.primary_color || '#4f46e5';
+  const brandName = data.cabinet?.hide_factu_branding && data.cabinet?.white_label_name
+    ? data.cabinet.white_label_name
+    : data.cabinet?.white_label_name || 'Factu.me';
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -186,8 +200,15 @@ export default function CabinetPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 flex-shrink-0">
-            <Building2 size={24} className="text-white" />
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
+            style={{ backgroundColor: primaryColor, boxShadow: `0 10px 25px -5px ${primaryColor}40` }}
+          >
+            {data.cabinet?.logo_url ? (
+              <img src={data.cabinet.logo_url} alt={brandName} className="w-8 h-8 rounded-lg object-contain" />
+            ) : (
+              <Building2 size={24} className="text-white" />
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">{data.cabinet.name}</h1>
@@ -211,12 +232,40 @@ export default function CabinetPage() {
           </Link>
           <Link
             href="/cabinet/invitations"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+            style={{ backgroundColor: primaryColor, boxShadow: `0 4px 14px -3px ${primaryColor}40` }}
           >
             <UserPlus size={15} />
             Inviter un client
           </Link>
         </div>
+      </div>
+
+      {/* Cabinet Navigation */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {[
+          { href: '/cabinet', label: 'Tableau de bord', icon: Building2 },
+          { href: '/cabinet/clients', label: 'Clients', icon: Users },
+          { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
+          { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
+          { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
+          { href: '/cabinet/settings', label: 'Parametres', icon: Settings },
+        ].map(({ href, label, icon: NavIcon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0',
+              pathname === href
+                ? 'border border-transparent'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 border border-transparent'
+            )}
+            style={pathname === href ? { backgroundColor: `${primaryColor}18`, color: primaryColor, borderColor: `${primaryColor}40` } : undefined}
+          >
+            <NavIcon size={13} />
+            {label}
+          </Link>
+        ))}
       </div>
 
       {/* KPI Stats */}
@@ -290,7 +339,7 @@ export default function CabinetPage() {
             </div>
             <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun client connecté</p>
             <p className="text-sm text-gray-400 mb-5">Invitez vos clients pour accéder à leurs données.</p>
-            <Link href="/cabinet/invitations" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-500 text-white font-semibold text-sm hover:bg-blue-600 transition-colors">
+            <Link href="/cabinet/invitations" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm transition-colors" style={{ backgroundColor: primaryColor }}>
               <Plus size={15} />
               Inviter un client
             </Link>

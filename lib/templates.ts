@@ -270,16 +270,39 @@ function buildLegalMentions(profile: Profile, docType: string, locale: Locale = 
   if (profile.siret) parts.push(isFr ? `SIRET : ${profile.siret}` : `Company registration: ${profile.siret}`);
   if (profile.vat_number) parts.push(isFr ? `N° TVA intracommunautaire : ${profile.vat_number}` : `VAT number: ${profile.vat_number}`);
 
-  // Statut légal
-  if (profile.legal_status === 'auto-entrepreneur') {
-    if (isFr) {
-      parts.push("Dispensé d'immatriculation au RCS et au Répertoire des Métiers");
-      parts.push('TVA non applicable, art. 293 B du CGI');
+  // New legal mentions for French compliance
+  if (profile.rcs_number) parts.push(isFr ? `RCS : ${profile.rcs_number}` : `Company reg.: ${profile.rcs_number}`);
+  if (profile.rm_number) parts.push(isFr ? `RM : ${profile.rm_number}` : `Trade reg.: ${profile.rm_number}`);
+  if (profile.capital_social) parts.push(isFr ? `Capital social : ${profile.capital_social} EUR` : `Share capital: ${profile.capital_social} EUR`);
+  if (profile.naf_code) parts.push(isFr ? `NAF/APE : ${profile.naf_code}` : `NAF/APE: ${profile.naf_code}`);
+
+  // TVA mentions based on regime fiscal
+  if (profile.regime_fiscal === 'micro' || (profile.legal_status === 'auto-entrepreneur' && !profile.regime_fiscal)) {
+    // Auto-entrepreneur or micro-entreprise
+    if (profile.legal_status === 'auto-entrepreneur') {
+      if (isFr) {
+        parts.push("Dispensé d'immatriculation au RCS et au Répertoire des Métiers");
+        parts.push('TVA non applicable, art. 293 B du CGI');
+      } else {
+        parts.push('Exempt from trade register registration');
+        parts.push('VAT not applicable, art. 293 B of the French General Tax Code');
+      }
     } else {
-      parts.push('Exempt from trade register registration');
-      parts.push('VAT not applicable, art. 293 B of the French General Tax Code');
+      // Micro but not auto-entrepreneur (micro BIC/BNC)
+      if (isFr) {
+        parts.push('Dispense de TVA en application de l\'art. 293 B du CGI');
+      }
+    }
+  } else if (profile.regime_fiscal === 'autoliquidation') {
+    // Autoliquidation (BTP, sub-contracting)
+    if (isFr) {
+      parts.push('Autoliquidation de la TVA conformément à l\'art. 283, 2 nonies du CGI');
+      if (profile.sector?.toLowerCase().includes('btp') || profile.sector?.toLowerCase().includes('construction')) {
+        parts.push('Montant soumis à autoliquidation de la TVA sur le HT');
+      }
     }
   } else if (profile.legal_status && profile.legal_status !== 'autre') {
+    // For 'reel' regime: TVA is shown on line items, no special mention needed
     if (isFr) {
       parts.push(`Forme juridique : ${profile.legal_status.replace('-', ' ').toUpperCase()}`);
     }
@@ -457,6 +480,7 @@ export interface TemplateData {
   sigBlock: string;
   paymentTermsBlock: string;
   legalMentionBlock: string;
+  cgvBlock: string;
   mandatoryMentionsBlock: string;
   insuranceMention: string;
   intellectualPropertyMention: string;
@@ -552,6 +576,11 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
 
   const legalMentionBlock = `<div style="margin-bottom:20px;padding:14px 18px;background:#f9f9f9;border-radius:8px"><div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">${t.invoice.legalMentions}</div><div style="font-size:12px;color:#374151;line-height:1.7">${p.legal_mention || defaultLegalMention}</div></div>`;
 
+  // CGV block
+  const cgvBlock = (p as Profile).cgv_text
+    ? `<div style="margin-top:16px;padding:12px 16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb"><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Conditions Générales de Vente</div><div style="font-size:11px;color:#374151;line-height:1.5;white-space:pre-wrap">${(p as Profile).cgv_text}</div></div>`
+    : '';
+
   const mandatoryMentionsBlock = getMandatoryMentionsBlock(invoice, p as Profile, accent, localeTyped);
   const insuranceMention = getInsuranceMention(p as Profile, localeTyped);
   const intellectualPropertyMention = getIntellectualPropertyMention(localeTyped);
@@ -564,7 +593,7 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
     accent, currency, locale, localeTyped, f, fd, clientName, clientAddr, labels,
     logoHtml, clientLogoHtml, legal, bankBlock, watermarkHtml, qrBlock, rows, discountRow,
     signatureBlock, paymentSection, sigBlock,
-    paymentTermsBlock, legalMentionBlock, mandatoryMentionsBlock, insuranceMention, intellectualPropertyMention,
+    paymentTermsBlock, legalMentionBlock, cgvBlock, mandatoryMentionsBlock, insuranceMention, intellectualPropertyMention,
     lang: p.language || 'fr',
     invoice, profile: p,
     docLabel: getDocLabel(invoice, p.language || 'fr'),
@@ -900,6 +929,9 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
       <!-- Payment section -->
       ${d.paymentSection}
 
+      <!-- CGV -->
+      ${d.cgvBlock}
+
       <!-- Legal mentions -->
       ${d.legalMentionBlock}
 
@@ -1048,6 +1080,7 @@ export function applyCustomTemplate(html: string, d: TemplateData): string {
     '{{payment_terms_block}}': d.paymentTermsBlock,
     '{{legal_mention}}': d.legal,
     '{{legal_mention_block}}': d.legalMentionBlock,
+    '{{cgv_block}}': d.cgvBlock,
     '{{mandatory_mentions}}': d.mandatoryMentionsBlock,
     '{{insurance_mention}}': d.insuranceMention,
     '{{intellectual_property_mention}}': d.intellectualPropertyMention,

@@ -80,7 +80,7 @@ export function SireneAutocomplete({
           .filter((result: any) => result.etat_administratif === 'A') // Uniquement les entreprises actives
           .map((result: any) => ({
             siren: result.siren || '',
-            siret: result.siege.siret || result.siren || '',
+            siret: result.siege?.siret ?? result.siren ?? '',
             nom_complet: result.nom_complet || result.nom_raison_sociale || '',
             nom_raison_sociale: result.nom_raison_sociale || result.nom_complet || '',
             adresse: result.siege?.adresse || '',

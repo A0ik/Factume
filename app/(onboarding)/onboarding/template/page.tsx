@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 
 const TEMPLATES = [
   { id: 1, name: 'Minimaliste', desc: 'Épuré et moderne',     headerBg: 'bg-primary',   headerH: 'h-1',  bodyBg: 'bg-white' },
@@ -53,11 +54,7 @@ export default function OnboardingTemplatePage() {
         </div>
 
         {/* Progress */}
-        <div className="flex gap-1 mb-6">
-          {[1, 2, 3, 4].map((step) => (
-            <div key={step} className={`h-1.5 flex-1 rounded-full ${step <= 3 ? 'bg-primary' : 'bg-gray-200'}`} />
-          ))}
-        </div>
+        <OnboardingProgress currentStep={3} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
 
         <div className="grid grid-cols-3 gap-2.5 mb-6">
           {TEMPLATES.map((t) => (

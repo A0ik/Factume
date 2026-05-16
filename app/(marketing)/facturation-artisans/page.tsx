@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartphone } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
@@ -242,6 +245,40 @@ export default function ArtisanPage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Factu.me fonctionne-t-il sur chantier ?",
+            answer: "Oui, Factu.me est une application web responsive qui fonctionne parfaitement sur smartphone et tablette depuis le chantier. Vous pouvez créer vos factures et devis directement sur le terrain, même avec la dictée vocale.",
+          },
+          {
+            question: "Comment utiliser la dictée vocale ?",
+            answer: "Appuyez simplement sur le micro dans Factu.me et dictez votre facture. Par exemple : '5 mètres de tuyau PER, pose robinet, 2 heures de main d'oeuvre'. L'IA transforme votre voix en ligne de facture automatiquement.",
+          },
+          {
+            question: "Les factures sont-elles conformes pour les artisans ?",
+            answer: "Oui, toutes les factures générées par Factu.me incluent les mentions légales obligatoires pour les artisans : numéro SIRET, assurance décennale, TVA adaptée à votre activité et conformité Factur-X 2026.",
+          },
+          {
+            question: "Puis-je gérer mes acomptes ?",
+            answer: "Oui, Factu.me permet de créer des factures d'acompte, de situation et de solde. Vous pouvez suivre les paiements échelonnés de vos chantiers et configurer des demandes d'acompte automatiques.",
+          },
+        ]}
+      />
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Artisans', url: 'https://factu.me/facturation-artisans' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facturation-btp', label: 'Facturation BTP' },
+          { href: '/facturation-electricien', label: 'Facturation Electricien' },
+          { href: '/facturation-plomberie', label: 'Facturation Plomberie' },
+        ]}
+      />
     </div>
   );
 }

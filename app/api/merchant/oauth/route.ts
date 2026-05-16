@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Lazy initialization to avoid build-time execution
 function getSupabaseAdmin() {
@@ -56,7 +57,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { provider, user_id, credentials } = await req.json();
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    const { provider, credentials } = await req.json();
+    const user_id = user.id;
 
     // In production, this would be called after OAuth callback
     // with the authorization code to exchange for access token

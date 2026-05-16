@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
 import React from 'react';
@@ -155,6 +155,11 @@ export async function POST(req: NextRequest) {
 
   console.log('[send-invoice] Request received');
   try {
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const body = await req.json();
 
     // Valider les données avec Zod
@@ -187,6 +192,11 @@ export async function POST(req: NextRequest) {
 
     if (error || !invoice) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
+    // Verify the invoice belongs to the authenticated user
+    if (invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     // Fetch full profile if not provided in request

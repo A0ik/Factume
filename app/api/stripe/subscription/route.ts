@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Tu gardes ta super structure de prix !
 const PRICE_IDS: Record<string, Record<string, string>> = {
@@ -20,11 +20,16 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId, yearly = false } = await req.json();
+    // Auth check - get userId from session, not from body
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    const userId = user.id;
+
+    const { plan, yearly = false } = await req.json();
     const interval = yearly ? 'yearly' : 'monthly';
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-    if (!userId) return NextResponse.json({ error: 'Utilisateur non identifié. Veuillez vous reconnecter.' }, { status: 400 });
     if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Plan invalide.' }, { status: 400 });
     const priceId = PRICE_IDS[plan][interval];
     if (!priceId) return NextResponse.json({ error: `Ce plan (${plan} / ${interval === 'yearly' ? 'annuel' : 'mensuel'}) n'est pas encore configuré. Veuillez contacter le support.` }, { status: 400 });

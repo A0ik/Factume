@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   // Keep pdf-parse and html-pdf-node (puppeteer/chrome) out of the webpack bundle
@@ -43,4 +44,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Export with Sentry configuration
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  tunnelRoute: '/monitoring',
+});

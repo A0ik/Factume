@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/Input';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 import { LEGAL_STATUSES, SECTORS } from '@/lib/utils';
 import { Check, ChevronDown, Building2, Briefcase, ArrowLeft } from 'lucide-react';
+import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
+import { FieldTooltip } from '@/components/onboarding/FieldTooltip';
 
 /* ── Nice searchable dropdown ── */
 function SearchableSelect({
@@ -161,11 +163,7 @@ export default function OnboardingCompanyPage() {
         </div>
 
         {/* Progress bar */}
-        <div className="flex gap-1 mb-6">
-          {[1, 2, 3, 4].map((step) => (
-            <div key={step} className={`h-1.5 flex-1 rounded-full ${step <= 1 ? 'bg-primary' : 'bg-gray-200'}`} />
-          ))}
-        </div>
+        <OnboardingProgress currentStep={1} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Company search with auto-fill */}
@@ -192,8 +190,12 @@ export default function OnboardingCompanyPage() {
 
           {/* Legal status - nice searchable dropdown */}
           <div className="relative">
+            <div className="flex items-center mb-1.5">
+              <span className="text-sm font-semibold text-gray-700">Statut juridique</span>
+              <FieldTooltip text="Détermine les mentions légales automatiques sur vos factures" />
+            </div>
             <SearchableSelect
-              label="Statut juridique"
+              label=""
               icon={Building2}
               value={form.legal_status}
               onChange={(v) => set('legal_status', v)}
@@ -214,8 +216,20 @@ export default function OnboardingCompanyPage() {
             />
           </div>
 
-          <Input label="SIRET" placeholder="12345678901234" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
-          <Input label="Numéro TVA" placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
+          <div>
+            <div className="flex items-center mb-1.5">
+              <span className="text-sm font-semibold text-gray-700">SIRET</span>
+              <FieldTooltip text="Votre SIRET est obligatoire sur vos factures (art. L.441-9 du Code de commerce)" />
+            </div>
+            <Input placeholder="12345678901234" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
+          </div>
+          <div>
+            <div className="flex items-center mb-1.5">
+              <span className="text-sm font-semibold text-gray-700">Numéro TVA</span>
+              <FieldTooltip text="Requis pour les échanges intra-UE et au-delà du seuil de franchise de TVA" />
+            </div>
+            <Input placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
+          </div>
 
           {/* Error display */}
           {error && (

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // Lazy initialization to avoid build-time execution
 function getSupabaseAdmin() {
@@ -11,10 +12,16 @@ function getSupabaseAdmin() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, user_id, description } = await req.json();
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    if (!name || !user_id) {
-      return NextResponse.json({ error: 'Name and user_id are required' }, { status: 400 });
+    const { name, description } = await req.json();
+    const user_id = user.id;
+
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
     // Check user's subscription tier and existing workspace count
@@ -98,12 +105,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    if (!userId) {
-      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
-    }
+    const userId = user.id;
 
     const { data: workspaces, error } = await getSupabaseAdmin()
       .from('workspaces')

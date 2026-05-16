@@ -43,7 +43,14 @@ export async function POST(req: NextRequest) {
       `redirect_uri=${encodeURIComponent(`${baseUrl}/api/stripe-connect/callback`)}&` +
       `state=${state}`;
 
-    return NextResponse.json({ url: oauthUrl });
+    const response = NextResponse.json({ url: oauthUrl });
+    response.cookies.set('stripe_connect_state', state, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 600,
+    });
+    return response;
   } catch (error: any) {
     console.error('[Stripe Connect OAuth URL]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

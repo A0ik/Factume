@@ -37,7 +37,7 @@ export async function createAmendment(
     .from('contract_amendments')
     .select('*', { count: 'exact', head: true })
     .eq('contract_id', contractId);
-  const amendmentNumber = `AV-${String(count || 0 + 1).padStart(3, '0')}`;
+  const amendmentNumber = `AV-${String((count || 0) + 1).padStart(3, '0')}`;
 
   // Créer l'avenant
   const { data, error } = await supabase
@@ -200,7 +200,7 @@ export async function getNextAmendmentNumber(contractId: string): Promise<string
     return 'AV-001';
   }
 
-  return `AV-${String(count || 0 + 1).padStart(3, '0')}`;
+  return `AV-${String((count || 0) + 1).padStart(3, '0')}`;
 }
 
 /**

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const { invoiceId, amount, description, stripeConnectId } = await req.json();
     const stripe = getStripe();
 

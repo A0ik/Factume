@@ -21,6 +21,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Code OAuth manquant' }, { status: 400 });
     }
 
+    // Validate CSRF state from cookie
+    const savedState = req.cookies.get('stripe_connect_state')?.value;
+    if (!state || !savedState || state !== savedState) {
+      return NextResponse.json({ error: 'Invalid CSRF state' }, { status: 403 });
+    }
+
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -84,6 +90,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Store in database
+    // TODO: SECURITY - OAuth tokens (access_token, refresh_token) are stored in PLAINTEXT.
+    // These MUST be encrypted at rest using AES-256-GCM or similar before storing in the database.
+    // This requires:
+    //   1. An encryption utility (e.g., using Node.js crypto.createCipheriv)
+    //   2. A TOKEN_ENCRYPTION_KEY env var (32 bytes, base64-encoded)
+    //   3. Encrypting tokenData.access_token and tokenData.refresh_token before .update()
+    //   4. Decrypting on read when making API calls on behalf of the user
+    // This is a HIGH PRIORITY security fix - plaintext tokens in DB are a critical vulnerability.
     await supabase
       .from('profiles')
       .update({
