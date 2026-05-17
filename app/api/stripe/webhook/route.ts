@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
           await supabase.from('profiles').update({
             subscription_tier: plan,
             stripe_subscription_id: session.subscription as string,
+            is_trial_active: false,
           }).eq('id', session.metadata.userId);
         }
         break;
@@ -152,10 +153,22 @@ export async function POST(req: NextRequest) {
         }
 
         // Activate trial in profile now that the user has completed checkout
+        // Use Stripe's trial dates to avoid divergence
         if (userId) {
+          let trialStart = new Date().toISOString();
+          let trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          if (subscriptionId) {
+            try {
+              const sub = await stripe.subscriptions.retrieve(subscriptionId);
+              if (sub.trial_start) trialStart = new Date(sub.trial_start * 1000).toISOString();
+              if (sub.trial_end) trialEnd = new Date(sub.trial_end * 1000).toISOString();
+            } catch {}
+          }
+
           await supabase.from('profiles').update({
-            trial_start_date: new Date().toISOString(),
-            trial_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            trial_start_date: trialStart,
+            trial_end_date: trialEnd,
             is_trial_active: true,
             subscription_tier: 'trial',
           }).eq('id', userId);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,11 +8,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
     }
 
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
 
-    if (!file || !userId) return NextResponse.json({ error: 'file and userId required' }, { status: 400 });
+    if (!file) return NextResponse.json({ error: 'Fichier requis' }, { status: 400 });
 
     const openrouter = new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey: process.env.OPENROUTER_API_KEY });
     const text = await file.text();
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (clients.length === 0) return NextResponse.json({ imported: 0 });
 
     const supabase = createAdminClient();
-    const toInsert = clients.filter((c) => c.name).map((c) => ({ ...c, user_id: userId }));
+    const toInsert = clients.filter((c) => c.name).map((c) => ({ ...c, user_id: user.id }));
 
     const { data, error } = await supabase.from('clients').insert(toInsert).select();
     if (error) throw error;

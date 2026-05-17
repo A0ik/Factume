@@ -36,7 +36,10 @@ export function useSubscription() {
   const isPro      = tier === 'pro'  || tier === 'business';
   const isBusiness = tier === 'business';
 
-  // Trial users get full Pro features
+  const trialDocumentCount = profile?.trial_document_count || 0;
+  const trialDocLimit = 3;
+
+  // Trial users get full Pro features but limited to 3 documents
   const effectiveTier = isTrial ? 'pro' : tier;
   const effectiveIsFree = isFree;
   const effectiveIsPro = isTrial || isPro;
@@ -56,17 +59,21 @@ export function useSubscription() {
     trialRemaining,
     trialEndDate,
     trialStartDate,
+    trialDocumentCount,
+    trialDocLimit,
+    trialDocsRemaining: isTrialActive ? Math.max(0, trialDocLimit - trialDocumentCount) : null,
+    isTrialAtDocLimit: isTrialActive && trialDocumentCount >= trialDocLimit,
     canUseVoice:          isSolo || effectiveIsPro || effectiveIsBusiness,
     canUseCustomTemplate: effectiveIsPro || effectiveIsBusiness,
     canUseRecurring:      effectiveIsPro || effectiveIsBusiness,
     canEditInvoice:       isSolo || effectiveIsPro || effectiveIsBusiness,
-    canDeleteInvoice:     isSolo || effectiveIsPro || effectiveIsBusiness,
+    canDeleteInvoice:     !isFree && !isTrialActive,
     canUseContracts:      effectiveIsPro || effectiveIsBusiness,
     canUseCRM:            effectiveIsPro || effectiveIsBusiness,
-    maxInvoices:          isFree ? 10 : Infinity,
+    maxInvoices:          isFree ? 5 : Infinity,
     invoiceCount:         monthlyInvoiceCount,
-    invoicesRemaining:    isFree ? Math.max(0, 10 - monthlyInvoiceCount) : null,
-    isAtLimit:            isFree && monthlyInvoiceCount >= 10,
+    invoicesRemaining:    isFree ? Math.max(0, 5 - monthlyInvoiceCount) : null,
+    isAtLimit:            isFree ? monthlyInvoiceCount >= 5 : isTrialActive && trialDocumentCount >= trialDocLimit,
     maxWorkspaces:        effectiveIsBusiness ? Infinity : (effectiveIsPro || isTrial) ? 3 : 1,
     canCreateWorkspace:   (count: number) => effectiveIsBusiness || ((effectiveIsPro || isTrial) && count < 3) || count < 1,
   };

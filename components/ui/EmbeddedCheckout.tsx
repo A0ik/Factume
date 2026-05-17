@@ -82,7 +82,7 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
               {isSetupMode && (
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
                   <Clock size={10} />
-                  Essai 4j
+                  Essai 7j
                 </span>
               )}
             </div>

@@ -65,9 +65,15 @@ import React from 'react';
  * Falls back to HTML+print if React-PDF fails (e.g. custom template).
  */
 export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | null): Promise<void> {
-  // Custom templates use the HTML path (React-PDF can't render arbitrary HTML)
   if (profile?.custom_template_html) {
     downloadHtmlPdf(invoice, profile);
+    return;
+  }
+
+  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    window.location.href = `/api/download/pdf/${invoice.id}`;
     return;
   }
 
@@ -77,7 +83,6 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
     const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
     const blob = await pdf(element as any).toBlob();
 
-    // Trigger download instead of opening in new tab
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -86,13 +91,11 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
     document.body.appendChild(a);
     a.click();
 
-    // Cleanup
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 100);
   } catch {
-    // Fallback to HTML+print
     downloadHtmlPdf(invoice, profile);
   }
 }

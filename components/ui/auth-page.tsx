@@ -256,9 +256,9 @@ export function AuthPage({
           <div className="w-full max-w-xs mt-5 border-t border-white/10 pt-5">
             <div className="flex items-center gap-4">
               <div className="flex -space-x-3">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="Utilisateur" className="w-9 h-9 rounded-full border-2 border-gray-950 object-cover shadow-lg" />
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="Utilisatrice" className="w-9 h-9 rounded-full border-2 border-gray-950 object-cover shadow-lg" />
-                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face" alt="Utilisateur" className="w-9 h-9 rounded-full border-2 border-gray-950 object-cover shadow-lg" />
+                <div className="w-9 h-9 rounded-full border-2 border-gray-950 bg-blue-500/20 text-blue-300 font-bold text-sm flex items-center justify-center shadow-lg">M</div>
+                <div className="w-9 h-9 rounded-full border-2 border-gray-950 bg-purple-500/20 text-purple-300 font-bold text-sm flex items-center justify-center shadow-lg">S</div>
+                <div className="w-9 h-9 rounded-full border-2 border-gray-950 bg-emerald-500/20 text-emerald-300 font-bold text-sm flex items-center justify-center shadow-lg">A</div>
               </div>
               <div className="text-left">
                 <p className="text-sm font-bold text-white">Ils nous font confiance</p>
@@ -389,7 +389,7 @@ export function AuthPage({
           )}
 
           <p className="text-center text-xs text-gray-400">
-            En continuant, vous acceptez nos <a href="#" className="underline underline-offset-2 hover:text-primary">Conditions d&apos;utilisation</a> {' '}et notre <a href="#" className="underline underline-offset-2 hover:text-primary">Politique de confidentialité</a>.
+            En continuant, vous acceptez nos <Link href="/legal/cgu" className="underline underline-offset-2 hover:text-primary">Conditions d&apos;utilisation</Link> {' '}et notre <Link href="/legal/confidentialite" className="underline underline-offset-2 hover:text-primary">Politique de confidentialité</Link>.
           </p>
         </div>
       </div>

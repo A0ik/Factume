@@ -2,8 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Sparkles, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+function linkifyContent(content: string): React.ReactNode {
+  const parts = content.split(/(support@factu\.me|[\w.-]+@[\w.-]+\.\w+)/g);
+  return parts.map((part, i) => {
+    if (/^[\w.-]+@[\w.-]+\.\w+$/.test(part)) {
+      return (
+        <a key={i} href={`mailto:${part}`} className="underline text-primary hover:text-primary/80">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
 
 interface Message {
   id: string;
@@ -257,7 +271,7 @@ export function AIChatWidget() {
                         : 'rounded-tl-sm bg-muted text-foreground'
                     )}
                   >
-                    {message.content || ' '}
+                        {message.role === 'assistant' ? linkifyContent(message.content || ' ') : (message.content || ' ')}  
                   </div>
                 </div>
               ))}
@@ -272,6 +286,13 @@ export function AIChatWidget() {
 
             {/* Input */}
             <div className="border-t bg-background p-3">
+              <a
+                href="mailto:support@factu.me"
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-muted-foreground/20 py-1.5 text-[11px] text-muted-foreground/60 hover:text-primary hover:border-primary/30 transition-colors mb-2"
+              >
+                <Mail className="h-3 w-3" />
+                Contacter le support par email
+              </a>
               <div className="flex items-center gap-2 rounded-xl border bg-muted/50 px-3 py-1 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30">
                 <input
                   ref={inputRef}

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -15,10 +14,7 @@ export async function POST(req: NextRequest) {
     const { clientId, iban, clientName, clientEmail, invoiceId, amount, description, stripeConnectId } = await req.json();
 
     const stripe = getStripe();
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createAdminClient();
 
     // Get or create Stripe customer
     let stripeCustomerId: string;
@@ -26,6 +22,7 @@ export async function POST(req: NextRequest) {
       .from('clients')
       .select('stripe_customer_id')
       .eq('id', clientId)
+      .eq('user_id', user.id)
       .single();
 
     if (client?.stripe_customer_id) {
@@ -90,11 +87,18 @@ export async function POST(req: NextRequest) {
       sepa_iban_last4: ibanLast4,
     }).eq('id', clientId);
 
-    // Update invoice
-    if (paymentIntent.status === 'processing' || paymentIntent.status === 'succeeded') {
+    // Update invoice — only mark as 'paid' when actually succeeded
+    // SEPA 'processing' means payment is pending (takes several days)
+    if (paymentIntent.status === 'succeeded') {
       await supabase.from('invoices').update({
         status: 'paid',
         paid_at: new Date().toISOString(),
+        payment_method: 'sepa',
+        updated_at: new Date().toISOString(),
+      }).eq('id', invoiceId);
+    } else if (paymentIntent.status === 'processing') {
+      await supabase.from('invoices').update({
+        status: 'pending_payment',
         payment_method: 'sepa',
         updated_at: new Date().toISOString(),
       }).eq('id', invoiceId);

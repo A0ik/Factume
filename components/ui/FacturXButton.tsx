@@ -49,6 +49,16 @@ export function FacturXButton({
   const performDownload = async () => {
     setIsDownloading(true);
     setShowConfirmModal(false);
+
+    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      window.location.href = `/api/download/facturx/${invoiceId}`;
+      toast.success('Téléchargement Factur-X en cours...', { duration: 3000 });
+      setIsDownloading(false);
+      return;
+    }
+
     try {
       console.log('[FacturXButton] Téléchargement Factur-X pour facture:', invoiceId);
 
@@ -59,7 +69,6 @@ export function FacturXButton({
         console.error('[FacturXButton] Erreur réponse:', error);
 
         if (response.status === 403) {
-          // Besoin d'upgrade
           toast.error('Fonctionnalité réservée aux abonnements Pro et Business', {
             description: 'Le format Factur-X nécessite un abonnement supérieur.',
             action: {
@@ -72,14 +81,12 @@ export function FacturXButton({
         throw new Error(error.error || error.details || 'Erreur lors de la génération Factur-X');
       }
 
-      // Vérifier que le contenu est bien un PDF
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/pdf')) {
         console.error('[FacturXButton] Type de contenu invalide:', contentType);
         throw new Error('Le serveur n\'a pas retourné un fichier PDF valide');
       }
 
-      // Télécharger le PDF
       const blob = await response.blob();
       console.log('[FacturXButton] Blob reçu, taille:', blob.size, 'octets');
 
@@ -89,11 +96,8 @@ export function FacturXButton({
       a.download = `${invoiceNumber.replace(/\//g, '-')}-facturx.pdf`;
       a.style.display = 'none';
       document.body.appendChild(a);
-
-      // Trigger le téléchargement
       a.click();
 
-      // Nettoyage
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);

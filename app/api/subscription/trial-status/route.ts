@@ -1,17 +1,17 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Fetch profile with trial information
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAuth
       .from('profiles')
       .select('is_trial_active, trial_start_date, trial_end_date, subscription_tier')
       .eq('id', user.id)
@@ -28,9 +28,10 @@ export async function GET() {
       const now = new Date();
       const endDate = new Date(profile.trial_end_date);
       if (endDate < now) {
-        // Only PATCH if not already marked as inactive (idempotent)
-        if (profile?.is_trial_active !== false || profile?.subscription_tier !== 'free') {
-          await supabase
+        // Only reset if the user is still on trial tier (don't touch paid users)
+        if (profile?.subscription_tier === 'trial') {
+          const admin = createAdminClient();
+          await admin
             .from('profiles')
             .update({
               is_trial_active: false,

@@ -144,7 +144,7 @@ export async function GET(
     }
 
     // ── Envoi du PDF ────────────────────────────────────────────────────────
-    const filename = `${invoice.number.replace(/\//g, '-')}-facturx.pdf`;
+    const filename = `${invoice.number.replace(/[/\r\n"']/g, '-')}-facturx.pdf`;
     const info = getFacturXInfo();
 
     console.log('[Factur-X] Envoi du fichier:', filename);

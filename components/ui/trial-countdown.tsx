@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 interface TrialCountdownProps {
   onClose?: () => void;
   className?: string;
+  trialDocumentCount?: number;
+  trialDocLimit?: number;
 }
 
-export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
+export function TrialCountdown({ onClose, className, trialDocumentCount = 0, trialDocLimit = 3 }: TrialCountdownProps) {
   const router = useRouter();
   const [timeRemaining, setTimeRemaining] = React.useState<{
     days: number;
@@ -122,7 +124,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
                 <Clock className="w-5 h-5" />
               </motion.div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold">Essai gratuit</span>
+                <span className="font-semibold">Essai gratuit</span> <span className="text-white/70 text-xs">({trialDocumentCount}/{trialDocLimit} docs)</span>
                 <span className="text-white/80">- Il vous reste</span>
                 <div className="flex items-center gap-1 font-mono font-bold bg-white/20 px-2 py-0.5 rounded">
                   <span>{totalHours > 24 ? `${timeRemaining.days}j ` : ''}</span>
@@ -130,7 +132,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
                   <span>{formatTime(timeRemaining.minutes)}m</span>
                   <span>{formatTime(timeRemaining.seconds)}s</span>
                 </div>
-                <span className="text-white/80">avant de passer à l'abonnement Business</span>
+                <span className="text-white/80">avant de passer à l'abonnement</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -140,7 +142,7 @@ export function TrialCountdown({ onClose, className }: TrialCountdownProps) {
                 onClick={() => router.push('/paywall')}
                 className="bg-white text-orange-600 px-4 py-1.5 rounded-full font-semibold text-sm hover:bg-orange-50 transition-colors"
               >
-                Passer à Pro maintenant
+                Choisir un abonnement
               </motion.button>
               {onClose && (
                 <button

@@ -145,10 +145,8 @@ export async function POST(req: NextRequest) {
           metadata: { plan, userId },
         });
 
-        // Mettre à jour le profil immédiatement
-        await supabase.from('profiles').update({
-          subscription_tier: plan,
-        }).eq('id', userId);
+        // Tier sera mis à jour par le webhook customer.subscription.updated
+        // Ne PAS updater ici pour éviter de donner l'accès avant confirmation Stripe
 
         return NextResponse.json({
           success: true,

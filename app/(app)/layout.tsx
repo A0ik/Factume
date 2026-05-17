@@ -83,14 +83,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Trial Countdown Banner - shows for active trial users */}
       {isTrialActive && showTrialBanner && !hideBanners && (
-        <TrialCountdown onClose={() => setShowTrialBanner(false)} />
+        <TrialCountdown onClose={() => setShowTrialBanner(false)} trialDocumentCount={profile?.trial_document_count || 0} trialDocLimit={3} />
       )}
 
       {/* Invoice Counter - shows for free users */}
       {isFree && showInvoiceCounter && !hideBanners && (
         <InvoiceCounter
           invoiceCount={invoiceCount}
-          maxInvoices={10}
+          maxInvoices={5}
           onClose={() => setShowInvoiceCounter(false)}
         />
       )}
@@ -112,7 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <main className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
           {/* Mobile top bar - Enhanced with logo */}
-          <div className="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-3 flex items-center justify-between shadow-sm">
+          <div className="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-3 flex items-center justify-between shadow-sm">
             <button
               onClick={() => setDrawerOpen(true)}
               className="p-2.5 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-slate-800 dark:to-slate-700/80 hover:from-gray-200 hover:to-gray-300/80 dark:hover:from-slate-700 dark:hover:to-slate-600/80 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-105 active:scale-95 -ml-1"

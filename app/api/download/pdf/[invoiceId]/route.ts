@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
+import { generatePdfBuffer } from '@/lib/pdf';
+
+export const maxDuration = 60;
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ invoiceId: string }> }
+) {
+  try {
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non authentifie' }, { status: 401 });
+    }
+
+    const { invoiceId } = await params;
+    const admin = createAdminClient();
+
+    const { data: invoice, error: invError } = await admin
+      .from('invoices')
+      .select('*, client:clients(*)')
+      .eq('id', invoiceId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (invError || !invoice) {
+      return NextResponse.json({ error: 'Document introuvable' }, { status: 404 });
+    }
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    const pdfBuffer = await generatePdfBuffer(invoice, profile);
+
+    const filename = `${invoice.number.replace(/[/\r\n"']/g, '-')}.pdf`;
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': pdfBuffer.length.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    });
+  } catch (error: any) {
+    console.error('[download/pdf] Error:', error.message);
+    return NextResponse.json(
+      { error: 'Erreur lors de la generation du PDF' },
+      { status: 500 }
+    );
+  }
+}

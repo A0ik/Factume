@@ -61,17 +61,15 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
 
   const handleDownload = async () => {
     try {
-      // Pour fallback HTML
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
       if (useHtmlFallback) {
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
 
-        // Méthode compatible avec tous les appareils
-        if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('Mac')) {
-          // iOS : ouvrir dans un nouvel onglet, le user peut faire "partager" → "enregistrer dans les fichiers"
+        if (isMobile) {
           window.open(url, '_blank');
         } else {
-          // Android/PC : téléchargement direct
           const a = document.createElement('a');
           a.href = url;
           a.download = `${invoice.number.replace(/\//g, '-')}.html`;
@@ -80,30 +78,27 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
           a.click();
           setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
         }
+      } else if (isMobile) {
+        window.location.href = `/api/download/pdf/${invoice.id}`;
       } else if (pdfUrl) {
-        // Pour PDF blob
         const response = await fetch(pdfUrl);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-
-        // Compatible iOS : ouvrir dans un nouvel onglet
-        if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') || navigator.userAgent.includes('Mac')) {
-          window.open(url, '_blank');
-        } else {
-          // Android/PC : téléchargement direct
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-        }
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
       }
     } catch (error) {
       console.error('[PDF Download Error]', error);
-      // Fallback : ouvrir dans un nouvel onglet
-      if (pdfUrl) window.open(pdfUrl, '_blank');
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.location.href = `/api/download/pdf/${invoice.id}`;
+      } else if (pdfUrl) {
+        window.open(pdfUrl, '_blank');
+      }
     }
   };
 

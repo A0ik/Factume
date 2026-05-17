@@ -58,6 +58,8 @@ export interface Profile {
   trial_start_date?: string;
   trial_end_date?: string;
   is_trial_active?: boolean;
+  trial_document_count?: number;
+  trial_ip_address?: string;
   auto_contract_transitions?: boolean;
   website?: string;
   referral_code?: string;

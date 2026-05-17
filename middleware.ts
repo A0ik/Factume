@@ -97,7 +97,8 @@ export async function middleware(req: NextRequest) {
   let rlLimit = 300;
   let rlWindow = 60_000;
   if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
-  if (isAuthRoute) { rlLimit = 10; rlWindow = 60_000; }
+  if (isAuthRoute) { rlLimit = 5; rlWindow = 3_600_000; }
+  if (pathname === '/api/stripe/trial-subscription') { rlLimit = 3; rlWindow = 86_400_000; }
 
   const rl = rateLimit({ key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`, limit: rlLimit, windowMs: rlWindow });
   if (!rl.success) {

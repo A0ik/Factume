@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { generatePdfBuffer } from '@/lib/pdf';
 import { createFacturXPdf } from '@/lib/facturx';
 import { Resend } from 'resend';
+
+const esc = (s: unknown) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 /**
  * API PDP - Envoi de facture par email avec Factur-X
@@ -12,6 +16,10 @@ import { Resend } from 'resend';
  */
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const body = await req.json();
     const { invoiceId, recipientEmail, message } = body;
 
@@ -30,11 +38,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Récupérer l'invoice
+    // Récupérer l'invoice (scoped to authenticated user)
     const { data: invoice } = await supabase
       .from('invoices')
       .select('*')
       .eq('id', invoiceId)
+      .eq('user_id', user.id)
       .single();
 
     if (!invoice) {
@@ -86,6 +95,7 @@ export async function POST(req: NextRequest) {
     const { error: resendError } = await resend.emails.send({
       from: `${senderName} <${senderEmail}>`,
       to: [recipientEmail],
+      replyTo: replyToEmail,
       replyTo: replyToEmail,
       subject: emailSubject,
       html: emailHtml,
@@ -162,7 +172,7 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Facture ${invoice.number}</title>
+  <title>Facture ${esc(invoice.number)}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f8;padding:40px 0">
@@ -175,7 +185,7 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
             <tr>
               <td>
                 <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">FACTURE</div>
-                <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-0.5px">${invoice.number}</div>
+                <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-0.5px">${esc(invoice.number)}</div>
               </td>
               <td align="right">
                 <div style="font-size:12px;color:rgba(255,255,255,0.8)">Émise le</div>
@@ -189,9 +199,9 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
         <!-- Body -->
         <tr><td style="background:#ffffff;padding:32px 40px">
           ${customMessage
-            ? `<p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6;white-space:pre-wrap">${customMessage.replace(/\n/g, '<br/>')}</p>`
+            ? `<p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6;white-space:pre-wrap">${esc(customMessage).replace(/\n/g, '<br/>')}</p>`
             : `<p style="font-size:15px;color:#374151;margin:0 0 8px">Bonjour,</p>
-               <p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6">Veuillez trouver ci-joint votre facture <strong>${invoice.number}</strong>.</p>`
+               <p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6">Veuillez trouver ci-joint votre facture <strong>${esc(invoice.number)}</strong>.</p>`
           }
 
           <!-- Total -->
@@ -211,7 +221,7 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
 
           <!-- Factur-X Badge -->
           <div style="background:#ecfdf5;border-left:3px solid #10b981;border-radius:6px;padding:16px;margin-bottom:24px">
-            <div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:6px">✓ Format Factur-X</div>
+            <div style="font-size:13px;font-weight:700;color:#059669;margin-bottom:6px">Format Factur-X</div>
             <p style="font-size:13px;color:#065f46;margin:0;line-height:1.6">
               Cette facture est au format Factur-X (ZUGFeRD). Elle contient des données structurées
               compatibles avec les logiciels comptables et conforme à la réglementation française
@@ -219,14 +229,14 @@ function generateInvoiceEmail(invoice: any, profile: any, customMessage?: string
             </p>
           </div>
 
-          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6">Cordialement,<br/><strong style="color:#111827">${profile.company_name}</strong></p>
+          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6">Cordialement,<br/><strong style="color:#111827">${esc(profile.company_name)}</strong></p>
         </td></tr>
 
         <!-- Footer -->
         <tr><td style="background:#f9fafb;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb">
           <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0;line-height:1.7">
-            Ce document vous est transmis par <strong>${profile.company_name}</strong> via Factu.me<br/>
-            ${profile.siret ? `SIRET : ${profile.siret} · ` : ''}${profile.legal_status === 'auto-entrepreneur' ? 'TVA non applicable, art. 293 B du CGI' : ''}
+            Ce document vous est transmis par <strong>${esc(profile.company_name)}</strong> via Factu.me<br/>
+            ${profile.siret ? `SIRET : ${esc(profile.siret)} · ` : ''}${profile.legal_status === 'auto-entrepreneur' ? 'TVA non applicable, art. 293 B du CGI' : ''}
           </p>
         </td></tr>
 

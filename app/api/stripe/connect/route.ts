@@ -49,12 +49,32 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Verify the authenticated user matches the state parameter
+    const cookieStore = await cookies();
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll(cs: { name: string; value: string; options?: Record<string, unknown> }[]) {
+            cs.forEach(({ name, value, options }) => cookieStore.set(name, value, options as any));
+          },
+        },
+      }
+    );
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+
+    if (authError || !user || user.id !== state) {
+      return NextResponse.redirect(new URL('/settings?stripe=error', req.url));
+    }
+
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const response = await stripe.oauth.token({ grant_type: 'authorization_code', code });
     const supabase = createAdminClient();
     await supabase.from('profiles')
       .update({ stripe_connect_id: response.stripe_user_id })
-      .eq('id', state);
+      .eq('id', user.id);
     return NextResponse.redirect(new URL('/settings?stripe=connected', req.url));
   } catch (err: any) {
     return NextResponse.redirect(new URL('/settings?stripe=error', req.url));

@@ -236,7 +236,7 @@ export default function LandingPageClient() {
       {/* Sticky mobile CTA */}
       <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 transition-transform duration-300 sm:hidden ${showStickyCta ? 'translate-y-0' : 'translate-y-full'}`}>
         <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="flex items-center justify-center gap-2 bg-brand-500 text-white font-semibold py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm">
-          <Zap className="w-4 h-4" />Essai gratuit 7 jours
+          <Zap className="w-4 h-4" />Commencer gratuitement
         </a>
       </div>
 
@@ -248,7 +248,7 @@ export default function LandingPageClient() {
           className="hidden sm:block fixed bottom-6 right-6 z-40"
         >
           <Link href="/register" className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm transition-all active:scale-95">
-            <Zap className="w-4 h-4" />Essai gratuit 7 jours
+            <Zap className="w-4 h-4" />Commencer gratuitement
           </Link>
         </motion.div>
       )}
@@ -304,7 +304,7 @@ export default function LandingPageClient() {
               <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>Connexion</span>
             </Link>
             <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3.5 py-1.5 rounded-full transition-all shadow-md shadow-brand-500/20 active:scale-[0.97]">
-              <span className="hidden sm:inline">Essai gratuit</span><span className="sm:hidden">Essai</span><ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-1.5 rounded-full hover:bg-brand-50 transition-colors">
               <Menu className="w-4.5 h-4.5 text-slate-600" />
@@ -408,9 +408,10 @@ export default function LandingPageClient() {
               <ScrollReveal delay={0.5}>
                 <div className="flex items-center gap-3 sm:gap-5 lg:gap-6 pt-1 justify-center lg:justify-start">
                   <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <img key={i} src={`https://picsum.photos/seed/face${i}/36/36.jpg`} className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 object-cover" alt={`Portrait utilisateur ${i}`} />
-                    ))}
+                    {['M', 'S', 'A', 'L'].map((initial, i) => {
+                      const colors = ['bg-blue-500/30 text-blue-300', 'bg-purple-500/30 text-purple-300', 'bg-emerald-500/30 text-emerald-300', 'bg-amber-500/30 text-amber-300'];
+                      return <div key={i} className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 ${colors[i]} font-bold text-[10px] sm:text-xs lg:text-sm flex items-center justify-center`}>{initial}</div>;
+                    })}
                     <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 bg-brand-500/20 flex items-center justify-center text-[9px] sm:text-[10px] lg:text-[11px] font-bold text-brand-300">+2k</div>
                   </div>
                   <div>
@@ -1110,7 +1111,7 @@ export default function LandingPageClient() {
                   <div className="flex items-center gap-1 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />)}</div>
                   <p className="text-sm text-slate-600 leading-relaxed flex-grow mb-5">&ldquo;{t.text}&rdquo;</p>
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                    <img src={`https://picsum.photos/seed/${t.avatar}/48/48.jpg`} className="w-11 h-11 rounded-full object-cover" alt={`Photo de profil de ${t.name}`} />
+                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center flex-shrink-0">{t.name.charAt(0)}</div>
                     <div><div className="font-bold text-sm">{t.name}</div><div className="text-xs text-slate-400">{t.role}</div></div>
                   </div>
                 </div></Card3D>

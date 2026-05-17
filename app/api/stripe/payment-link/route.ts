@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -12,6 +12,17 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     const { invoiceId, amount, description, stripeConnectId } = await req.json();
+
+    // Verify the invoice belongs to the authenticated user
+    const supabaseAdmin = createAdminClient();
+    const { data: invoice } = await supabaseAdmin
+      .from('invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .eq('user_id', user.id)
+      .single();
+    if (!invoice) return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+
     const stripe = getStripe();
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {

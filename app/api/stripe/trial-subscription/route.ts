@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import { getClientIp } from '@/lib/rate-limit';
+import { isDisposableEmail } from '@/lib/disposable-emails';
 
 const PRICE_IDS: Record<string, Record<string, string>> = {
   solo: {
@@ -19,11 +21,15 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId, yearly = false } = await req.json();
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié. Veuillez vous reconnecter.' }, { status: 401 });
+    const userId = user.id;
+
+    const { plan, yearly = false } = await req.json();
     const interval = yearly ? 'yearly' : 'monthly';
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-    if (!userId) return NextResponse.json({ error: 'Utilisateur non identifié. Veuillez vous reconnecter.' }, { status: 400 });
     if (!PRICE_IDS[plan]) return NextResponse.json({ error: 'Plan invalide.' }, { status: 400 });
     const priceId = PRICE_IDS[plan][interval];
     if (!priceId) return NextResponse.json({ error: `Ce plan (${plan} / ${interval === 'yearly' ? 'annuel' : 'mensuel'}) n'est pas encore configuré. Veuillez contacter le support.` }, { status: 400 });
@@ -33,9 +39,22 @@ export async function POST(req: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Profil introuvable. Veuillez vous reconnecter.' }, { status: 404 });
 
-    // Prevent trial abuse: reject if user already had a trial
-    if (profile.trial_start_date) {
-      return NextResponse.json({ error: 'Vous avez déjà utilisé votre période d\'essai.' }, { status: 400 });
+    // Block disposable emails
+    if (profile.email && isDisposableEmail(profile.email)) {
+      return NextResponse.json({ error: 'Les adresses email jetables ne sont pas acceptées. Veuillez utiliser une adresse email valide.' }, { status: 400 });
+    }
+
+    // Atomic trial activation check (prevents race conditions)
+    const clientIp = getClientIp(req);
+    const { data: trialCheck, error: trialCheckError } = await supabase
+      .rpc('activate_trial_check', { p_user_id: userId, p_ip_address: clientIp || null });
+
+    if (trialCheckError) {
+      return NextResponse.json({ error: 'Erreur lors de la vérification. Veuillez réessayer.' }, { status: 500 });
+    }
+
+    if (!trialCheck || !trialCheck[0]?.can_activate) {
+      return NextResponse.json({ error: trialCheck?.[0]?.reason || 'Essai non disponible.' }, { status: 400 });
     }
 
     // 1. Créer ou récupérer le client Stripe
@@ -79,6 +98,7 @@ export async function POST(req: NextRequest) {
     // On stocke seulement le subscription_id pour le webhook.
     await supabase.from('profiles').update({
       stripe_subscription_id: subscription.id,
+      trial_ip_address: clientIp || null,
     }).eq('id', userId);
 
     return NextResponse.json({

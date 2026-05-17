@@ -144,7 +144,7 @@ export function InvoiceCounter({ invoiceCount, maxInvoices, onClose, className }
                 <p className={cn("text-xs", colors.text)}>
                   {isAtLimit
                     ? "Vous avez atteint votre limite. Passez à Pro pour créer des factures illimitées."
-                    : `Attention, il ne vous reste que ${remaining} facture${remaining > 1 ? 's' : ''}. Passez à Pro pour des factures illimitées !`
+                    : `Attention, il ne vous reste que ${remaining} facture${remaining > 1 ? 's' : ''}. Passez à un abonnement pour des factures illimitées !`
                   }
                 </p>
               </motion.div>

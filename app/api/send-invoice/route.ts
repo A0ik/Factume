@@ -10,7 +10,16 @@ import { z } from 'zod';
 
 export const maxDuration = 60;
 
-const safe = (s: unknown) => String(s ?? '').replace(/[^\x00-\xFF]/g, '?');
+const safe = (s: unknown) => String(s ?? '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-zA-Z0-9._-]/g, '_');
+
+const esc = (s: unknown) => String(s ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 function buildEmailHtml(invoice: any, profile: any, senderName: string, isReminder = false, customMessage?: string): string {
   const accent = profile?.accent_color || '#1D9E75';
@@ -25,7 +34,7 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
   const firstItem = invoice.items?.[0]?.description || 'votre prestation';
   const itemRows = (invoice.items || []).map((item: any) => `
     <tr>
-      <td style="padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#374151">${item.description}</td>
+      <td style="padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#374151">${esc(item.description)}</td>
       <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#6b7280;text-align:center">${item.quantity}</td>
       <td style="padding:10px 8px;border-bottom:1px solid #f0f0f0;font-size:13px;color:#374151;text-align:right">${fmt(item.unit_price)}</td>
       <td style="padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:13px;font-weight:700;color:#111827;text-align:right">${fmt(item.total)}</td>
@@ -52,7 +61,7 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
             <tr>
               <td>
                 <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px">${docLabel}</div>
-                <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-0.5px">${invoice.number}</div>
+                <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:-0.5px">${esc(invoice.number)}</div>
               </td>
               <td align="right">
                 <div style="font-size:12px;color:rgba(255,255,255,0.8)">Émise le</div>
@@ -66,17 +75,17 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
         <!-- Body -->
         <tr><td style="background:#ffffff;padding:32px 40px">
           ${customMessage
-            ? `<p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6;white-space:pre-wrap">${customMessage.replace(/\n/g, '<br/>')}</p>`
+            ? `<p style="font-size:14px;color:#374151;margin:0 0 28px;line-height:1.6;white-space:pre-wrap">${esc(customMessage).replace(/\n/g, '<br/>')}</p>`
             : `
-          <p style="font-size:15px;color:#374151;margin:0 0 8px">Bonjour ${clientName},</p>
+          <p style="font-size:15px;color:#374151;margin:0 0 8px">Bonjour ${esc(clientName)},</p>
           <p style="font-size:14px;color:#374151;margin:0 0 4px;line-height:1.6">
             ${isReminder
-              ? `Je me permets de revenir vers vous concernant la ${docLabel.toLowerCase()} <strong style="color:#111827">${invoice.number}</strong> restée impayée à ce jour.`
-              : `Veuillez trouver ci-joint votre ${docLabel.toLowerCase()} pour <strong style="color:#111827">${firstItem}</strong>.`
+              ? `Je me permets de revenir vers vous concernant la ${docLabel.toLowerCase()} <strong style="color:#111827">${esc(invoice.number)}</strong> restée impayée à ce jour.`
+              : `Veuillez trouver ci-joint votre ${docLabel.toLowerCase()} pour <strong style="color:#111827">${esc(firstItem)}</strong>.`
             }
           </p>
           <p style="font-size:14px;color:#6b7280;margin:0 0 28px;line-height:1.6">
-            De la part de <strong style="color:#111827">${senderName}</strong>.
+            De la part de <strong style="color:#111827">${esc(senderName)}</strong>.
           </p>
           `}
 
@@ -118,18 +127,18 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
 
           ${payBtn}
 
-          ${invoice.notes ? `<div style="background:#f8f8fc;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Notes</div><p style="font-size:13px;color:#374151;margin:0;line-height:1.6">${invoice.notes}</p></div>` : ''}
+          ${invoice.notes ? `<div style="background:#f8f8fc;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Notes</div><p style="font-size:13px;color:#374151;margin:0;line-height:1.6">${esc(invoice.notes)}</p></div>` : ''}
 
-          ${profile?.iban ? `<div style="background:#f0fdf4;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Coordonnées bancaires</div><div style="font-size:13px;color:#374151;line-height:1.8">${profile.bank_name ? `<div><strong>Banque :</strong> ${profile.bank_name}</div>` : ''}<div><strong>IBAN :</strong> ${profile.iban}</div>${profile.bic ? `<div><strong>BIC :</strong> ${profile.bic}</div>` : ''}</div></div>` : ''}
+          ${profile?.iban ? `<div style="background:#f0fdf4;border-left:3px solid ${accent};border-radius:6px;padding:14px 16px;margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Coordonnées bancaires</div><div style="font-size:13px;color:#374151;line-height:1.8">${profile.bank_name ? `<div><strong>Banque :</strong> ${esc(profile.bank_name)}</div>` : ''}<div><strong>IBAN :</strong> ${esc(profile.iban)}</div>${profile.bic ? `<div><strong>BIC :</strong> ${esc(profile.bic)}</div>` : ''}</div></div>` : ''}
 
-          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6">Cordialement,<br/><strong style="color:#111827">${senderName}</strong></p>
+          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6">Cordialement,<br/><strong style="color:#111827">${esc(senderName)}</strong></p>
         </td></tr>
 
         <!-- Footer -->
         <tr><td style="background:#f9fafb;border-radius:0 0 16px 16px;padding:20px 40px;border-top:1px solid #e5e7eb">
           <p style="font-size:11px;color:#9ca3af;text-align:center;margin:0;line-height:1.7">
-            Ce document vous est transmis par <strong>${senderName}</strong> via Factu.me<br/>
-            ${profile?.siret ? `SIRET : ${profile.siret} · ` : ''}${profile?.legal_status === 'auto-entrepreneur' ? 'TVA non applicable, art. 293 B du CGI' : ''}
+            Ce document vous est transmis par <strong>${esc(senderName)}</strong> via Factu.me<br/>
+            ${profile?.siret ? `SIRET : ${esc(profile.siret)} · ` : ''}${profile?.legal_status === 'auto-entrepreneur' ? 'TVA non applicable, art. 293 B du CGI' : ''}
           </p>
         </td></tr>
 
@@ -188,27 +197,18 @@ export async function POST(req: NextRequest) {
       .from('invoices')
       .select('*, client:clients(*)')
       .eq('id', invoiceId)
+      .eq('user_id', user.id)
       .single();
 
     if (error || !invoice) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    // Verify the invoice belongs to the authenticated user
-    if (invoice.user_id !== user.id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
-    }
-
-    // Fetch full profile if not provided in request
-    let profile = requestProfile;
-    if (!profile || Object.keys(profile).length === 0) {
-      const { data: fetchedProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', invoice.user_id)
-        .single();
-      profile = fetchedProfile;
-    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
     const senderName = profile?.company_name || 'Factu.me';
     const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';

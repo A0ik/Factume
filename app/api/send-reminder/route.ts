@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const { invoiceId, email, profile } = await req.json();
     if (!invoiceId || !email) return NextResponse.json({ error: 'invoiceId and email required' }, { status: 400 });
 
@@ -15,9 +19,9 @@ export async function POST(req: NextRequest) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    // Record reminder sent timestamp
+    // Record reminder sent timestamp (scoped to user)
     const supabase = createAdminClient();
-    await supabase.from('invoices').update({ updated_at: new Date().toISOString() }).eq('id', invoiceId);
+    await supabase.from('invoices').update({ updated_at: new Date().toISOString() }).eq('id', invoiceId).eq('user_id', user.id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
