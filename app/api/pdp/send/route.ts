@@ -96,7 +96,6 @@ export async function POST(req: NextRequest) {
       from: `${senderName} <${senderEmail}>`,
       to: [recipientEmail],
       replyTo: replyToEmail,
-      replyTo: replyToEmail,
       subject: emailSubject,
       html: emailHtml,
       attachments: [{
