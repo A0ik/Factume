@@ -313,6 +313,7 @@ export default function DashboardPage() {
         </div>
 
         {/* DSO - Délai Moyen de Paiement */}
+        <Link href="/invoices?status=paid" className="block">
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-purple-500/5 transition-all duration-300 group"
@@ -333,8 +334,10 @@ export default function DashboardPage() {
           </motion.p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">jours moyen</p>
         </motion.div>
+        </Link>
 
         {/* En retard */}
+        <Link href="/invoices?status=overdue" className="block">
         <motion.div
           whileHover={{ scale: 1.02 }}
           className={`rounded-2xl p-5 border shadow-sm transition-all duration-300 group ${stats?.overdueCount
@@ -359,8 +362,10 @@ export default function DashboardPage() {
           </motion.p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">factures</p>
         </motion.div>
+        </Link>
 
         {/* En attente */}
+        <Link href="/invoices?status=sent" className="block">
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 group"
@@ -381,6 +386,7 @@ export default function DashboardPage() {
           </motion.p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatCurrency(stats?.pendingRevenue || 0)}</p>
         </motion.div>
+        </Link>
       </motion.div>
     </section>
 
@@ -439,7 +445,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <div className="h-[220px]">
+        <div className="h-[200px] sm:h-[220px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} barGap={4} barCategoryGap="35%">
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
@@ -465,6 +471,46 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
       </motion.div>
+
+      {/* ── Cash Flow Forecast (90 jours) ── */}
+      {cashFlowMonths.some((m) => m.toCollect + m.recurring > 0) && (
+        <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={16} className="text-primary" />
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-white text-sm">Prévision de trésorerie</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Prochains 90 jours</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {cashFlowMonths.map((m, i) => {
+              const total = m.toCollect + m.recurring;
+              return (
+                <div key={m.key} className="group">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{m.label}</span>
+                    <span className="text-sm font-bold text-primary">{formatCurrency(total)}</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, (total / (cashFlowMonths.reduce((max, b) => Math.max(max, b.toCollect + b.recurring), 0) || 1)) * 100)}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.1 }}
+                      className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-400"
+                    />
+                  </div>
+                  {m.toCollect > 0 && m.recurring > 0 && (
+                    <div className="flex gap-3 mt-1">
+                      <span className="text-[11px] text-gray-400">En attente : {formatCurrency(m.toCollect)}</span>
+                      <span className="text-[11px] text-gray-400">Récurrent : {formatCurrency(m.recurring)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Top 5 Clients ── */}
       {topClients.length > 0 && (

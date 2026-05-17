@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { encryptToken } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -89,21 +90,23 @@ export async function GET(req: NextRequest) {
       // Continue anyway, we have the account ID from tokenData
     }
 
-    // Store in database
-    // TODO: SECURITY - OAuth tokens (access_token, refresh_token) are stored in PLAINTEXT.
-    // These MUST be encrypted at rest using AES-256-GCM or similar before storing in the database.
-    // This requires:
-    //   1. An encryption utility (e.g., using Node.js crypto.createCipheriv)
-    //   2. A TOKEN_ENCRYPTION_KEY env var (32 bytes, base64-encoded)
-    //   3. Encrypting tokenData.access_token and tokenData.refresh_token before .update()
-    //   4. Decrypting on read when making API calls on behalf of the user
-    // This is a HIGH PRIORITY security fix - plaintext tokens in DB are a critical vulnerability.
+    // Store in database — tokens are encrypted at rest using AES-256-GCM
+    let encryptedAccessToken: string;
+    let encryptedRefreshToken: string;
+    try {
+      encryptedAccessToken = encryptToken(tokenData.access_token);
+      encryptedRefreshToken = encryptToken(tokenData.refresh_token);
+    } catch (e) {
+      console.error('[Stripe Connect] Token encryption failed:', e);
+      return NextResponse.redirect(`${baseUrl}/settings?stripe-connect-error=encryption_failed`);
+    }
+
     await supabase
       .from('profiles')
       .update({
         stripe_connect_account_id: tokenData.stripe_user_id,
-        stripe_connect_access_token: tokenData.access_token,
-        stripe_connect_refresh_token: tokenData.refresh_token,
+        stripe_connect_access_token: encryptedAccessToken,
+        stripe_connect_refresh_token: encryptedRefreshToken,
         // Stripe Standard tokens don't always have expires_in, handle it safely
         stripe_connect_token_expires_at: tokenData.expires_in
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()

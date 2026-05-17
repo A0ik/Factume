@@ -10,6 +10,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    // Vérifier le subscription tier pour les utilisateurs Free
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, is_trial_active, monthly_invoice_count, invoice_month')
+      .eq('id', user.id)
+      .single();
+
+    const tier = profile?.subscription_tier || 'free';
+    const isFree = tier === 'free' && !profile?.is_trial_active;
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const monthlyCount = profile?.invoice_month === currentMonth ? (profile?.monthly_invoice_count || 0) : 0;
+
+    if (isFree && monthlyCount >= 5) {
+      return NextResponse.json(
+        { error: 'Limite atteinte. Passez au plan Solo pour créer des factures illimitées.', code: 'FREE_LIMIT' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       client_id, client_name_override, document_type, issue_date, due_date,
@@ -17,7 +36,7 @@ export async function POST(req: Request) {
       notes, prefix, linked_invoice_id, idempotency_id
     } = body;
 
-    console.log('[API /invoices/create] User:', user.id, 'Prefix:', prefix, 'Total:', total);
+    console.log('[API /invoices/create] User:', user.id, 'Tier:', tier, 'Prefix:', prefix, 'Total:', total);
 
     const { data: invoiceId, error: rpcError } = await supabase
       .rpc('create_invoice_atomique', {

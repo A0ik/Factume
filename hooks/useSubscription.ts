@@ -33,8 +33,9 @@ export function useSubscription() {
   const isFree     = tier === 'free' && !isTrialActive;
   const isTrial    = tier === 'trial' || isTrialActive;
   const isSolo     = tier === 'solo';
-  const isPro      = tier === 'pro'  || tier === 'business';
+  const isPro      = tier === 'pro';
   const isBusiness = tier === 'business';
+  const isProOrAbove = tier === 'pro' || tier === 'business';
 
   const trialDocumentCount = profile?.trial_document_count || 0;
   const trialDocLimit = 3;
@@ -42,7 +43,7 @@ export function useSubscription() {
   // Trial users get full Pro features but limited to 3 documents
   const effectiveTier = isTrial ? 'pro' : tier;
   const effectiveIsFree = isFree;
-  const effectiveIsPro = isTrial || isPro;
+  const effectiveIsPro = isTrial || isProOrAbove;
   const effectiveIsBusiness = isBusiness;
 
   return {
@@ -54,6 +55,7 @@ export function useSubscription() {
     isTrial,
     isSolo,
     isPro,
+    isProOrAbove,
     isBusiness,
     isTrialActive,
     trialRemaining,

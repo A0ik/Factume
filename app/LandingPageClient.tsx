@@ -1491,9 +1491,9 @@ export default function LandingPageClient() {
             <div>
               <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Ressources</h4>
               <ul className="space-y-2">
-                <li><Link href="/legal/mentions-legales" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Mentions légales</Link></li>
-                <li><Link href="/legal/cgu" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">CGU</Link></li>
-                <li><Link href="/legal/confidentialite" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Confidentialité</Link></li>
+                <li><Link href="/demo" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Démo interactive</Link></li>
+                <li><a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">IA & Dictée vocale</a></li>
+                <li><a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Tarifs</a></li>
               </ul>
             </div>
             <div>

@@ -1,6 +1,36 @@
 import { v4 as uuidv4 } from 'uuid';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 export function generateId(): string { return uuidv4(); }
+
+const TOKEN_ENCRYPTION_KEY = process.env.TOKEN_ENCRYPTION_KEY;
+
+function getEncryptionKey(): Buffer {
+  if (!TOKEN_ENCRYPTION_KEY) {
+    throw new Error('TOKEN_ENCRYPTION_KEY env var is required for encrypting OAuth tokens');
+  }
+  return Buffer.from(TOKEN_ENCRYPTION_KEY, 'base64');
+}
+
+export function encryptToken(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = randomBytes(16);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([iv, authTag, encrypted]).toString('base64');
+}
+
+export function decryptToken(ciphertext: string): string {
+  const key = getEncryptionKey();
+  const data = Buffer.from(ciphertext, 'base64');
+  const iv = data.subarray(0, 16);
+  const authTag = data.subarray(16, 32);
+  const encrypted = data.subarray(32);
+  const decipher = createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  return decipher.update(encrypted) + decipher.final('utf8');
+}
 
 export function formatCurrency(amount: number, currency = 'EUR', locale = 'fr-FR'): string {
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);

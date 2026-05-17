@@ -25,22 +25,31 @@ export async function POST(req: NextRequest) {
 
         // Handle regular invoice payment (metadata.invoiceId)
         if (session.mode === 'payment' && session.metadata?.invoiceId) {
-          const { data: invoice } = await supabase
+          // Vérifier si la facture est déjà payée (idempotence)
+          const { data: existingInvoice } = await supabase
             .from('invoices')
-            .update({ status: 'paid', paid_at: new Date().toISOString() })
+            .select('id, status')
             .eq('id', session.metadata.invoiceId)
-            .select('*, client:client_id(name)')
             .single();
 
-          // Créer une notification pour l'utilisateur
-          if (invoice && session.metadata?.userId) {
-            await supabase.from('notifications').insert({
-              user_id: session.metadata.userId,
-              type: 'invoice_paid',
-              title: `Facture payée — ${invoice.number}`,
-              body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée avec succès.`,
-              link: `/invoices/${invoice.id}`,
-            });
+          if (existingInvoice && existingInvoice.status !== 'paid') {
+            const { data: invoice } = await supabase
+              .from('invoices')
+              .update({ status: 'paid', paid_at: new Date().toISOString() })
+              .eq('id', session.metadata.invoiceId)
+              .select('*, client:client_id(name)')
+              .single();
+
+            // Créer une notification pour l'utilisateur
+            if (invoice && session.metadata?.userId) {
+              await supabase.from('notifications').insert({
+                user_id: session.metadata.userId,
+                type: 'invoice_paid',
+                title: `Facture payée — ${invoice.number}`,
+                body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée avec succès.`,
+                link: `/invoices/${invoice.id}`,
+              });
+            }
           }
         }
 
@@ -105,7 +114,12 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription;
         // Trial → active transition: update tier to the actual plan from metadata
-        const plan = sub.metadata?.plan || 'free';
+        const plan = sub.metadata?.plan;
+        // Ne pas downgrader si les metadata sont absentes — récupérer le plan via le prix
+        if (!plan) {
+          console.warn('[webhook] subscription.updated: metadata.plan missing for sub', sub.id, '- skipping update to prevent accidental downgrade');
+          break;
+        }
         const previousAttributes = event.data.previous_attributes as Partial<Stripe.Subscription> | undefined;
 
         if (sub.status === 'active') {
@@ -238,6 +252,60 @@ export async function POST(req: NextRequest) {
               link: '/settings',
               read: false,
             }).select();
+          }
+        }
+        break;
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = typeof charge.payment_intent === 'string'
+          ? charge.payment_intent
+          : charge.payment_intent?.id;
+
+        if (paymentIntentId) {
+          await supabase.from('invoices')
+            .update({ status: 'refunded' })
+            .eq('stripe_payment_intent_id', paymentIntentId);
+        }
+        break;
+      }
+
+      case 'payment_intent.succeeded': {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        // Marquer les factures SEPA en pending_payment comme payées quand le paiement aboutit
+        if (pi.metadata?.invoice_id) {
+          const { data: invoice } = await supabase
+            .from('invoices')
+            .select('id, status, number, total, client:clients(name)')
+            .eq('id', pi.metadata.invoice_id)
+            .single();
+
+          if (invoice && invoice.status === 'pending_payment') {
+            await supabase.from('invoices')
+              .update({
+                status: 'paid',
+                paid_at: new Date().toISOString(),
+                stripe_payment_intent_id: pi.id,
+              })
+              .eq('id', pi.metadata.invoice_id);
+          }
+        }
+        // Fallback: rechercher par payment_intent_id
+        if (!pi.metadata?.invoice_id) {
+          const { data: invoice } = await supabase
+            .from('invoices')
+            .select('id, status, number, user_id, total, client:clients(name)')
+            .eq('stripe_payment_intent_id', pi.id)
+            .single();
+
+          if (invoice && invoice.status === 'pending_payment') {
+            await supabase.from('invoices')
+              .update({
+                status: 'paid',
+                paid_at: new Date().toISOString(),
+              })
+              .eq('id', invoice.id);
           }
         }
         break;
