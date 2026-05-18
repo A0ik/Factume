@@ -67,10 +67,12 @@ export function sanitizePaymentMethod(val: unknown): string | null {
   return null;
 }
 
-// AI returns confidence as 0-100 per prompt instructions — normalize to 0-1
+// AI may return confidence as 0-100 or 0-1 — auto-detect and normalize to 0-1
 export function normalizeConfidence(val: unknown): number {
   const n = sanitizeNumeric(val) ?? 0;
-  return Math.min(Math.max(n / 100, 0), 1);
+  // If value > 1, assume 0-100 scale and divide; otherwise already 0-1
+  const normalized = n > 1 ? n / 100 : n;
+  return Math.min(Math.max(normalized, 0), 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -312,7 +314,6 @@ Retourne UNIQUEMENT du JSON valide avec cette structure exacte :
       "account_label": "Fournitures de bureau",
       "document_type": "invoice|receipt|other",
       "is_professional_expense": true,
-      "vat_details": [{"rate": 20.0, "base": 100.00, "amount": 20.00}],
       "page_number": 1
     }
   ],

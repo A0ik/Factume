@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
-import {
-  sanitizeCategory,
-  sanitizeString,
-  sanitizeNumeric,
-  sanitizeDate,
-  sanitizePaymentMethod,
-  sanitizeLineItems,
-  sanitizeVatDetails,
-  normalizeConfidence,
-  validatePCGCode,
-  generateStoragePath,
-  buildOcrPrompt,
-  ALLOWED_MIME_TYPES,
-} from '@/lib/ocr-helpers';
+import { generateStoragePath, buildOcrPrompt, ALLOWED_MIME_TYPES } from '@/lib/ocr-helpers';
+import { processAndSaveExpense } from '@/lib/ocr-core';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -235,155 +222,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize all extracted fields using shared helpers
-    const category = sanitizeCategory(parsed.category);
-    const supplierCategory = sanitizeString(parsed.supplier_category);
-
-    const extractedAccountCode = sanitizeString(parsed.account_code);
-    const extractedAccountLabel = sanitizeString(parsed.account_label);
-
-    const extracted = {
-      vendor: sanitizeString(parsed.vendor),
-      vendor_address: sanitizeString(parsed.vendor_address),
-      vendor_siret: sanitizeString(parsed.vendor_siret),
-      vendor_vat_number: sanitizeString(parsed.vendor_vat_number),
-      amount: sanitizeNumeric(parsed.amount),
-      ht_amount: sanitizeNumeric(parsed.ht_amount),
-      vat_amount: sanitizeNumeric(parsed.vat_amount),
-      vat_rate: sanitizeNumeric(parsed.vat_rate),
-      vat_details: sanitizeVatDetails(parsed.vat_details),
-      date: sanitizeDate(parsed.date),
-      due_date: sanitizeDate(parsed.due_date),
-      invoice_number: sanitizeString(parsed.invoice_number),
-      description: sanitizeString(parsed.description),
-      category,
-      currency: sanitizeString(parsed.currency) ?? 'EUR',
-      line_items: sanitizeLineItems(parsed.line_items),
-      confidence: normalizeConfidence(parsed.confidence),
-      payment_method: sanitizePaymentMethod(parsed.payment_method),
-      is_duplicate: typeof parsed.is_duplicate === 'boolean' ? parsed.is_duplicate : false,
-      supplier_category: supplierCategory,
-      account_code: extractedAccountCode,
-      account_label: extractedAccountLabel,
-      document_type: sanitizeString(parsed.document_type),
-      is_professional_expense: typeof parsed.is_professional_expense === 'boolean' ? parsed.is_professional_expense : true,
-      cost_center: sanitizeString(parsed.cost_center),
-    };
-
-    // Determine account code: vendor_mappings → AI suggestion (PCG-validated) → plan-comptable fallback
-    const accountMapping = getAccountCode(category, supplierCategory);
-    let finalAccountCode = (validatePCGCode(extractedAccountCode) ? extractedAccountCode : null) ?? accountMapping.code;
-    let finalAccountLabel = extractedAccountLabel ?? accountMapping.label;
-
-    // Check vendor_mappings for user-learned account codes (highest priority)
-    if (extracted.vendor) {
-      const normalized = extracted.vendor.toLowerCase().trim();
-      const { data: mapping } = await supabase
-        .from('vendor_mappings')
-        .select('account_code, account_name')
-        .eq('user_id', user.id)
-        .ilike('vendor_name_pattern', normalized)
-        .maybeSingle();
-      if (mapping?.account_code) {
-        finalAccountCode = mapping.account_code;
-        finalAccountLabel = mapping.account_name || finalAccountLabel;
-      }
-    }
-
-    // Generate journal entry (écriture comptable)
-    const journalEntry = generateJournalEntry({
-      category,
-      supplierCategory,
-      amountTtc: extracted.amount ?? 0,
-      amountHt: extracted.ht_amount,
-      vatAmount: extracted.vat_amount,
-      vatRate: extracted.vat_rate,
-      paymentMethod: extracted.payment_method,
+    // Sanitize, resolve accounts, generate journal entry, save to DB — all in one call
+    const result = await processAndSaveExpense(parsed, user.id, supabase, {
+      receiptUrl: receiptPublicUrl,
+      storagePath,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      isPdf,
     });
 
-    // Build journal entry JSON once — reused in both DB record and API response
-    const journalEntryJson = {
-      debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
-      credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
-      vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
-    };
-
-    // ------------------------------------------------------------------
-    // 9. Save to expenses table
-    // ------------------------------------------------------------------
-    const expenseRecord: Record<string, unknown> = {
-      user_id: user.id,
-      vendor: extracted.vendor,
-      amount: extracted.amount,
-      vat_amount: extracted.vat_amount,
-      category: extracted.category,
-      date: extracted.date,
-      description: extracted.description,
-      receipt_url: receiptPublicUrl,
-      receipt_storage_path: storagePath,
-      payment_method: extracted.payment_method,
-      status: 'pending',
-      ocr_raw_response: parsed,
-      ocr_confidence: extracted.confidence,
-      ocr_line_items: extracted.line_items,
-      ocr_supplier_siret: extracted.vendor_siret,
-      ocr_invoice_number: extracted.invoice_number,
-      ocr_currency: extracted.currency,
-      ocr_payment_due_date: extracted.due_date,
-      account_code: finalAccountCode,
-      account_label: finalAccountLabel,
-      journal_type: journalEntry.journalType,
-      journal_entry: journalEntryJson,
-      vat_account: journalEntry.vatAccount || null,
-      document_type: extracted.document_type,
-      is_professional_expense: extracted.is_professional_expense,
-      supplier_category: extracted.supplier_category,
-    };
-
-    // Remove null keys so Supabase uses column defaults
-    for (const key of Object.keys(expenseRecord)) {
-      if (expenseRecord[key] === null || expenseRecord[key] === undefined) {
-        delete expenseRecord[key];
-      }
-    }
-
-    const { data: savedExpense, error: dbError } = await supabase
-      .from('expenses')
-      .insert(expenseRecord)
-      .select()
-      .single();
-
-    if (dbError) {
-      console.error('[OCR Receipt] DB insert error:', dbError);
-      // Still return extraction results even if DB save fails
+    if (result.dbError) {
       return NextResponse.json(
         {
           warning: 'Extraction réussie mais erreur lors de la sauvegarde en base.',
-          extracted,
+          extracted: result.extracted,
           receipt_url: receiptPublicUrl,
           receipt_storage_path: storagePath,
-          db_error: dbError.message,
+          db_error: result.dbError,
         },
-        { status: 207 }, // 207 Multi-Status: partial success
+        { status: 207 },
       );
     }
 
-    // ------------------------------------------------------------------
-    // 10. Return comprehensive response
-    // ------------------------------------------------------------------
     return NextResponse.json(
       {
         success: true,
-        expense: savedExpense,
-        extracted,
-        accounting: {
-          account_code: finalAccountCode,
-          account_label: finalAccountLabel,
-          journal_type: journalEntry.journalType,
-          journal_entry: journalEntryJson,
-          vat_deductible: accountMapping.vatDeductible,
-          default_vat_rate: accountMapping.defaultVatRate,
-        },
+        expense: result.savedExpense,
+        extracted: result.extracted,
+        accounting: result.accounting,
         receipt_url: receiptPublicUrl,
         receipt_storage_path: storagePath,
         meta: {
@@ -392,7 +259,7 @@ export async function POST(req: NextRequest) {
           file_type: file.type,
           is_pdf: isPdf,
           model: OCR_MODEL,
-          ocr_confidence: extracted.confidence,
+          ocr_confidence: result.extracted.confidence,
         },
       },
       { status: 200 },

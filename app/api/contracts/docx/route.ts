@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { generateContractDOCX } from '@/lib/labor-law/docx-export-service';
 
 // Map snake_case DB fields to camelCase ContractData fields
@@ -71,6 +72,10 @@ function normalizeContractData(raw: Record<string, any>): Record<string, any> {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const body = await req.json();
     const raw = body.contract ?? body;
 

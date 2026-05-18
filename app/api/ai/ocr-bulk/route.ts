@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import {
-  sanitizeCategory,
-  sanitizeString,
-  sanitizeNumeric,
-  sanitizeDate,
-  sanitizePaymentMethod,
-  sanitizeLineItems,
-  sanitizeVatDetails,
-  normalizeConfidence,
-  validatePCGCode,
   generateStoragePath,
   buildOcrPrompt,
   runWithConcurrency,
   ALLOWED_MIME_TYPES,
 } from '@/lib/ocr-helpers';
+import { processAndSaveExpense, processSegments, type MultiPageOCRResult } from '@/lib/ocr-core';
+import { detectInvoiceSegments, isPDF as isPdfMime } from '@/lib/pdf-splitter';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -137,83 +129,22 @@ async function processFile(
       return { success: false, file: fileName, error: 'Réponse IA invalide (JSON malformé).' };
     }
 
-    // Sanitize all fields with shared helpers (consistent with ocr-receipt)
-    const category = sanitizeCategory(parsed.category);
-    const supplierCategory = sanitizeString(parsed.supplier_category);
-
-    const extractedAccountCode = sanitizeString(parsed.account_code);
-    const extractedAccountLabel = sanitizeString(parsed.account_label);
-
-    const accountMapping = getAccountCode(category, supplierCategory);
-    const finalAccountCode = (validatePCGCode(extractedAccountCode) ? extractedAccountCode : null) ?? accountMapping.code;
-    const finalAccountLabel = extractedAccountLabel ?? accountMapping.label;
-
-    const journalEntry = generateJournalEntry({
-      category,
-      supplierCategory,
-      amountTtc: sanitizeNumeric(parsed.amount) ?? 0,
-      amountHt: sanitizeNumeric(parsed.ht_amount),
-      vatAmount: sanitizeNumeric(parsed.vat_amount),
-      vatRate: sanitizeNumeric(parsed.vat_rate),
-      paymentMethod: sanitizePaymentMethod(parsed.payment_method),
+    // Sanitize, resolve accounts, generate journal entry, save to DB — all via ocr-core
+    const result = await processAndSaveExpense(parsed, userId, supabase, {
+      receiptUrl,
+      storagePath,
+      fileName,
+      fileSize: file.size,
+      fileType: file.type,
+      isPdf,
     });
 
-    const expenseRecord: Record<string, unknown> = {
-      user_id: userId,
-      vendor: sanitizeString(parsed.vendor),
-      amount: sanitizeNumeric(parsed.amount),
-      vat_amount: sanitizeNumeric(parsed.vat_amount),
-      category,
-      date: sanitizeDate(parsed.date),
-      due_date: sanitizeDate(parsed.due_date),
-      description: sanitizeString(parsed.description),
-      receipt_url: receiptUrl,
-      receipt_storage_path: storagePath,
-      payment_method: sanitizePaymentMethod(parsed.payment_method),
-      status: 'pending',
-      // OCR metadata
-      ocr_raw_response: parsed,
-      ocr_confidence: normalizeConfidence(parsed.confidence),
-      ocr_line_items: sanitizeLineItems(parsed.line_items),
-      ocr_supplier_siret: sanitizeString(parsed.vendor_siret),
-      ocr_invoice_number: sanitizeString(parsed.invoice_number),
-      ocr_currency: sanitizeString(parsed.currency) ?? 'EUR',
-      ocr_payment_due_date: sanitizeDate(parsed.due_date),
-      // Accounting (PCG)
-      account_code: finalAccountCode,
-      account_label: finalAccountLabel,
-      journal_type: journalEntry.journalType,
-      journal_entry: {
-        debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
-        credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
-        vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
-      },
-      vat_account: journalEntry.vatAccount || null,
-      document_type: sanitizeString(parsed.document_type),
-      supplier_category: supplierCategory,
-      is_professional_expense: typeof parsed.is_professional_expense === 'boolean' ? parsed.is_professional_expense : true,
-      vat_details: sanitizeVatDetails(parsed.vat_details),
-    };
-
-    // Remove null/undefined keys so Supabase uses column defaults
-    for (const key of Object.keys(expenseRecord)) {
-      if (expenseRecord[key] === null || expenseRecord[key] === undefined) {
-        delete expenseRecord[key];
-      }
+    if (result.dbError) {
+      console.error(`[OCR Bulk] Insert failed for ${fileName}:`, result.dbError);
+      return { success: false, file: fileName, error: `Erreur base de données : ${result.dbError}` };
     }
 
-    const { data: expense, error: insertError } = await supabase
-      .from('expenses')
-      .insert(expenseRecord)
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error(`[OCR Bulk] Insert failed for ${fileName}:`, insertError);
-      return { success: false, file: fileName, error: `Erreur base de données : ${insertError.message}` };
-    }
-
-    return { success: true, file: fileName, expense: expense ?? undefined };
+    return { success: true, file: fileName, expense: result.savedExpense ?? undefined };
   } catch (error: unknown) {
     console.error(`[OCR Bulk] Error processing ${fileName}:`, error);
     const err = error as { message?: string; status?: number };
@@ -309,67 +240,77 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 6. Multi-invoice detection (delegate to ocr-multi-page)
+    // 6. Multi-invoice detection (direct function calls, no HTTP)
     // ------------------------------------------------------------------
     if (detectMultiInvoice && files.length === 1 && files[0].type === 'application/pdf') {
       const pdfFile = files[0];
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const userCookie = req.headers.get('cookie') ?? '';
 
-      // Detect invoice boundaries
-      const detectFormData = new FormData();
-      detectFormData.append('file', pdfFile);
-
-      const detectResponse = await fetch(`${baseUrl}/api/ai/detect-invoices`, {
-        method: 'POST',
-        headers: { Cookie: userCookie },
-        body: detectFormData,
-      });
-
-      if (!detectResponse.ok) {
-        const err = await detectResponse.json().catch(() => ({ error: 'Détection échouée' }));
+      // Validate MIME
+      if (!isPdfMime(pdfFile.type)) {
         return NextResponse.json(
-          { error: err.error || 'Erreur lors de la détection des factures' },
-          { status: detectResponse.status },
+          { error: `Type de fichier non supporté (${pdfFile.type}). Seuls les fichiers PDF sont acceptés.` },
+          { status: 400 },
         );
       }
 
-      const detectResult = await detectResponse.json();
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      const pdfBuffer = Buffer.from(arrayBuffer);
 
-      // Extract each detected invoice
-      const extractFormData = new FormData();
-      extractFormData.append('file', pdfFile);
-      extractFormData.append('segments', JSON.stringify(detectResult.segments));
-
-      const extractResponse = await fetch(`${baseUrl}/api/ai/ocr-multi-page`, {
-        method: 'POST',
-        headers: { Cookie: userCookie },
-        body: extractFormData,
+      const openrouterForDetect = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: process.env.OPENROUTER_API_KEY,
       });
 
-      if (!extractResponse.ok) {
-        const err = await extractResponse.json().catch(() => ({ error: 'Extraction échouée' }));
+      // Detect invoice boundaries (direct call, no HTTP)
+      let detectResult;
+      try {
+        detectResult = await detectInvoiceSegments(pdfBuffer, openrouterForDetect);
+      } catch (detectError) {
+        console.error('[OCR Bulk] Detection failed:', detectError);
         return NextResponse.json(
-          { error: err.error || "Erreur lors de l'extraction des factures" },
-          { status: extractResponse.status },
+          { error: 'Erreur lors de la détection des factures' },
+          { status: 500 },
         );
       }
 
-      const extractResult = await extractResponse.json();
+      // Extract each detected invoice (direct call, no HTTP)
+      let extractResults: MultiPageOCRResult[];
+      try {
+        extractResults = await processSegments(
+          pdfBuffer,
+          detectResult.segments,
+          user.id,
+          supabase,
+          openrouterForDetect,
+          2,
+        );
+      } catch (extractError) {
+        console.error('[OCR Bulk] Extraction failed:', extractError);
+        return NextResponse.json(
+          { error: "Erreur lors de l'extraction des factures" },
+          { status: 500 },
+        );
+      }
 
-      const bulkResults = extractResult.results.map((r: Record<string, unknown>) => ({
+      const bulkResults = extractResults.map((r) => ({
         success: r.success,
         file: pdfFile.name,
         fileSegment: r.segment
-          ? `p.${(r.segment as Record<string, number>).startPage}-${(r.segment as Record<string, number>).endPage}`
+          ? `p.${r.segment.startPage}-${r.segment.endPage}`
           : undefined,
         expense: r.expense,
         error: r.error,
       }));
 
+      const successCount = extractResults.filter((r) => r.success).length;
+
       return NextResponse.json({
         results: bulkResults,
-        summary: extractResult.summary,
+        summary: {
+          totalSegments: detectResult.segments.length,
+          succeeded: successCount,
+          failed: detectResult.segments.length - successCount,
+        },
         multiInvoiceDetected: true,
         segments: detectResult.segments,
       });

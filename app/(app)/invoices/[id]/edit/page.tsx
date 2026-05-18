@@ -329,7 +329,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const handleSave = async () => {
     if (!invoice) return;
 
-    if (!clientName && !items[0].description) {
+    if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation');
       return;
     }

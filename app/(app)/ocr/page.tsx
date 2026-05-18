@@ -171,22 +171,31 @@ function getDextStatus(file: ScannedFile): 'processing' | 'to_review' | 'ready' 
   return 'to_review';
 }
 
-// Duplicate detection
+// Duplicate detection with ±3 day tolerance (like Dext)
 function checkDuplicate(file: ScannedFile, allFiles: ScannedFile[], existingExpenses: DbExpense[]): boolean {
   if (!file.result?.extracted) return false;
   const { vendor, amount, date } = file.result.extracted;
   if (!vendor || !amount || !date) return false;
 
+  const fileDate = new Date(date).getTime();
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
   // Check against other completed files
   for (const other of allFiles) {
     if (other.id === file.id || other.status !== 'complete' || !other.result?.extracted) continue;
     const o = other.result.extracted;
-    if (o.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(o.amount - amount) < 0.01 && o.date === date) return true;
+    if (o.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(o.amount - amount) < 0.01 && o.date) {
+      const otherDate = new Date(o.date).getTime();
+      if (Math.abs(fileDate - otherDate) <= THREE_DAYS_MS) return true;
+    }
   }
 
   // Check against DB expenses
   for (const e of existingExpenses) {
-    if (e.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(e.amount - amount) < 0.01 && e.date === date) return true;
+    if (e.vendor?.toLowerCase() === vendor.toLowerCase() && Math.abs(e.amount - amount) < 0.01 && e.date) {
+      const expDate = new Date(e.date).getTime();
+      if (Math.abs(fileDate - expDate) <= THREE_DAYS_MS) return true;
+    }
   }
   return false;
 }

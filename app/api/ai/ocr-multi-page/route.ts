@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
-  extractPageRange,
   type DetectionResult,
   type InvoiceSegment,
   isPDF,
+  detectInvoiceSegments,
 } from '@/lib/pdf-splitter';
+import { processSegments } from '@/lib/ocr-core';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -33,122 +35,6 @@ interface MultiPageOCRResponse {
     succeeded: number;
     failed: number;
   };
-}
-
-// ---------------------------------------------------------------------------
-// Helper: Call the existing OCR receipt endpoint
-// ---------------------------------------------------------------------------
-
-const INTERNAL_FETCH_TIMEOUT_MS = 60_000;
-
-async function extractInvoiceFromPDF(
-  pdfBuffer: Buffer,
-  segment: InvoiceSegment,
-  userCookie: string,
-  req: Request,
-): Promise<OCRResult> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), INTERNAL_FETCH_TIMEOUT_MS);
-
-  try {
-    const endPage = segment.endPage ?? segment.startPage;
-    console.log(`[OCR Multi-Page] 🔍 Extraction segment PDF ${segment.startPage}-${endPage}`);
-
-    // Extraire le segment PDF (sans conversion en image)
-    const segmentPdfBuffer = await extractPageRange(pdfBuffer, segment.startPage, endPage);
-
-    console.log(`[OCR Multi-Page] 📦 Segment PDF extrait: ${segmentPdfBuffer.length} bytes`);
-
-    const formData = new FormData();
-    const blob = new Blob([new Uint8Array(segmentPdfBuffer)], { type: 'application/pdf' });
-    formData.append('file', blob, `segment_${segment.startPage}-${endPage}.pdf`);
-
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('host')
-      ? `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('host')}`
-      : 'http://localhost:3000';
-
-    console.log(`[OCR Multi-Page] 📡 Appel OCR vers: ${baseUrl}/api/ai/ocr-receipt`);
-
-    const response = await fetch(`${baseUrl}/api/ai/ocr-receipt`, {
-      method: 'POST',
-      headers: { Cookie: userCookie },
-      body: formData,
-      signal: controller.signal,
-    });
-
-    console.log(`[OCR Multi-Page] 📥 Réponse OCR: status=${response.status}, ok=${response.ok}`);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Erreur OCR inconnue' }));
-      console.error(`[OCR Multi-Page] ❌ Erreur OCR segment ${segment.startPage}-${endPage}:`, errorData);
-
-      return {
-        success: false,
-        segment,
-        error: errorData.error || `Erreur HTTP ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
-    console.log(`[OCR Multi-Page] ✅ Extraction réussie segment ${segment.startPage}-${endPage}`);
-
-    return {
-      success: true,
-      segment,
-      expense: data.expense ?? data.extracted,
-    };
-  } catch (error) {
-    console.error(`[OCR Multi-Page] 💥 Exception segment ${segment.startPage}-${segment.endPage}:`, error);
-    const message = error instanceof Error
-      ? (error.name === 'AbortError' ? 'Délai dépassé (timeout 60s).' : error.message)
-      : 'Erreur inconnue';
-    return { success: false, segment, error: message };
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Helper: Process segments with concurrency limit (queue-based, race-free)
-// ---------------------------------------------------------------------------
-
-async function processSegments(
-  pdfBuffer: Buffer,
-  segments: InvoiceSegment[],
-  userCookie: string,
-  req: Request,
-  limit: number = 2,
-): Promise<OCRResult[]> {
-  const results = new Array<OCRResult>(segments.length);
-  // queue holds [originalIndex, segment] — shift() is synchronous, no race
-  const queue: Array<[number, InvoiceSegment]> = segments.map((s, i) => [i, s]);
-
-  async function worker(): Promise<void> {
-    while (queue.length > 0) {
-      const item = queue.shift();
-      if (!item) break;
-      const [idx, segment] = item;
-
-      try {
-        console.log(`[OCR Multi-Page] Worker ${idx}: Processing segment pages ${segment.startPage}-${segment.endPage ?? segment.startPage}`);
-
-        // Utiliser extractInvoiceFromPDF au lieu de mergePagesToImage + extractInvoiceFromImage
-        results[idx] = await extractInvoiceFromPDF(pdfBuffer, segment, userCookie, req);
-      } catch (error) {
-        console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage ?? segment.startPage}:`, error);
-
-        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-        results[idx] = {
-          success: false,
-          segment,
-          error: errorMessage,
-        };
-      }
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, segments.length) }, worker));
-  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,29 +148,23 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      // Auto-detect segments by calling detect-invoices endpoint
-      const detectFormData = new FormData();
-      detectFormData.append('file', file);
-
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const detectUrl = `${baseUrl}/api/ai/detect-invoices`;
-      const userCookieForDetect = req.headers.get('cookie') ?? '';
-
-      const detectResponse = await fetch(detectUrl, {
-        method: 'POST',
-        headers: { Cookie: userCookieForDetect },
-        body: detectFormData,
+      // Auto-detect segments via direct function call (no HTTP)
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfBufferForDetect = Buffer.from(arrayBuffer);
+      const openrouterForDetect = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: process.env.OPENROUTER_API_KEY!,
       });
 
-      if (!detectResponse.ok) {
+      try {
+        const detectData = await detectInvoiceSegments(pdfBufferForDetect, openrouterForDetect);
+        segments = detectData.segments;
+      } catch {
         return NextResponse.json(
           { error: 'Échec de la détection automatique des factures.' },
           { status: 500 }
         );
       }
-
-      const detectData: DetectionResult = await detectResponse.json();
-      segments = detectData.segments;
     }
 
     if (segments.length > MAX_SEGMENTS) {
@@ -300,8 +180,9 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
 
-    const userCookie = req.headers.get('cookie') ?? '';
-    const results = await processSegments(pdfBuffer, segments, userCookie, req, 2);
+    const results = await processSegments(pdfBuffer, segments, user.id, supabase,
+      new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey: process.env.OPENROUTER_API_KEY! }), 2
+    );
 
     // ------------------------------------------------------------------
     // 6. Return results

@@ -687,7 +687,7 @@ export default function ExpenseAnalyticsPage() {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">TVA par taux</p>
             <div className="space-y-2">
               {vatByRate.map((v, idx) => {
-                const vatMax = vatByRate[0].amount || 1;
+                const vatMax = vatByRate[0]?.amount || 1;
                 const barW = (v.amount / vatMax) * 100;
                 return (
                   <div key={v.rate} className="flex items-center gap-3">

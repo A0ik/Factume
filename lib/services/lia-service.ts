@@ -92,7 +92,7 @@ JSON uniquement: {isConform:true/false, missingMentions:[], recommendations:[], 
           console.log('[LIA] Coût conformité:', cost.toFixed(4), 'USD');
         }
 
-        const response = JSON.parse(completion.choices[0].message.content || '{}');
+        const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
 
         return {
           isConform: response.isConform || false,
@@ -153,7 +153,7 @@ JSON uniquement: {modifiedPayslip:{}, explanation:"", warnings:[], legalComplian
           console.log('[LIA] Coût requête:', cost.toFixed(4), 'USD | Tokens:', completion.usage.total_tokens);
         }
 
-        const response = JSON.parse(completion.choices[0].message.content || '{}');
+        const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
 
         return {
           modifiedPayslip: response.modifiedPayslip || request.currentPayslip,

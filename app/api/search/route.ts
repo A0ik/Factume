@@ -261,8 +261,8 @@ async function calculateFacets(
   const categoryMap = new Map<string, number>();
   const vendorMap = new Map<string, number>();
   const statusMap = new Map<string, number>();
-  let minDate = results[0].date;
-  let maxDate = results[0].date;
+  let minDate = results[0]?.date || '';
+  let maxDate = results[0]?.date || '';
 
   for (const r of results) {
     if (r.category) {

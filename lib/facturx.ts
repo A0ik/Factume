@@ -55,9 +55,16 @@ function formatCurrencyFacturX(amount: number): string {
 }
 
 function getVatCategoryCode(vatRate: number): string {
-  // Codes de catégorie TVA selon EN 16931
-  if (vatRate === 0) return 'E'; // Exempté
-  return 'S'; // Standard
+  // Codes de catégorie TVA selon EN 16931 (UNCL 5305)
+  if (vatRate === 0) return 'Z'; // Zero-rated (taux zéro)
+  return 'S'; // Standard (taux normal)
+}
+
+function getVatExemptionReason(vatRate: number, legalStatus?: string): string {
+  if (vatRate === 0 && legalStatus === 'auto-entrepreneur') {
+    return 'TVA non applicable, art. 293 B du CGI';
+  }
+  return '';
 }
 
 /**
@@ -88,7 +95,9 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
   const issueDate = formatDateFacturX(invoice.issue_date);
   const docTypeCode = invoice.document_type === 'invoice' ? '380' :
                      invoice.document_type === 'credit_note' ? '381' :
-                     invoice.document_type === 'quote' ? '389' : '380';
+                     invoice.document_type === 'quote' ? '389' :
+                     invoice.document_type === 'deposit' ? '380' :
+                     invoice.document_type === 'purchase_order' ? '220' : '380';
 
   // Due date
   let dueDateEl = '';
@@ -109,15 +118,11 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
   const sellerSiret = profile.siret?.trim() || '';
   const sellerVat = profile.vat_number?.trim() || '';
 
-  const sellerAddressParts = [
-    profile.address?.trim(),
-    profile.postal_code?.trim(),
-    profile.city?.trim(),
-    profile.country?.trim() || 'FR'
-  ].filter(Boolean);
-  const sellerAddress = sellerAddressParts.length > 0
-    ? sellerAddressParts.join(', ')
-    : sellerName;
+  const sellerLineOne = escapeXml(profile.address?.trim() || sellerName);
+  const sellerCity = escapeXml(profile.city?.trim() || '');
+  const sellerPostcode = escapeXml(profile.postal_code?.trim() || '');
+  const sellerCountry = escapeXml(profile.country?.trim() || 'FR');
+  const sellerEmail = profile.email?.trim() || '';
 
   // BuyerTradeParty - Acheteur
   const buyerName = escapeXml(
@@ -135,15 +140,11 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
   const buyerVat = invoice.client_vat_number?.trim() || invoice.client?.vat_number?.trim() || '';
 
   // Priorité aux champs directs de l'invoice, sinon utilise les champs du client lié
-  const buyerAddressParts = [
-    invoice.client_address?.trim() || invoice.client?.address?.trim(),
-    invoice.client_postal_code?.trim() || invoice.client?.postal_code?.trim(),
-    invoice.client_city?.trim() || invoice.client?.city?.trim(),
-    invoice.client?.country?.trim() || 'FR'
-  ].filter(Boolean);
-  const buyerAddress = buyerAddressParts.length > 0
-    ? buyerAddressParts.join(', ')
-    : buyerName;
+  const buyerLineOne = escapeXml(invoice.client_address?.trim() || invoice.client?.address?.trim() || buyerName);
+  const buyerCity = escapeXml(invoice.client_city?.trim() || invoice.client?.city?.trim() || '');
+  const buyerPostcode = escapeXml(invoice.client_postal_code?.trim() || invoice.client?.postal_code?.trim() || '');
+  const buyerCountry = escapeXml(invoice.client?.country?.trim() || 'FR');
+  const buyerEmail = (invoice as any).client_email?.trim() || invoice.client?.email?.trim() || '';
 
   // Lignes de facturation avec validation
   const lineItemsXml = invoice.items.map((item, idx) => {
@@ -193,34 +194,43 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
       </ram:IncludedSupplyChainTradeLineItem>`;
   }).join('');
 
-  // Calcul des totaux de TVA par taux
+  // Calcul des totaux de TVA par taux (après remise globale)
+  const discountPct = Number(invoice.discount_percent) || 0;
   const vatByRate = new Map<number, { taxable: number; tax: number }>();
   invoice.items.forEach(item => {
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unit_price) || 0;
     const vatRate = Number(item.vat_rate) || 0;
 
-    const taxable = quantity * unitPrice;
-    const tax = taxable * (vatRate / 100);
+    const lineTotal = item.total ?? quantity * unitPrice;
+    const afterDiscount = lineTotal * (1 - discountPct / 100);
+    const tax = afterDiscount * (vatRate / 100);
 
     const current = vatByRate.get(vatRate) || { taxable: 0, tax: 0 };
     vatByRate.set(vatRate, {
-      taxable: current.taxable + taxable,
+      taxable: current.taxable + afterDiscount,
       tax: current.tax + tax
     });
   });
 
-  const vatBreakdownXml = Array.from(vatByRate.entries()).map(([rate, amounts]) => `
+  const vatBreakdownXml = Array.from(vatByRate.entries()).map(([rate, amounts]) => {
+    const catCode = getVatCategoryCode(rate);
+    const exemptionReason = getVatExemptionReason(rate, profile.legal_status);
+    return `
         <ram:ApplicableTradeTax>
           <ram:CalculatedAmount>${formatCurrencyFacturX(amounts.tax)}</ram:CalculatedAmount>
           <ram:TypeCode>VAT</ram:TypeCode>
           <ram:BasisAmount>${formatCurrencyFacturX(amounts.taxable)}</ram:BasisAmount>
-          <ram:CategoryCode>${getVatCategoryCode(rate)}</ram:CategoryCode>
+          <ram:CategoryCode>${catCode}</ram:CategoryCode>
+          ${exemptionReason ? `<ram:ExemptionReason>${escapeXml(exemptionReason)}</ram:ExemptionReason>` : ''}
           <ram:RateApplicablePercent>${rate}</ram:RateApplicablePercent>
-        </ram:ApplicableTradeTax>`).join('');
+        </ram:ApplicableTradeTax>`;
+  }).join('');
 
   // Calculs des totaux
   const subtotal = Number(invoice.subtotal) || 0;
+  const discountAmount = Number(invoice.discount_amount) || 0;
+  const taxBasis = subtotal - discountAmount;
   const vatAmount = Number(invoice.vat_amount) || 0;
   const total = Number(invoice.total) || 0;
 
@@ -228,6 +238,18 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
   if (total < 0) {
     throw new Error('Montant total invalide (négatif)');
   }
+
+  const discountXml = discountAmount > 0 ? `
+      <ram:SpecifiedTradeAllowanceCharge>
+        <ram:ChargeIndicator><udt:Indicator>false</udt:Indicator></ram:ChargeIndicator>
+        <ram:ActualAmount>${formatCurrencyFacturX(discountAmount)}</ram:ActualAmount>
+        <ram:Reason>${escapeXml(`Remise ${discountPct}%`)}</ram:Reason>
+        <ram:CategoryTradeTax>
+          <ram:TypeCode>VAT</ram:TypeCode>
+          <ram:CategoryCode>S</ram:CategoryCode>
+          <ram:RateApplicablePercent>${invoice.items[0]?.vat_rate ?? 20}</ram:RateApplicablePercent>
+        </ram:CategoryTradeTax>
+      </ram:SpecifiedTradeAllowanceCharge>` : '';
 
   // XML complet Factur-X (Profil EN 16931)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -260,9 +282,14 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
         ${sellerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(sellerVat)}</ram:ID>
         </ram:SpecifiedTaxRegistration>` : ''}
+        ${sellerEmail ? `<ram:URIUniversalCommunication>
+          <ram:URIID schemeID="EM">${escapeXml(sellerEmail)}</ram:URIID>
+        </ram:URIUniversalCommunication>` : ''}
         <ram:PostalTradeAddress>
-          <ram:LineOne>${escapeXml(sellerAddress)}</ram:LineOne>
-          <ram:CountryID>${escapeXml(profile.country?.trim() || 'FR')}</ram:CountryID>
+          <ram:LineOne>${sellerLineOne}</ram:LineOne>
+          ${sellerPostcode ? `<ram:PostcodeCode>${sellerPostcode}</ram:PostcodeCode>` : ''}
+          ${sellerCity ? `<ram:CityName>${sellerCity}</ram:CityName>` : ''}
+          <ram:CountryID>${sellerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
       </ram:SellerTradeParty>
 
@@ -272,20 +299,39 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
         ${buyerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(buyerVat)}</ram:ID>
         </ram:SpecifiedTaxRegistration>` : ''}
+        ${buyerEmail ? `<ram:URIUniversalCommunication>
+          <ram:URIID schemeID="EM">${escapeXml(buyerEmail)}</ram:URIID>
+        </ram:URIUniversalCommunication>` : ''}
         <ram:PostalTradeAddress>
-          <ram:LineOne>${escapeXml(buyerAddress)}</ram:LineOne>
-          <ram:CountryID>${escapeXml(invoice.client?.country?.trim() || 'FR')}</ram:CountryID>
+          <ram:LineOne>${buyerLineOne}</ram:LineOne>
+          ${buyerPostcode ? `<ram:PostcodeCode>${buyerPostcode}</ram:PostcodeCode>` : ''}
+          ${buyerCity ? `<ram:CityName>${buyerCity}</ram:CityName>` : ''}
+          <ram:CountryID>${buyerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
       </ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
 
-    <ram:ApplicableHeaderTradeDelivery />
+    <ram:ApplicableHeaderTradeDelivery>
+      ${invoice.document_type === 'delivery_note' && invoice.issue_date ? `<ram:ActualDeliverySupplyChainEvent>
+        <ram:OccurrenceDateTime>
+          <udt:DateTimeString format="102">${formatDateFacturX(invoice.issue_date)}</udt:DateTimeString>
+        </ram:OccurrenceDateTime>
+      </ram:ActualDeliverySupplyChainEvent>` : ''}
+    </ram:ApplicableHeaderTradeDelivery>
 
     <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>${escapeXml(currency)}</ram:InvoiceCurrencyCode>${vatBreakdownXml}
+      <ram:InvoiceCurrencyCode>${escapeXml(currency)}</ram:InvoiceCurrencyCode>
+      ${(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && profile.iban ? `<ram:SpecifiedTradeSettlementPaymentMeans>
+        <ram:TypeCode>58</ram:TypeCode>
+        <ram:PayeePartyCreditorFinancialAccount>
+          <ram:IBANID>${escapeXml(profile.iban.replace(/\s/g, ''))}</ram:IBANID>
+          ${profile.bic ? `<ram:ProprietaryID>${escapeXml(profile.bic)}</ram:ProprietaryID>` : ''}
+        </ram:PayeePartyCreditorFinancialAccount>
+      </ram:SpecifiedTradeSettlementPaymentMeans>` : ''}${vatBreakdownXml}${discountXml}
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
         <ram:LineTotalAmount>${formatCurrencyFacturX(subtotal)}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>${formatCurrencyFacturX(subtotal)}</ram:TaxBasisTotalAmount>
+        ${discountAmount > 0 ? `<ram:AllowanceTotalAmount>${formatCurrencyFacturX(discountAmount)}</ram:AllowanceTotalAmount>` : ''}
+        <ram:TaxBasisTotalAmount>${formatCurrencyFacturX(taxBasis)}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="${escapeXml(currency)}">${formatCurrencyFacturX(vatAmount)}</ram:TaxTotalAmount>
         <ram:GrandTotalAmount>${formatCurrencyFacturX(total)}</ram:GrandTotalAmount>
         <ram:DuePayableAmount>${formatCurrencyFacturX(total)}</ram:DuePayableAmount>
@@ -401,7 +447,7 @@ function createFacturXXmp(invoiceNumber: string): string {
    xmp:CreateDate="${now}"
    pdf:Producer="FacturmeWeb"
    fx:ConformanceLevel="EN 16931"
-   fx:DocumentFileName="${invoiceNumber}-facturx.xml"
+   fx:DocumentFileName="factur-x.xml"
    fx:DocumentType="INVOICE">
   </rdf:Description>
  </rdf:RDF>

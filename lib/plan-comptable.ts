@@ -290,7 +290,7 @@ export function generateJournalEntry(params: {
   } = params;
 
   const account = getAccountCode(category, supplierCategory);
-  const effectiveHt = amountHt ?? (amountTtc - (vatAmount ?? 0));
+  const effectiveHt = Math.max(0, amountHt ?? (amountTtc - (vatAmount ?? 0)));
   const effectiveVat = vatAmount ?? 0;
   const vatAccount = getVatAccount(vatRate);
 

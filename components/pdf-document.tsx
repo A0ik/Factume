@@ -389,12 +389,25 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
               <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>Sous-total HT</Text>
               <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827', flexShrink: 0 }}>{f(invoice.subtotal)}</Text>
             </View>
-            {meta.showVat && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
-                <Text style={{ fontSize: 9.5, color: '#6b7280', flexShrink: 1 }}>TVA</Text>
-                <Text style={{ fontSize: 9.5, fontFamily: bold, color: '#111827', flexShrink: 0 }}>{f(invoice.vat_amount)}</Text>
-              </View>
-            )}
+            {meta.showVat && (() => {
+              // Group VAT by rate for breakdown display (after global discount)
+              const discountPct = invoice.discount_percent ?? 0;
+              const vatGroups = new Map<number, { base: number; vat: number }>();
+              for (const item of invoice.items) {
+                const ht = (item.total ?? item.quantity * item.unit_price) * (1 - discountPct / 100);
+                const rate = item.vat_rate || 0;
+                const existing = vatGroups.get(rate) || { base: 0, vat: 0 };
+                existing.base += ht;
+                existing.vat += ht * (rate / 100);
+                vatGroups.set(rate, existing);
+              }
+              return Array.from(vatGroups.entries()).sort(([a], [b]) => a - b).map(([rate, { base, vat }]) => (
+                <View key={rate} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 8, color: '#6b7280', flexShrink: 1 }}>TVA {rate}% (base {f(base)})</Text>
+                  <Text style={{ fontSize: 8, fontFamily: bold, color: '#374151', flexShrink: 0 }}>{f(vat)}</Text>
+                </View>
+              ));
+            })()}
             {(invoice.discount_amount ?? 0) > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, paddingVertical: 4 }}>
                 <Text style={{ fontSize: 9.5, color: '#ef4444', flexShrink: 1 }}>Remise ({invoice.discount_percent}%)</Text>

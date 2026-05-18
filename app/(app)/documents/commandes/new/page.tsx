@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
+  { value: '2.1', label: '2.1% — Particulier' },
   { value: '5.5', label: '5.5% — Réduit' },
   { value: '10',  label: '10% — Intermédiaire' },
   { value: '20',  label: '20% — Normal' },
@@ -116,8 +117,13 @@ export default function NewCommandePage() {
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const vatAmount = items.reduce((s, i) => s + i.quantity * i.unit_price * (i.vat_rate / 100), 0);
-  const discountAmount = discountPercent > 0 ? (subtotal + vatAmount) * (discountPercent / 100) : 0;
-  const total = subtotal + vatAmount - discountAmount;
+  const discountAmount = discountPercent > 0 ? subtotal * (discountPercent / 100) : 0;
+  const discountedSubtotal = subtotal - discountAmount;
+  const recalculatedVat = items.reduce((s, i) => {
+    const lineDisc = (i.quantity * i.unit_price) * (discountPercent > 0 ? discountPercent / 100 : 0);
+    return s + ((i.quantity * i.unit_price) - lineDisc) * (i.vat_rate / 100);
+  }, 0);
+  const total = discountedSubtotal + recalculatedVat;
 
   const dueDate = paymentDays === 0
     ? ''
@@ -169,7 +175,8 @@ export default function NewCommandePage() {
         }
       }
 
-      if (!clientId) {
+      // Toujours remplir les details extraits (complètent les infos du client selectionné)
+      {
         if (parsed?.client_email) setClientEmail(parsed.client_email);
         if (parsed?.client_phone) setClientPhone(parsed.client_phone);
         if (parsed?.client_address) setClientAddress(parsed.client_address);
@@ -226,7 +233,8 @@ export default function NewCommandePage() {
       }
     }
 
-    if (!clientId) {
+    // Toujours remplir les details extraits (complètent les infos du client selectionné)
+    {
       if (result.client_email) setClientEmail(result.client_email);
       if (result.client_phone) setClientPhone(result.client_phone);
       if (result.client_address) setClientAddress(result.client_address);
@@ -331,7 +339,7 @@ export default function NewCommandePage() {
   };
 
   const handleSave = async () => {
-    if (!clientName && !items[0].description) {
+    if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation.');
       return;
     }

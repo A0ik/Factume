@@ -311,20 +311,6 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      case 'charge.refunded': {
-        const charge = event.data.object as Stripe.Charge;
-        const paymentIntentId = typeof charge.payment_intent === 'string'
-          ? charge.payment_intent
-          : charge.payment_intent?.id;
-
-        if (paymentIntentId) {
-          await supabase.from('invoices')
-            .update({ status: 'refunded' })
-            .eq('stripe_payment_intent_id', paymentIntentId);
-        }
-        break;
-      }
-
       case 'customer.deleted': {
         const customer = event.data.object as Stripe.Customer;
         await supabase.from('profiles')

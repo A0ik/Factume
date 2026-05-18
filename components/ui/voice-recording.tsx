@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader2, Check, AlertCircle, Lightbulb } from "lucide-react";
+import { Mic, MicOff, Loader2, Check, AlertCircle, Lightbulb, Edit3, HelpCircle, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -13,6 +13,13 @@ interface VoiceRecordingProps {
   mode?: 'invoice' | 'quote' | 'credit_note' | 'order' | 'delivery' | 'deposit';
   existingItems?: Array<{ description: string; quantity: number; unit_price: number; vat_rate: number }>;
   sector?: string;
+}
+
+export interface VoiceUncertainField {
+  field: string;
+  current_value: string | number | null;
+  reason: string;
+  suggestion?: string | number | null;
 }
 
 export interface VoiceAnalysisResult {
@@ -30,6 +37,7 @@ export interface VoiceAnalysisResult {
   due_days?: number | null;
   notes?: string | null;
   discount_percent?: number;
+  uncertain_fields?: VoiceUncertainField[];
 }
 
 export function PulseVoiceRecorder({
@@ -51,6 +59,10 @@ export function PulseVoiceRecorder({
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Confirmation popup state
+  const [pendingResult, setPendingResult] = useState<VoiceAnalysisResult | null>(null);
+  const [corrections, setCorrections] = useState<Record<string, string>>({});
 
   // Cleanup on unmount
   useEffect(() => {
@@ -148,6 +160,7 @@ export function PulseVoiceRecorder({
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
       const formData = new FormData();
       formData.append('audio', blob, 'recording.webm');
+      formData.append('mode', mode);
 
       if (sector) {
         formData.append('sector', sector);
@@ -192,14 +205,21 @@ export function PulseVoiceRecorder({
       }
 
       if (result.parsed) {
-        onResult(result.parsed);
-        if (result.summary) {
-          toast.success(result.summary);
-        }
+        const hasUncertain = result.parsed.uncertain_fields && result.parsed.uncertain_fields.length > 0;
 
-        // Auto-close after successful processing if onClose provided
-        if (onClose) {
-          setTimeout(() => onClose(), 500);
+        if (hasUncertain) {
+          // Show confirmation popup for uncertain fields
+          setPendingResult(result.parsed);
+          setCorrections({});
+        } else {
+          // All clear, apply directly
+          onResult(result.parsed);
+          if (result.summary) {
+            toast.success(result.summary);
+          }
+          if (onClose) {
+            setTimeout(() => onClose(), 500);
+          }
         }
       }
     } catch (err: any) {
@@ -216,6 +236,86 @@ export function PulseVoiceRecorder({
 
   const isSupported = typeof window !== 'undefined' &&
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  // Apply corrections to the pending result and submit
+  const confirmAndApply = () => {
+    if (!pendingResult) return;
+    const corrected = { ...pendingResult };
+
+    // Apply user corrections
+    for (const [fieldPath, newValue] of Object.entries(corrections)) {
+      if (!newValue && newValue !== '0') continue;
+      const numVal = parseFloat(newValue);
+      const useNumber = !isNaN(numVal) && /^[\d.,]+$/.test(newValue.trim());
+
+      if (fieldPath.startsWith('items[')) {
+        const match = fieldPath.match(/items\[(\d+)\]\.(\w+)/);
+        if (match && corrected.items) {
+          const idx = parseInt(match[1]);
+          const key = match[2];
+          if (corrected.items[idx]) {
+            (corrected.items[idx] as any)[key] = useNumber ? numVal : newValue;
+          }
+        }
+      } else {
+        (corrected as any)[fieldPath] = useNumber ? numVal : newValue;
+      }
+    }
+
+    onResult(corrected);
+    if (pendingResult.summary) {
+      toast.success(pendingResult.summary);
+    }
+    setPendingResult(null);
+    setCorrections({});
+    if (onClose) {
+      setTimeout(() => onClose(), 300);
+    }
+  };
+
+  const skipCorrections = () => {
+    if (!pendingResult) return;
+    onResult(pendingResult);
+    if (pendingResult.summary) {
+      toast.success(pendingResult.summary);
+    }
+    setPendingResult(null);
+    setCorrections({});
+    if (onClose) {
+      setTimeout(() => onClose(), 300);
+    }
+  };
+
+  // Render field label from field path
+  const fieldLabel = (field: string): string => {
+    const labels: Record<string, string> = {
+      'client_name': 'Nom du client',
+      'client_email': 'Email',
+      'client_phone': 'Téléphone',
+      'client_address': 'Adresse',
+      'client_city': 'Ville',
+      'client_postal_code': 'Code postal',
+      'client_siret': 'SIRET',
+      'client_vat_number': 'N° TVA',
+      'due_days': 'Délai (jours)',
+      'discount_percent': 'Remise (%)',
+      'notes': 'Notes',
+    };
+    if (field.startsWith('items[')) {
+      const match = field.match(/items\[(\d+)\]\.(\w+)/);
+      if (match) {
+        const idx = parseInt(match[1]) + 1;
+        const keyLabels: Record<string, string> = {
+          'description': 'Description',
+          'quantity': 'Quantité',
+          'unit_price': 'Prix unitaire HT',
+          'vat_rate': 'Taux TVA',
+        };
+        return `Ligne ${idx} — ${keyLabels[match[2]] || match[2]}`;
+      }
+    }
+    return labels[field] || field;
+  };
 
   if (!isSupported) {
     return (
@@ -383,6 +483,79 @@ export function PulseVoiceRecorder({
           </p>
         </motion.div>
       )}
+
+      {/* Confirmation popup for uncertain fields */}
+      <AnimatePresence>
+        {pendingResult && pendingResult.uncertain_fields && pendingResult.uncertain_fields.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="w-full max-w-lg mx-auto"
+          >
+            <div className="rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/5 overflow-hidden shadow-lg">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-amber-200 dark:border-amber-500/20 bg-amber-100/50 dark:bg-amber-500/10">
+                <div className="w-9 h-9 rounded-xl bg-amber-200 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <HelpCircle size={18} className="text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Vérification requise</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">
+                    L'IA n'est pas certaine de certaines valeurs. Vérifiez et corrigez si besoin.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
+                {pendingResult.uncertain_fields.map((uf, idx) => (
+                  <div key={idx} className="rounded-xl bg-white dark:bg-slate-800/80 border border-amber-100 dark:border-amber-500/10 p-3">
+                    <div className="flex items-start gap-2 mb-2">
+                      <Edit3 size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{fieldLabel(uf.field)}</p>
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400/80 mt-0.5">{uf.reason}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">IA:</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 line-through opacity-50">
+                        {String(uf.current_value ?? '—')}
+                      </span>
+                      <input
+                        type="text"
+                        placeholder={uf.suggestion != null ? String(uf.suggestion) : String(uf.current_value ?? '')}
+                        value={corrections[uf.field] ?? ''}
+                        onChange={(e) => setCorrections(prev => ({ ...prev, [uf.field]: e.target.value }))}
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2 px-5 py-4 border-t border-amber-200 dark:border-amber-500/20">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={skipCorrections}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 transition-colors"
+                >
+                  Garder tel quel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={confirmAndApply}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md transition-all"
+                >
+                  <CheckCircle size={16} />
+                  Confirmer
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Close button */}
       {onClose && (

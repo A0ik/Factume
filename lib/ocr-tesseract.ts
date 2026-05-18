@@ -113,7 +113,7 @@ function extractBasicData(text: string): TesseractResult['basicData'] {
 
   // 3. Extract invoice number
   const invoicePatterns = [
-    /(?:facture|invoice|n°|no|numéro)?\s*[:#]?\s*([A-Z0-9\-]{3,20})/i,
+    /(?:facture|invoice|n°|no|numéro)\s*[:#]?\s*([A-Z0-9\-]{3,20})/i,
     /(?:réf|réference|ref)\s*[:#]?\s*([A-Z0-9\-]{3,20})/i,
   ];
 
@@ -135,7 +135,7 @@ function extractBasicData(text: string): TesseractResult['basicData'] {
 
     // Look for company name patterns
     if (
-      (/^[A-Z][A-Z0-9\s&\-\.]{2,30}$/.test(cleanLine)) ||
+      (/^[A-Za-z][A-Za-z0-9\s&\-\.]{2,30}$/.test(cleanLine)) ||
       (/^(SAS|SARL|EURL|SA|GmbH|Ltd|LLC|INC)/i.test(cleanLine)) ||
       cleanLine.includes('Société') ||
       cleanLine.includes('Company')
@@ -188,7 +188,7 @@ export async function extractWithTesseract(
     // Validate MIME type
     const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/gif'];
     const normalizedMimeType = mimeType?.toLowerCase() || '';
-    if (!supportedTypes.some(t => normalizedMimeType.includes(t.split('/')[1]))) {
+    if (!supportedTypes.includes(normalizedMimeType)) {
       throw new Error(`Unsupported MIME type: ${mimeType}. Tesseract requires images.`);
     }
 
@@ -309,18 +309,31 @@ export function tesseractResultToExpense(
 
 export async function batchExtractWithTesseract(
   items: Array<{ buffer: Buffer; mimeType: string }>,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  concurrency: number = 3,
 ): Promise<TesseractResult[]> {
-  const results: TesseractResult[] = [];
+  const results = new Array<TesseractResult>(items.length);
+  let completed = 0;
+  const queue = items.map((item, idx) => ({ idx, item }));
 
-  for (let i = 0; i < items.length; i++) {
-    const result = await extractWithTesseract(items[i].buffer, items[i].mimeType);
-    results.push(result);
+  async function worker(): Promise<void> {
+    while (queue.length > 0) {
+      const entry = queue.shift();
+      if (!entry) break;
+      const { idx, item } = entry;
 
-    if (onProgress) {
-      onProgress(i + 1, items.length);
+      results[idx] = await extractWithTesseract(item.buffer, item.mimeType);
+      completed++;
+
+      if (onProgress) {
+        onProgress(completed, items.length);
+      }
     }
   }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
 
   return results;
 }

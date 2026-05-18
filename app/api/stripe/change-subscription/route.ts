@@ -133,10 +133,15 @@ export async function POST(req: NextRequest) {
 
         const isUpgrade = prorataInfo.isUpgrade;
 
+        const itemId = currentSubscription.items.data[0]?.id;
+        if (!itemId) {
+          return NextResponse.json({ error: 'Aucun article d\'abonnement trouvé dans Stripe. Veuillez contacter le support.' }, { status: 400 });
+        }
+
         // Mise à jour de la souscription existante avec proration Stripe native
         await stripe.subscriptions.update(currentSubscriptionId, {
           items: [{
-            id: currentSubscription.items.data[0].id,
+            id: itemId,
             price: priceId,
           }],
           // Pour les upgrades : facturer immédiatement le différentiel

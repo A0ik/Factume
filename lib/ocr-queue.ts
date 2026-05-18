@@ -8,7 +8,7 @@ import { extractWithTesseract, isTesseractResultReliable, tesseractResultToExpen
 import { convertPdfToImages, isPDFBuffer, getPDFPageCount } from './pdf-to-image';
 import OpenAI from 'openai';
 import { buildOcrPrompt, buildMultiPagePDFPrompt } from './ocr-helpers';
-import { generateStoragePath, sanitizeCategory, sanitizeString, sanitizeNumeric, sanitizeDate, sanitizePaymentMethod } from './ocr-helpers';
+import { generateStoragePath, sanitizeCategory, sanitizeString, sanitizeNumeric, sanitizeDate, sanitizePaymentMethod, normalizeConfidence, sanitizeLineItems, sanitizeVatDetails } from './ocr-helpers';
 import { getAccountCode, generateJournalEntry } from './plan-comptable';
 import { validatePCGCode } from './ocr-helpers';
 
@@ -113,18 +113,42 @@ export class OCRQueueManager {
   // --------------------------------------------------------------------------
 
   async addBatchJobs(jobs: OCRQueueJob[]): Promise<string[]> {
-    const jobIds: string[] = [];
+    if (jobs.length === 0) return [];
 
-    for (const job of jobs) {
-      try {
-        const id = await this.addJob(job);
-        jobIds.push(id);
-      } catch (error) {
-        console.error(`[OCR Queue] Failed to add job for ${job.fileName}:`, error);
+    const rows = jobs.map(job => ({
+      user_id: job.userId,
+      file_name: job.fileName,
+      file_type: job.fileType || 'application/octet-stream',
+      storage_path: job.storagePath,
+      receipt_url: job.receiptUrl,
+      file_size: job.fileSize || 0,
+      status: 'pending',
+      priority: job.priority || 0,
+      attempts: 0,
+    }));
+
+    const { data, error } = await this.supabase
+      .from('ocr_queue')
+      .insert(rows)
+      .select('id');
+
+    if (error) {
+      console.error('[OCR Queue] Batch insert error:', error);
+      // Fallback to sequential insert
+      const jobIds: string[] = [];
+      for (const job of jobs) {
+        try {
+          const id = await this.addJob(job);
+          jobIds.push(id);
+        } catch (e) {
+          console.error(`[OCR Queue] Failed to add job for ${job.fileName}:`, e);
+        }
       }
+      return jobIds;
     }
 
-    console.log(`[OCR Queue] ${jobIds.length} jobs added to queue`);
+    const jobIds = (data || []).map(r => r.id);
+    console.log(`[OCR Queue] ${jobIds.length} jobs added to queue (batch)`);
     return jobIds;
   }
 
@@ -203,11 +227,10 @@ export class OCRQueueManager {
 
   private async processJob(job: OCRQueueJob): Promise<OCRJobResult> {
     const startTime = Date.now();
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Job timeout')), JOB_TIMEOUT_MS)
-    );
+    const timeoutId = setTimeout(() => {}, 0); // placeholder, set below
+    clearTimeout(timeoutId);
 
-    try {
+    const doProcess = async (): Promise<OCRJobResult> => {
       // Mark job as processing
       await this.supabase
         .from('ocr_queue')
@@ -267,7 +290,7 @@ export class OCRQueueManager {
           }
 
           const firstPage = conversionResult.pages[0];
-          const result = await this.processImagePage(
+          const pageResult = await this.processImagePage(
             firstPage.imageBuffer,
             'image/png',
             job.userId,
@@ -276,18 +299,18 @@ export class OCRQueueManager {
             1
           );
 
-          expenses.push(result.expense);
-          confidence = result.confidence;
-          costUsd = result.costUsd;
-          method = result.method;
+          expenses.push(pageResult.expense);
+          confidence = pageResult.confidence;
+          costUsd = pageResult.costUsd;
+          method = pageResult.method;
         }
       } else {
         // Single image: Process directly
-        const result = await this.processImagePage(buffer, mimeType, job.userId, job.fileUrl, job.storagePath);
-        expenses.push(result.expense);
-        confidence = result.confidence;
-        costUsd = result.costUsd;
-        method = result.method;
+        const imgResult = await this.processImagePage(buffer, mimeType, job.userId, job.fileUrl, job.storagePath);
+        expenses.push(imgResult.expense);
+        confidence = imgResult.confidence;
+        costUsd = imgResult.costUsd;
+        method = imgResult.method;
       }
 
       // Step 3: Save expenses to database
@@ -336,8 +359,20 @@ export class OCRQueueManager {
       }
 
       throw new Error('No expense data extracted');
+    };
 
+    // Race the processing against the timeout, clearing the timer on completion
+    let jobTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      jobTimeoutId = setTimeout(() => reject(new Error('Job timeout')), JOB_TIMEOUT_MS);
+    });
+
+    try {
+      const result = await Promise.race([doProcess(), timeoutPromise]);
+      if (jobTimeoutId) clearTimeout(jobTimeoutId);
+      return result;
     } catch (error) {
+      if (jobTimeoutId) clearTimeout(jobTimeoutId);
       const processingTimeMs = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
@@ -386,18 +421,31 @@ export class OCRQueueManager {
     costUsd: number;
     method: 'tesseract' | 'openrouter' | 'hybrid';
   }> {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Page processing timeout')), JOB_TIMEOUT_MS / 2)
-    );
+    const pageTimeoutMs = JOB_TIMEOUT_MS / 2;
+
+    // Helper: race an operation against a timeout, clearing the timer on completion
+    const raceWithTimeout = async <T>(operation: Promise<T>): Promise<T> => {
+      let tid: ReturnType<typeof setTimeout> | undefined;
+      const tp = new Promise<never>((_, reject) => {
+        tid = setTimeout(() => reject(new Error('Page processing timeout')), pageTimeoutMs);
+      });
+      try {
+        const result = await Promise.race([operation, tp]);
+        if (tid) clearTimeout(tid);
+        return result;
+      } catch (err) {
+        if (tid) clearTimeout(tid);
+        throw err;
+      }
+    };
 
     // Step 1: Try Tesseract (FREE)
     const pageLabel = pageNumber ? `Page ${pageNumber}` : 'Image';
     console.log(`[OCR Queue] Processing ${pageLabel} with Tesseract...`);
 
-    const tesseractResult = await Promise.race([
-      extractWithTesseract(buffer, mimeType),
-      timeoutPromise,
-    ]);
+    const tesseractResult = await raceWithTimeout(
+      extractWithTesseract(buffer, mimeType)
+    );
 
     let expense: Record<string, unknown> | undefined;
     let method: 'tesseract' | 'openrouter' | 'hybrid' = 'tesseract';
@@ -425,10 +473,9 @@ export class OCRQueueManager {
       method = 'openrouter';
 
       // Fallback to OpenRouter
-      const openrouterResult = await Promise.race([
-        this.processWithOpenRouter(buffer, mimeType, userId, receiptUrl, storagePath),
-        timeoutPromise,
-      ]);
+      const openrouterResult = await raceWithTimeout(
+        this.processWithOpenRouter(buffer, mimeType, userId, receiptUrl, storagePath)
+      );
 
       expense = openrouterResult.expense;
       confidence = openrouterResult.confidence;
@@ -865,46 +912,11 @@ export class OCRQueueManager {
   }
 }
 
-// Helper function from ocr-helpers (import to avoid circular dependency)
-function normalizeConfidence(val: unknown): number {
-  const n = typeof val === 'number' ? val : parseFloat(String(val));
-  return Math.min(Math.max((n || 0) / 100, 0), 1);
+// Lazy-initialized singleton to avoid reading process.env at module import time
+let _ocrQueueManager: OCRQueueManager | null = null;
+export function getOCRQueueManager(): OCRQueueManager {
+  if (!_ocrQueueManager) {
+    _ocrQueueManager = new OCRQueueManager();
+  }
+  return _ocrQueueManager;
 }
-
-function sanitizeLineItems(raw: unknown) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((v): v is Record<string, unknown> => typeof v === 'object' && v !== null)
-    .map((v) => {
-      const quantity = typeof v.quantity === 'number' ? v.quantity : 1;
-      const unit_price = typeof v.unit_price === 'number' ? v.unit_price : null;
-      const total = typeof v.total === 'number' ? v.total : null;
-      const vatRaw = typeof v.vat_rate === 'number' ? v.vat_rate : null;
-      const vat_rate = (vatRaw !== null && vatRaw >= 0 && vatRaw <= 100) ? vatRaw : null;
-      const account_code = typeof v.account_code === 'string' ? v.account_code : null;
-
-      return {
-        description: typeof v.description === 'string' ? v.description : 'Article',
-        quantity,
-        unit_price,
-        total,
-        vat_rate,
-        account_code: account_code && /^\d{6}$/.test(account_code) ? account_code : null,
-        account_label: typeof v.account_label === 'string' ? v.account_label : null,
-      };
-    });
-}
-
-function sanitizeVatDetails(raw: unknown) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((v): v is Record<string, unknown> => typeof v === 'object' && v !== null)
-    .map((v) => ({
-      rate: typeof v.rate === 'number' ? v.rate : null,
-      base: typeof v.base === 'number' ? v.base : null,
-      amount: typeof v.amount === 'number' ? v.amount : null,
-    }));
-}
-
-// Export singleton instance
-export const ocrQueueManager = new OCRQueueManager();

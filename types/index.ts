@@ -134,6 +134,7 @@ export interface InvoiceItem {
   unit_price: number;
   vat_rate: number;
   total: number;
+  discount_percent?: number;
 }
 
 export type DocumentType = 'invoice' | 'quote' | 'credit_note' | 'purchase_order' | 'delivery_note' | 'deposit';
@@ -746,6 +747,13 @@ export interface VoiceExistingItem {
   vat_rate: number;
 }
 
+export interface VoiceUncertainField {
+  field: string;
+  current_value: string | number | null;
+  reason: string;
+  suggestion?: string | number | null;
+}
+
 export interface VoiceParsedResponse {
   action: 'added' | 'modified' | 'removed' | 'replaced';
   summary: string | null;
@@ -761,6 +769,7 @@ export interface VoiceParsedResponse {
   due_days: number | null;
   notes: string | null;
   discount_percent?: number;
+  uncertain_fields?: VoiceUncertainField[];
 }
 
 export interface VoiceProcessResponse {

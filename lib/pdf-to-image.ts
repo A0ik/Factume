@@ -163,12 +163,24 @@ export async function convertPdfToImages(
           imageBuffer = result;
         }
 
+        // Get image dimensions from sharp if available
+        let width = 0;
+        let height = 0;
+        try {
+          const sharp = (await import('sharp')).default;
+          const metadata = await sharp(imageBuffer).metadata();
+          width = metadata.width ?? 0;
+          height = metadata.height ?? 0;
+        } catch {
+          // sharp not available, leave dimensions as 0
+        }
+
         pages.push({
           pageNumber: pageNum,
           imageBuffer,
           mimeType: `image/${format}`,
-          width: 0,
-          height: 0,
+          width,
+          height,
         });
 
         console.log(`[PDF to Image] Page ${pageNum}/${totalPages} converted to ${format}`);

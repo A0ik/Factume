@@ -926,14 +926,30 @@ function generateArticles(data: ContractTemplateData): string {
 
   // ── ARTICLE : Protection des données (RGPD) ──────────────
   A("Protection des données personnelles", `
-    <p>Dans le cadre de la relation contractuelle, ${company} collecte et traite des données
-    personnelles concernant ${fullName} aux seules fins de gestion administrative et sociale,
-    conformément au Règlement (UE) 2016/679 (RGPD) et à la loi Informatique et Libertés
-    (modifiée par la loi n°&nbsp;2018-493 du 20&nbsp;juin 2018).</p>
-    <p>${fullName} dispose d'un droit d'accès, de rectification, d'effacement et de portabilité
-    de ses données, ainsi que du droit de s'opposer à leur traitement,
-    exercice par courrier adressé au responsable du traitement.</p>
-  `);
+    <p>Dans le cadre de la relation contractuelle, ${company}, en tant que responsable de traitement,
+    collecte et traite des données personnelles concernant ${fullName} aux fins de :</p>
+    <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+      <li>Gestion de la paie et de l'administration du personnel</li>
+      <li>Accomplissement des obligations légales et réglementaires (déclarations sociales, fiscales)</li>
+      <li>Gestion de la carrière et de la formation professionnelle</li>
+    </ul>
+    <p><strong>Fondements juridiques&nbsp;:</strong> exécution du contrat de travail (Art.&nbsp;6(1)(b) RGPD),
+    obligations légales (Art.&nbsp;6(1)(c) RGPD), intérêt légitime de l'employeur (Art.&nbsp;6(1)(f) RGPD).</p>
+    <p><strong>Durée de conservation&nbsp;:</strong> les données sont conservées pendant la durée du contrat
+    et {{RETENTION}}. Les données de paie sont conservées 10&nbsp;ans (Code de commerce Art.&nbsp;L123-22).
+    Les données médicales le cas échéant sont conservées selon les règles applicables à la médecine du travail.</p>
+    <p><strong>Destinataires&nbsp;:</strong> service RH, service paie, organismes sociaux (URSSAF, CPAM),
+    administration fiscale, et le cas échéant les prestataires de services dûment autorisés.</p>
+    <p>${fullName} dispose des droits suivants, exercables auprès du DPO de ${company} :</p>
+    <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+      <li>Droit d'accès, de rectification et d'effacement (Art.&nbsp;15-17 RGPD)</li>
+      <li>Droit à la portabilité des données (Art.&nbsp;20 RGPD)</li>
+      <li>Droit d'opposition et à la limitation du traitement (Art.&nbsp;18-21 RGPD)</li>
+      <li>Droit de introduire une réclamation auprès de la CNIL (www.cnil.fr)</li>
+    </ul>
+    <p>Le traitement des données est conforme au Règlement (UE) 2016/679 (RGPD)
+    et à la loi Informatique et Libertés (modifiée par la loi n°&nbsp;2018-493 du 20&nbsp;juin 2018).</p>
+  `.replace('{{RETENTION}}', type === 'freelance' ? '5 ans après la fin du contrat' : "5 ans après la fin du contrat (Code du travail)"));
 
   // ── ARTICLE : Rupture ────────────────────────────────────
   if (type === 'freelance') {
@@ -1222,6 +1238,14 @@ function buildContractHTML(data: ContractTemplateData): string {
   </div>
   ` : ''}
 
+  <!-- DISCLAIMER LÉGAL -->
+  <div style="margin-top: 20px; padding: 10px; background: #fffbe6; border: 1px solid #e6d800; border-radius: 4px; font-size: 7pt; color: #666; line-height: 1.4; break-inside: avoid;">
+    <strong>Avertissement&nbsp;:</strong> Ce document a été généré automatiquement par Factu.me à partir des informations fournies.
+    Il constitue un modèle de contrat de travail et ne remplace pas l'avis d'un professionnel du droit (avocat, expert-comptable ou juriste).
+    Il appartient à chaque partie de vérifier la conformité du document avec la convention collective applicable et la réglementation en vigueur
+    avant toute signature. En cas de doute, consultez un professionnel qualifié.
+  </div>
+
   <!-- PIED DE PAGE -->
   <div class="doc-footer">
     <div>
@@ -1284,10 +1308,122 @@ export function getContractArticles(data: ContractTemplateData): { title: string
 }
 
 // ─────────────────────────────────────────────
+// VALIDATION PRÉ-GÉNÉRATION
+// ─────────────────────────────────────────────
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+
+const COMMON_REQUIRED: (keyof ContractTemplateData)[] = [
+  'employeeFirstName', 'employeeLastName', 'employeeAddress',
+  'employeePostalCode', 'employeeCity', 'employeeBirthDate',
+  'employeeNationality',
+  'companyName', 'companyAddress', 'companyPostalCode',
+  'companyCity', 'companySiret', 'employerName', 'employerTitle',
+  'contractStartDate', 'jobTitle', 'workLocation', 'workSchedule',
+  'salaryAmount',
+];
+
+const TRIAL_PERIOD_MAX_DAYS: Record<string, number> = {
+  ouvrier: 60, employe: 60,
+  technicien: 90, 'agent de maitrise': 90, 'agent de maîtrise': 90,
+  cadre: 120,
+};
+
+export function validateContractData(data: ContractTemplateData): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  // Common required fields
+  for (const field of COMMON_REQUIRED) {
+    if (!data[field] || (typeof data[field] === 'string' && !(data[field] as string).trim())) {
+      errors.push({ field, message: `Le champ "${field}" est requis.`, severity: 'error' });
+    }
+  }
+
+  // CDD-specific: end date and reason
+  if (data.contractType === 'cdd') {
+    if (!data.contractEndDate) {
+      errors.push({ field: 'contractEndDate', message: 'La date de fin est obligatoire pour un CDD.', severity: 'error' });
+    }
+    if (!data.contractReason) {
+      errors.push({ field: 'contractReason', message: 'Le motif de recours au CDD est obligatoire (Art. L1242-1 à L1242-3).', severity: 'error' });
+    }
+  }
+
+  // Stage-specific: school, tutor, duration
+  if (data.contractType === 'stage') {
+    if (!data.schoolName) {
+      errors.push({ field: 'schoolName', message: "Le nom de l'établissement d'enseignement est obligatoire.", severity: 'error' });
+    }
+    if (!data.tutorName) {
+      errors.push({ field: 'tutorName', message: 'Le nom du tuteur/maître de stage est obligatoire.', severity: 'error' });
+    }
+    if (!data.contractEndDate) {
+      errors.push({ field: 'contractEndDate', message: 'La date de fin est obligatoire pour un stage.', severity: 'error' });
+    }
+    if (data.internshipGratification) {
+      const gratifNum = parseFloat(data.internshipGratification);
+      if (!isNaN(gratifNum) && gratifNum < 4.50) {
+        errors.push({ field: 'internshipGratification', message: 'La gratification minimale légale est de 4,50 €/heure (2026).', severity: 'warning' });
+      }
+    }
+  }
+
+  // Apprentissage-specific: diploma, CFA
+  if (data.contractType === 'apprentissage') {
+    if (!data.diplomaTitle) {
+      errors.push({ field: 'diplomaTitle', message: 'Le titre du diplôme préparé est obligatoire.', severity: 'error' });
+    }
+    if (!data.contractEndDate) {
+      errors.push({ field: 'contractEndDate', message: 'La date de fin est obligatoire pour un apprentissage.', severity: 'error' });
+    }
+  }
+
+  // Non-compete clause validation (4 cumulative conditions)
+  if (data.nonCompeteClause && !['stage', 'freelance'].includes(data.contractType)) {
+    if (!data.nonCompeteArea) {
+      errors.push({ field: 'nonCompeteArea', message: 'La zone géographique de non-concurrence est obligatoire (jurisprudence Cass. Soc. 10/07/2002).', severity: 'error' });
+    }
+    if (!data.nonCompeteDuration) {
+      errors.push({ field: 'nonCompeteDuration', message: 'La durée de non-concurrence est obligatoire.', severity: 'error' });
+    } else {
+      const durationMonths = parseInt(data.nonCompeteDuration);
+      if (!isNaN(durationMonths) && durationMonths > 24) {
+        errors.push({ field: 'nonCompeteDuration', message: 'La durée de non-concurrence ne peut excéder 24 mois (jurisprudence).', severity: 'error' });
+      }
+    }
+    if (!data.nonCompeteCompensation) {
+      errors.push({ field: 'nonCompeteCompensation', message: 'La contrepartie financière est OBLIGATOIRE. Sans elle, la clause est NULLE (Cass. Soc. 10/07/2002).', severity: 'error' });
+    }
+  }
+
+  // Trial period max validation
+  if (data.trialPeriodDays && data.contractClassification) {
+    const days = parseInt(data.trialPeriodDays);
+    const classification = data.contractClassification.toLowerCase();
+    for (const [key, maxDays] of Object.entries(TRIAL_PERIOD_MAX_DAYS)) {
+      if (classification.includes(key) && !isNaN(days) && days > maxDays) {
+        errors.push({ field: 'trialPeriodDays', message: `Période d'essai max pour "${data.contractClassification}" : ${maxDays} jours (renouvelable une fois).`, severity: 'warning' });
+        break;
+      }
+    }
+  }
+
+  return errors;
+}
+
+// ─────────────────────────────────────────────
 // EXPORTS PUBLICS
 // ─────────────────────────────────────────────
 
 export function generateContract(data: ContractTemplateData): string {
+  const errors = validateContractData(data).filter(e => e.severity === 'error');
+  if (errors.length > 0) {
+    throw new Error(`Impossible de générer le contrat. Champs manquants : ${errors.map(e => e.message).join(' | ')}`);
+  }
   return buildContractHTML(data);
 }
 

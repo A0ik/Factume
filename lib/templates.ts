@@ -627,7 +627,7 @@ function adjustBrightness(hex: string, amount: number): string {
  * Uses Inter for body text and Crimson Pro for headings
  * Features warm accent color palette with elegant gradients and modern card-based layout
  */
-function magnificentTemplate(d: TemplateData, accentColor: string): string {
+function magnificentTemplate(d: TemplateData, accentColor: string, templateId: number = 1): string {
   // Elegant warm accent palette (inspired by the provided design)
   const accent = accentColor;
   const accentDark = adjustBrightness(accentColor, -20);
@@ -637,6 +637,98 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
   const accentGlow = hexToRgba(accentColor, 0.12);
   const accentBorder = hexToRgba(accentColor, 0.25);
   const accentShadow = hexToRgba(accentColor, 0.35);
+
+  // Template-specific styling overrides
+  let templateVars = '';
+  let templateHeaderStyle = '';
+  let templateHeaderFontFamily = "'Crimson Pro', Georgia, 'Times New Roman', serif";
+  let templateBodyFontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+  let templateAccentBarStyle = '';
+  let templateFooterBarStyle = '';
+
+  switch (templateId) {
+    case 2: // Classique - serif, dark navy, elegant borders
+      templateVars = `
+        --bg: #f0f0f2;
+        --paper: #ffffff;
+        --border: #d4d4d8;
+        --border-strong: #a1a1aa;
+        --row-alt: #f4f4f5;
+        --text: #18181b;
+        --text-secondary: #52525b;
+        --text-muted: #a1a1aa;
+      `;
+      templateHeaderStyle = `border-bottom: 3px double ${accentColor}; padding-bottom: 24px; margin-bottom: 32px;`;
+      templateAccentBarStyle = `height:6px; background:repeating-linear-gradient(90deg, ${accentColor} 0px, ${accentColor} 12px, transparent 12px, transparent 18px);`;
+      templateFooterBarStyle = `background:${accentColor}; border-top:2px solid ${adjustBrightness(accentColor, -30)};`;
+      break;
+    case 3: // Moderne - accent-driven, rounded cards, vibrant
+      templateVars = `
+        --bg: #f8fafc;
+        --paper: #ffffff;
+        --border: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --row-alt: #f1f5f9;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+      `;
+      templateHeaderStyle = `border-left: 4px solid ${accentColor}; padding-left: 20px; margin-bottom: 32px;`;
+      templateAccentBarStyle = `height:4px; background:linear-gradient(90deg, ${accentColor}, ${adjustBrightness(accentColor, 40)}, ${accentColor}); border-radius:0 0 4px 4px;`;
+      templateFooterBarStyle = `background:linear-gradient(135deg, ${accentColor}, ${adjustBrightness(accentColor, -20)}); border-top:2px solid ${adjustBrightness(accentColor, -30)};`;
+      break;
+    case 4: // Elegant - warm tones, serif headings, soft
+      templateVars = `
+        --bg: #faf8f5;
+        --paper: #fffdf9;
+        --border: #e8ddd0;
+        --border-strong: #d4c4b0;
+        --row-alt: #fdf8f3;
+        --text: #1a1007;
+        --text-secondary: #6b5c4a;
+        --text-muted: #a89880;
+      `;
+      templateHeaderStyle = `text-align: center; margin-bottom: 40px;`;
+      templateAccentBarStyle = `height:3px; background:linear-gradient(90deg, transparent, ${accentColor}, #e0b896, ${accentColor}, transparent);`;
+      templateFooterBarStyle = `background:linear-gradient(135deg, ${adjustBrightness(accentColor, -10)}, #e0b896); border-top:2px solid ${adjustBrightness(accentColor, -30)};`;
+      break;
+    case 5: // Corporate - navy blue, professional, structured
+      templateVars = `
+        --bg: #f0f4f8;
+        --paper: #ffffff;
+        --border: #cbd5e1;
+        --border-strong: #94a3b8;
+        --row-alt: #f0f4f8;
+        --text: #0f172a;
+        --text-secondary: #334155;
+        --text-muted: #64748b;
+      `;
+      templateHeaderStyle = `background: #1e3a5f; margin: -48px -56px 32px; padding: 32px 56px; color: white; border-radius: 0;`;
+      templateAccentBarStyle = `height:5px; background:linear-gradient(90deg, #1e3a5f, ${accentColor}, #1e3a5f);`;
+      templateFooterBarStyle = `background:#1e3a5f; border-top:3px solid ${accentColor};`;
+      break;
+    case 6: // Nature - green, organic, fresh
+      templateVars = `
+        --bg: #f0fdf4;
+        --paper: #ffffff;
+        --border: #bbf7d0;
+        --border-strong: #86efac;
+        --row-alt: #f0fdf4;
+        --text: #14532d;
+        --text-secondary: #166534;
+        --text-muted: #4ade80;
+      `;
+      templateHeaderStyle = `border-top: 4px solid #166534; padding-top: 24px; margin-bottom: 32px;`;
+      templateAccentBarStyle = `height:4px; background:linear-gradient(90deg, #166534, #4ade80, #166534);`;
+      templateFooterBarStyle = `background:linear-gradient(135deg, #166534, #14532d); border-top:3px solid #4ade80;`;
+      break;
+    default: // Minimaliste - clean, minimal (original style)
+      templateVars = '';
+      templateHeaderStyle = '';
+      templateAccentBarStyle = '';
+      templateFooterBarStyle = '';
+      break;
+  }
 
   // CSS variables for dynamic theming
   const cssVars = `
@@ -658,6 +750,7 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
     --row-alt: #faf8f6;
     --success: #4a9e7d;
     --danger: #c75c5c;
+    ${templateVars}
   `;
 
   // Client info block
@@ -749,13 +842,14 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
   <div style="max-width:900px;margin:40px auto;background:var(--paper);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 8px 32px rgba(0,0,0,0.08),0 24px 60px rgba(0,0,0,0.06);overflow:hidden;position:relative">
 
     <!-- Accent gradient bar -->
-    <div style="height:4px;background:linear-gradient(90deg,var(--accent-dark),var(--accent),#e0b896,var(--accent-dark));background-size:300% 100%"></div>
+    <div style="${templateAccentBarStyle || 'height:4px;background:linear-gradient(90deg,var(--accent-dark),var(--accent),#e0b896,var(--accent-dark));background-size:300% 100%'}"></div>
 
     <!-- Main content -->
     <div style="padding:48px 56px;position:relative;z-index:1">
 
       <!-- Header section -->
-      <div style="display:grid;grid-template-columns:1fr auto;gap:40px;margin-bottom:44px;align-items:start">
+      <div style="${templateHeaderStyle}">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:40px;margin-bottom:44px;align-items:start${templateId === 5 ? ';color:white' : ''}">
 
         <!-- Left: Brand -->
         <div style="display:flex;align-items:center;gap:18px">
@@ -795,6 +889,7 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
           </div>
         </div>
       </div>
+      </div>${templateHeaderStyle ? '' : ''}
 
       <!-- Divider -->
       <div style="height:1px;background:var(--border);margin-bottom:36px;position:relative">
@@ -850,11 +945,22 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
             <span style="font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">${d.f(d.invoice.subtotal)}</span>
           </div>
 
-          <!-- Ligne TVA -->
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;font-size:14px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:8px">
-            <span style="font-weight:500">TVA</span>
-            <span style="font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">${d.f(d.invoice.vat_amount)}</span>
-          </div>
+          <!-- TVA détaillée par taux -->
+          ${(() => {
+            const discountPct = d.invoice.discount_percent ?? 0;
+            const vatGroups = new Map<number, { base: number; vat: number }>();
+            for (const item of d.invoice.items) {
+              const ht = (item.total ?? item.quantity * item.unit_price) * (1 - discountPct / 100);
+              const rate = item.vat_rate || 0;
+              const existing = vatGroups.get(rate) || { base: 0, vat: 0 };
+              existing.base += ht;
+              existing.vat += ht * (rate / 100);
+              vatGroups.set(rate, existing);
+            }
+            return Array.from(vatGroups.entries()).sort(([a], [b]) => a - b).map(([rate, { base, vat }]) =>
+              `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 16px;font-size:12px;color:var(--text-secondary);background:#fafafa;border-radius:8px;margin-bottom:4px"><span style="font-weight:500">TVA ${rate}% <span style="color:var(--text-muted);font-size:11px">(base ${d.f(base)})</span></span><span style="font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0">${d.f(vat)}</span></div>`
+            ).join('');
+          })()}
 
           <!-- Ligne remise (si applicable) -->
           ${d.discountRow ? `<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 16px;font-size:14px;color:#dc2626;background:#fef2f2;border-radius:8px;margin-bottom:8px;border:1px solid #fecaca">${d.discountRow}</div>` : ''}
@@ -959,7 +1065,7 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
     </div>
 
     <!-- Footer bar avec total en évidence -->
-    <div class="footer-bar" style="background:linear-gradient(135deg,var(--accent-dark),var(--accent));padding:16px 56px;display:flex;justify-content:space-between;align-items:center;gap:24px;border-top:3px solid var(--accent-dark)">
+    <div class="footer-bar" style="${templateFooterBarStyle || 'background:linear-gradient(135deg,var(--accent-dark),var(--accent));border-top:3px solid var(--accent-dark)'};padding:16px 56px;display:flex;justify-content:space-between;align-items:center;gap:24px">
       <div style="display:flex;align-items:center;gap:24px;min-width:0;overflow:hidden">
         <div style="font-size:11px;color:rgba(255,255,255,0.9);display:flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap">
           <i class="fas fa-file-invoice" style="color:rgba(255,255,255,0.7);font-size:10px"></i> ${d.docLabel} ${d.translations.common.generatedBy}
@@ -983,7 +1089,7 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
     </div>
 
     <!-- Bottom accent bar -->
-    <div style="height:4px;background:linear-gradient(90deg,var(--accent-dark),var(--accent),#e0b896,var(--accent-dark));background-size:300% 100%"></div>
+    <div style="${templateAccentBarStyle || 'height:4px;background:linear-gradient(90deg,var(--accent-dark),var(--accent),#e0b896,var(--accent-dark));background-size:300% 100%'}"></div>
 
   </div>
 </body>
@@ -992,43 +1098,41 @@ function magnificentTemplate(d: TemplateData, accentColor: string): string {
 
 // ── Template 1: Minimaliste ──
 export function templateMinimaliste(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 1);
 }
 
 // ── Template 2: Classique ──
 export function templateClassique(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 2);
 }
 
 // ── Template 3: Moderne ──
 export function templateModerne(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 3);
 }
 
 // ── Template 4: Élégant ──
 export function templateElegant(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 4);
 }
 
 // ── Template 5: Corporate ──
 export function templateCorporate(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 5);
 }
 
 // ── Template 6: Nature ──
 export function templateNature(d: TemplateData): string {
-  return magnificentTemplate(d, d.accent);
+  return magnificentTemplate(d, d.accent, 6);
 }
 
 // ── Template spécial : Bon de commande ──
 export function templatePurchaseOrder(d: TemplateData): string {
-  // Utilise le même magnifique template mais avec des mentions spécifiques
   return magnificentTemplate(d, d.accent);
 }
 
 // ── Template spécial : Bon de livraison ──
 export function templateDeliveryNote(d: TemplateData): string {
-  // Utilise le même magnifique template mais avec des mentions spécifiques
   return magnificentTemplate(d, d.accent);
 }
 

@@ -245,7 +245,7 @@ export default function LandingPageClient() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="hidden sm:block fixed bottom-6 right-6 z-40"
+          className="hidden sm:block fixed bottom-20 right-6 z-40"
         >
           <Link href="/register" className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm transition-all active:scale-95">
             <Zap className="w-4 h-4" />Commencer gratuitement

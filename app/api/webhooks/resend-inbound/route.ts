@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import crypto from 'crypto';
+import { processAndSaveExpense } from '@/lib/ocr-core';
+import { buildOcrPrompt } from '@/lib/ocr-helpers';
 
 // ---------------------------------------------------------------------------
 // Resend Inbound Parse webhook — handles forwarded receipts / invoices sent to
@@ -54,46 +56,8 @@ function verifySignature(body: string, signatureHeader: string | null): boolean 
 }
 
 // ---------------------------------------------------------------------------
-// 2. Sanitization helpers  (mirrors ocr-receipt/route.ts)
+// 2. OCR via OpenRouter — returns raw AI response for processAndSaveExpense
 // ---------------------------------------------------------------------------
-
-function sanitizeNumeric(val: unknown): number | null {
-  if (val === null || val === undefined) return null;
-  const n = typeof val === 'number' ? val : parseFloat(String(val).replace(/\s/g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-function sanitizeDate(val: unknown): string | null {
-  if (typeof val !== 'string') return null;
-  const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return null;
-  const [, y, m, d] = match;
-  const date = new Date(`${y}-${m}-${d}T00:00:00Z`);
-  return Number.isFinite(date.getTime()) ? `${y}-${m}-${d}` : null;
-}
-
-function sanitizeString(val: unknown): string | null {
-  return typeof val === 'string' && val.trim().length > 0 ? val.trim() : null;
-}
-
-const VALID_CATEGORIES = [
-  'transport', 'meals', 'accommodation', 'equipment', 'office',
-  'shopping', 'mileage', 'telecom', 'insurance', 'software', 'other',
-] as const;
-
-function sanitizeCategory(val: unknown): string {
-  return typeof val === 'string' && (VALID_CATEGORIES as readonly string[]).includes(val) ? val : 'other';
-}
-
-function sanitizePaymentMethod(val: unknown): string | null {
-  if (typeof val !== 'string') return null;
-  const normalized = val.toLowerCase().trim();
-  if (['card', 'carte'].includes(normalized)) return 'card';
-  if (['cash', 'especes'].includes(normalized)) return 'cash';
-  if (['transfer', 'virement'].includes(normalized)) return 'transfer';
-  if (['check', 'cheque'].includes(normalized)) return 'check';
-  return null;
-}
 
 // ---------------------------------------------------------------------------
 // 3. Duplicate detection
@@ -139,40 +103,7 @@ async function isDuplicate(
 }
 
 // ---------------------------------------------------------------------------
-// 4. OCR prompt (French — tailored for expense receipts)
-// ---------------------------------------------------------------------------
-
-const OCR_PROMPT = `Tu es un expert-comptable français spécialisé dans l'analyse de justificatifs de dépenses. Analyse ce document avec précision maximale.
-
-RÈGLES :
-1. Ne devine JAMAIS une information absente — mets null.
-2. Distingue bien HT / TTC / TVA.
-3. Les montants doivent être des NOMBRES (pas de chaînes, pas de symbole €).
-4. Les dates au format YYYY-MM-DD.
-5. Le champ category doit être une seule valeur parmi la liste ci-dessous.
-
-CATÉGORIES AUTORISÉES :
-transport | meals | accommodation | equipment | office | shopping | telecom | insurance | software | other
-
-Retourne UNIQUEMENT du JSON valide (pas de markdown, pas de commentaires) :
-{
-  "vendor": "nom du fournisseur",
-  "amount": 0.00,
-  "ht_amount": 0.00,
-  "vat_amount": 0.00,
-  "vat_rate": 20.0,
-  "date": "YYYY-MM-DD",
-  "description": "description courte",
-  "category": "transport|meals|accommodation|equipment|office|shopping|telecom|insurance|software|other",
-  "currency": "EUR",
-  "confidence": 85,
-  "payment_method": "card|cash|transfer|check|null",
-  "invoice_number": "numéro ou null"
-}
-Si le document est illisible, mets null pour les champs concernés et confidence à 0.`;
-
-// ---------------------------------------------------------------------------
-// 5. Run OCR via OpenRouter (mirrors ocr-receipt/route.ts)
+// 4. Run OCR via OpenRouter — returns raw parsed JSON for ocr-core
 // ---------------------------------------------------------------------------
 
 async function runOcr(
@@ -196,7 +127,7 @@ async function runOcr(
         {
           role: 'user',
           content: [
-            { type: 'text', text: OCR_PROMPT },
+            { type: 'text', text: buildOcrPrompt() },
             {
               type: 'image_url',
               image_url: { url: `data:${mimeType};base64,${base64Content}` },
@@ -262,26 +193,22 @@ async function processAttachment(
       .getPublicUrl(storagePath);
 
     const receiptUrl = urlData.publicUrl;
-
-    // Determine mime for OCR — PDFs are sent as image/jpeg to Gemini
-    // (Gemini handles PDF natively, but we normalise for safety)
     const isPdf = content_type === 'application/pdf';
-    const ocrMime = isPdf ? 'application/pdf' : content_type;
 
     // Preprocess image for better OCR accuracy (skip PDFs)
     let ocrBase64 = content;
-    let finalMime = ocrMime;
+    let ocrMime = isPdf ? 'application/pdf' : content_type;
     if (!isPdf) {
       try {
         const { preprocessReceipt } = await import('@/lib/ocr-preprocess');
         const processed = await preprocessReceipt(buffer, ocrMime);
         ocrBase64 = processed.buffer.toString('base64');
-        finalMime = processed.mimeType;
+        ocrMime = processed.mimeType;
       } catch {}
     }
 
     // Run OCR
-    const raw = await runOcr(ocrBase64, finalMime);
+    const raw = await runOcr(ocrBase64, ocrMime);
     if (!raw) {
       // Save minimal record even without OCR
       const { data: saved } = await getSupabaseAdmin()
@@ -304,74 +231,37 @@ async function processAttachment(
       return { success: true, expenseId: saved?.id, filename };
     }
 
-    // Sanitize OCR output
-    const vendor = sanitizeString(raw.vendor);
-    const amount = sanitizeNumeric(raw.amount);
-    const htAmount = sanitizeNumeric(raw.ht_amount);
-    const vatAmount = sanitizeNumeric(raw.vat_amount);
-    const vatRate = sanitizeNumeric(raw.vat_rate);
-    const date = sanitizeDate(raw.date) ?? new Date().toISOString().slice(0, 10);
-    const description = sanitizeString(raw.description) ?? `Reçu par email — ${filename}`;
-    const category = sanitizeCategory(raw.category);
-    const currency = sanitizeString(raw.currency) ?? 'EUR';
-    const confidence = sanitizeNumeric(raw.confidence) ?? 0;
-    const paymentMethod = sanitizePaymentMethod(raw.payment_method);
-    const invoiceNumber = sanitizeString(raw.invoice_number);
-
     // Duplicate check
-    const dup = await isDuplicate(userId, vendor, amount, date);
+    const amount = raw.amount as number | undefined;
+    const vendor = raw.vendor as string | undefined;
+    const date = raw.date as string | undefined;
+    const dup = await isDuplicate(userId, vendor ?? null, amount ?? null, date ?? null);
     if (dup) {
       console.log(`[resend-inbound] Duplicate detected: vendor=${vendor} amount=${amount} date=${date}`);
       return { success: false, filename, error: 'Duplicate expense', vendor, amount };
     }
 
-    // Build expense record — only non-null keys
-    const expenseRecord: Record<string, unknown> = {
-      user_id: userId,
-      vendor,
-      amount,
-      category,
-      date,
-      description,
-      receipt_url: receiptUrl,
-      receipt_storage_path: storagePath,
-      payment_method: paymentMethod,
-      status: 'pending',
-      source: 'email',
-      ocr_raw_response: raw,
-      ocr_confidence: confidence,
-      ocr_invoice_number: invoiceNumber,
-      ocr_currency: currency,
-    };
-
-    if (htAmount !== null) expenseRecord.amount_ht = htAmount; // Only if the column exists
-    if (vatAmount !== null) expenseRecord.vat_amount = vatAmount;
-    if (vatRate !== null) expenseRecord.vat_rate = vatRate;
-
-    // Remove null/undefined so Supabase uses column defaults
-    Object.keys(expenseRecord).forEach((key) => {
-      if (expenseRecord[key] === null || expenseRecord[key] === undefined) {
-        delete expenseRecord[key];
-      }
+    // Use ocr-core for sanitize + accounts + journal + DB save
+    const supabase = getSupabaseAdmin();
+    const result = await processAndSaveExpense(raw, userId, supabase, {
+      receiptUrl,
+      storagePath,
+      fileName: filename,
+      isPdf,
     });
 
-    const { data: savedExpense, error: dbError } = await getSupabaseAdmin()
-      .from('expenses')
-      .insert(expenseRecord)
-      .select('id')
-      .single();
-
-    if (dbError) {
-      console.error('[resend-inbound] DB insert error:', dbError);
-      return { success: false, filename, error: dbError.message };
+    // Add source: 'email' to the saved record
+    if (result.savedExpense?.id) {
+      await supabase.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
     }
 
     return {
-      success: true,
-      expenseId: savedExpense?.id,
-      vendor,
-      amount,
+      success: !result.dbError,
+      expenseId: (result.savedExpense as Record<string, unknown>)?.id as string | undefined,
+      vendor: (result.extracted as Record<string, unknown>).vendor as string | null,
+      amount: (result.extracted as Record<string, unknown>).amount as number | null,
       filename,
+      error: result.dbError ?? undefined,
     };
   } catch (err) {
     console.error(`[resend-inbound] processAttachment error for ${filename}:`, err);
@@ -405,7 +295,7 @@ async function extractFromHtmlBody(
       messages: [
         {
           role: 'user',
-          content: `${OCR_PROMPT}\n\n--- CONTENU EMAIL ---\nObjet: ${subject || 'N/A'}\n\n${body.slice(0, 8000)}`,
+          content: `${buildOcrPrompt()}\n\n--- CONTENU EMAIL ---\nObjet: ${subject || 'N/A'}\n\n${body.slice(0, 8000)}`,
         },
       ],
       response_format: { type: 'json_object' },
@@ -417,67 +307,40 @@ async function extractFromHtmlBody(
 
     const raw = JSON.parse(rawContent) as Record<string, unknown>;
 
-    const vendor = sanitizeString(raw.vendor);
-    const amount = sanitizeNumeric(raw.amount);
-    const vatAmount = sanitizeNumeric(raw.vat_amount);
-    const date = sanitizeDate(raw.date) ?? new Date().toISOString().slice(0, 10);
-    const description = sanitizeString(raw.description) ?? `Email: ${subject || 'sans objet'}`;
-    const category = sanitizeCategory(raw.category);
-    const confidence = sanitizeNumeric(raw.confidence) ?? 0;
-    const paymentMethod = sanitizePaymentMethod(raw.payment_method);
-    const invoiceNumber = sanitizeString(raw.invoice_number);
-    const currency = sanitizeString(raw.currency) ?? 'EUR';
-
     // Only save if we extracted a meaningful amount
+    const amount = raw.amount as number | undefined;
     if (!amount || amount <= 0) return null;
 
+    const vendor = raw.vendor as string | undefined;
+    const date = raw.date as string | undefined;
+
     // Duplicate check
-    const dup = await isDuplicate(userId, vendor, amount, date);
+    const dup = await isDuplicate(userId, vendor ?? null, amount, date ?? null);
     if (dup) {
       return { success: false, filename: 'email-body', error: 'Duplicate expense', vendor, amount };
     }
 
-    const expenseRecord: Record<string, unknown> = {
-      user_id: userId,
-      vendor,
-      amount,
-      category,
-      date,
-      description: `${description} (extrait du corps de l'email)`,
-      payment_method: paymentMethod,
-      status: 'pending',
-      source: 'email',
-      ocr_raw_response: raw,
-      ocr_confidence: confidence,
-      ocr_invoice_number: invoiceNumber,
-      ocr_currency: currency,
-    };
-
-    if (vatAmount !== null) expenseRecord.vat_amount = vatAmount;
-
-    Object.keys(expenseRecord).forEach((key) => {
-      if (expenseRecord[key] === null || expenseRecord[key] === undefined) {
-        delete expenseRecord[key];
-      }
+    // Use ocr-core for sanitize + accounts + journal + DB save
+    const supabase = getSupabaseAdmin();
+    const result = await processAndSaveExpense(raw, userId, supabase, {
+      receiptUrl: '',
+      storagePath: '',
+      fileName: 'email-body',
+      isPdf: false,
     });
 
-    const { data: savedExpense, error: dbError } = await getSupabaseAdmin()
-      .from('expenses')
-      .insert(expenseRecord)
-      .select('id')
-      .single();
-
-    if (dbError) {
-      console.error('[resend-inbound] DB insert error (email body):', dbError);
-      return { success: false, filename: 'email-body', error: dbError.message };
+    // Add source: 'email'
+    if (result.savedExpense?.id) {
+      await supabase.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
     }
 
     return {
-      success: true,
-      expenseId: savedExpense?.id,
-      vendor,
-      amount,
+      success: !result.dbError,
+      expenseId: (result.savedExpense as Record<string, unknown>)?.id as string | undefined,
+      vendor: (result.extracted as Record<string, unknown>).vendor as string | null,
+      amount: (result.extracted as Record<string, unknown>).amount as number | null,
       filename: 'email-body',
+      error: result.dbError ?? undefined,
     };
   } catch (err) {
     console.error('[resend-inbound] extractFromHtmlBody error:', err);

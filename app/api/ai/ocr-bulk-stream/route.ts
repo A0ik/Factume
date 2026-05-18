@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { ocrQueueManager, type OCRQueueJob } from '@/lib/ocr-queue';
+import { getOCRQueueManager, type OCRQueueJob } from '@/lib/ocr-queue';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
               priority,
             };
 
-            const jobId = await ocrQueueManager.addJob(job);
+            const jobId = await getOCRQueueManager().addJob(job);
             job.id = jobId;
             jobs.push(job);
 
@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
             const progress = Math.round((completedCount / jobs.length) * 100);
 
             // Get queue stats
-            const stats = await ocrQueueManager.getQueueStats(user.id);
+            const stats = await getOCRQueueManager().getQueueStats(user.id);
 
             send({
               stage: 'processing',
@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
           for (const job of jobs) {
             if (completedJobIds.has(job.id)) continue;
 
-            const status = await ocrQueueManager.getJobStatus(job.id);
+            const status = await getOCRQueueManager().getJobStatus(job.id);
             if (!status) continue;
 
             if (status.status === 'completed' || status.status === 'failed') {
@@ -296,9 +296,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Final summary
-        const finalStats = await ocrQueueManager.getQueueStats(user.id);
+        const finalStats = await getOCRQueueManager().getQueueStats(user.id);
         const finalResults = await Promise.all(
-          jobs.map(async (job) => await ocrQueueManager.getJobStatus(job.id))
+          jobs.map(async (job) => await getOCRQueueManager().getJobStatus(job.id))
         );
 
         const succeeded = finalResults.filter(r => r?.status === 'completed').length;
@@ -356,7 +356,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   }
 
-  const stats = await ocrQueueManager.getQueueStats(user.id);
+  const stats = await getOCRQueueManager().getQueueStats(user.id);
 
   return NextResponse.json({
     stats,

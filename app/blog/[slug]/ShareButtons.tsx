@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Twitter, Linkedin, Facebook, Link2, Check } from 'lucide-react';
 
 interface ShareButtonsProps {
@@ -9,8 +9,12 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ title }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  useEffect(() => {
+    setShareUrl(window.location.href);
+  }, []);
+
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
 

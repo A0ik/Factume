@@ -82,14 +82,25 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
     const userId = profile.id;
 
-    const items = formData.items.map((item) => ({ ...item, id: generateId(), total: item.quantity * item.unit_price }));
-    const subtotal = items.reduce((s, i) => s + i.total, 0);
+    const items = formData.items.map((item) => {
+      const lineTotal = item.quantity * item.unit_price;
+      const lineDisc = (item as any).discount_percent ? lineTotal * ((item as any).discount_percent / 100) : 0;
+      return { ...item, id: generateId(), total: lineTotal - lineDisc };
+    });
+    const subtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
     const vatAmount = items.reduce((s, i) => s + i.total * (i.vat_rate / 100), 0);
     const docType = formData.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
-    const discountAmount = formData.discount_percent ? (subtotal + vatAmount) * (formData.discount_percent / 100) : 0;
+    // Remise globale appliquee sur le HT apres remises par ligne, puis TVA recalculee
+    const subtotalAfterLineDiscounts = items.reduce((s, i) => s + i.total, 0);
+    const discountAmount = formData.discount_percent ? subtotalAfterLineDiscounts * (formData.discount_percent / 100) : 0;
+    const discountedSubtotal = subtotalAfterLineDiscounts - discountAmount;
+    const recalculatedVat = items.reduce((s, i) => {
+      const afterGlobalDisc = i.total * (formData.discount_percent ? 1 - formData.discount_percent / 100 : 1);
+      return s + afterGlobalDisc * (i.vat_rate / 100);
+    }, 0);
     const finalIdempotencyId = idempotencyId || crypto.randomUUID();
-    const finalTotal = subtotal + vatAmount - discountAmount;
+    const finalTotal = discountedSubtotal + recalculatedVat;
 
     // Approche 1: Server-side API (fiable, pas de problème Web Locks)
     console.log('[createInvoice] Using server-side API route...');
@@ -104,8 +115,8 @@ export const useDataStore = create<DataState>((set, get) => ({
           issue_date: formData.issue_date,
           due_date: formData.due_date || null,
           items,
-          subtotal,
-          vat_amount: vatAmount,
+          subtotal: discountedSubtotal,
+          vat_amount: recalculatedVat,
           discount_percent: formData.discount_percent || null,
           discount_amount: discountAmount || null,
           total: finalTotal,
@@ -151,8 +162,8 @@ export const useDataStore = create<DataState>((set, get) => ({
             p_issue_date: formData.issue_date,
             p_due_date: formData.due_date || null,
             p_items: items,
-            p_subtotal: subtotal,
-            p_vat_amount: vatAmount,
+            p_subtotal: discountedSubtotal,
+            p_vat_amount: recalculatedVat,
             p_discount_percent: formData.discount_percent || null,
             p_discount_amount: discountAmount || null,
             p_total: finalTotal,
@@ -198,13 +209,22 @@ export const useDataStore = create<DataState>((set, get) => ({
     const user = session?.user; if (!user) throw new Error('Non authentifié');
     let u: InvoiceUpdateData = { ...updates, updated_at: new Date().toISOString() } as InvoiceUpdateData;
     if (updates.items) {
-      const items = updates.items.map((i) => ({ ...i, total: i.quantity * i.unit_price }));
-      const subtotal = items.reduce((s, i) => s + i.total, 0);
-      const vat = items.reduce((s, i) => s + i.total * (i.vat_rate / 100), 0);
+      const items = updates.items.map((i) => {
+        const lineTotal = i.quantity * i.unit_price;
+        const lineDisc = (i as any).discount_percent ? lineTotal * ((i as any).discount_percent / 100) : 0;
+        return { ...i, total: lineTotal - lineDisc };
+      });
+      const subtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
+      const subtotalAfterLineDiscounts = items.reduce((s, i) => s + i.total, 0);
       const existing = get().invoices.find((inv) => inv.id === id);
       const discPct = updates.discount_percent ?? existing?.discount_percent ?? 0;
-      const discAmt = discPct > 0 ? (subtotal + vat) * (discPct / 100) : 0;
-      u = { ...u, items, subtotal, vat_amount: vat, discount_percent: discPct || null, discount_amount: discAmt || null, total: subtotal + vat - discAmt };
+      const discAmt = discPct > 0 ? subtotalAfterLineDiscounts * (discPct / 100) : 0;
+      const discountedSubtotal = subtotalAfterLineDiscounts - discAmt;
+      const vat = items.reduce((s, i) => {
+        const afterGlobalDisc = i.total * (discPct > 0 ? 1 - discPct / 100 : 1);
+        return s + afterGlobalDisc * (i.vat_rate / 100);
+      }, 0);
+      u = { ...u, items, subtotal: discountedSubtotal, vat_amount: vat, discount_percent: discPct || null, discount_amount: discAmt || null, total: discountedSubtotal + vat };
     }
     const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
     if (error) throw error;
@@ -239,7 +259,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw new Error('Les utilisateurs du plan gratuit ne peuvent pas supprimer de documents. Passez à un abonnement payant pour débloquer cette fonctionnalité.');
     }
 
-    const { error } = await getSupabaseClient().from('invoices').delete().eq('id', id);
+    const { error } = await getSupabaseClient().from('invoices').delete().eq('id', id).eq('user_id', user.id);
     if (error) throw error;
     set((s) => ({ invoices: s.invoices.filter((inv) => inv.id !== id) })); get().computeStats();
   },

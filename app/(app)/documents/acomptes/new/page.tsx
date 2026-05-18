@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
+  { value: '2.1', label: '2.1% — Particulier' },
   { value: '5.5', label: '5.5% — Réduit' },
   { value: '10',  label: '10% — Intermédiaire' },
   { value: '20',  label: '20% — Normal' },
@@ -47,7 +48,7 @@ export default function NewAcomptePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useAuthStore();
-  const { clients, createInvoice } = useDataStore();
+  const { clients, invoices, createInvoice } = useDataStore();
   const sub = useSubscription();
 
   const docType: DocumentType = 'deposit';
@@ -89,6 +90,13 @@ export default function NewAcomptePage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [lastGenSource, setLastGenSource] = useState<'voice' | 'ai' | null>(null);
 
+  // Acompte-specific: linked invoice + percentage
+  const [linkedInvoiceId, setLinkedInvoiceId] = useState<string | null>(null);
+  const [showInvoicePicker, setShowInvoicePicker] = useState(false);
+  const [depositPercent, setDepositPercent] = useState<number>(0);
+  const userInvoices = invoices.filter((i) => i.document_type === 'invoice');
+  const linkedInvoice = linkedInvoiceId ? invoices.find((i) => i.id === linkedInvoiceId) : null;
+
   const [showProductCatalog, setShowProductCatalog] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState('');
@@ -116,8 +124,13 @@ export default function NewAcomptePage() {
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const vatAmount = items.reduce((s, i) => s + i.quantity * i.unit_price * (i.vat_rate / 100), 0);
-  const discountAmount = discountPercent > 0 ? (subtotal + vatAmount) * (discountPercent / 100) : 0;
-  const total = subtotal + vatAmount - discountAmount;
+  const discountAmount = discountPercent > 0 ? subtotal * (discountPercent / 100) : 0;
+  const discountedSubtotal = subtotal - discountAmount;
+  const recalculatedVat = items.reduce((s, i) => {
+    const lineDisc = (i.quantity * i.unit_price) * (discountPercent > 0 ? discountPercent / 100 : 0);
+    return s + ((i.quantity * i.unit_price) - lineDisc) * (i.vat_rate / 100);
+  }, 0);
+  const total = discountedSubtotal + recalculatedVat;
 
   const dueDate = paymentDays === 0
     ? ''
@@ -169,7 +182,8 @@ export default function NewAcomptePage() {
         }
       }
 
-      if (!clientId) {
+      // Toujours remplir les details extraits (complètent les infos du client selectionné)
+      {
         if (parsed?.client_email) setClientEmail(parsed.client_email);
         if (parsed?.client_phone) setClientPhone(parsed.client_phone);
         if (parsed?.client_address) setClientAddress(parsed.client_address);
@@ -226,7 +240,8 @@ export default function NewAcomptePage() {
       }
     }
 
-    if (!clientId) {
+    // Toujours remplir les details extraits (complètent les infos du client selectionné)
+    {
       if (result.client_email) setClientEmail(result.client_email);
       if (result.client_phone) setClientPhone(result.client_phone);
       if (result.client_address) setClientAddress(result.client_address);
@@ -331,7 +346,7 @@ export default function NewAcomptePage() {
   };
 
   const handleSave = async () => {
-    if (!clientName && !items[0].description) {
+    if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation.');
       return;
     }
@@ -358,6 +373,7 @@ export default function NewAcomptePage() {
           items: items,
           notes: notes || undefined,
           discount_percent: discountPercent > 0 ? discountPercent : undefined,
+          linked_invoice_id: linkedInvoiceId || undefined,
           client_email: clientId ? undefined : clientEmail || undefined,
           client_phone: clientId ? undefined : clientPhone || undefined,
           client_address: clientId ? undefined : clientAddress || undefined,
@@ -706,6 +722,92 @@ export default function NewAcomptePage() {
                 </div>
               </div>
 
+              {/* Acompte-specific: facture d'origine + pourcentage */}
+              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
+                  <Banknote size={15} className="text-gray-400 dark:text-gray-500" />
+                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Acompte</h3>
+                  {linkedInvoice && (
+                    <span className="ml-auto text-xs text-teal-600 dark:text-teal-400 font-semibold">{depositPercent > 0 ? `${depositPercent}% de ${linkedInvoice.number}` : linkedInvoice.number}</span>
+                  )}
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <label className="text-[11px] text-gray-400 dark:text-gray-500 font-medium block mb-1.5">Facture associée</label>
+                    {linkedInvoice ? (
+                      <div className="flex items-center gap-3 p-3 bg-teal-50 dark:bg-teal-500/10 rounded-xl border border-teal-100 dark:border-teal-500/20">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">{linkedInvoice.number}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {linkedInvoice.client?.name || linkedInvoice.client_name_override} — {formatCurrency(linkedInvoice.total)}
+                          </p>
+                        </div>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => { setLinkedInvoiceId(null); setDepositPercent(0); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors">
+                          <X size={14} />
+                        </motion.button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <button onClick={() => setShowInvoicePicker(!showInvoicePicker)} className="w-full text-left px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-400 dark:text-gray-500 bg-white dark:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-500/30 transition-colors">
+                          Sélectionner la facture...
+                        </button>
+                        {showInvoicePicker && (
+                          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                            {userInvoices.length === 0 ? (
+                              <p className="p-4 text-sm text-gray-400 text-center">Aucune facture trouvée</p>
+                            ) : userInvoices.map((inv) => (
+                              <button key={inv.id} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors border-b border-gray-50 dark:border-white/5 last:border-0" onClick={() => {
+                                setLinkedInvoiceId(inv.id);
+                                if (inv.client_id) { setClientId(inv.client_id); setClientName(inv.client?.name || ''); }
+                                else { setClientId(null); setClientName(inv.client_name_override || ''); }
+                                setShowInvoicePicker(false);
+                              }}>
+                                <div className="flex justify-between items-center">
+                                  <div><p className="font-semibold text-gray-900 dark:text-white">{inv.number}</p><p className="text-xs text-gray-400">{inv.client?.name || inv.client_name_override}</p></div>
+                                  <p className="font-bold text-gray-700 dark:text-gray-300">{formatCurrency(inv.total)}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {linkedInvoice && (
+                    <div>
+                      <label className="text-[11px] text-gray-400 dark:text-gray-500 font-medium block mb-1.5">Pourcentage d'acompte</label>
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={1} max={100} step={1} value={depositPercent || ''} onChange={(e) => {
+                          const pct = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                          setDepositPercent(pct);
+                          if (pct > 0 && linkedInvoice) {
+                            const depositHT = linkedInvoice.subtotal * (pct / 100);
+                            setItems([{ id: generateId(), description: `Acompte de ${pct}% sur ${linkedInvoice.number}`, quantity: 1, unit_price: Math.round(depositHT * 100) / 100, vat_rate: linkedInvoice.items?.[0]?.vat_rate || 20 }]);
+                          }
+                        }} placeholder="%" className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-center font-bold bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all" />
+                        <span className="text-sm text-gray-500">%</span>
+                        <div className="flex gap-1">
+                          {[25, 30, 50].map((p) => (
+                            <button key={p} onClick={() => {
+                              setDepositPercent(p);
+                              if (linkedInvoice) {
+                                const depositHT = linkedInvoice.subtotal * (p / 100);
+                                setItems([{ id: generateId(), description: `Acompte de ${p}% sur ${linkedInvoice.number}`, quantity: 1, unit_price: Math.round(depositHT * 100) / 100, vat_rate: linkedInvoice.items?.[0]?.vat_rate || 20 }]);
+                              }
+                            }} className={`text-xs px-2 py-1 rounded-lg font-semibold transition-colors ${depositPercent === p ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-teal-500/10'}`}>
+                              {p}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Montant acompte HT : {formatCurrency(linkedInvoice.subtotal * (depositPercent / 100))} — Solde restant : {formatCurrency(linkedInvoice.subtotal * (1 - depositPercent / 100))}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
                   <CalendarIcon size={15} className="text-gray-400 dark:text-gray-500" />
@@ -969,7 +1071,7 @@ export default function NewAcomptePage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">TVA</span>
-                      <span className="font-semibold tabular-nums">{formatCurrency(vatAmount)}</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(recalculatedVat)}</span>
                     </div>
                     {discountPercent > 0 && (
                       <div className="flex justify-between text-sm text-green-400">

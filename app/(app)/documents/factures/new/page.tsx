@@ -26,6 +26,7 @@ import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-r
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
+  { value: '2.1', label: '2.1% — Particulier' },
   { value: '5.5', label: '5.5% — Réduit' },
   { value: '10',  label: '10% — Intermédiaire' },
   { value: '20',  label: '20% — Normal' },
@@ -123,10 +124,23 @@ export default function NewFacturePage() {
     (c) => clientName.length >= 1 && c.name.toLowerCase().includes(clientName.toLowerCase()),
   );
 
+  // Calcul avec remise par ligne + remise globale
+  const lineItemSubtotals = items.map((i) => {
+    const lineHT = i.quantity * i.unit_price;
+    const lineDisc = (i as any).discount_percent ?? 0;
+    return lineHT * (1 - lineDisc / 100);
+  });
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const vatAmount = items.reduce((s, i) => s + i.quantity * i.unit_price * (i.vat_rate / 100), 0);
-  const discountAmount = discountPercent > 0 ? (subtotal + vatAmount) * (discountPercent / 100) : 0;
-  const total = subtotal + vatAmount - discountAmount;
+  const subtotalAfterLineDiscounts = lineItemSubtotals.reduce((s, v) => s + v, 0);
+  const vatAmount = items.reduce((s, i, idx) => s + lineItemSubtotals[idx] * (i.vat_rate / 100), 0);
+  const globalDiscountAmount = discountPercent > 0 ? subtotalAfterLineDiscounts * (discountPercent / 100) : 0;
+  const discountedSubtotal = subtotalAfterLineDiscounts - globalDiscountAmount;
+  const recalculatedVat = items.reduce((s, i, idx) => {
+    const afterGlobalDisc = lineItemSubtotals[idx] * (discountPercent > 0 ? 1 - discountPercent / 100 : 1);
+    return s + afterGlobalDisc * (i.vat_rate / 100);
+  }, 0);
+  const total = discountedSubtotal + recalculatedVat;
+  const totalLineDiscount = subtotal - subtotalAfterLineDiscounts;
 
   const dueDate = paymentDays === 0
     ? ''
@@ -179,7 +193,8 @@ export default function NewFacturePage() {
         }
       }
 
-      if (!clientId) {
+      // Toujours remplir les details extraits (complètent les infos du client selectionné)
+      {
         if (parsed?.client_email) setClientEmail(parsed.client_email);
         if (parsed?.client_phone) setClientPhone(parsed.client_phone);
         if (parsed?.client_address) setClientAddress(parsed.client_address);
@@ -237,7 +252,8 @@ export default function NewFacturePage() {
       }
     }
 
-    if (!clientId) {
+    // Toujours remplir les details extraits (complètent les infos du client selectionné)
+    {
       if (result.client_email) setClientEmail(result.client_email);
       if (result.client_phone) setClientPhone(result.client_phone);
       if (result.client_address) setClientAddress(result.client_address);
@@ -347,7 +363,7 @@ export default function NewFacturePage() {
       return;
     }
 
-    if (!clientName && !items[0].description) {
+    if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation.');
       return;
     }
@@ -948,13 +964,54 @@ export default function NewFacturePage() {
                         />
                       </div>
 
+                      {((item as any).discount_percent ?? 0) > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Percent size={12} className="text-green-500 flex-shrink-0" />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={(item as any).discount_percent ?? ''}
+                            onChange={(e) => updateItem(item.id, 'discount_percent', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                            placeholder="Remise %"
+                            className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-xs text-center bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-green-500/20"
+                          />
+                          <span className="text-xs text-gray-400">%</span>
+                          <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                            -{formatCurrency(item.quantity * item.unit_price * ((item as any).discount_percent ?? 0) / 100)}
+                          </span>
+                          <button onClick={() => updateItem(item.id, 'discount_percent', 0)} className="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors">Retirer</button>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between mt-2 sm:mt-2.5 pt-2 sm:pt-2.5 border-t border-gray-200 dark:border-white/10">
-                        <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500">
-                          {formatCurrency(item.quantity * item.unit_price)} HT
-                          {item.vat_rate > 0 && ` + ${item.vat_rate}% TVA`}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs sm:text-sm text-gray-400 dark:text-gray-500">
+                            {(() => {
+                              const lineDisc = (item as any).discount_percent ?? 0;
+                              const lineHT = item.quantity * item.unit_price;
+                              const afterDisc = lineHT * (1 - lineDisc / 100);
+                              return <>
+                                {formatCurrency(lineHT)} HT
+                                {lineDisc > 0 && <span className="text-green-600 dark:text-green-400 ml-1">(-{lineDisc}%)</span>}
+                                {item.vat_rate > 0 && ` + ${item.vat_rate}% TVA`}
+                              </>;
+                            })()}
+                          </span>
+                          {((item as any).discount_percent ?? 0) === 0 && (
+                            <button onClick={() => updateItem(item.id, 'discount_percent', 10)} className="text-[10px] text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors flex items-center gap-0.5">
+                              <Percent size={10} /> Remise
+                            </button>
+                          )}
+                        </div>
                         <span className="text-sm font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(item.quantity * item.unit_price * (1 + item.vat_rate / 100))} TTC
+                          {(() => {
+                            const lineDisc = (item as any).discount_percent ?? 0;
+                            const lineHT = item.quantity * item.unit_price;
+                            const afterDisc = lineHT * (1 - lineDisc / 100);
+                            return formatCurrency(afterDisc * (1 + item.vat_rate / 100));
+                          })()} TTC
                         </span>
                       </div>
                     </motion.div>
@@ -1027,7 +1084,7 @@ export default function NewFacturePage() {
                     />
                     <span className="text-sm text-gray-500 dark:text-gray-400">%</span>
                     {discountPercent > 0 && (
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400">−{formatCurrency(discountAmount)}</span>
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400">−{formatCurrency(globalDiscountAmount)}</span>
                     )}
                     {discountPercent > 0 && (
                       <motion.button
@@ -1074,16 +1131,22 @@ export default function NewFacturePage() {
                       <span className="text-gray-400">Sous-total HT</span>
                       <span className="font-semibold tabular-nums">{formatCurrency(subtotal)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">TVA</span>
-                      <span className="font-semibold tabular-nums">{formatCurrency(vatAmount)}</span>
-                    </div>
-                    {discountPercent > 0 && (
+                    {totalLineDiscount > 0 && (
                       <div className="flex justify-between text-sm text-green-400">
-                        <span>Remise {discountPercent}%</span>
-                        <span className="font-semibold tabular-nums">−{formatCurrency(discountAmount)}</span>
+                        <span>Remises/lignes</span>
+                        <span className="font-semibold tabular-nums">−{formatCurrency(totalLineDiscount)}</span>
                       </div>
                     )}
+                    {globalDiscountAmount > 0 && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Remise globale {discountPercent}%</span>
+                        <span className="font-semibold tabular-nums">−{formatCurrency(globalDiscountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">TVA</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(recalculatedVat)}</span>
+                    </div>
                     <div className="h-px bg-white/10" />
                     <div className="flex justify-between">
                       <span className="text-white font-bold">Total TTC</span>
@@ -1100,9 +1163,10 @@ export default function NewFacturePage() {
                           <div key={item.id} className="flex justify-between items-start gap-2">
                             <p className="text-xs text-gray-400 truncate flex-1">
                               {item.description || `Ligne ${idx + 1}`}
+                              {(item as any).discount_percent > 0 && <span className="text-green-400 ml-1">(-{(item as any).discount_percent}%)</span>}
                             </p>
                             <p className="text-xs text-white font-semibold tabular-nums flex-shrink-0">
-                              {formatCurrency(item.quantity * item.unit_price * (1 + item.vat_rate / 100))}
+                              {formatCurrency(item.quantity * item.unit_price * (1 - ((item as any).discount_percent ?? 0) / 100) * (1 + item.vat_rate / 100))}
                             </p>
                           </div>
                         ))}

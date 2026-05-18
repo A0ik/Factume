@@ -1,36 +1,25 @@
 // ---------------------------------------------------------------------------
 // OCR Hybrid API Route - Tesseract (free) + OpenRouter (fallback)
-// This endpoint provides cost-optimized OCR by using free Tesseract first
-// and only falling back to paid OpenRouter if confidence is low
+// Cost-optimized OCR: free Tesseract first, paid OpenRouter if low confidence
 // ---------------------------------------------------------------------------
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { extractWithTesseract, isTesseractResultReliable, tesseractResultToExpense } from '@/lib/ocr-tesseract';
-import { convertPdfToImages, isPDFBuffer } from '@/lib/pdf-to-image';
+import { extractWithTesseract, isTesseractResultReliable } from '@/lib/ocr-tesseract';
+import { convertPdfToImages } from '@/lib/pdf-to-image';
 import OpenAI from 'openai';
-import { buildOcrPrompt } from '@/lib/ocr-helpers';
+import { buildOcrPrompt, generateStoragePath, ALLOWED_MIME_TYPES } from '@/lib/ocr-helpers';
+import { processAndSaveExpense } from '@/lib/ocr-core';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
-import {
-  sanitizeCategory,
-  sanitizeString,
-  sanitizeNumeric,
-  sanitizeDate,
-  sanitizePaymentMethod,
-  sanitizeLineItems,
-  sanitizeVatDetails,
-  normalizeConfidence,
-  validatePCGCode,
-  generateStoragePath,
-  ALLOWED_MIME_TYPES,
-} from '@/lib/ocr-helpers';
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-const TESSERACT_CONFIDENCE_THRESHOLD = 0.8; // 80% confidence to skip OpenRouter
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const TESSERACT_CONFIDENCE_THRESHOLD = 0.8;
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -74,7 +63,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 2. Validate environment
+    // 2. Rate limiting (Supabase-backed)
+    // ------------------------------------------------------------------
+    {
+      const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+      const { count: recentCount } = await supabase
+        .from('expenses')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', windowStart);
+
+      if (recentCount !== null && recentCount >= RATE_LIMIT_MAX_REQUESTS) {
+        return NextResponse.json(
+          { error: 'Trop de requêtes OCR. Réessayez dans une minute.' },
+          { status: 429 },
+        );
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // 3. Validate environment
     // ------------------------------------------------------------------
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json(
@@ -84,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 3. Parse & validate file
+    // 4. Parse & validate file
     // ------------------------------------------------------------------
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
@@ -98,9 +106,7 @@ export async function POST(req: NextRequest) {
 
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json(
-        {
-          error: `Type de fichier non supporté (${file.type}). Formats acceptés : JPEG, PNG, WebP, HEIC, PDF.`,
-        },
+        { error: `Type de fichier non supporté (${file.type}). Formats acceptés : JPEG, PNG, WebP, HEIC, PDF.` },
         { status: 400 }
       );
     }
@@ -117,7 +123,7 @@ export async function POST(req: NextRequest) {
     const isPdf = file.type === 'application/pdf';
 
     // ------------------------------------------------------------------
-    // 4. Upload to Supabase Storage
+    // 5. Upload to Supabase Storage
     // ------------------------------------------------------------------
     const storagePath = generateStoragePath(user.id, file.name);
 
@@ -140,20 +146,16 @@ export async function POST(req: NextRequest) {
     const receiptPublicUrl = urlData.publicUrl;
 
     // ------------------------------------------------------------------
-    // 5. Hybrid OCR Process
+    // 6. Hybrid OCR Process
     // ------------------------------------------------------------------
     const startTime = Date.now();
-    let result: {
-      success: boolean;
-      method: 'tesseract' | 'openrouter' | 'hybrid';
-      confidence: number;
-      processingTimeMs: number;
-      costUsd: number;
-      extracted?: Record<string, unknown>;
-      tesseractData?: {
-        confidence: number;
-        basicData: Record<string, unknown>;
-      };
+    const fileMeta = {
+      receiptUrl: receiptPublicUrl,
+      storagePath,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      isPdf,
     };
 
     // For PDFs, convert to images first for Tesseract
@@ -165,23 +167,15 @@ export async function POST(req: NextRequest) {
       const conversionResult = await convertPdfToImages(originalBuffer, { maxPages: 1 });
 
       if (conversionResult.success && conversionResult.pages.length > 0) {
-        // Use first page for Tesseract
         ocrBuffer = conversionResult.pages[0].imageBuffer as Buffer;
         ocrMimeType = 'image/png';
         console.log('[OCR Hybrid] PDF first page converted, trying Tesseract...');
       } else {
         console.log('[OCR Hybrid] PDF conversion failed, using OpenRouter directly');
-        result = await processWithOpenRouter(
-          originalBuffer,
-          file.type,
-          user.id,
-          supabase,
-          receiptPublicUrl,
-          storagePath,
-          startTime
+        const openrouterResult = await processWithOpenRouter(
+          originalBuffer, file.type, user.id, supabase, fileMeta, startTime
         );
-
-        return NextResponse.json(result);
+        return NextResponse.json(openrouterResult);
       }
     }
 
@@ -189,49 +183,107 @@ export async function POST(req: NextRequest) {
     console.log('[OCR Hybrid] Step 1: Trying Tesseract OCR...');
     const tesseractResult = await extractWithTesseract(ocrBuffer, ocrMimeType);
 
-    result = {
-      success: true,
-      method: 'tesseract',
+    const tesseractMeta = {
       confidence: tesseractResult.confidence,
-      processingTimeMs: Date.now() - startTime,
-      costUsd: 0,
-      tesseractData: {
-        confidence: tesseractResult.confidence,
-        basicData: tesseractResult.basicData,
-      },
+      basicData: tesseractResult.basicData,
     };
 
     // Step 2: Check if Tesseract is reliable enough
     if (isTesseractResultReliable(tesseractResult)) {
       console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} >= ${TESSERACT_CONFIDENCE_THRESHOLD}, using it`);
 
-      result.extracted = tesseractResultToExpense(tesseractResult, {
-        userId: user.id,
-        receiptUrl: receiptPublicUrl,
-        storagePath: storagePath,
-        category: 'other',
+      // Build accounting data for Tesseract result (fixes 1B: Tesseract now has accounting)
+      const category = 'other';
+      const accountMapping = getAccountCode(category, null);
+      const journalEntry = generateJournalEntry({
+        category,
+        supplierCategory: null,
+        amountTtc: tesseractResult.basicData.amount ?? 0,
+        amountHt: null,
+        vatAmount: null,
+        vatRate: null,
+        paymentMethod: null,
       });
 
-      // Add vendor mappings check
-      if (result.extracted.vendor) {
-        await applyVendorMappings(supabase, user.id, result.extracted);
+      const extracted = {
+        vendor: tesseractResult.basicData.vendor,
+        amount: tesseractResult.basicData.amount,
+        date: tesseractResult.basicData.date,
+        description: null,
+        category,
+        confidence: tesseractResult.confidence,
+        currency: 'EUR',
+        payment_method: null,
+        document_type: 'receipt',
+        supplier_category: null,
+        account_code: accountMapping.code,
+        account_label: accountMapping.label,
+      };
+
+      // Check vendor_mappings
+      let finalAccountCode = accountMapping.code;
+      let finalAccountLabel = accountMapping.label;
+      if (extracted.vendor) {
+        const normalized = extracted.vendor.toLowerCase().trim();
+        const { data: mapping } = await supabase
+          .from('vendor_mappings')
+          .select('account_code, account_name, corrected_category')
+          .eq('user_id', user.id)
+          .ilike('vendor_name_pattern', normalized)
+          .maybeSingle();
+        if (mapping?.account_code) {
+          finalAccountCode = mapping.account_code;
+          finalAccountLabel = mapping.account_name || finalAccountLabel;
+        }
+        if (mapping?.corrected_category) {
+          (extracted as Record<string, unknown>).category = mapping.corrected_category;
+        }
       }
 
-      // Save to database
+      const journalEntryJson = {
+        debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
+        credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
+        vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
+      };
+
+      const expenseRecord: Record<string, unknown> = {
+        user_id: user.id,
+        vendor: extracted.vendor,
+        amount: extracted.amount,
+        category: extracted.category,
+        date: extracted.date,
+        description: extracted.description,
+        receipt_url: receiptPublicUrl,
+        receipt_storage_path: storagePath,
+        status: 'pending',
+        ocr_method: 'tesseract',
+        ocr_confidence: extracted.confidence,
+        ocr_currency: 'EUR',
+        account_code: finalAccountCode,
+        account_label: finalAccountLabel,
+        journal_type: journalEntry.journalType,
+        journal_entry: journalEntryJson,
+        vat_account: journalEntry.vatAccount || null,
+        document_type: 'receipt',
+        supplier_category: null,
+      };
+
+      for (const key of Object.keys(expenseRecord)) {
+        if (expenseRecord[key] === null || expenseRecord[key] === undefined) {
+          delete expenseRecord[key];
+        }
+      }
+
       const { data: savedExpense, error: dbError } = await supabase
         .from('expenses')
-        .insert({ ...result.extracted, ocr_method: 'tesseract' })
+        .insert(expenseRecord)
         .select()
         .single();
 
       if (dbError) {
         console.error('[OCR Hybrid] DB insert error:', dbError);
         return NextResponse.json(
-          {
-            warning: 'Extraction réussie mais erreur lors de la sauvegarde en base.',
-            extracted: result.extracted,
-            db_error: dbError.message,
-          },
+          { warning: 'Extraction réussie mais erreur lors de la sauvegarde.', extracted, db_error: dbError.message },
           { status: 207 }
         );
       }
@@ -239,42 +291,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         method: 'tesseract',
-        confidence: result.confidence,
-        processingTimeMs: result.processingTimeMs,
+        confidence: extracted.confidence,
+        processingTimeMs: Date.now() - startTime,
         costUsd: 0,
         expense: savedExpense,
-        extracted: result.extracted,
+        extracted,
+        accounting: {
+          account_code: finalAccountCode,
+          account_label: finalAccountLabel,
+          journal_type: journalEntry.journalType,
+          journal_entry: journalEntryJson,
+          vat_deductible: accountMapping.vatDeductible,
+          default_vat_rate: accountMapping.defaultVatRate,
+        },
         receipt_url: receiptPublicUrl,
-        tesseract_data: result.tesseractData,
+        tesseract_data: tesseractMeta,
       });
 
     } else {
       console.log(`[OCR Hybrid] Tesseract confidence ${tesseractResult.confidence} < ${TESSERACT_CONFIDENCE_THRESHOLD}, falling back to OpenRouter`);
 
-      // Fallback to OpenRouter
       const openrouterResult = await processWithOpenRouter(
-        originalBuffer,
-        file.type,
-        user.id,
-        supabase,
-        receiptPublicUrl,
-        storagePath,
-        startTime
+        originalBuffer, file.type, user.id, supabase, fileMeta, startTime
       );
 
-      result = {
-        ...openrouterResult,
-        method: 'hybrid',
-        tesseractData: {
-          confidence: tesseractResult.confidence,
-          basicData: tesseractResult.basicData,
-        },
-      };
-
-      // Merge Tesseract basic data as fallback
-      if (result.extracted) {
-        (result.extracted as Record<string, unknown>).ocr_raw_response = {
-          openrouter: (result.extracted as Record<string, unknown>).ocr_raw_response,
+      // Merge Tesseract data as reference
+      if (openrouterResult.extracted) {
+        (openrouterResult.extracted as Record<string, unknown>).ocr_raw_response = {
+          openrouter: (openrouterResult.extracted as Record<string, unknown>).ocr_raw_response,
           tesseract: {
             text: tesseractResult.text,
             confidence: tesseractResult.confidence,
@@ -282,29 +326,24 @@ export async function POST(req: NextRequest) {
           },
         };
       }
-    }
 
-    // ------------------------------------------------------------------
-    // 6. Return response
-    // ------------------------------------------------------------------
-    return NextResponse.json(result);
+      return NextResponse.json({
+        ...openrouterResult,
+        method: 'hybrid',
+        tesseract_data: tesseractMeta,
+      });
+    }
 
   } catch (error) {
     console.error('[OCR Hybrid] Unhandled error:', error);
     const err = error as { message?: string; status?: number };
 
     if (err.status === 401 || err.status === 403) {
-      return NextResponse.json(
-        { error: 'Clé API invalide. Vérifiez OPENROUTER_API_KEY.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Clé API invalide. Vérifiez OPENROUTER_API_KEY.' }, { status: 500 });
     }
 
     if (err.status === 429) {
-      return NextResponse.json(
-        { error: 'Trop de requêtes vers le service IA. Réessayez dans quelques instants.' },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: 'Trop de requêtes vers le service IA. Réessayez dans quelques instants.' }, { status: 429 });
     }
 
     return NextResponse.json(
@@ -315,16 +354,16 @@ export async function POST(req: NextRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: Process with OpenRouter (paid)
+// Helper: Process with OpenRouter (paid) — uses ocr-core for consistency
 // ---------------------------------------------------------------------------
 
 async function processWithOpenRouter(
   buffer: Buffer,
   mimeType: string,
   userId: string,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-  receiptUrl: string,
-  storagePath: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  fileMeta: { receiptUrl: string; storagePath: string; fileName?: string; fileSize?: number; fileType?: string; isPdf?: boolean },
   startTime: number
 ): Promise<{
   success: boolean;
@@ -333,6 +372,8 @@ async function processWithOpenRouter(
   processingTimeMs: number;
   costUsd: number;
   extracted?: Record<string, unknown>;
+  accounting?: Record<string, unknown>;
+  receipt_url?: string;
 }> {
   const openrouter = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
@@ -363,87 +404,15 @@ async function processWithOpenRouter(
 
   const parsed = JSON.parse(rawContent);
 
-  // Build expense record
-  const category = sanitizeCategory(parsed.category);
-  const supplierCategory = sanitizeString(parsed.supplier_category);
-  const extractedAccountCode = sanitizeString(parsed.account_code);
-  const extractedAccountLabel = sanitizeString(parsed.account_label);
+  // Use ocr-core for sanitize + accounts + journal + DB save
+  const result = await processAndSaveExpense(parsed, userId, supabase, fileMeta);
 
-  const accountMapping = getAccountCode(category, supplierCategory);
-  const finalAccountCode = (validatePCGCode(extractedAccountCode) ? extractedAccountCode : null) ?? accountMapping.code;
-  const finalAccountLabel = extractedAccountLabel ?? accountMapping.label;
-
-  const journalEntry = generateJournalEntry({
-    category,
-    supplierCategory,
-    amountTtc: sanitizeNumeric(parsed.amount) ?? 0,
-    amountHt: sanitizeNumeric(parsed.ht_amount),
-    vatAmount: sanitizeNumeric(parsed.vat_amount),
-    vatRate: sanitizeNumeric(parsed.vat_rate),
-    paymentMethod: sanitizePaymentMethod(parsed.payment_method),
-  });
-
-  const extracted = {
-    user_id: userId,
-    vendor: sanitizeString(parsed.vendor),
-    amount: sanitizeNumeric(parsed.amount),
-    vat_amount: sanitizeNumeric(parsed.vat_amount),
-    category,
-    date: sanitizeDate(parsed.date),
-    due_date: sanitizeDate(parsed.due_date),
-    description: sanitizeString(parsed.description),
-    receipt_url: receiptUrl,
-    receipt_storage_path: storagePath,
-    payment_method: sanitizePaymentMethod(parsed.payment_method),
-    status: 'pending',
-    ocr_raw_response: parsed,
-    ocr_confidence: normalizeConfidence(parsed.confidence),
-    ocr_line_items: sanitizeLineItems(parsed.line_items),
-    ocr_supplier_siret: sanitizeString(parsed.vendor_siret),
-    ocr_invoice_number: sanitizeString(parsed.invoice_number),
-    ocr_currency: sanitizeString(parsed.currency) ?? 'EUR',
-    ocr_payment_due_date: sanitizeDate(parsed.due_date),
-    account_code: finalAccountCode,
-    account_label: finalAccountLabel,
-    journal_type: journalEntry.journalType,
-    journal_entry: {
-      debit: { account: journalEntry.debitAccount, label: journalEntry.debitLabel, amount: journalEntry.amount },
-      credit: { account: journalEntry.creditAccount, label: journalEntry.creditLabel, amount: journalEntry.amount + journalEntry.vatAmount },
-      vat: journalEntry.vatAccount ? { account: journalEntry.vatAccount, amount: journalEntry.vatAmount } : null,
-    },
-    vat_account: journalEntry.vatAccount || null,
-    document_type: sanitizeString(parsed.document_type),
-    supplier_category: supplierCategory,
-    is_professional_expense: typeof parsed.is_professional_expense === 'boolean' ? parsed.is_professional_expense : true,
-    vat_details: sanitizeVatDetails(parsed.vat_details),
-    ocr_method: 'openrouter',
-  };
-
-  // Apply vendor mappings
-  if (extracted.vendor) {
-    await applyVendorMappings(supabase, userId, extracted);
+  if (result.dbError) {
+    console.error('[OCR Hybrid] DB insert error:', result.dbError);
+    throw new Error('Erreur base de données: ' + result.dbError);
   }
 
-  // Remove null keys
-  for (const key of Object.keys(extracted)) {
-    if ((extracted as Record<string, unknown>)[key] === null || (extracted as Record<string, unknown>)[key] === undefined) {
-      delete (extracted as Record<string, unknown>)[key];
-    }
-  }
-
-  // Save to database
-  const { data: savedExpense, error: dbError } = await supabase
-    .from('expenses')
-    .insert(extracted)
-    .select()
-    .single();
-
-  if (dbError) {
-    console.error('[OCR Hybrid] DB insert error:', dbError);
-    throw dbError;
-  }
-
-  // Estimate cost (rough calculation)
+  // Estimate cost
   const inputTokens = base64.length / 4;
   const outputTokens = JSON.stringify(parsed).length / 4;
   const costUsd = (inputTokens / 1_000_000) * 0.30 + (outputTokens / 1_000_000) * 2.50;
@@ -451,38 +420,11 @@ async function processWithOpenRouter(
   return {
     success: true,
     method: 'openrouter',
-    confidence: normalizeConfidence(parsed.confidence),
+    confidence: result.extracted.confidence as number,
     processingTimeMs: Date.now() - startTime,
     costUsd,
-    extracted: savedExpense,
+    extracted: result.savedExpense ?? result.extracted,
+    accounting: result.accounting as Record<string, unknown>,
+    receipt_url: fileMeta.receiptUrl,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Helper: Apply vendor mappings
-// ---------------------------------------------------------------------------
-
-async function applyVendorMappings(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
-  userId: string,
-  extracted: Record<string, unknown>
-): Promise<void> {
-  if (!extracted.vendor) return;
-
-  const normalized = (extracted.vendor as string).toLowerCase().trim();
-  const { data: mapping } = await supabase
-    .from('vendor_mappings')
-    .select('account_code, account_name, corrected_category')
-    .eq('user_id', userId)
-    .ilike('vendor_name_pattern', normalized)
-    .maybeSingle();
-
-  if (mapping?.account_code) {
-    extracted.account_code = mapping.account_code;
-    extracted.account_label = mapping.account_name || extracted.account_label;
-  }
-
-  if (mapping?.corrected_category) {
-    extracted.category = mapping.corrected_category;
-  }
 }

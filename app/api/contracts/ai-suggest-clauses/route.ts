@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { applyUserIdRateLimit } from '@/lib/rate-limit';
 import OpenAI from 'openai';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    const rateLimitError = applyUserIdRateLimit(user.id, 10, 60_000);
+    if (rateLimitError) return rateLimitError;
+
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
     }

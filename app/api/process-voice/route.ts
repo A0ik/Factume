@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { audio, sector, isEdit, existingItems } = validatedData;
+    const mode = (formData.get('mode') as string) || 'invoice';
 
     // Transcription with Groq Whisper (auto-detect language - supports Arabic and French)
     const transcription = await groq.audio.transcriptions.create({
@@ -56,6 +57,17 @@ export async function POST(req: NextRequest) {
 
     const sectorHint = sector ? `L'utilisateur travaille dans le secteur : ${sector}.` : '';
 
+    // Type de document pour adapter le prompt
+    const modeLabel: Record<string, string> = {
+      invoice: 'facture',
+      quote: 'devis',
+      credit_note: 'avoir (note de crédit)',
+      order: 'bon de commande',
+      delivery: 'bon de livraison',
+      deposit: "facture d'acompte",
+    };
+    const docLabel = modeLabel[mode || 'invoice'] || 'facture';
+
     let systemPrompt: string;
 
     if (isEdit && existingItems.length) {
@@ -67,7 +79,7 @@ export async function POST(req: NextRequest) {
 
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
-CONTEXTE: L'utilisateur modifie une facture existante par voix. Analyse avec précision son intention.
+CONTEXTE: L'utilisateur modifie un ${docLabel} existant par voix. Analyse avec précision son intention.
 
 RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
@@ -101,7 +113,8 @@ Retourne UNIQUEMENT du JSON valide :
     { "description": "string", "quantity": number, "unit_price": number, "vat_rate": number }
   ],
   "due_days": null,
-  "notes": null
+  "notes": null,
+  "uncertain_fields": []
 }
 
 RÈGLES ABSOLUES :
@@ -112,6 +125,11 @@ RÈGLES ABSOLUES :
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
 - summary doit être en français, court et précis
 
+⚠️ INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
+Ne signale QUE si l'information a 2+ interprétations très différentes (ex: "deux" vs "douze") ou est inaudible.
+Si tu es raisonnablement confiant → "uncertain_fields": []
+Exemple de signal légitime :
+
 ⚠️ CALCUL JOURNALIER - MODIFICATION :
 - "X jours à Y€/jour" → quantity = X, unit_price = Y
 - "X jours à Y€ par jour" → quantity = X, unit_price = Y
@@ -121,7 +139,7 @@ RÈGLES ABSOLUES :
     } else {
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
-CONTEXTE: L'utilisateur dicte une facture par voix. Extrais TOUTES les informations pertinentes de manière professionnelle.
+CONTEXTE: L'utilisateur dicte un ${docLabel} par voix. Extrais TOUTES les informations pertinentes de manière professionnelle.
 
 RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
@@ -140,6 +158,7 @@ EXTRACTION OBLIGATOIRE :
 2. LIGNES: Chaque prestation/produit mentionné avec quantité et prix
 3. DÉLAI: "30 jours", "60 jours", "à réception", "comptant", "15 jours"
 4. REMISE: Uniquement si explicite ("remise 10%", "faire une remise", "-10%")
+5. CONTACT: email, téléphone, adresse s'ils sont mentionnés
 
 Format JSON attendu:
 {
@@ -156,8 +175,28 @@ Format JSON attendu:
   "items": [{"description": "string", "quantity": number, "unit_price": number, "vat_rate": number}],
   "due_days": number,
   "notes": "string ou null",
-  "discount_percent": number
+  "discount_percent": number,
+  "uncertain_fields": [
+    {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
+  ]
 }
+
+⚠️ INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
+Ne signale un champ QUE si l'information est réellement ambiguë ou inaudible.
+NE PAS signaler si tu es raisonnablement confiant (même si tu n'es pas à 100%).
+Signale UNIQUEMENT dans ces cas :
+- Le mot entendu a 2+ interprétations très différentes (ex: "deux" vs "douze", "cent" vs "sans")
+- Un nombre clé est couvert par du bruit ou inaudible
+- L'utilisateur se contredit dans la même phrase (ex: "500... non 1500")
+NE PAS signaler :
+- Les noms propres légèrement imprécis (prends ton meilleur choix)
+- Les petits doutes normaux d'une transcription (l'IA gère ça)
+- Les montants clairement énoncés même si le contexte est vague
+Si aucun doute réel → "uncertain_fields": []
+Exemples de signaux légitimes :
+- "uncertain_fields": [{"field": "items[0].unit_price", "current_value": 500, "reason": "L'utilisateur a dit 'cinq cent' mais pourrait vouloir dire 15 000", "suggestion": 500}]
+- "uncertain_fields": [{"field": "client_name", "current_value": "Dupont", "reason": "Nom partiellement entendu, pourrait être Dupond ou Du Pont", "suggestion": "Dupont"}]
+Si tout est clair et certain, retourne : "uncertain_fields": []
 
 RÈGLES ABSOLUES pour les descriptions :
 - NE JAMAIS recopier mot pour mot ce que l'utilisateur a dit
@@ -165,12 +204,19 @@ RÈGLES ABSOLUES pour les descriptions :
 - "site internet" → "Conception et développement de site web"
 - "logo" → "Création d'identité visuelle et logotype"
 - "3 jours de conseil" → "Prestation de conseil et accompagnement stratégique"
+- "nettoyage" → "Prestation de nettoyage professionnel"
+- "réparation" → "Service de réparation et maintenance"
+- "cours" → "Prestation de formation et enseignement"
+- "livraison" → "Service de livraison et transport"
+- "coaching" → "Accompagnement et coaching professionnel"
+- "photographie" → "Prestation de photographie professionnelle"
+- "rédaction" → "Service de rédaction et création de contenu"
 - Description entre 3 et 10 mots, claire et professionnelle
 
 RÈGLES POUR LES MONTANTS :
 - unit_price est TOUJOURS HT — DOIT être un nombre fini
 - Si le montant est TTC, calcule TOI-MÊME le HT : HT = TTC / (1 + TVA/100)
-- TVA standard = 20%, réduite = 10%, très réduite = 5.5%, exonérée = 0%
+- TVA standard = 20%, réduite = 10%, très réduite = 5.5%, particulier = 2.1%, exonérée = 0%
 - vat_rate par défaut = 20
 - CORRECT: unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
 - FAUX: unit_price: 400 / 1.10
@@ -186,15 +232,28 @@ RÈGLES POUR LES MONTANTS :
 - TOUJOURS interpréter le nombre de jours/semaines comme quantity
 - Si un prix total est donné sans précision "par jour", diviser par le nombre de jours
 
+⚠️ MONTANTS FORFAITAIRES :
+- "pour 3000€" / "un forfait de X€" → quantity: 1, unit_price: X (le montant total)
+- "le projet coûte X€" → quantity: 1, unit_price: X
+- Si ni "/jour" ni "par jour" ni "/mois" mentionné → forfait (quantity = 1)
+
+⚠️ MONTANTS MENSUELS :
+- "X€ par mois" / "X€/mois" / "mensuel" → quantity: 1, unit_price: X, description inclut "(mensuel)"
+
 EXEMPLES DE CALCUL JOURNALIER :
 - "5 jours de développement à 500€ par jour" → {description: "Développement", quantity: 5, unit_price: 500, vat_rate: 20}
 - "3 jours de conseil à 800€/j" → {description: "Prestation de conseil", quantity: 3, unit_price: 800, vat_rate: 20}
 - "Une semaine de formation à 1000€ par jour" → {description: "Formation", quantity: 5, unit_price: 1000, vat_rate: 20}
 - "2 jours de design à £600 per day" → {description: "Design", quantity: 2, unit_price: 696, vat_rate: 20} (£600 × 1.16)
 
+EXEMPLES DE FORFAIT :
+- "un site web pour 3000€" → {description: "Conception et développement de site web", quantity: 1, unit_price: 3000, vat_rate: 20}
+- "le logo à 500€" → {description: "Création d'identité visuelle et logotype", quantity: 1, unit_price: 500, vat_rate: 20}
+
 INFORMATIONS CLIENT :
 - SIRET: 14 chiffres sans espaces ni points
 - TVA: format FRXX123456789 (XX = clé, 9 chiffres = SIREN)
+- Email: chercher des mots comme "arobase", "chez", "at", "@" dans la dictée
 
 DÉLAI DE PAIEMENT :
 - "à réception" / "comptant" / "sur place" → due_days: 0
@@ -202,13 +261,26 @@ DÉLAI DE PAIEMENT :
 - "30 jours" (défaut) → due_days: 30
 - "45 jours" → due_days: 45
 - "60 jours" → due_days: 60
-- "fin de mois" → ajouter aux jours indiqués
+- "fin de mois" → due_days: 30 (valeur standard)
 
 REMISE:
 - NE JAMAIS mettre de remise par défaut
 - Uniquement si l'utilisateur le demande explicitement
 - "remise 10%" ou "10% de remise" → discount_percent: 10
 - Sans mention → discount_percent: 0
+
+NOTES ET CONDITIONS :
+- Si l'utilisateur mentionne des conditions spéciales, les mettre dans "notes"
+- Exemples : "non remboursable", "valable 1 mois", "urgence +50%"
+
+SITUATIONS PARTICULIÈRES À GÉRER :
+- L'utilisateur ne mentionne qu'un seul montant total → 1 ligne avec quantity=1, description générique basée sur le secteur
+- L'utilisateur dit "la même chose que d'habitude" → crée une ligne générique "Prestation de service" avec les montants entendus
+- L'utilisateur hésite sur un prix → mets le prix entendu et ajoute-le dans uncertain_fields
+- L'utilisateur mentionne plusieurs clients → prends le dernier mentionné comme client principal
+- L'utilisateur parle trop vite ou bafouille → extrais ce que tu peux, signale le reste dans uncertain_fields
+- L'utilisateur mélange français et arabe/darija → extrais les infos dans les deux langues, noms en français
+- L'utilisateur donne un montant TTC → convertis en HT et signale la conversion
 
 RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'expressions`;
     }
@@ -231,6 +303,7 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       due_days: 30,
       notes: null,
       discount_percent: 0,
+      uncertain_fields: [],
     };
     try {
       parsed = JSON.parse(completion.choices[0].message.content || '{}') as VoiceParsedResponse;
