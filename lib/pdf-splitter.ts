@@ -5,6 +5,7 @@
 
 import { PDFDocument } from 'pdf-lib';
 import pdf from 'pdf-parse';
+import { getPDFPageCount } from './pdf-to-image';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -118,13 +118,12 @@ export class OCRQueueManager {
     const rows = jobs.map(job => ({
       user_id: job.userId,
       file_name: job.fileName,
-      file_type: job.fileType || 'application/octet-stream',
+      file_url: job.fileUrl,
+      mime_type: job.mimeType || 'application/octet-stream',
       storage_path: job.storagePath,
-      receipt_url: job.receiptUrl,
       file_size: job.fileSize || 0,
       status: 'pending',
-      priority: job.priority || 0,
-      attempts: 0,
+      priority: job.priority || 'normal',
     }));
 
     const { data, error } = await this.supabase
