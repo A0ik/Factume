@@ -77,7 +77,7 @@ export const blogPosts: BlogPost[] = [
     ],
   },
   {
-    slug: 'facture-électronique-obligatoire-2026',
+    slug: 'facture-electronique-obligatoire-2026',
     title: 'Facture électronique obligatoire en 2026 : tout savoir sur la reforme',
     description: 'La facture électronique sera obligatoire pour toutes les entreprises françaises. Découvrez les échéances, les obligations et comment vous préparer des maintenant.',
     date: '2025-02-10',
@@ -129,7 +129,7 @@ export const blogPosts: BlogPost[] = [
     ],
   },
   {
-    slug: 'mentions-légales-facture',
+    slug: 'mentions-legales-facture',
     title: 'Les mentions légales obligatoires sur une facture : guide complet',
     description: 'Quelles sont les mentions légales obligatoires sur une facture en France ? Découvrez la liste complète pour être en règle et éviter les amendes.',
     date: '2025-03-05',
@@ -546,7 +546,7 @@ export const blogPosts: BlogPost[] = [
     ],
   },
   {
-    slug: 'ocr-reçus-note-de-frais',
+    slug: 'ocr-recus-note-de-frais',
     title: 'OCR et notes de frais : comment automatiser la gestion de vos dépenses',
     description: 'Découvrez comment l\'OCR (reconnaissance optique) révolutionne la gestion des notes de frais et reçus. Gain de temps, réduction des erreurs et conformité fiscale.',
     date: '2025-04-10',

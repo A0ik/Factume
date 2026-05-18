@@ -164,10 +164,10 @@ export default function Sidebar() {
         href: '/ocr',
         icon: ScanLine,
         label: 'Scan OCR',
-        enabled: false,
-        lockReason: 'Fonctionnalité temporairement désactivée',
-        unlockTier: undefined,
-        badge: 'Bientôt',
+        enabled: sub.isBusiness || sub.isTrialActive,
+        lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business',
+        unlockTier: 'business',
+        badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
       { href: '/integrations', icon: Plug,     label: 'Connexions',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
       { href: '/data-health',  icon: Shield,   label: 'Santé des données', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
@@ -625,19 +625,19 @@ export default function Sidebar() {
           className={cn(
             'relative overflow-hidden rounded-2xl p-3 mb-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg',
             'border',
-            sub.tier === 'free' && 'bg-gradient-to-br from-gray-100 to-gray-50 border-gray-200 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700',
-            sub.tier === 'trial' && 'bg-gradient-to-br from-purple-100 to-purple-50 border-purple-200 dark:from-purple-900/30 dark:to-purple-800/20 dark:border-purple-700',
-            (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-gradient-to-br from-blue-100 to-blue-50 border-blue-200 dark:from-blue-900/30 dark:to-blue-800/20 dark:border-blue-700',
-            sub.tier === 'business' && 'bg-gradient-to-br from-violet-100 to-violet-50 border-violet-200 dark:from-violet-900/30 dark:to-violet-800/20 dark:border-violet-700',
+            sub.tier === 'free' && 'bg-gradient-to-br from-gray-300 to-gray-200 border-gray-400 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700',
+            sub.tier === 'trial' && 'bg-gradient-to-br from-purple-300 to-purple-200 border-purple-400 dark:from-purple-900/30 dark:to-purple-800/20 dark:border-purple-700',
+            (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-gradient-to-br from-blue-300 to-blue-200 border-blue-400 dark:from-blue-900/30 dark:to-blue-800/20 dark:border-blue-700',
+            sub.tier === 'business' && 'bg-gradient-to-br from-violet-300 to-violet-200 border-violet-400 dark:from-violet-900/30 dark:to-violet-800/20 dark:border-violet-700',
           )}
         >
           <div className="flex items-center gap-3">
             <div className={cn(
               'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
-              sub.tier === 'free' && 'bg-gray-200 dark:bg-gray-700',
-              sub.tier === 'trial' && 'bg-purple-200 dark:bg-purple-800',
-              (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-blue-200 dark:bg-blue-800',
-              sub.tier === 'business' && 'bg-violet-200 dark:bg-violet-800',
+              sub.tier === 'free' && 'bg-gray-400 dark:bg-gray-700',
+              sub.tier === 'trial' && 'bg-purple-400 dark:bg-purple-800',
+              (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-blue-400 dark:bg-blue-800',
+              sub.tier === 'business' && 'bg-violet-400 dark:bg-violet-800',
             )}>
               <tierConfig.icon size={18} className={tierConfig.iconColor} strokeWidth={2.5} />
             </div>

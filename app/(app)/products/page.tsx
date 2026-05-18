@@ -256,51 +256,42 @@ export default function ProductsPage() {
     }
   };
 
+  const [retryCount, setRetryCount] = useState(0);
+
   useEffect(() => {
     if (user) fetchProducts();
-  }, [user]);
+  }, [user, retryCount]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const supabase = getSupabaseClient();
       if (!supabase) {
-        console.warn('Supabase client not available');
-        setProducts([]);
-        setLoading(false);
+        if (retryCount < 3) {
+          setTimeout(() => setRetryCount(c => c + 1), 500);
+        } else {
+          setProducts([]);
+          setLoading(false);
+        }
         return;
       }
 
-      // Vérifier d'abord si la table existe en faisant une requête simple
-      const { data, error, status } = await supabase
+      const { data: allProducts, error } = await supabase
         .from('products')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
 
-      // Si la table n'existe pas (code 404 ou erreur specific)
       if (error) {
-        // Code d'erreur PostgreSQL pour "relation does not exist"
-        if (error.code === '42P01' || status === 404 || error.message.includes('does not exist')) {
-          console.warn('Products table does not exist yet');
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
           setProducts([]);
           setLoading(false);
           return;
         }
         throw error;
       }
-
-      // Si on a un résultat, récupérer tous les produits
-      const { data: allProducts, error: allError } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (allError) throw allError;
       setProducts(allProducts || []);
     } catch (e: any) {
       console.error('Error fetching products:', e);
-      // Ne pas afficher de toast pour les erreurs de connexion
       if (e.message && !e.message.includes('Failed to fetch')) {
         toast.error('Erreur lors du chargement des produits');
       }

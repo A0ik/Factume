@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { FALLBACK_MODELS } from '@/lib/services/ai-models-config';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -10,13 +11,6 @@ const openai = new OpenAI({
     'X-Title': 'Factu.me Support',
   },
 });
-
-const FALLBACK_MODELS = [
-  'nvidia/llama-3.1-nemotron-70b-instruct:free',
-  'google/gemma-3-4b-it:free',
-  'meta-llama/llama-3-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-];
 
 const SYSTEM_PROMPT = `Tu es l'assistant support de Factu.me, un logiciel de facturation français pour auto-entrepreneurs, artisans, freelances et TPE.
 

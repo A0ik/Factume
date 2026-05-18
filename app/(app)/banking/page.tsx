@@ -78,7 +78,8 @@ export default function BankingPage() {
       .select('*')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error('Error fetching expenses:', error);
         setExpenses(data || []);
         setExpensesLoading(false);
       });
@@ -253,13 +254,22 @@ export default function BankingPage() {
           title="Banque"
           subtitle="Vue d'ensemble de votre tresorerie"
           actions={
-            <Link
-              href="/expenses"
-              className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95"
-            >
-              <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
-              Depense
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/banking/connect"
+                className="group inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 hover:border-primary hover:text-primary hover:scale-105 active:scale-95"
+              >
+                <Landmark size={16} />
+                Connecter
+              </Link>
+              <Link
+                href="/expenses"
+                className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95"
+              >
+                <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
+                Depense
+              </Link>
+            </div>
           }
         />
       </motion.div>

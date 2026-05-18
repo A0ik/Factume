@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Landmark, Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
@@ -10,6 +10,14 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function BankConnectPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="animate-spin text-gray-400" size={32} /></div>}>
+      <BankConnectContent />
+    </Suspense>
+  );
+}
+
+function BankConnectContent() {
   const { profile } = useAuthStore();
   const { connectBank, fetchBankConnections, bankConnections } = useIntegrationStore();
   const searchParams = useSearchParams();
@@ -18,7 +26,7 @@ export default function BankConnectPage() {
   const error = searchParams.get('error');
 
   useEffect(() => {
-    fetchBankConnections();
+    fetchBankConnections().catch((err) => console.error('Error fetching bank connections:', err));
   }, []);
 
   useEffect(() => {

@@ -462,7 +462,7 @@ export default function ClientsPage() {
           />
           <StatCard
             title="Factures / client"
-            value={activeClients.length > 0 ? (invoices.length / activeClients.length).toFixed(1) : '0'}
+            value={activeClients.length > 0 ? (invoices.filter(i => activeClients.some(c => c.id === i.client_id)).length / activeClients.length).toFixed(1) : '0'}
             subtitle="en moyenne"
             icon={FileText}
             gradient="from-blue-500 to-blue-600"

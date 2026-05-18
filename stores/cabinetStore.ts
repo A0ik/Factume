@@ -71,7 +71,7 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
-    await fetch('/api/cabinet/clients', {
+    const res = await fetch('/api/cabinet/clients', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -79,6 +79,10 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      throw new Error(error || 'Erreur lors de la mise à jour');
+    }
     await get().fetchCabinet();
   },
 
@@ -108,7 +112,7 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
-    await fetch('/api/cabinet/clients', {
+    const res = await fetch('/api/cabinet/clients', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -116,6 +120,10 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       },
       body: JSON.stringify({ clientUserId }),
     });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      throw new Error(error || 'Erreur lors de la suppression');
+    }
     await get().fetchCabinet();
   },
 

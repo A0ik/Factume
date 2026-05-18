@@ -188,7 +188,7 @@ export default function CabinetPage() {
     );
   }
 
-  const netBalance = (data.stats.totalRevenue || 0) - (data.stats.totalExpenses || 0);
+  const netBalance = (data.stats?.totalRevenue || 0) - (data.stats?.totalExpenses || 0);
   const primaryColor = data.cabinet?.primary_color || '#4f46e5';
   const brandName = data.cabinet?.hide_factu_branding && data.cabinet?.white_label_name
     ? data.cabinet.white_label_name
@@ -273,7 +273,7 @@ export default function CabinetPage() {
         {[
           {
             label: 'CA total des clients',
-            value: formatCurrency(data.stats.totalRevenue || 0),
+            value: formatCurrency(data.stats?.totalRevenue || 0),
             icon: TrendingUp,
             color: 'from-emerald-500 to-teal-600',
             bg: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -281,7 +281,7 @@ export default function CabinetPage() {
           },
           {
             label: 'Dépenses totales',
-            value: formatCurrency(data.stats.totalExpenses || 0),
+            value: formatCurrency(data.stats?.totalExpenses || 0),
             icon: Euro,
             color: 'from-red-500 to-rose-600',
             bg: 'bg-red-50 dark:bg-red-900/20',
@@ -297,11 +297,11 @@ export default function CabinetPage() {
           },
           {
             label: 'Factures en retard',
-            value: String(data.stats.totalOverdue || 0),
+            value: String(data.stats?.totalOverdue || 0),
             icon: AlertTriangle,
-            color: data.stats.totalOverdue > 0 ? 'from-amber-500 to-orange-500' : 'from-gray-400 to-gray-500',
-            bg: data.stats.totalOverdue > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900/20',
-            text: data.stats.totalOverdue > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400',
+            color: (data.stats?.totalOverdue || 0) > 0 ? 'from-amber-500 to-orange-500' : 'from-gray-400 to-gray-500',
+            bg: (data.stats?.totalOverdue || 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900/20',
+            text: (data.stats?.totalOverdue || 0) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400',
           },
         ].map(({ label, value, icon: Icon, color, bg, text }) => (
           <div key={label} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>

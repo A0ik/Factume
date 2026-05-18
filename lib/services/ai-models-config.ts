@@ -18,40 +18,40 @@ export interface AIModelConfig {
  */
 export const AI_MODELS: Record<string, AIModelConfig> = {
   // Modèles GRATUITS - Recommandés pour économiser
-  'gemma-4b-free': {
-    id: 'google/gemma-3-4b-it:free',
-    name: 'Google Gemma 3 4B (Gratuit)',
+  'gemma-31b-free': {
+    id: 'google/gemma-4-31b-it:free',
+    name: 'Google Gemma 4 31B (Gratuit)',
     provider: 'OpenRouter',
     free: true,
     costPer1kTokens: 0,
-    maxTokens: 8192,
+    maxTokens: 131072,
+    useCase: 'general',
+  },
+  'gemma-27b-free': {
+    id: 'google/gemma-3-27b-it:free',
+    name: 'Google Gemma 3 27B (Gratuit)',
+    provider: 'OpenRouter',
+    free: true,
+    costPer1kTokens: 0,
+    maxTokens: 131072,
     useCase: 'general',
   },
   'llama-8b-free': {
-    id: 'meta-llama/llama-3-8b-instruct:free',
-    name: 'Llama 3 8B (Gratuit)',
+    id: 'meta-llama/llama-3.1-8b-instruct:free',
+    name: 'Llama 3.1 8B (Gratuit)',
     provider: 'OpenRouter',
     free: true,
     costPer1kTokens: 0,
-    maxTokens: 8192,
+    maxTokens: 131072,
     useCase: 'general',
   },
-  'mistral-7b-free': {
-    id: 'mistralai/mistral-7b-instruct:free',
-    name: 'Mistral 7B (Gratuit)',
+  'gemma-12b-free': {
+    id: 'google/gemma-3-12b-it:free',
+    name: 'Google Gemma 3 12B (Gratuit)',
     provider: 'OpenRouter',
     free: true,
     costPer1kTokens: 0,
-    maxTokens: 8192,
-    useCase: 'general',
-  },
-  'phi-3-free': {
-    id: 'microsoft/phi-3-medium-4k-instruct:free',
-    name: 'Phi-3 Medium (Gratuit)',
-    provider: 'OpenRouter',
-    free: true,
-    costPer1kTokens: 0,
-    maxTokens: 4096,
+    maxTokens: 131072,
     useCase: 'general',
   },
 
@@ -89,26 +89,26 @@ export const AI_MODELS: Record<string, AIModelConfig> = {
  * Modèles recommandés par cas d'usage (optimisés pour le coût)
  */
 export const RECOMMENDED_MODELS = {
-  contract_analysis: AI_MODELS['gemma-4b-free'].id,      // Gratuit et rapide
-  payslip_modification: AI_MODELS['llama-8b-free'].id,   // Gratuit et précis
-  general: AI_MODELS['mistral-7b-free'].id,              // Gratuit et équilibré
+  contract_analysis: AI_MODELS['gemma-31b-free'].id,
+  payslip_modification: AI_MODELS['gemma-27b-free'].id,
+  general: AI_MODELS['gemma-31b-free'].id,
 };
 
 /**
- * Ordre de fallback des modèles (du plus léger au plus performant)
+ * Ordre de fallback des modèles (du plus performant au plus léger)
  */
 export const FALLBACK_MODELS = [
-  AI_MODELS['gemma-4b-free'].id,
+  AI_MODELS['gemma-31b-free'].id,
+  AI_MODELS['gemma-27b-free'].id,
   AI_MODELS['llama-8b-free'].id,
-  AI_MODELS['mistral-7b-free'].id,
-  AI_MODELS['phi-3-free'].id,
+  AI_MODELS['gemma-12b-free'].id,
 ];
 
 /**
  * Fonction pour obtenir le meilleur modèle gratuit disponible
  */
 export function getBestFreeModel(): string {
-  return AI_MODELS['gemma-4b-free'].id;
+  return AI_MODELS['gemma-31b-free'].id;
 }
 
 /**

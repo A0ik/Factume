@@ -14,6 +14,11 @@ export default function CabinetSettingsPage() {
   const { cabinet, fetchCabinet, updateCabinet } = useCabinetStore();
   const sub = useSubscription();
   const [name, setName]   = useState('');
+
+  if (!sub.isBusiness && !sub.isTrialActive) {
+    router.push('/cabinet');
+    return null;
+  }
   const [siret, setSiret] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#4f46e5');
   const [logoUrl, setLogoUrl] = useState('');
