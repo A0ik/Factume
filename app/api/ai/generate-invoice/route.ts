@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { validateAIGenerateData, formatValidationError, ValidationError, DocumentType, AIGenerateSchema, validateRequest } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 type LocalDocumentType = DocumentType;
@@ -63,6 +64,11 @@ export async function POST(req: NextRequest) {
         }
       );
     }
+
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     // Récupérer et valider le corps de la requête
     let body: unknown;

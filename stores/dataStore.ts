@@ -335,12 +335,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((s) => ({ recurringInvoices: [...s.recurringInvoices, data] })); return data;
   },
   updateRecurringInvoice: async (id, updates) => {
-    const { data, error } = await getSupabaseClient().from('recurring_invoices').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select('*, client:clients(*)').single();
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
+    const { data, error } = await getSupabaseClient().from('recurring_invoices').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
     if (error) throw error;
     set((s) => ({ recurringInvoices: s.recurringInvoices.map((r) => (r.id === id ? data : r)) }));
   },
   deleteRecurringInvoice: async (id) => {
-    const { error } = await getSupabaseClient().from('recurring_invoices').delete().eq('id', id);
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const user = session?.user; if (!user) throw new Error('Non authentifié');
+    const { error } = await getSupabaseClient().from('recurring_invoices').delete().eq('id', id).eq('user_id', user.id);
     if (error) throw error;
     set((s) => ({ recurringInvoices: s.recurringInvoices.filter((r) => r.id !== id) }));
   },

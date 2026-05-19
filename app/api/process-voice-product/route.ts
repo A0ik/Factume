@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const rl = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) }
+      });
+    }
+
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
     }

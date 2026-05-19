@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase-admin';
+import { createAdminClient } from '@/lib/supabase-server';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Resend } from 'resend';
 

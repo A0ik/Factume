@@ -4,6 +4,7 @@ import { processVoiceTranscript } from '@/lib/groq-translator';
 import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
 import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 export const maxDuration = 60;
 
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
         }
       );
     }
+
+    // Auth check
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
