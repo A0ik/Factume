@@ -324,7 +324,7 @@ export async function autoLearnVendorRule(
 
   const { error: upsertError } = await supabase
     .from('vendor_mappings')
-    .upsert(upsertData, { onConflict: 'user_id,raw_vendor' });
+    .upsert(upsertData, { onConflict: 'user_id,vendor_name_pattern' });
 
   if (upsertError) {
     console.error('[AutoLearn] Upsert error:', upsertError);
@@ -346,6 +346,9 @@ export interface MultiPageOCRResult {
   success: boolean;
   segment?: InvoiceSegment;
   expense?: Record<string, unknown>;
+  extracted?: Record<string, unknown>;
+  receipt_url?: string;
+  receipt_storage_path?: string;
   error?: string;
 }
 
@@ -416,7 +419,14 @@ export async function extractInvoiceFromPDF(
     }
 
     console.log(`[OCR Multi-Page] Extraction réussie segment ${segment.startPage}-${endPage}`);
-    return { success: true, segment, expense: result.savedExpense ?? undefined, extracted: result.extracted };
+    return {
+      success: true,
+      segment,
+      expense: result.savedExpense ?? undefined,
+      extracted: result.extracted,
+      receipt_url: receiptPublicUrl,
+      receipt_storage_path: storagePath,
+    };
   } catch (error) {
     console.error(`[OCR Multi-Page] Exception segment ${segment.startPage}-${segment.endPage}:`, error);
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
