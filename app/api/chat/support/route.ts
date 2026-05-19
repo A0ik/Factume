@@ -116,6 +116,7 @@ async function tryModelWithFallback(
 
   for (const model of FALLBACK_MODELS) {
     try {
+      console.log(`[Support Chat] Trying model: ${model}`);
       const response = await openai.chat.completions.create({
         model,
         messages: [
@@ -124,7 +125,7 @@ async function tryModelWithFallback(
         ] as any,
         stream: true,
         max_tokens: 2000,
-      });
+      }, { timeout: 15000 });
 
       return new ReadableStream({
         async start(controller) {
@@ -153,7 +154,7 @@ async function tryModelWithFallback(
       });
     } catch (err: any) {
       lastError = err;
-      console.error(`[Support Chat] Model ${model} failed:`, err?.message || err);
+      console.error(`[Support Chat] Model ${model} failed:`, err?.status, err?.message || err);
       continue;
     }
   }
@@ -163,6 +164,11 @@ async function tryModelWithFallback(
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.error('[Support Chat] OPENROUTER_API_KEY is not configured');
+      return new Response(JSON.stringify({ error: 'Configuration IA manquante' }), { status: 500 });
+    }
+
     // Auth optionnelle - le chat fonctionne même sans compte
     let userId: string | null = null;
     try {

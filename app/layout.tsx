@@ -93,6 +93,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://factu.me'),
   alternates: {
     canonical: 'https://factu.me',
+    languages: {
+      'fr': 'https://factu.me',
+      'x-default': 'https://factu.me',
+    },
   },
   openGraph: {
     type: 'website',

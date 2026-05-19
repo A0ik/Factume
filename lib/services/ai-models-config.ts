@@ -65,6 +65,15 @@ export const AI_MODELS: Record<string, AIModelConfig> = {
     maxTokens: 8192,
     useCase: 'contract_analysis',
   },
+  'gemini-flash-paid': {
+    id: 'google/gemini-2.0-flash-001',
+    name: 'Google Gemini 2.0 Flash (Paid)',
+    provider: 'OpenRouter',
+    free: false,
+    costPer1kTokens: 0.001,
+    maxTokens: 1048576,
+    useCase: 'general',
+  },
   'llama-70b': {
     id: 'meta-llama/llama-3-70b-instruct',
     name: 'Llama 3 70B',
@@ -102,6 +111,7 @@ export const FALLBACK_MODELS = [
   AI_MODELS['gemma-27b-free'].id,
   AI_MODELS['llama-8b-free'].id,
   AI_MODELS['gemma-12b-free'].id,
+  AI_MODELS['gemini-flash-paid'].id,
 ];
 
 /**

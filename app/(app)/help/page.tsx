@@ -8,10 +8,12 @@ import {
   BookOpen, HelpCircle, ChevronRight, Send, Clock,
   Download, RefreshCw, Headphones, Ticket,
   MessageSquare, CheckCircle2, Loader2,
+  Landmark, ScanLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { FAQSchema } from '@/components/seo/FAQSchema';
 
 interface FAQ {
   q: string;
@@ -73,7 +75,7 @@ const CATEGORIES = [
     description: 'Dictée vocale et intelligence artificielle',
     faqs: [
       { q: 'Comment fonctionne la dictée vocale ?', a: 'Disponible avec les plans Solo et Pro. Cliquez sur "Créer une facture" puis sur le microphone. Parlez naturellement ("Facture pour Dupont SA, développement site web, 5 jours à 500€"). L\'IA analyse votre audio et remplit automatiquement tous les champs.' },
-      { q: 'Dans quelle langue puis-je dicter ?', a: 'Factu.me comprend le français et l\'anglais. Dictez dans la langue de votre choix, l\'IA s\'adapte automatiquement.' },
+      { q: 'Dans quelle langue puis-je dicter ?', a: 'Factu.me comprend 7 langues : français, arabe, anglais, espagnol, allemand, italien et portugais. Dictez dans la langue de votre choix, l\'IA s\'adapte automatiquement.' },
       { q: 'Que faire si la dictée n\'est pas précise ?', a: 'Parlez clairement en articulant les chiffres et noms de clients. Après traitement, tous les champs restent modifiables avant de créer la facture.' },
       { q: 'Quelles autres fonctions IA sont disponibles ?', a: 'L\'IA peut aussi catégoriser vos dépenses, analyser vos documents, générer des suggestions de clauses contractuelles et analyser vos relevés bancaires pour un suivi comptabilité automatisé.' },
     ],
@@ -99,9 +101,9 @@ const CATEGORIES = [
     bg: 'bg-rose-50',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Gratuit : 3 factures/mois, fonctions de base.\nPlan Solo (9€/mois) : Factures illimitées, dictée vocale IA, factures récurrentes.\nPlan Pro (19€/mois) : Tout Solo + templates premium, Stripe Connect, accès workspace équipe.' },
-      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres.' },
-      { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Gratuit avec les limitations associées.' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Découverte (Gratuit) : 10 factures/mois, clients illimités, templates de base.\nPlan Solo (14,99€/mois) : Factures illimitées, dictée vocale IA, OCR, CRM, calendrier, relances.\nPlan Pro (29,99€/mois) : Tout Solo + contrats CDI/CDD, multi-devises, export FEC, Factur-X, rapprochement bancaire.\nPlan Business (59,99€/mois) : Tout Pro + multi-utilisateurs, mode cabinet, API, support prioritaire.\n\nEssai gratuit de 14 jours disponible sans carte bancaire.' },
+      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 14 jours sans engagement.' },
+      { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Découverte avec les limitations associées.' },
     ],
   },
   {
@@ -129,7 +131,48 @@ const CATEGORIES = [
       { q: 'Comment supprimer mon compte ?', a: 'Dans Paramètres > Compte, cliquez sur "Supprimer le compte". Cette action est irréversible et supprime définitivement toutes vos données (factures, clients, profil).' },
       { q: 'Factu.me est-il conforme au RGPD ?', a: 'Oui. Vos données ne sont jamais vendues à des tiers. Vous pouvez demander l\'export ou la suppression de vos données à tout moment via les paramètres.' },
       { q: 'Comment créer un client ?', a: 'Allez dans la section "Clients" et cliquez sur "Nouveau client". Vous pouvez également créer un client directement lors de la création d\'une facture en tapant son nom.' },
-      { q: 'Puis-je utiliser Factu.me sur mobile ?', a: 'Factu.me est une application web responsive, optimisée pour tous les écrans. Vous pouvez l\'utiliser sur votre téléphone, tablette ou ordinateur sans installer quoi que ce soit.' },
+      { q: 'Puis-je utiliser Factu.me sur mobile ?', a: 'Factu.me est une application web responsive, optimisée pour tous les écrans. Vous pouvez l\'utiliser sur votre téléphone, tablette ou ordinateur sans installer quoi que ce soit. Installez-la comme PWA pour un accès rapide depuis l\'écran d\'accueil.' },
+      { q: 'Comment personnaliser mes modèles de facture ?', a: 'Allez dans Paramètres > Modèles. Vous pouvez choisir parmi 6 templates intégrés, importer votre propre facture pour créer un template personnalisé, ou modifier la couleur d\'accent et le logo.' },
+      { q: 'Comment fonctionnent les factures récurrentes ?', a: 'Dans la section "Récurrentes", créez une récurrence en définissant le client, les prestations et la fréquence (hebdomadaire, mensuelle, trimestrielle, annuelle). La facture sera générée automatiquement à chaque échéance.' },
+    ],
+  },
+  {
+    id: 'ocr',
+    icon: ScanLine,
+    label: 'Scan OCR',
+    color: 'text-cyan-600',
+    bg: 'bg-cyan-50',
+    description: 'Numérisation intelligente de documents',
+    faqs: [
+      { q: 'Comment scanner une facture ou un reçu ?', a: 'Allez dans la section "Scan OCR" (plan Business) ou utilisez le bouton d\'import dans la liste des factures. Uploadez un PDF ou une photo de votre document. L\'IA extrait automatiquement les informations : fournisseur, montant, TVA, date, lignes de prestation.' },
+      { q: 'Quels formats sont supportés ?', a: 'Le scan OCR accepte les fichiers PDF, JPG, PNG et HEIC. Les documents multipages sont supportés : l\'IA détecte et sépare automatiquement les différentes factures dans un même PDF.' },
+      { q: 'Puis-je importer ma propre facture comme modèle ?', a: 'Oui ! Uploadez une facture dont vous aimez le design dans Paramètres > Modèles > Importer. L\'IA analyse le style visuel (couleurs, polices, layout) et crée un template personnalisé que vous pouvez réutiliser pour toutes vos factures.' },
+    ],
+  },
+  {
+    id: 'banque',
+    icon: Landmark,
+    label: 'Banque',
+    color: 'text-indigo-600',
+    bg: 'bg-indigo-50',
+    description: 'Rapprochement bancaire et transactions',
+    faqs: [
+      { q: 'Comment connecter mon compte bancaire ?', a: 'Allez dans la section "Banque" (plan Pro ou supérieur). Cliquez sur "Connecter une banque" pour accéder au portail sécurisé Nordigen/GoCardless. Sélectionnez votre banque, authentifiez-vous, et vos transactions seront importées automatiquement.' },
+      { q: 'Qu\'est-ce que le rapprochement bancaire ?', a: 'Le rapprochement bancaire permet de faire correspondre vos factures émises avec les encaissements sur votre compte bancaire. Cela vous permet de savoir précisément quelles factures ont été payées et lesquelles sont encore en attente.' },
+      { q: 'Mes données bancaires sont-elles sécurisées ?', a: 'Oui. La connexion se fait via l\'API réglementée Nordigen/GoCardless (Open Banking PSD2). Factu.me n\'a jamais accès à vos identifiants bancaires. Seules les données de transactions sont importées en lecture seule.' },
+    ],
+  },
+  {
+    id: 'facturx',
+    icon: FileText,
+    label: 'Factur-X',
+    color: 'text-teal-600',
+    bg: 'bg-teal-50',
+    description: 'Facturation électronique 2026',
+    faqs: [
+      { q: 'Qu\'est-ce que Factur-X ?', a: 'Factur-X est le standard français de facturation électronique (norme EN 16931). À partir de septembre 2026, toutes les entreprises françaises devront émettre et recevoir des factures électroniques en B2B. Factu.me génère automatiquement des factures conformes Factur-X.' },
+      { q: 'Comment me conformer à la réforme 2026 ?', a: 'Avec les plans Pro et Business de Factu.me, vos factures sont automatiquement conformes Factur-X (EN 16931). Le PDF généré contient un fichier XML embarqué avec toutes les données structurées. Vous n\'avez rien de supplémentaire à configurer.' },
+      { q: 'Qu\'est-ce qu\'un PDP (Portail de Dématérialisation Partenaire) ?', a: 'Un PDP est une plateforme agréée par l\'État pour transmettre les factures électroniques. Factu.me est compatible avec les principaux PDP du marché. Consultez notre guide dédié dans le centre d\'aide pour plus de détails.' },
     ],
   },
 ];
@@ -404,6 +447,8 @@ export default function HelpPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* FAQ Schema for SEO */}
+      <FAQSchema items={CATEGORIES.flatMap(cat => cat.faqs.map(f => ({ question: f.q, answer: f.a })))} />
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -561,7 +606,7 @@ export default function HelpPage() {
           {/* Quick actions */}
           <div className="space-y-3">
             <a
-              href="mailto:support@facturme.app"
+              href="mailto:contact@factu.me"
               className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -569,7 +614,7 @@ export default function HelpPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-900 text-sm">Email support</p>
-                <p className="text-xs text-gray-400 mt-0.5">support@facturme.app</p>
+                <p className="text-xs text-gray-400 mt-0.5">contact@factu.me</p>
               </div>
               <ChevronRight size={14} className="text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
             </a>

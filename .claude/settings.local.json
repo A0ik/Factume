@@ -203,7 +203,8 @@
       "mcp__claude_ai_Supabase__get_logs",
       "Bash(chmod +x /tmp/check_tables.sh)",
       "Bash(/tmp/check_tables.sh)",
-      "Bash(tee /tmp/build_output.log)"
+      "Bash(tee /tmp/build_output.log)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx next build)"
     ]
   },
   "enableAllProjectMcpServers": true,

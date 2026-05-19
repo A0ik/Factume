@@ -102,6 +102,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Article Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Article',
+              headline: post.title,
+              description: post.description,
+              datePublished: post.date,
+              author: { '@type': 'Person', name: post.author },
+              publisher: { '@type': 'Organization', name: 'Factu.me', url: 'https://factu.me' },
+              mainEntityOfPage: `https://factu.me/blog/${post.slug}`,
+            }),
+          }}
+        />
         {/* Back to blog button */}
         <Link
           href="/blog"

@@ -39,24 +39,31 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
         return;
       }
 
-      // On mobile, always use HTML fallback - most mobile browsers can't render PDF blobs in iframes
+      // On mobile, fetch server-side PDF for consistent rendering with download
       if (isMobile) {
-        setHtml(generateInvoiceHtml(invoice, profile));
-        setUseHtmlFallback(true);
-        setLoading(false);
-        // Also generate PDF in background for download button
         try {
-          const { pdf } = await import('@react-pdf/renderer');
-          const { PdfDocument } = await import('@/components/pdf-document');
-          const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
-          const blob = await (pdf as any)(element).toBlob();
-          if (!cancelled) {
+          const response = await fetch(`/api/download/pdf/${invoice.id}`);
+          if (response.ok && !cancelled) {
+            const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             urlRef.current = url;
             setPdfUrl(url);
+            setLoading(false);
+          } else {
+            // Server PDF failed, fall back to HTML
+            if (!cancelled) {
+              setHtml(generateInvoiceHtml(invoice, profile));
+              setUseHtmlFallback(true);
+              setLoading(false);
+            }
           }
         } catch {
-          // PDF generation in background failed, that's fine - HTML is already showing
+          // Network error, fall back to HTML
+          if (!cancelled) {
+            setHtml(generateInvoiceHtml(invoice, profile));
+            setUseHtmlFallback(true);
+            setLoading(false);
+          }
         }
         return;
       }
@@ -92,7 +99,7 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
   const handleDownload = async () => {
     try {
       if (isMobile) {
-        // On mobile, use server endpoint for download
+        // On mobile, always use server endpoint for download (consistent with preview)
         window.location.href = `/api/download/pdf/${invoice.id}`;
         return;
       }

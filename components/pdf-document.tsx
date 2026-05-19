@@ -204,8 +204,19 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
     legalParts.push('Pénalités de retard : 3× taux légal — Indemnité forfaitaire : 40 EUR (art. L.441-6 c. com.)');
   const legalText = profile.legal_mention || legalParts.join(' • ');
 
-  const payTermsText = profile.payment_terms ||
-    "Paiement à réception de la facture. En cas de retard de paiement, une indemnité forfaitaire de 40 EUR sera appliquée (art. L.441-6 c. com.). Pénalités de retard : 3× le taux légal.";
+  const payTermsText = (() => {
+    const terms = profile.payment_terms;
+    if (!terms) {
+      return "Paiement à réception de la facture. En cas de retard de paiement, une indemnité forfaitaire de 40 EUR sera appliquée (art. L.441-6 c. com.). Pénalités de retard : 3× le taux légal.";
+    }
+    const numMatch = terms.match(/^\d+$/);
+    if (numMatch) {
+      const days = parseInt(terms, 10);
+      if (days === 0) return "Paiement à réception de la facture.";
+      return `Paiement sous ${days} jours. En cas de retard de paiement, une indemnité forfaitaire de 40 EUR sera appliquée (art. L.441-6 c. com.). Pénalités de retard : 3× le taux légal.`;
+    }
+    return terms;
+  })();
 
   const isFullHeader = tpl.headerType === 'full';
 

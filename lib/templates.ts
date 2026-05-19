@@ -1199,5 +1199,10 @@ export function applyCustomTemplate(html: string, d: TemplateData): string {
   for (const [key, value] of Object.entries(replacements)) {
     result = result.split(key).join(value);
   }
+  // Clean up any unreplaced placeholders to avoid raw {{placeholder}} in output
+  result = result.replace(/\{\{[^}]+\}\}/g, '');
+  // Sanitize: remove script tags and event handlers (security)
+  result = result.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  result = result.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
   return result;
 }

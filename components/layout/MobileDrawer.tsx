@@ -7,15 +7,19 @@ import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Calculator, HelpCircle,
   Bell, Building2, Crown, Sparkles, Rocket, Zap, Target, Lock, ChevronRight, ChevronDown,
-  Moon, Sun, Home, Search, Activity, Landmark, Link2,
+  Moon, Sun, Home, Search, Activity, Landmark,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
+  BookOpen, Shield, Plug, Briefcase, TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useDataStore } from '@/stores/dataStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/ui/Logo';
+import { openCommandPalette } from '@/components/ui/CommandPalette';
 
 const TIER_ICON: Record<string, any> = { free: Zap, solo: Rocket, pro: Crown, business: Sparkles, trial: Sparkles };
 const TIER_LABEL: Record<string, string> = { free: 'Gratuit', solo: 'Solo', pro: 'Pro', business: 'Business', trial: 'Essai' };
@@ -46,7 +50,9 @@ const DOC_SUB_ITEMS = [
 export default function MobileDrawer({ open, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { profile, user } = useAuthStore();
+  const { invoices } = useDataStore();
+  const { unreadCount, fetchNotifications } = useWorkspaceStore();
   const sub = useSubscription();
   const { theme, toggle } = useThemeStore();
   const [docsExpanded, setDocsExpanded] = useState(pathname.startsWith('/documents'));
@@ -61,8 +67,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  // Fetch notifications
+  useEffect(() => { if (user) fetchNotifications(user.id); }, [user]);
+
   const TierIcon = TIER_ICON[sub.tier] || Zap;
   const docsActive = pathname.startsWith('/documents');
+  const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
 
   // Build nav items based on subscription
   const buildMainNav = (): NavItem[] => {
@@ -85,15 +95,16 @@ export default function MobileDrawer({ open, onClose }: Props) {
     ];
 
     tools.push(
-      { href: '/notifications', icon: Bell, label: 'Notifications' },
-      { href: '/help', icon: HelpCircle, label: 'Aide' },
-      { href: '/settings', icon: Settings, label: 'Paramètres' },
+      { href: '/notifications', icon: Bell,      label: 'Notifications' },
+      { href: '/blog',          icon: BookOpen,  label: 'Blog' },
+      { href: '/help',          icon: HelpCircle,label: 'Aide' },
+      { href: '/settings',      icon: Settings,  label: 'Paramètres' },
     );
 
     return tools;
   };
 
-  const buildPremiumNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> => {
+  const buildAdvancedNav = (): Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> => {
     const items: Array<{ href: string; icon: any; label: string; enabled: boolean; lockReason?: string; unlockTier?: string; badge?: string }> = [];
 
     // Pipeline CRM - Pro/Business only
@@ -126,10 +137,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
         unlockTier: 'business',
         badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business',
       },
-      { href: '/connections', icon: Link2,    label: 'Connexions',    enabled: false, lockReason: 'Bientôt disponible' },
-      { href: '/accounting',  icon: Calculator,label: 'Comptabilité', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
-      { href: '/activity',    icon: Activity, label: 'Activité',      enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
-      { href: '/banking',     icon: Landmark, label: 'Banque',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/integrations', icon: Plug,      label: 'Connexions',        enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/data-health',  icon: Shield,    label: 'Santé des données', enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/accounting',   icon: Calculator,label: 'Comptabilité',      enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/activity',     icon: Activity,  label: 'Activité',          enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/banking',      icon: Landmark,  label: 'Banque',            enabled: sub.effectiveIsPro, lockReason: sub.effectiveIsPro ? undefined : 'Disponible avec Pro', unlockTier: 'pro', badge: sub.effectiveIsPro ? undefined : 'PRO' },
+      { href: '/cabinet',      icon: Briefcase, label: 'Cabinet',           enabled: sub.isBusiness || sub.isTrialActive, lockReason: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Disponible avec Business', unlockTier: 'business', badge: (sub.isBusiness || sub.isTrialActive) ? undefined : 'Business' },
     );
 
     return items;
@@ -137,7 +150,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
 
   const NAV_MAIN = buildMainNav();
   const NAV_TOOLS = buildToolsNav();
-  const NAV_PREMIUM = buildPremiumNav();
+  const NAV_ADVANCED = buildAdvancedNav();
 
   const NavItem = ({ href, icon: Icon, label, locked, lockReason, unlockTier }: NavItem) => {
     const active = pathname.startsWith(href);
@@ -160,6 +173,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     return (
       <Link
         href={href}
+        onClick={onClose}
         className={cn(
           'flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200',
           active
@@ -176,6 +190,11 @@ export default function MobileDrawer({ open, onClose }: Props) {
           <Icon size={17} strokeWidth={active ? 2.5 : 2} />
         </span>
         <span className="flex-1 font-semibold">{label}</span>
+        {href === '/notifications' && unreadCount > 0 && (
+          <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-primary text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
         {active && (
           <motion.span
             initial={{ scale: 0 }}
@@ -191,7 +210,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop - Enhanced with better contrast */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -200,7 +219,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
             onClick={onClose}
           />
 
-          {/* Drawer - Enhanced liquid glass effect */}
+          {/* Drawer */}
           <motion.div
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
@@ -242,6 +261,18 @@ export default function MobileDrawer({ open, onClose }: Props) {
               </div>
             </div>
 
+            {/* Search bar */}
+            <div className="px-3 py-2 border-b border-emerald-100/60 dark:border-emerald-900/20">
+              <button
+                onClick={() => { onClose(); openCommandPalette(); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700/80 transition-all text-sm"
+              >
+                <Search size={15} className="text-primary" />
+                <span className="flex-1 text-left font-medium">Rechercher...</span>
+                <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-400 font-mono">⌘K</kbd>
+              </button>
+            </div>
+
             {/* Nav content */}
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
               {/* Main nav */}
@@ -255,7 +286,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
                 {/* Dashboard first */}
                 {NAV_MAIN.length > 0 && <NavItem key={NAV_MAIN[0].href} {...NAV_MAIN[0]} />}
 
-                {/* Expandable Documents (2nd position) */}
+                {/* Expandable Documents */}
                 <div className="space-y-0.5">
                   <div className="flex items-stretch gap-0">
                     <Link
@@ -277,6 +308,11 @@ export default function MobileDrawer({ open, onClose }: Props) {
                         <FileText size={17} strokeWidth={docsActive ? 2.5 : 2} />
                       </span>
                       <span className="flex-1 font-semibold">Documents</span>
+                      {overdueCount > 0 && (
+                        <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                          {overdueCount > 9 ? '9+' : overdueCount}
+                        </span>
+                      )}
                     </Link>
                     <button
                       onClick={() => setDocsExpanded(!docsExpanded)}
@@ -318,12 +354,34 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   )}
                 </div>
 
-                {/* Rest of core nav (Clients, Articles, Agenda) */}
+                {/* Rest of core nav */}
                 {NAV_MAIN.slice(1).map((item) => <NavItem key={item.href} {...item} />)}
               </div>
 
-              {/* Premium features */}
-              {NAV_PREMIUM.some(item => item.enabled || item.lockReason) && (
+              {/* Quick stats */}
+              <div className="px-1">
+                <div className="px-3 py-3 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp size={12} className="text-primary" />
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aperçu</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Payées', value: invoices.filter(i => i.status === 'paid').length, color: 'text-primary' },
+                      { label: 'Attente', value: invoices.filter(i => i.status === 'sent').length, color: 'text-amber-500' },
+                      { label: 'Retard', value: overdueCount, color: overdueCount > 0 ? 'text-red-500' : 'text-gray-300' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="text-center p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-colors cursor-default">
+                        <p className={cn('text-lg font-black', color)}>{value}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Premium features - organized by category like desktop */}
+              {NAV_ADVANCED.some(item => item.enabled || item.lockReason) && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 px-1 mb-2">
                     <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-500/10 flex items-center justify-center">
@@ -331,54 +389,190 @@ export default function MobileDrawer({ open, onClose }: Props) {
                     </div>
                     <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Premium</p>
                   </div>
-                  <div className="space-y-0.5">
-                    {NAV_PREMIUM.map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
-                      if (enabled) {
-                        const isActive = pathname.startsWith(href);
-                        return (
-                          <Link
-                            key={href}
-                            href={href}
-                            onClick={onClose}
-                            className={cn(
-                              'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
-                              isActive
-                                ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
-                            )}
-                          >
-                            <span className={cn(
-                              'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
-                              isActive
-                                ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
-                                : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
-                            )}>
-                              <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
-                            </span>
-                            <span className="flex-1 font-semibold">{label}</span>
-                          </Link>
-                        );
-                      }
 
-                      return (
-                        <div
-                          key={href}
-                          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70"
-                          title={lockReason}
-                        >
-                          <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
-                            <Icon size={17} strokeWidth={2} />
-                          </span>
-                          <span className="flex-1 font-medium">{label}</span>
-                          {badge ? (
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                  {/* Gestion & Comptabilité */}
+                  {NAV_ADVANCED.some(i => i.href === '/expenses' || i.href === '/accounting' || i.href === '/activity') && (
+                    <>
+                      <div className="px-4 mb-1">
+                        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gestion & Comptabilité</p>
+                      </div>
+                      <div className="space-y-0.5 mb-2">
+                        {NAV_ADVANCED.filter(i => i.href === '/expenses' || i.href === '/accounting' || i.href === '/activity').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                          const isActive = pathname.startsWith(href);
+                          return enabled ? (
+                            <Link key={href} href={href} onClick={onClose}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                              )}
+                            >
+                              <span className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                              )}>
+                                <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                              </span>
+                              <span className="flex-1 font-semibold">{label}</span>
+                            </Link>
                           ) : (
-                            <Lock size={13} />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <div key={href} className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70" title={lockReason}>
+                              <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
+                                <Icon size={17} strokeWidth={2} />
+                              </span>
+                              <span className="flex-1 font-medium">{label}</span>
+                              {badge ? (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                              ) : (
+                                <Lock size={13} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* CRM & Ventes */}
+                  {NAV_ADVANCED.some(i => i.href === '/crm') && (
+                    <>
+                      <div className="px-4 mb-1">
+                        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">CRM & Ventes</p>
+                      </div>
+                      <div className="space-y-0.5 mb-2">
+                        {NAV_ADVANCED.filter(i => i.href === '/crm').map(({ href, icon: Icon, label, enabled, lockReason, badge }) => {
+                          const isActive = pathname.startsWith(href);
+                          return enabled ? (
+                            <Link key={href} href={href} onClick={onClose}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                              )}
+                            >
+                              <span className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                              )}>
+                                <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                              </span>
+                              <span className="flex-1 font-semibold">{label}</span>
+                            </Link>
+                          ) : (
+                            <div key={href} className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70" title={lockReason}>
+                              <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
+                                <Icon size={17} strokeWidth={2} />
+                              </span>
+                              <span className="flex-1 font-medium">{label}</span>
+                              {badge ? (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                              ) : (
+                                <Lock size={13} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Automatisation & Connexions */}
+                  {NAV_ADVANCED.some(i => i.href === '/ocr' || i.href === '/integrations' || i.href === '/banking' || i.href === '/data-health') && (
+                    <>
+                      <div className="px-4 mb-1">
+                        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Automatisation & Connexions</p>
+                      </div>
+                      <div className="space-y-0.5 mb-2">
+                        {NAV_ADVANCED.filter(i => i.href === '/ocr' || i.href === '/integrations' || i.href === '/banking' || i.href === '/data-health').map(({ href, icon: Icon, label, enabled, lockReason, unlockTier, badge }) => {
+                          const isActive = pathname.startsWith(href);
+                          return enabled ? (
+                            <Link key={href} href={href} onClick={onClose}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                              )}
+                            >
+                              <span className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                              )}>
+                                <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                              </span>
+                              <span className="flex-1 font-semibold">{label}</span>
+                            </Link>
+                          ) : (
+                            <div key={href} className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70" title={lockReason}>
+                              <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
+                                <Icon size={17} strokeWidth={2} />
+                              </span>
+                              <span className="flex-1 font-medium">{label}</span>
+                              {badge ? (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                              ) : (
+                                <Lock size={13} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Cabinet */}
+                  {NAV_ADVANCED.some(i => i.href === '/cabinet') && (
+                    <>
+                      <div className="px-4 mb-1 mt-2">
+                        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cabinet</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        {NAV_ADVANCED.filter(i => i.href === '/cabinet').map(({ href, icon: Icon, label, enabled, lockReason, badge }) => {
+                          const isActive = pathname.startsWith(href);
+                          return enabled ? (
+                            <Link key={href} href={href} onClick={onClose}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-r from-primary/15 via-primary/10 to-primary/5 text-primary shadow-lg shadow-primary/20 border border-primary/20'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-emerald-50/80 hover:to-emerald-100/50 dark:hover:from-emerald-900/20 dark:hover:to-emerald-800/10 hover:text-gray-900 dark:hover:text-white hover:shadow-md',
+                              )}
+                            >
+                              <span className={cn(
+                                'flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 transition-all duration-200',
+                                isActive
+                                  ? 'bg-gradient-to-br from-primary to-primary-dark text-white shadow-xl shadow-primary/30'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-gray-800 dark:to-gray-700/80 text-gray-500 dark:text-gray-400',
+                              )}>
+                                <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                              </span>
+                              <span className="flex-1 font-semibold">{label}</span>
+                            </Link>
+                          ) : (
+                            <div key={href} className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-70" title={lockReason}>
+                              <span className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 bg-gray-100 dark:bg-gray-800/80 backdrop-blur-sm">
+                                <Icon size={17} strokeWidth={2} />
+                              </span>
+                              <span className="flex-1 font-medium">{label}</span>
+                              {badge ? (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20 uppercase tracking-wide">{badge}</span>
+                              ) : (
+                                <Lock size={13} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -403,7 +597,6 @@ export default function MobileDrawer({ open, onClose }: Props) {
                   onClick={onClose}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark to-emerald-600 transition-transform group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-20" />
                   <div className="relative flex items-center gap-3 w-full">
                     <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 transition-transform group-hover:rotate-12 group-hover:scale-110">
                       <Sparkles size={20} className="text-white" strokeWidth={2.5} />

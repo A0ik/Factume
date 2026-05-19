@@ -122,6 +122,15 @@ Retourne UNIQUEMENT du JSON valide avec ces champs OBLIGATOIRES:
       return NextResponse.json({ error: 'Impossible de générer le template' }, { status: 500 });
     }
 
+    // Clean markdown code fences if AI wrapped the HTML
+    if (typeof result.template_html === 'string') {
+      result.template_html = result.template_html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '');
+      // Ensure valid HTML structure
+      if (!result.template_html.includes('<html') && !result.template_html.includes('<body')) {
+        result.template_html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page { margin: 0; size: A4; }</style></head><body>${result.template_html}</body></html>`;
+      }
+    }
+
     if (!result.template_html) {
       return NextResponse.json({ error: 'Template non généré' }, { status: 500 });
     }
