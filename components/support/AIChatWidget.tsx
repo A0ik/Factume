@@ -88,10 +88,19 @@ export function AIChatWidget() {
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 1500);
-    // Restore hidden state from localStorage
+    // Restore hidden state from localStorage (auto-expire after 24h)
     try {
       const stored = localStorage.getItem('chat-widget-hidden');
-      if (stored === 'true') setIsHidden(true);
+      const hiddenAt = localStorage.getItem('chat-widget-hidden-at');
+      if (stored === 'true') {
+        if (hiddenAt && Date.now() - parseInt(hiddenAt, 10) > 24 * 60 * 60 * 1000) {
+          // Expired — show widget again
+          localStorage.removeItem('chat-widget-hidden');
+          localStorage.removeItem('chat-widget-hidden-at');
+        } else {
+          setIsHidden(true);
+        }
+      }
     } catch {}
     return () => clearTimeout(timer);
   }, []);
@@ -305,7 +314,10 @@ export function AIChatWidget() {
   const handleHide = useCallback(() => {
     setIsHidden(true);
     setIsOpen(false);
-    try { localStorage.setItem('chat-widget-hidden', 'true'); } catch {}
+    try {
+      localStorage.setItem('chat-widget-hidden', 'true');
+      localStorage.setItem('chat-widget-hidden-at', Date.now().toString());
+    } catch {}
   }, []);
 
   const handleUnhide = useCallback(() => {
@@ -316,7 +328,7 @@ export function AIChatWidget() {
 
   if (!isVisible) return null;
 
-  // Hidden indicator — small dot in bottom-left
+  // Hidden indicator — small floating button in bottom-left
   if (isHidden) {
     return (
       <motion.div
@@ -326,11 +338,12 @@ export function AIChatWidget() {
       >
         <button
           onClick={handleUnhide}
-          className="group relative flex h-3 w-3 items-center justify-center rounded-full bg-primary opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+          className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/80 shadow-lg hover:bg-primary hover:shadow-xl transition-all cursor-pointer"
           aria-label="Réafficher l'assistant"
         >
+          <MessageCircle className="h-4 w-4 text-white" />
           {showHiddenTooltip && (
-            <span className="absolute left-6 whitespace-nowrap rounded-lg bg-foreground px-3 py-1.5 text-xs text-background opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span className="absolute left-12 whitespace-nowrap rounded-lg bg-foreground px-3 py-1.5 text-xs text-background opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               Besoin d&apos;aide ?
             </span>
           )}
