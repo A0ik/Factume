@@ -416,7 +416,7 @@ export async function extractInvoiceFromPDF(
     }
 
     console.log(`[OCR Multi-Page] Extraction réussie segment ${segment.startPage}-${endPage}`);
-    return { success: true, segment, expense: result.savedExpense ?? undefined };
+    return { success: true, segment, expense: result.savedExpense ?? undefined, extracted: result.extracted };
   } catch (error) {
     console.error(`[OCR Multi-Page] Exception segment ${segment.startPage}-${segment.endPage}:`, error);
     const message = error instanceof Error ? error.message : 'Erreur inconnue';

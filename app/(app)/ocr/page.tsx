@@ -300,7 +300,7 @@ function PaywallSection() {
             </Link>
 
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-              Essai gratuit de 14 jours inclus
+              Essai gratuit de 7 jours inclus
             </p>
           </div>
         </div>
@@ -346,6 +346,13 @@ export default function OCRPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [reviewingDbExpense, setReviewingDbExpense] = useState<DbExpense | null>(null);
 
+  // DB expense edit mode (Dext-style workflow)
+  const [dbEditMode, setDbEditMode] = useState(false);
+  const [dbEditData, setDbEditData] = useState<{
+    vendor: string; amount: number; vat_amount: number; ht_amount: number;
+    date: string; category: string; description: string;
+  } | null>(null);
+
   // Clients from dataStore
   const { clients } = useDataStore();
 
@@ -379,6 +386,11 @@ export default function OCRPage() {
   }, [user]);
 
   useEffect(() => { fetchDbExpenses(); }, [fetchDbExpenses]);
+
+  // Separate user-triggered fetch to handle late auth resolution
+  useEffect(() => {
+    if (user) fetchDbExpenses();
+  }, [user]);
 
   // Load vendor mappings
   useEffect(() => {
@@ -639,6 +651,7 @@ export default function OCRPage() {
           results: Array<{
             success: boolean;
             expense?: Record<string, unknown>;
+            extracted?: Record<string, unknown>;
             segment?: { startPage: number; endPage: number };
             error?: string;
           }>;
@@ -658,9 +671,11 @@ export default function OCRPage() {
           console.log(`[OCR DEBUG] Segment ${i + 1}: success=${result.success}, hasExpense=${!!result.expense}`);
 
           if (result.success && result.expense) {
-            const extracted = ((result.expense as any).extracted || result.expense) as unknown as ExtractedData;
+            // Prefer the explicit `extracted` field from ocr-core (multi-page),
+            // fallback to expense.extracted (single-page), then to the expense row itself
+            const extracted = ((result as any).extracted || (result.expense as any).extracted || result.expense) as unknown as ExtractedData;
 
-            console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€`);
+            console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€ (confiance: ${extracted.confidence})`);
 
             // Construire un nom intelligent basé sur les données extraites
             const vendor = extracted.vendor || 'Fournisseur inconnu';
@@ -674,7 +689,7 @@ export default function OCRPage() {
             newFiles.push({
               id: generateId(),
               file: new File([], name),
-              preview: receiptUrl || scannedFile.preview || '',
+              preview: scannedFile.file.type.startsWith('image/') ? scannedFile.preview : '',
               status: 'complete' as const,
               progress: 100,
               result: {
@@ -824,6 +839,7 @@ export default function OCRPage() {
         setBatchProgress({ current: Math.min(i + BATCH_SIZE, pending.length), total: pending.length });
       }
       toast.success('Analyse terminée !');
+      fetchDbExpenses();
     } finally {
       setIsProcessing(false);
       setBatchProgress(null);
@@ -947,6 +963,54 @@ export default function OCRPage() {
     }
   }, [fetchDbExpenses]);
 
+  // ---------- Save DB expense edits (Dext-style workflow) ----------
+  const saveDbEdits = useCallback(async () => {
+    if (!dbEditData || !reviewingDbExpense) return;
+
+    try {
+      const res = await fetch(`/api/expenses/${reviewingDbExpense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: dbEditData.vendor,
+          amount: dbEditData.amount,
+          vat_amount: dbEditData.vat_amount,
+          ht_amount: dbEditData.ht_amount,
+          date: dbEditData.date,
+          category: dbEditData.category,
+          description: dbEditData.description,
+          status: 'reviewed',
+          ...(selectedClientId && { client_id: selectedClientId }),
+          ...(projectCode && { project_code: projectCode }),
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        toast.error(`Erreur : ${errData.error || 'inconnue'}`);
+        return;
+      }
+
+      // Update vendor mapping for auto-learning
+      if (dbEditData.vendor) {
+        try {
+          await getSupabaseClient().from('vendor_mappings').upsert({
+            user_id: user?.id,
+            vendor_name_pattern: dbEditData.vendor.toLowerCase().trim(),
+            raw_vendor: dbEditData.vendor.toLowerCase().trim(),
+            corrected_vendor: dbEditData.vendor,
+            corrected_category: dbEditData.category,
+          }, { onConflict: 'user_id,raw_vendor' });
+        } catch { /* non-critical */ }
+      }
+
+      setDbEditMode(false);
+      fetchDbExpenses();
+      toast.success('Dépense corrigée et vérifiée !');
+    } catch {
+      toast.error('Impossible de sauvegarder les corrections.');
+    }
+  }, [dbEditData, reviewingDbExpense, selectedClientId, projectCode, user, fetchDbExpenses]);
+
   // ---------- Load DB expense for review ----------
   const loadExpenseForReview = useCallback(async (expenseId: string) => {
     const expense = dbExpenses.find(e => e.id === expenseId);
@@ -955,6 +1019,16 @@ export default function OCRPage() {
     setSelectedClientId(expense.client_id || '');
     setProjectCode(expense.project_code || '');
     setEditMode(false);
+    setDbEditMode(false);
+    setDbEditData({
+      vendor: expense.vendor || '',
+      amount: expense.amount || 0,
+      vat_amount: expense.vat_amount || 0,
+      ht_amount: expense.ht_amount || 0,
+      date: expense.date || '',
+      category: expense.category || '',
+      description: expense.description || '',
+    });
   }, [dbExpenses]);
 
   // ---------- Paywall guard ----------
@@ -2083,11 +2157,19 @@ export default function OCRPage() {
             <DialogTitle>{previewImage?.title || 'Aperçu du document'}</DialogTitle>
           </DialogHeader>
           <div className="relative w-full">
-            <img
-              src={previewImage?.url}
-              alt={previewImage?.title || 'Aperçu du document'}
-              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-            />
+            {previewImage?.url && (previewImage.url.includes('.pdf') || previewImage.url.includes('application/pdf')) ? (
+              <iframe
+                src={previewImage.url}
+                className="w-full h-[70vh] rounded-lg border-0"
+                title={previewImage.title || 'Aperçu PDF'}
+              />
+            ) : (
+              <img
+                src={previewImage?.url}
+                alt={previewImage?.title || 'Aperçu du document'}
+                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -19,6 +19,97 @@ function linkifyContent(content: string): React.ReactNode {
   });
 }
 
+function renderAssistantContent(content: string): React.ReactNode {
+  // Split into lines and process markdown-like formatting
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let inList = false;
+  let listItems: React.ReactNode[] = [];
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="list-disc pl-4 my-1 space-y-0.5">
+          {listItems}
+        </ul>
+      );
+      listItems = [];
+    }
+    inList = false;
+  };
+
+  const formatInline = (text: string): React.ReactNode[] => {
+    // Process **bold** and *italic*
+    const parts: React.ReactNode[] = [];
+    const regex = /\*\*(.+?)\*\*/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={parts.length}>{text.slice(lastIndex, match.index)}</span>);
+      }
+      parts.push(<strong key={parts.length}>{match[1]}</strong>);
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      parts.push(<span key={parts.length}>{text.slice(lastIndex)}</span>);
+    }
+    return parts.length > 0 ? parts : [text];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Bullet list items: - item or * item
+    const listMatch = line.match(/^[\s]*[-*]\s+(.*)$/);
+    if (listMatch) {
+      inList = true;
+      listItems.push(
+        <li key={`li-${i}`} className="text-sm">
+          {linkifyAndFormat(listMatch[1])}
+        </li>
+      );
+      continue;
+    }
+
+    // If we were in a list and hit a non-list line, flush it
+    if (inList) {
+      flushList();
+    }
+
+    // Empty line = paragraph break
+    if (line.trim() === '') {
+      elements.push(<br key={`br-${i}`} />);
+      continue;
+    }
+
+    // Regular line
+    elements.push(
+      <span key={`line-${i}`} className="block">
+        {linkifyAndFormat(line)}
+      </span>
+    );
+  }
+
+  // Flush remaining list
+  flushList();
+
+  return <>{elements}</>;
+
+  function linkifyAndFormat(text: string): React.ReactNode[] {
+    // First apply inline formatting, then linkify emails
+    const inlineFormatted = formatInline(text);
+    return inlineFormatted.map((node, idx) => {
+      if (typeof node === 'string') {
+        return <span key={idx}>{linkifyContent(node)}</span>;
+      }
+      // For React elements (like <strong>), check their children for emails
+      return <span key={idx}>{node}</span>;
+    });
+  }
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -424,7 +515,7 @@ export function AIChatWidget() {
                           : 'rounded-tl-sm bg-muted text-foreground'
                       )}
                     >
-                      {message.role === 'assistant' ? linkifyContent(message.content || ' ') : (message.content || ' ')}
+                      {message.role === 'assistant' ? renderAssistantContent(message.content || ' ') : (message.content || ' ')}
                       {isError && lastFailedMessages && (
                         <button
                           onClick={handleRetry}
