@@ -728,6 +728,9 @@ function generateArticles(data: ContractTemplateData): string {
       ${trialText}</p>
       <p>La présente embauche est subordonnée à la production des pièces justificatives
       requises par la réglementation en vigueur (titre de séjour, autorisation de travail le cas échéant).</p>
+      <p class="legal-note">DPAE&nbsp;: ${company} a effectué la Déclaration Préalable à l'Embauche auprès de l'URSSAF
+      conformément aux articles L.&nbsp;1221-10 à L.&nbsp;1221-14 du Code du travail (au plus tard la veille de l'embauche).
+      Le récépissé sera remis au salarié.</p>
     `);
   }
 
@@ -967,6 +970,65 @@ function generateArticles(data: ContractTemplateData): string {
       démission, licenciement, rupture conventionnelle homologuée, retraite ou faute grave / lourde.</p>
       <p>Les préavis applicables sont ceux définis par la <em>${esc(data.collectiveAgreement) || 'convention collective applicable'}</em>
       et, à défaut, par les dispositions légales en vigueur.</p>
+    `);
+  }
+
+  // ── ARTICLE : Mutuelle et prévoyance (Loi ANI, Art. L911-7 CSS) ──
+  if (['cdi', 'cdd', 'apprentissage', 'professionnalisation', 'portage'].includes(type)) {
+    A("Mutuelle et prévoyance", `
+      <p>Conformément à la loi n°&nbsp;2013-504 du 14&nbsp;juin 2013 (loi ANI) et à l'article L.&nbsp;911-7 du Code de la sécurité sociale,
+      ${company} souscrit pour l'ensemble de ses salariés une <strong>couverture complémentaire santé collective</strong>
+      dont la part patronale est au minimum égale à <strong>50&nbsp;% du montant de la cotisation</strong>.</p>
+      <p>Cette couverture respecte le panier de soins minimal défini par l'arrêté du 8&nbsp;décembre 2016
+      (hospitalisation, optique, dentaire, consultations, pharmacie).</p>
+      ${data.hasHealth ? `<p>Le salarié bénéficie de la mutuelle d'entreprise mentionnée aux avantages en nature.</p>` : ''}
+    `);
+  }
+
+  // ── ARTICLE : Télétravail (Art. L1222-9 à L1222-11) ──
+  if (['cdi', 'cdd', 'apprentissage', 'professionnalisation'].includes(type)) {
+    A("Télétravail", `
+      <p>Sous réserve d'un accord mutuel entre les parties, ${fullName} pourra être amené(e) à exercer
+      tout ou partie de son activité en <strong>télétravail</strong>, conformément aux articles L.&nbsp;1222-9 à L.&nbsp;1222-11
+      du Code du travail et à l'accord national interprofessionnel du 26&nbsp;novembre 2020.</p>
+      <p>En cas de télétravail régulier, les modalités seront définies par accord d'entreprise ou,
+      à défaut, par charte soumise au CSE, précisant :</p>
+      <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+        <li>Les conditions d'éligibilité et les jours de télétravail</li>
+        <li>Les plages horaires de contactabilité</li>
+        <li>La prise en charge des frais liés au télétravail (équipement, connexion)</li>
+        <li>Le droit à la déconnexion (Art.&nbsp;L2242-17 du Code du travail)</li>
+      </ul>
+      <p>Le télétravail est mis en œuvre sur la base du volontariat. Le refus d'accepter le télétravail
+      ne constitue pas un motif de rupture du contrat. Le retour au travail sur site est possible
+      (principe de réversibilité).</p>
+      <p>Un accident survenu sur le lieu de télétravail à l'heure du travail est présumé
+      accident du travail (Art.&nbsp;L1222-10).</p>
+    `);
+  }
+
+  // ── ARTICLE : Formation professionnelle ──
+  if (['cdi', 'cdd', 'apprentissage', 'professionnalisation'].includes(type)) {
+    A("Formation professionnelle", `
+      <p>${fullName} bénéficie des dispositions relatives à la formation professionnelle continue
+      prévues par le Code du travail (livre VI, partie légale).</p>
+      <p>Le Compte Personnel de Formation (CPF) permet au salarié d'acquérir des droits à la formation
+      tout au long de sa carrière professionnelle, comptabilisés en heures, dans la limite de
+      <strong>150&nbsp;heures</strong> (Art.&nbsp;L6323-11 du Code du travail).</p>
+      <p>Un entretien professionnel est organisé au moins tous les deux ans afin d'examiner
+      les perspectives d'évolution professionnelle et les besoins en formation du salarié.</p>
+    `);
+  }
+
+  // ── ARTICLE : Propriété intellectuelle ──
+  if (!['stage', 'freelance'].includes(type)) {
+    A("Propriété intellectuelle", `
+      <p>Les créations, inventions, logiciels et toute œuvre de l'esprit réalisés par ${fullName}
+      dans le cadre de l'exécution de son contrat de travail et dans le cadre de ses fonctions
+      appartiennent à ${company}, conformément aux articles L.&nbsp;111-1 et L.&nbsp;113-9 du Code de la propriété intellectuelle.</p>
+      <p>Les inventions de mission (inventions réalisées dans le cadre d'un contrat de travail
+      comportant une mission inventive) appartiennent à l'employeur (Art.&nbsp;L611-7 du Code de la propriété intellectuelle).
+      Les inventions hors mission sont la propriété du salarié, sauf si l'employeur peut démontrer un lien avec ses activités.</p>
     `);
   }
 
@@ -1333,6 +1395,9 @@ const TRIAL_PERIOD_MAX_DAYS: Record<string, number> = {
   cadre: 120,
 };
 
+// SMIC 2026 (Art. L3231-1 à L3231-12 du Code du travail)
+const SMIC_HOURLY_BRUT_2026 = 12.02;
+
 export function validateContractData(data: ContractTemplateData): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -1400,15 +1465,36 @@ export function validateContractData(data: ContractTemplateData): ValidationErro
     }
   }
 
-  // Trial period max validation
+  // Trial period max validation (Art. L1221-19 à L1221-26 CDI, Art. L1242-10 CDD)
   if (data.trialPeriodDays && data.contractClassification) {
     const days = parseInt(data.trialPeriodDays);
     const classification = data.contractClassification.toLowerCase();
     for (const [key, maxDays] of Object.entries(TRIAL_PERIOD_MAX_DAYS)) {
       if (classification.includes(key) && !isNaN(days) && days > maxDays) {
-        errors.push({ field: 'trialPeriodDays', message: `Période d'essai max pour "${data.contractClassification}" : ${maxDays} jours (renouvelable une fois).`, severity: 'warning' });
+        errors.push({ field: 'trialPeriodDays', message: `Période d'essai max pour "${data.contractClassification}" : ${maxDays} jours (renouvelable une fois, Art. L1221-19).`, severity: 'warning' });
         break;
       }
+    }
+  }
+
+  // SMIC validation (12.02€/h brut en 2026)
+  if (['cdi', 'cdd', 'apprentissage', 'professionnalisation', 'interim', 'portage'].includes(data.contractType)) {
+    const salary = parseFloat(data.salaryAmount);
+    if (!isNaN(salary)) {
+      if (data.salaryFrequency === 'hourly' && salary < SMIC_HOURLY_BRUT_2026) {
+        errors.push({ field: 'salaryAmount', message: `Le salaire horaire brut ne peut être inférieur au SMIC 2026 : ${SMIC_HOURLY_BRUT_2026}€/h (Art. L3231-1).`, severity: 'error' });
+      } else if (data.salaryFrequency === 'monthly' && salary < SMIC_HOURLY_BRUT_2026 * 151.67) {
+        errors.push({ field: 'salaryAmount', message: `Le salaire mensuel brut ne peut être inférieur au SMIC 2026 : ${(SMIC_HOURLY_BRUT_2026 * 151.67).toFixed(2)}€/mois (Art. L3231-1).`, severity: 'error' });
+      }
+    }
+  }
+
+  // Non-compete compensation minimum (≥10% du brut, jurisprudence)
+  if (data.nonCompeteClause && data.nonCompeteCompensation && data.salaryAmount) {
+    const comp = parseFloat(data.nonCompeteCompensation);
+    const salary = parseFloat(data.salaryAmount);
+    if (!isNaN(comp) && !isNaN(salary) && comp < salary * 0.10) {
+      errors.push({ field: 'nonCompeteCompensation', message: `L'indemnité de non-concurrence est potentiellement insuffisante (recommandé ≥ 10% du brut mensuel).`, severity: 'warning' });
     }
   }
 

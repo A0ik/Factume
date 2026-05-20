@@ -58,32 +58,40 @@ export async function POST(req: NextRequest) {
           const invoiceId = session.metadata.invoice_id;
           const userId = session.metadata.user_id;
 
-          // Update invoice status
-          await supabase
+          // Idempotency: skip if already paid
+          const { data: existingInvoice } = await supabase
             .from('invoices')
-            .update({
-              status: 'paid',
-              paid_at: new Date().toISOString(),
-              stripe_payment_intent_id: session.payment_intent as string,
-            })
-            .eq('id', invoiceId);
-
-          // Get invoice details for notification
-          const { data: invoice } = await supabase
-            .from('invoices')
-            .select('*, client:clients(name)')
+            .select('id, status')
             .eq('id', invoiceId)
             .single();
 
-          if (invoice && userId) {
-            // Create notification
-            await supabase.from('notifications').insert({
-              user_id: userId,
-              type: 'invoice_paid',
-              title: `Facture payée — ${invoice.number}`,
-              body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée via Stripe.`,
-              link: `/invoices/${invoiceId}`,
-            });
+          if (existingInvoice && existingInvoice.status !== 'paid') {
+            // Update invoice status
+            await supabase
+              .from('invoices')
+              .update({
+                status: 'paid',
+                paid_at: new Date().toISOString(),
+                stripe_payment_intent_id: session.payment_intent as string,
+              })
+              .eq('id', invoiceId);
+
+            // Get invoice details for notification
+            const { data: invoice } = await supabase
+              .from('invoices')
+              .select('*, client:clients(name)')
+              .eq('id', invoiceId)
+              .single();
+
+            if (invoice && userId) {
+              await supabase.from('notifications').insert({
+                user_id: userId,
+                type: 'invoice_paid',
+                title: `Facture payée — ${invoice.number}`,
+                body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée via Stripe.`,
+                link: `/invoices/${invoiceId}`,
+              });
+            }
           }
         }
 

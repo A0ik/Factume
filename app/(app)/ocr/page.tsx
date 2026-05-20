@@ -6,7 +6,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { getSupabaseClient } from '@/lib/supabase';
 import { cn, formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag, Maximize2, Plus } from 'lucide-react';
+import { Camera, Upload, FileImage, Sparkles, Check, X, AlertCircle, Zap, Shield, Clock, ChevronDown, Eye, Edit2, Trash2, ArrowRight, Scan, ImagePlus, Loader2, FileText, ChevronRight, Crown, Car, Coffee, Home, Laptop, Briefcase, ShoppingCart, Smartphone, Disc, Package, Inbox, CheckCircle2, CircleDot, Archive, Users, Tag, Maximize2, Plus, ZoomIn, ZoomOut, RotateCw, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -73,7 +73,7 @@ interface ScannedFile {
   id: string;
   file: File;
   preview: string;
-  status: 'pending' | 'uploading' | 'analyzing' | 'complete' | 'error';
+  status: 'pending' | 'uploading' | 'analyzing' | 'segmenting' | 'complete' | 'error';
   progress: number;
   result?: {
     extracted: ExtractedData;
@@ -81,6 +81,11 @@ interface ScannedFile {
     receipt_url?: string;
   };
   error?: string;
+  sourcePdfUrl?: string;
+  sourcePdfName?: string;
+  segmentPages?: string;
+  documentType?: string;
+  receiptUrl?: string;
 }
 
 interface HistoryItem {
@@ -156,6 +161,30 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
     <span className={cn('inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-current/20', color.text, color.bg)}>
       <span className="w-1.5 h-1.5 rounded-full bg-current" />
       {color.label} {Math.round(confidence * 100)}%
+    </span>
+  );
+}
+
+// ---------- Document type badges ----------
+const DOCUMENT_TYPES: Record<string, { label: string; color: string; bg: string }> = {
+  invoice: { label: 'Facture', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30' },
+  receipt: { label: 'Reçu', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
+  credit_note: { label: 'Note de crédit', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30' },
+  delivery_note: { label: 'Bon de livraison', color: 'text-gray-700 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/50' },
+  quote: { label: 'Devis', color: 'text-violet-700 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/30' },
+  expense_report: { label: 'Note de frais', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/30' },
+  purchase_order: { label: 'Bon de commande', color: 'text-teal-700 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/30' },
+};
+
+function DocumentTypeBadge({ type }: { type?: string | null }) {
+  if (!type) return null;
+  const normalized = type.toLowerCase().replace(/[\s_-]/g, '_');
+  const docType = DOCUMENT_TYPES[normalized];
+  if (!docType) return null;
+  return (
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-current/10', docType.color, docType.bg)}>
+      <FileText size={9} />
+      {docType.label}
     </span>
   );
 }
@@ -356,6 +385,19 @@ export default function OCRPage() {
   // Clients from dataStore
   const { clients } = useDataStore();
 
+  // Segment verification state (multi-page PDF)
+  const [pendingSegments, setPendingSegments] = useState<{
+    fileId: string;
+    file: File;
+    segments: Array<{
+      startPage: number;
+      endPage: number | null;
+      vendor: string | null;
+      invoiceNumber: string | null;
+    }>;
+    totalPages: number;
+  } | null>(null);
+
   // Keep a stable ref to dbExpenses for use inside setFiles callbacks
   const dbExpensesRef = useRef<DbExpense[]>([]);
 
@@ -364,6 +406,7 @@ export default function OCRPage() {
 
   // Image preview state
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
 
   const fetchDbExpenses = useCallback(async () => {
     if (!user) return;
@@ -485,19 +528,28 @@ export default function OCRPage() {
   }, [reviewingFile]);
 
   // ===========================================================================
-  // HELPER: Détecter si un fichier est un PDF multi-pages (sans sharp côté client)
+  // HELPER: Détecter les segments d'un PDF multi-pages en un seul appel API
   // ===========================================================================
 
-  const detectPdfType = useCallback(async (file: File): Promise<{ isPdf: boolean; pageCount: number }> => {
+  const detectPdfSegments = useCallback(async (file: File): Promise<{
+    isPdf: boolean;
+    pageCount: number;
+    segments: Array<{
+      startPage: number;
+      endPage: number | null;
+      vendor: string | null;
+      invoiceNumber: string | null;
+    }>;
+    needsManualReview: boolean;
+  } | null> => {
     if (file.type !== 'application/pdf') {
       debugLog(`📄 Fichier non-PDF détecté: ${file.name} (${file.type})`);
-      return { isPdf: false, pageCount: 0 };
+      return null;
     }
 
-    debugLog(`📑 PDF détecté: ${file.name}, tentative de détection du nombre de pages...`);
+    debugLog(`📑 PDF détecté: ${file.name}, détection des segments...`);
 
     try {
-      // Utiliser l'endpoint detect-invoices qui gère tout côté serveur
       const formData = new FormData();
       formData.append('file', file);
 
@@ -508,15 +560,20 @@ export default function OCRPage() {
 
       if (response.ok) {
         const data = await response.json();
-        debugLog(`✅ Nombre de pages détecté: ${data.totalPages}`);
-        return { isPdf: true, pageCount: data.totalPages || 0 };
+        debugLog(`✅ Segments détectés: ${data.segments?.length || 0}, pages: ${data.totalPages}`);
+        return {
+          isPdf: true,
+          pageCount: data.totalPages || 0,
+          segments: data.segments || [],
+          needsManualReview: data.needsManualReview || false,
+        };
       }
 
-      debugWarn(`⚠️ Échec détection pages: ${response.status}`);
-      return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
+      debugWarn(`⚠️ Échec détection: ${response.status}`);
+      return { isPdf: true, pageCount: 0, segments: [], needsManualReview: false };
     } catch (error) {
       debugError(`❌ Erreur détection PDF:`, error);
-      return { isPdf: true, pageCount: 0 }; // PDF mais détection échouée
+      return { isPdf: true, pageCount: 0, segments: [], needsManualReview: false };
     }
   }, []);
 
@@ -558,206 +615,52 @@ export default function OCRPage() {
       }, 200);
 
       // =========================================================================
-      // ÉTAPE 1: Détecter le type de fichier
+      // ÉTAPE 1: Détecter les segments en un seul appel (PDF only)
       // =========================================================================
-      const { isPdf, pageCount } = await detectPdfType(scannedFile.file);
+      const detection = await detectPdfSegments(scannedFile.file);
 
       // =========================================================================
       // CAS 1: PDF multi-pages avec potentiellement plusieurs factures
       // =========================================================================
-      if (isPdf && pageCount > 1) {
+      if (detection && detection.isPdf && detection.pageCount > 1) {
         updateFile(scannedFile.id, { status: 'analyzing', progress: 30 });
 
-        console.log(`[OCR DEBUG] 🔍 PDF multipage détecté: ${pageCount} pages dans "${scannedFile.file.name}"`);
+        console.log(`[OCR DEBUG] 🔍 PDF multipage détecté: ${detection.pageCount} pages dans "${scannedFile.file.name}"`);
 
-        // ÉTAPE 2: Détecter les factures dans le PDF
-        const detectFormData = new FormData();
-        detectFormData.append('file', scannedFile.file);
-
-        const detectResponse = await fetch('/api/ai/detect-invoices', {
-          method: 'POST',
-          body: detectFormData,
-        });
-
-        if (!detectResponse.ok) {
-          console.error(`[OCR DEBUG] ❌ Erreur détection factures: ${detectResponse.status}`);
-          throw new Error('Détection des factures échouée');
-        }
-
-        const detectData = await detectResponse.json() as {
-          segments: Array<{
-            startPage: number;
-            endPage: number | null;
-            vendor: string | null;
-            invoiceNumber: string | null;
-          }>;
-          needsManualReview: boolean;
-        };
+        const detectData = detection;
 
         console.log(`[OCR DEBUG] ✅ Segments détectés: ${detectData.segments.length}`);
         detectData.segments.forEach((seg, i) => {
           console.log(`[OCR DEBUG]    Segment ${i + 1}: pages ${seg.startPage}-${seg.endPage}, vendor: ${seg.vendor || 'N/A'}`);
         });
 
-        // ⚠️ Validation: Si aucun segment détecté, avertir l'utilisateur
+        // ⚠️ Validation: Si aucun segment détecté, traiter comme PDF simple
         if (detectData.segments.length === 0) {
           console.warn(`[OCR DEBUG] ⚠️ Aucun segment détecté pour "${scannedFile.file.name}"`);
-          toast.error('Aucune facture détectée dans ce PDF. Vérifiez que les pages contiennent des factures valides.');
-          updateFile(scannedFile.id, {
-            status: 'error',
-            error: 'Aucune facture détectée. Essayez de séparer les factures en fichiers distincts.'
-          });
-          return;
-        }
-
-        // ✅ AUTOMATIQUE: Traiter chaque facture détectée sans intervention manuelle
-        console.log(`[OCR DEBUG] 🔄 Traitement automatique de ${detectData.segments.length} facture(s)`);
-
-        updateFile(scannedFile.id, {
-          status: 'analyzing',
-          progress: 60,
-          result: {
-            extracted: {
-              vendor: '',
-              amount: 0,
-              ht_amount: 0,
-              vat_amount: 0,
-              confidence: 0,
-              category: '',
-              date: '',
-              description: `Traitement de ${detectData.segments.length} facture(s)...`,
-              currency: 'EUR',
-              invoice_number: '',
-              line_items: []
-            } as ExtractedData
-          }
-        });
-
-        toast.info(`Extraction de ${detectData.segments.length} facture(s) en cours...`, { duration: 5000 });
-        const multiPageFormData = new FormData();
-        multiPageFormData.append('file', scannedFile.file);
-        multiPageFormData.append('segments', JSON.stringify(detectData.segments));
-
-        const ocrResponse = await fetch('/api/ai/ocr-multi-page', {
-          method: 'POST',
-          body: multiPageFormData,
-        });
-
-        if (!ocrResponse.ok) {
-          throw new Error('Traitement multi-factures échoué');
-        }
-
-        const ocrData = await ocrResponse.json() as {
-          results: Array<{
-            success: boolean;
-            expense?: Record<string, unknown>;
-            extracted?: Record<string, unknown>;
-            segment?: { startPage: number; endPage: number };
-            error?: string;
-          }>;
-          summary: { succeeded: number; failed: number };
-        };
-
-        // ÉTAPE 4: Créer une entrée ScannedFile pour chaque facture
-        const newFiles: ScannedFile[] = [];
-
-        console.log(`[OCR DEBUG] 🔄 Traitement des résultats: ${ocrData.results.length} segments`);
-
-        const failedSegments: Array<{index: number; error?: string}> = [];
-
-        for (let i = 0; i < ocrData.results.length; i++) {
-          const result = ocrData.results[i] as { success: boolean; expense?: Record<string, unknown>; error?: string };
-
-          console.log(`[OCR DEBUG] Segment ${i + 1}: success=${result.success}, hasExpense=${!!result.expense}`);
-
-          if (result.success && result.expense) {
-            // Prefer the explicit `extracted` field from ocr-core (multi-page),
-            // fallback to expense.extracted (single-page), then to the expense row itself
-            const extracted = ((result as any).extracted || (result.expense as any).extracted || result.expense) as unknown as ExtractedData;
-
-            console.log(`[OCR DEBUG]    ✅ Facture extraite: ${extracted.vendor || 'N/A'} - ${extracted.amount || 0}€ (confiance: ${extracted.confidence})`);
-
-            // Construire un nom intelligent basé sur les données extraites
-            const vendor = extracted.vendor || 'Fournisseur inconnu';
-            const invoiceNum = extracted.invoice_number || '';
-            const date = extracted.date ? new Date(extracted.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '';
-            const name = `${vendor}${invoiceNum ? ` - ${invoiceNum}` : ''}${date ? ` (${date})` : ''}`;
-
-            // Récupérer receipt_url pour le preview
-            const receiptUrl = (result.expense as any)?.receipt_url || '';
-
-            newFiles.push({
-              id: generateId(),
-              file: new File([], name),
-              preview: scannedFile.file.type.startsWith('image/') ? scannedFile.preview : '',
-              status: 'complete' as const,
-              progress: 100,
-              result: {
-                extracted,
-                expense: result.expense as { id: string; [key: string]: unknown },
-              },
-            });
-          } else {
-            const errorMsg = result.error || 'Erreur inconnue';
-            console.warn(`[OCR DEBUG]    ❌ Segment ${i + 1} échoué: ${errorMsg}`);
-            failedSegments.push({ index: i + 1, error: errorMsg });
-          }
-        }
-
-        // Afficher les erreurs spécifiques dans la console pour debug
-        if (failedSegments.length > 0) {
-          debugError(`💥 Segments échoués:`, failedSegments);
-        }
-
-        console.log(`[OCR DEBUG] ✨ Total factures extraites: ${newFiles.length}/${ocrData.results.length}`);
-
-        if (newFiles.length === 0) {
-          // ⚠️ TOUS les segments ont échoué - afficher les erreurs spécifiques
-          const errorDetails = failedSegments.map(f => `Segment ${f.index}: ${f.error}`).join('\n');
-
-          console.error(`[OCR DEBUG] 💥 Toutes les extractions ont échoué:\n${errorDetails}`);
-
-          updateFile(scannedFile.id, {
-            status: 'error',
-            error: `Aucune facture n'a pu être extraite. Erreurs:\n${errorDetails}`
-          });
-
-          // Créer un message d'erreur plus informatif
-          const firstError = failedSegments[0]?.error || 'Erreur inconnue';
-          toast.error(`Extraction échouée: ${firstError}`, {
-            description: `Vérifiez la console (F12) pour voir les erreurs détaillées des ${failedSegments.length} segments.`,
-            duration: 12000,
-          });
-
-          return;
-        }
-
-        // Remplacer le fichier original par les factures détectées
-        setFiles(prev => {
-          const filtered = prev.filter(f => f.id !== scannedFile.id);
-          return [...filtered, ...newFiles];
-        });
-
-        if (newFiles.length < ocrData.results.length) {
-          const failedErrors = failedSegments.map(f => `Segment ${f.index}: ${f.error}`).join('; ');
-          toast.warning(`${newFiles.length}/${ocrData.results.length} factures extraites. Erreurs: ${failedErrors}`, {
-            duration: 10000,
-          });
+          // Fall through to single-page processing
+        } else if (detectData.segments.length === 1 && detectData.segments[0].startPage === 1 && detectData.segments[0].endPage === detection.pageCount) {
+          // Single invoice spanning all pages - treat as one file
+          console.log(`[OCR DEBUG] 📄 PDF contient une seule facture sur ${detection.pageCount} pages`);
+          // Fall through to single-page processing below
         } else {
-          // ✅ Message de succès détaillé avec les fournisseurs détectés
-          const vendors = newFiles.map(f => f.result?.extracted?.vendor).filter(Boolean).join(', ');
-          const vendorText = vendors ? `Fournisseurs: ${vendors}` : 'Chaque facture a été détectée et extraite automatiquement.';
-
-          toast.success(`${newFiles.length} facture(s) extraite(s) du PDF avec succès !`, {
-            description: vendorText,
-            duration: 6000,
+          // Multiple invoices detected - show segment verification UI
+          updateFile(scannedFile.id, { status: 'segmenting', progress: 50 });
+          setPendingSegments({
+            fileId: scannedFile.id,
+            file: scannedFile.file,
+            segments: detectData.segments,
+            totalPages: detection.pageCount,
           });
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+          return;
         }
-        return;
       }
 
       // =========================================================================
-      // CAS 2: Traitement normal (image ou PDF 1 page)
+      // CAS 2: Traitement normal (image, PDF 1 page, ou PDF mono-facture)
       // =========================================================================
 
       const formData = new FormData();
@@ -789,10 +692,19 @@ export default function OCRPage() {
 
       await new Promise(resolve => setTimeout(resolve, 400));
 
+      const receiptUrl = (data as any)?.receipt_url || '';
+
       setFiles(prev => {
         const updated = prev.map(f =>
           f.id === scannedFile.id
-            ? { ...f, status: 'complete' as const, progress: 100, result: data }
+            ? {
+              ...f,
+              status: 'complete' as const,
+              progress: 100,
+              result: data,
+              receiptUrl: receiptUrl || undefined,
+              documentType: (data as any)?.extracted?.document_type || undefined,
+            }
             : f
         );
         return updated.map(f => {
@@ -818,7 +730,145 @@ export default function OCRPage() {
       });
       toast.error(`Erreur: ${scannedFile.file.name} - ${err.message || 'analyse échouée'}`);
     }
-  }, [updateFile, detectPdfType]);
+  }, [updateFile, detectPdfSegments]);
+
+  // Process segments after user verification
+  const processSegmentsFromPdf = useCallback(async (segmentsData: typeof pendingSegments) => {
+    if (!segmentsData) return;
+    const { fileId, file, segments } = segmentsData;
+
+    setPendingSegments(null);
+    setIsProcessing(true);
+
+    try {
+      updateFile(fileId, { status: 'analyzing', progress: 40 });
+
+      toast.info(`Extraction de ${segments.length} facture(s) en cours...`, { duration: 5000 });
+      const multiPageFormData = new FormData();
+      multiPageFormData.append('file', file);
+      multiPageFormData.append('segments', JSON.stringify(segments));
+
+      const ocrResponse = await fetch('/api/ai/ocr-multi-page', {
+        method: 'POST',
+        body: multiPageFormData,
+      });
+
+      if (!ocrResponse.ok) {
+        throw new Error('Traitement multi-factures échoué');
+      }
+
+      const ocrData = await ocrResponse.json() as {
+        results: Array<{
+          success: boolean;
+          expense?: Record<string, unknown>;
+          extracted?: Record<string, unknown>;
+          receipt_url?: string;
+          receipt_storage_path?: string;
+          segment?: { startPage: number; endPage: number };
+          error?: string;
+        }>;
+        summary: { succeeded: number; failed: number };
+      };
+
+      const newFiles: ScannedFile[] = [];
+      const failedSegments: Array<{ index: number; error?: string; pages?: string }> = [];
+
+      for (let i = 0; i < ocrData.results.length; i++) {
+        const result = ocrData.results[i];
+        const seg = segments[i];
+
+        if (result.success && result.expense) {
+          const extracted = (result.extracted || (result.expense as any).extracted || result.expense) as unknown as ExtractedData;
+          const vendor = extracted.vendor || 'Fournisseur inconnu';
+          const invoiceNum = extracted.invoice_number || '';
+          const date = extracted.date ? new Date(extracted.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '';
+          const name = `${vendor}${invoiceNum ? ` - ${invoiceNum}` : ''}${date ? ` (${date})` : ''}`;
+          const receiptUrl = result.receipt_url || (result.expense as any)?.receipt_url || '';
+          const pages = seg ? `p.${seg.startPage}${seg.endPage && seg.endPage > seg.startPage ? `-${seg.endPage}` : ''}` : undefined;
+
+          newFiles.push({
+            id: generateId(),
+            file: new File([], name),
+            preview: '',
+            status: 'complete' as const,
+            progress: 100,
+            result: {
+              extracted,
+              expense: result.expense as { id: string; [key: string]: unknown },
+              receipt_url: receiptUrl,
+            },
+            sourcePdfName: file.name,
+            segmentPages: pages,
+            documentType: (extracted as any).document_type || undefined,
+            receiptUrl: receiptUrl || undefined,
+          });
+        } else {
+          const errorMsg = result.error || 'Erreur inconnue';
+          const pages = seg ? `p.${seg.startPage}-${seg.endPage || seg.startPage}` : `Segment ${i + 1}`;
+          failedSegments.push({ index: i + 1, error: errorMsg, pages });
+        }
+      }
+
+      if (newFiles.length === 0) {
+        const errorDetails = failedSegments.map(f => `${f.pages}: ${f.error}`).join('\n');
+        updateFile(fileId, {
+          status: 'error',
+          error: `Aucune facture extraite.\n${errorDetails}`
+        });
+        toast.error(`Extraction échouée`, {
+          description: errorDetails,
+          duration: 12000,
+        });
+        return;
+      }
+
+      // Replace original file with extracted invoices
+      setFiles(prev => {
+        const target = prev.find(f => f.id === fileId);
+        if (target?.preview && target.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(target.preview);
+        }
+        return [...prev.filter(f => f.id !== fileId), ...newFiles];
+      });
+
+      // Add error files for failed segments
+      if (failedSegments.length > 0) {
+        const errorFiles: ScannedFile[] = failedSegments.map(f => ({
+          id: generateId(),
+          file: new File([], `${file.name} - ${f.pages}`),
+          preview: '',
+          status: 'error' as const,
+          progress: 0,
+          error: f.error,
+          sourcePdfName: file.name,
+          segmentPages: f.pages,
+        }));
+        setFiles(prev => [...prev, ...errorFiles]);
+
+        toast.warning(`${newFiles.length}/${segments.length} factures extraites`, {
+          description: failedSegments.map(f => `${f.pages}: ${f.error}`).join('; '),
+          duration: 10000,
+        });
+      } else {
+        const vendors = newFiles.map(f => f.result?.extracted?.vendor).filter(Boolean).join(', ');
+        toast.success(`${newFiles.length} facture(s) extraite(s) !`, {
+          description: vendors || undefined,
+          duration: 6000,
+        });
+      }
+
+      fetchDbExpenses();
+    } catch (err: any) {
+      updateFile(fileId, {
+        status: 'error',
+        progress: 0,
+        error: err.message || 'Erreur inconnue',
+      });
+      toast.error(`Erreur: ${err.message || 'extraction échouée'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [updateFile, fetchDbExpenses]);
 
   const BATCH_SIZE = 3;
 
@@ -929,7 +979,7 @@ export default function OCRPage() {
             account_name: editData.account_label || null,
             corrected_vendor: editData.vendor,
             corrected_category: editData.category,
-          }, { onConflict: 'user_id,raw_vendor' });
+          }, { onConflict: 'user_id,vendor_name_pattern' });
         } catch {
           // Non-critical: vendor mapping save failure shouldn't block the user
         }
@@ -999,7 +1049,7 @@ export default function OCRPage() {
             raw_vendor: dbEditData.vendor.toLowerCase().trim(),
             corrected_vendor: dbEditData.vendor,
             corrected_category: dbEditData.category,
-          }, { onConflict: 'user_id,raw_vendor' });
+          }, { onConflict: 'user_id,vendor_name_pattern' });
         } catch { /* non-critical */ }
       }
 
@@ -1298,11 +1348,24 @@ export default function OCRPage() {
                         <div className="p-4">
                           <div className="flex items-start gap-3">
                             {/* Thumbnail */}
-                            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
                               {scannedFile.preview ? (
                                 <img src={scannedFile.preview} alt="" className="w-full h-full object-cover" />
+                              ) : scannedFile.receiptUrl || scannedFile.result?.receipt_url ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: scannedFile.receiptUrl || scannedFile.result?.receipt_url || '', title: scannedFile.result?.extracted?.vendor || scannedFile.file.name }); }}
+                                  className="w-full h-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                                >
+                                  <FileText size={24} className="text-blue-500" />
+                                </button>
                               ) : (
                                 <FileText size={24} className="text-gray-400" />
+                              )}
+                              {/* Segment page indicator */}
+                              {scannedFile.segmentPages && (
+                                <span className="absolute -bottom-0.5 -right-0.5 px-1 py-0.5 rounded-md bg-blue-500 text-white text-[8px] font-black leading-none">
+                                  {scannedFile.segmentPages}
+                                </span>
                               )}
                             </div>
 
@@ -1311,6 +1374,16 @@ export default function OCRPage() {
                               <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                                 {scannedFile.file.name}
                               </p>
+                              {/* Document type + segment badges */}
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <DocumentTypeBadge type={scannedFile.documentType || (scannedFile.result?.extracted as any)?.document_type} />
+                                {scannedFile.sourcePdfName && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400">
+                                    <FileText size={8} />
+                                    {scannedFile.sourcePdfName.length > 20 ? scannedFile.sourcePdfName.substring(0, 17) + '...' : scannedFile.sourcePdfName}
+                                  </span>
+                                )}
+                              </div>
                               {/* Montant et date pour factures complètes */}
                               {scannedFile.status === 'complete' && scannedFile.result?.extracted && (
                                 <div className="mt-1 flex flex-wrap items-center gap-x-2">
@@ -1346,6 +1419,12 @@ export default function OCRPage() {
                                   <span className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400">
                                     <Sparkles size={12} className="animate-pulse" />
                                     Analyse IA...
+                                  </span>
+                                )}
+                                {scannedFile.status === 'segmenting' && (
+                                  <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400">
+                                    <Scan size={12} className="animate-pulse" />
+                                    Détection des factures...
                                   </span>
                                 )}
                                 {scannedFile.status === 'complete' && dextStatus === 'to_review' && (
@@ -1385,12 +1464,17 @@ export default function OCRPage() {
                               </div>
 
                               {/* Progress bar */}
-                              {(scannedFile.status === 'uploading' || scannedFile.status === 'analyzing') && (
+                              {(scannedFile.status === 'uploading' || scannedFile.status === 'analyzing' || scannedFile.status === 'segmenting') && (
                                 <div className="mt-2 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                   <motion.div
                                     initial={{ width: '0%' }}
                                     animate={{ width: `${scannedFile.progress}%` }}
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"
+                                    className={cn(
+                                      'h-full rounded-full transition-colors',
+                                      scannedFile.status === 'segmenting'
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                                        : 'bg-gradient-to-r from-emerald-500 to-green-500'
+                                    )}
                                     transition={{ duration: 0.3 }}
                                   />
                                 </div>
@@ -1428,6 +1512,17 @@ export default function OCRPage() {
                                   <Eye size={14} />
                                 </motion.button>
                               )}
+                              {(scannedFile.receiptUrl || scannedFile.result?.receipt_url) && (
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: scannedFile.receiptUrl || scannedFile.result?.receipt_url || '', title: scannedFile.result?.extracted?.vendor || 'Document' }); }}
+                                  className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                  title="Voir le justificatif"
+                                >
+                                  <FileText size={14} />
+                                </motion.button>
+                              )}
                               <motion.button
                                 whileHover={{ scale: 1.1, rotate: 90 }}
                                 whileTap={{ scale: 0.9 }}
@@ -1440,12 +1535,27 @@ export default function OCRPage() {
                           </div>
                         </div>
 
-                        {/* Error message */}
+                        {/* Error message + retry */}
                         {scannedFile.status === 'error' && scannedFile.error && (
                           <div className="px-4 pb-3">
-                            <p className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
-                              {scannedFile.error}
-                            </p>
+                            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                              <p className="text-xs text-red-500 dark:text-red-400 flex-1">
+                                {scannedFile.error}
+                              </p>
+                              {scannedFile.sourcePdfName && (
+                                <span className="text-[9px] text-red-400 font-semibold shrink-0">
+                                  {scannedFile.segmentPages}
+                                </span>
+                              )}
+                            </div>
+                            {/* Retry button for errors */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateFile(scannedFile.id, { status: 'pending', progress: 0, error: undefined }); }}
+                              className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                            >
+                              <RefreshCw size={10} />
+                              Réessayer
+                            </button>
                           </div>
                         )}
                       </motion.div>
@@ -1486,9 +1596,12 @@ export default function OCRPage() {
                 {/* Review header */}
                 <div className="p-5 border-b border-gray-100 dark:border-gray-700">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                      Résultat de l'analyse
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        Résultat de l'analyse
+                      </h3>
+                      <DocumentTypeBadge type={reviewingFile.documentType || (reviewingFile.result?.extracted as any)?.document_type} />
+                    </div>
                     <motion.button
                       data-action="close-panel"
                       whileHover={{ rotate: 90, scale: 1.1 }}
@@ -1500,15 +1613,37 @@ export default function OCRPage() {
                     </motion.button>
                   </div>
                   {/* Thumbnail preview */}
-                  {reviewingFile.preview && (
+                  {(reviewingFile.preview || reviewingFile.receiptUrl || reviewingFile.result?.receipt_url) && (
                     <div
                       className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
-                      onClick={() => setPreviewImage({ url: reviewingFile.preview!, title: reviewingFile.result?.extracted?.vendor || 'Document' })}
+                      onClick={() => setPreviewImage({
+                        url: reviewingFile.preview || reviewingFile.receiptUrl || reviewingFile.result?.receipt_url || '',
+                        title: reviewingFile.result?.extracted?.vendor || reviewingFile.sourcePdfName || 'Document'
+                      })}
                     >
-                      <img src={reviewingFile.preview} alt={`Aperçu du justificatif: ${reviewingFile.result?.extracted?.vendor || 'Document'}`} className="w-full h-full object-cover" />
+                      {reviewingFile.preview ? (
+                        <img src={reviewingFile.preview} alt={`Aperçu du justificatif: ${reviewingFile.result?.extracted?.vendor || 'Document'}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-blue-50 dark:bg-blue-900/20">
+                          <FileText size={28} className="text-blue-500" />
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                            {reviewingFile.sourcePdfName ? `${reviewingFile.segmentPages || 'PDF'}` : 'Voir le justificatif'}
+                          </span>
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
                         <Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
+                    </div>
+                  )}
+                  {/* Segment source info */}
+                  {reviewingFile.sourcePdfName && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-gray-400">
+                      <FileText size={10} />
+                      <span className="truncate">{reviewingFile.sourcePdfName}</span>
+                      {reviewingFile.segmentPages && (
+                        <span className="font-bold text-blue-500">{reviewingFile.segmentPages}</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2101,14 +2236,28 @@ export default function OCRPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                      {expense.vendor || 'Fournisseur inconnu'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {expense.date
-                        ? new Date(expense.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : 'Date inconnue'}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                        {expense.vendor || 'Fournisseur inconnu'}
+                      </p>
+                      <DocumentTypeBadge type={expense.document_type} />
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-400">
+                        {expense.date
+                          ? new Date(expense.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : 'Date inconnue'}
+                      </p>
+                      {expense.receipt_url && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: expense.receipt_url, title: expense.vendor || 'Document' }); }}
+                          className="text-[10px] font-semibold text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-0.5 transition-colors"
+                        >
+                          <Eye size={9} />
+                          Justificatif
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Category icon */}
@@ -2150,24 +2299,135 @@ export default function OCRPage() {
         )}
       </motion.div>
 
-      {/* Image Preview Dialog */}
-      <Dialog open={previewImage !== null} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-4xl w-full">
+      {/* ===== Segment Verification Dialog ===== */}
+      <Dialog open={pendingSegments !== null} onOpenChange={(open) => { if (!open) { setPendingSegments(null); } }}>
+        <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{previewImage?.title || 'Aperçu du document'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Scan size={20} className="text-emerald-500" />
+              Vérification des segments
+              <span className="text-sm font-normal text-gray-400">
+                {pendingSegments?.segments.length || 0} facture(s) détectée(s) dans {pendingSegments?.totalPages || 0} pages
+              </span>
+            </DialogTitle>
           </DialogHeader>
-          <div className="relative w-full">
+
+          {pendingSegments && (
+            <div className="space-y-4">
+              {/* Info banner */}
+              <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50">
+                <Eye size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                  L'IA a détecté {pendingSegments.segments.length} facture(s) dans ce PDF.
+                  Vérifiez les segments ci-dessous et ajustez-les si nécessaire avant l'extraction.
+                </p>
+              </div>
+
+              {/* Segments list */}
+              <div className="space-y-2">
+                {pendingSegments.segments.map((seg, idx) => {
+                  const segmentColors = [
+                    'border-blue-400 bg-blue-50/50 dark:bg-blue-900/20',
+                    'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20',
+                    'border-violet-400 bg-violet-50/50 dark:bg-violet-900/20',
+                    'border-amber-400 bg-amber-50/50 dark:bg-amber-900/20',
+                    'border-rose-400 bg-rose-50/50 dark:bg-rose-900/20',
+                    'border-teal-400 bg-teal-50/50 dark:bg-teal-900/20',
+                  ];
+                  const colorClass = segmentColors[idx % segmentColors.length];
+                  const endPage = seg.endPage ?? seg.startPage;
+                  const pageCount = endPage - seg.startPage + 1;
+
+                  return (
+                    <div key={idx} className={cn('rounded-xl border-2 p-4', colorClass)}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-sm font-black text-gray-700 dark:text-gray-300 shadow-sm">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                              {seg.vendor || `Facture ${idx + 1}`}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Pages {seg.startPage}{endPage > seg.startPage ? ` à ${endPage}` : ''} ({pageCount} page{pageCount > 1 ? 's' : ''})
+                              {seg.invoiceNumber && ` — N° ${seg.invoiceNumber}`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 pt-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => processSegmentsFromPdf(pendingSegments)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/30"
+                >
+                  <Zap size={16} />
+                  Extraire {pendingSegments.segments.length} facture(s)
+                </motion.button>
+                <button
+                  onClick={() => setPendingSegments(null)}
+                  className="px-6 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Document Preview Dialog ===== */}
+      <Dialog open={previewImage !== null} onOpenChange={() => { setPreviewImage(null); setPreviewZoom(1); }}>
+        <DialogContent className="max-w-5xl w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewImage?.title || 'Aperçu du document'}
+            </DialogTitle>
+          </DialogHeader>
+          {/* Zoom controls */}
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={() => setPreviewZoom(z => Math.max(0.25, z - 0.25))}
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <span className="text-xs font-bold text-gray-500 w-12 text-center">{Math.round(previewZoom * 100)}%</span>
+            <button
+              onClick={() => setPreviewZoom(z => Math.min(3, z + 0.25))}
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              <ZoomIn size={14} />
+            </button>
+            <button
+              onClick={() => setPreviewZoom(1)}
+              className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-xs font-bold text-gray-500"
+            >
+              Reset
+            </button>
+          </div>
+          <div className="relative w-full overflow-auto rounded-lg" style={{ maxHeight: '75vh' }}>
             {previewImage?.url && (previewImage.url.includes('.pdf') || previewImage.url.includes('application/pdf')) ? (
               <iframe
                 src={previewImage.url}
-                className="w-full h-[70vh] rounded-lg border-0"
+                className="w-full rounded-lg border-0"
+                style={{ height: '75vh', transform: `scale(${previewZoom})`, transformOrigin: 'top left', width: `${100 / previewZoom}%` }}
                 title={previewImage.title || 'Aperçu PDF'}
               />
             ) : (
               <img
                 src={previewImage?.url}
                 alt={previewImage?.title || 'Aperçu du document'}
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                className="w-full h-auto object-contain rounded-lg transition-transform"
+                style={{ transform: `scale(${previewZoom})`, transformOrigin: 'center' }}
               />
             )}
           </div>

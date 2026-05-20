@@ -204,7 +204,22 @@
       "Bash(chmod +x /tmp/check_tables.sh)",
       "Bash(/tmp/check_tables.sh)",
       "Bash(tee /tmp/build_output.log)",
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx next build)"
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx next build)",
+      "Bash(where supabase)",
+      "Bash(curl:*)",
+      "Bash(where psql)",
+      "Bash(where pg_isready)",
+      "Bash(npx:*)",
+      "Bash(node -e \"\nconst { createClient } = require\\(''@supabase/supabase-js''\\);\nconst supabase = createClient\\(\n  ''https://ggrwyfhptxwpahwkeoyj.supabase.co'',\n  ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdncnd5ZmhwdHh3cGFod2tlb3lqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQ5Njc1MywiZXhwIjoyMDg5MDcyNzUzfQ.DqJ4hDMQrlB0MZ1VRjDHauJ1u3JsfdVC9KgTVUU7pJo''\n\\);\nconsole.log\\(''Client created''\\);\n\")",
+      "Bash(node -e:*)",
+      "Bash(findstr:*)",
+      "Bash(docker:*)",
+      "Bash(grep -r \"from ['\\\\\"]@/lib/upstash-rate-limit\" --include=\"*.ts\" --include=\"*.tsx\" -l)",
+      "Bash(grep -r \"from ['\\\\\"]@/lib/supabase-admin\" --include=\"*.ts\" --include=\"*.tsx\" -l)",
+      "Bash(grep -r \"from ['\\\\\"]@/factume-backend\" --include=\"*.ts\" --include=\"*.tsx\" -l)",
+      "Bash(cat vercel.json)",
+      "Bash(cat .vercel/project.json)",
+      "Bash(grep -E \"\\\\.tsx$\")"
     ]
   },
   "enableAllProjectMcpServers": true,

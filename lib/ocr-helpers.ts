@@ -371,6 +371,70 @@ export const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Post-extraction validation — catches AI hallucinations
+// ---------------------------------------------------------------------------
+
+export interface ValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  needsReview: boolean;
+}
+
+export function validateOcrExtraction(extracted: Record<string, unknown>): ValidationResult {
+  const warnings: string[] = [];
+  const confidence = normalizeConfidence(extracted.confidence);
+  const amount = sanitizeNumeric(extracted.amount);
+  const htAmount = sanitizeNumeric(extracted.ht_amount);
+  const vatAmount = sanitizeNumeric(extracted.vat_amount);
+  const vatRate = sanitizeNumeric(extracted.vat_rate);
+  const lineItems = sanitizeLineItems(extracted.line_items);
+
+  // 1. Line items sum vs total
+  if (lineItems.length > 0 && amount !== null) {
+    const lineItemsSum = lineItems.reduce((sum, item) => sum + (item.total ?? item.quantity * (item.unit_price ?? 0)), 0);
+    if (lineItemsSum > 0 && amount > 0) {
+      const diff = Math.abs(lineItemsSum - amount) / amount;
+      if (diff > 0.02) {
+        warnings.push(`Somme des lignes (${lineItemsSum.toFixed(2)}) ≠ montant total (${amount.toFixed(2)}), écart ${(diff * 100).toFixed(1)}%`);
+      }
+    }
+  }
+
+  // 2. HT + TVA ≈ TTC
+  if (htAmount !== null && vatAmount !== null && amount !== null) {
+    const computedTtc = htAmount + vatAmount;
+    const diff = Math.abs(computedTtc - amount);
+    if (amount > 0 && diff / amount > 0.02) {
+      warnings.push(`HT (${htAmount.toFixed(2)}) + TVA (${vatAmount.toFixed(2)}) = ${computedTtc.toFixed(2)} ≠ TTC (${amount.toFixed(2)})`);
+    }
+  }
+
+  // 3. TVA rate consistency
+  if (htAmount !== null && htAmount > 0 && vatAmount !== null && vatRate !== null) {
+    const expectedVat = htAmount * (vatRate / 100);
+    const diff = Math.abs(expectedVat - vatAmount);
+    if (diff / vatAmount > 0.05) {
+      warnings.push(`TVA calculée (${expectedVat.toFixed(2)}) ≠ TVA extraite (${vatAmount.toFixed(2)})`);
+    }
+  }
+
+  // 4. Negative amounts
+  if (amount !== null && amount <= 0) warnings.push('Montant TTC négatif ou nul');
+  if (htAmount !== null && htAmount < 0) warnings.push('Montant HT négatif');
+
+  // 5. Missing critical fields
+  if (!sanitizeString(extracted.vendor)) warnings.push('Fournisseur non détecté');
+  if (!sanitizeDate(extracted.date)) warnings.push('Date non détectée');
+
+  // 6. Confidence-based flagging
+  if (confidence < 0.65) warnings.push('Confiance faible — vérification recommandée');
+
+  const needsReview = warnings.length > 0 || confidence < 0.70;
+
+  return { isValid: warnings.length === 0, warnings, needsReview };
+}
+
+// ---------------------------------------------------------------------------
 // Rate limiting constants (shared defaults — endpoints may override)
 // ---------------------------------------------------------------------------
 

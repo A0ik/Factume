@@ -251,6 +251,7 @@ export async function POST(req: NextRequest) {
         expense: result.savedExpense,
         extracted: result.extracted,
         accounting: result.accounting,
+        validation: result.validation,
         receipt_url: receiptPublicUrl,
         receipt_storage_path: storagePath,
         meta: {
@@ -260,6 +261,7 @@ export async function POST(req: NextRequest) {
           is_pdf: isPdf,
           model: OCR_MODEL,
           ocr_confidence: result.extracted.confidence,
+          needs_review: result.validation.needsReview,
         },
       },
       { status: 200 },

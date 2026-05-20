@@ -16,6 +16,8 @@ import {
   validatePCGCode,
   generateStoragePath,
   buildOcrPrompt,
+  validateOcrExtraction,
+  type ValidationResult,
 } from '@/lib/ocr-helpers';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import { extractPageRange, type InvoiceSegment } from '@/lib/pdf-splitter';
@@ -49,6 +51,7 @@ export interface ProcessedExpense {
   };
   savedExpense: Record<string, unknown> | null;
   dbError: string | null;
+  validation: ValidationResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,6 +176,9 @@ export async function processAndSaveExpense(
   // 1. Sanitize
   const { extracted, category, supplierCategory } = sanitizeOcrResponse(rawAiResponse);
 
+  // 1b. Validate extraction (catch AI hallucinations)
+  const validation = validateOcrExtraction(extracted);
+
   // 2. Resolve account code
   const { code: finalAccountCode, label: finalAccountLabel } = await resolveAccountCode(
     category, supplierCategory,
@@ -205,7 +211,7 @@ export async function processAndSaveExpense(
     receipt_url: fileMeta.receiptUrl,
     receipt_storage_path: fileMeta.storagePath,
     payment_method: extracted.payment_method,
-    status: 'pending',
+    status: validation.needsReview ? 'needs_review' : 'pending',
     ocr_raw_response: rawAiResponse,
     ocr_confidence: extracted.confidence,
     ocr_line_items: extracted.line_items,
@@ -222,6 +228,11 @@ export async function processAndSaveExpense(
     is_professional_expense: extracted.is_professional_expense,
     supplier_category: extracted.supplier_category,
   };
+
+  // Store validation warnings if any
+  if (validation.warnings.length > 0) {
+    expenseRecord.ocr_validation_warnings = validation.warnings;
+  }
 
   // Remove null keys
   for (const key of Object.keys(expenseRecord)) {
@@ -253,6 +264,7 @@ export async function processAndSaveExpense(
     },
     savedExpense: dbError ? null : savedExpense,
     dbError: dbError?.message || null,
+    validation,
   };
 }
 

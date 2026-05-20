@@ -228,9 +228,13 @@ export default function MentionsLegales() {
             </Link>
             <span className="text-gray-300 dark:text-gray-600">•</span>
             <Link href="/legal/cgu" className="hover:text-primary transition-colors">
-              Conditions Générales d'Utilisation
+              CGU
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <Link href="/legal/cgv" className="hover:text-primary transition-colors">
+              CGV
+            </Link>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
             <Link href="/" className="hover:text-primary transition-colors flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Retour sur Factu.me

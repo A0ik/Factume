@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   // Upsert: if the user already has a mapping for this raw_vendor, update it
   const { data, error } = await supabase
     .from('vendor_mappings')
-    .upsert(upsertData, { onConflict: 'user_id,raw_vendor' })
+    .upsert(upsertData, { onConflict: 'user_id,vendor_name_pattern' })
     .select()
     .single();
 

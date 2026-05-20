@@ -116,13 +116,26 @@ function makeStyles(accent: string) {
     articlePara: { fontSize: 8.5, color: '#333', marginBottom: 4, textAlign: 'justify' },
     // Signatures
     sigRow: { flexDirection: 'row', gap: 20, marginTop: 20 },
-    sigBox: { flex: 1 },
-    sigTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+    sigBox: { flex: 1, borderWidth: 1, borderColor: '#e2e8f0', borderStyle: 'solid', borderRadius: 4, padding: 10 },
+    sigTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 3, color: accent },
     sigName: { fontSize: 8.5, color: '#444', marginBottom: 2 },
     sigDate: { fontSize: 8, color: '#888', fontFamily: 'Helvetica-Oblique', marginBottom: 8 },
-    sigLine: { borderBottomWidth: 1, borderBottomColor: '#333', borderBottomStyle: 'solid', marginBottom: 4, marginTop: 30 },
+    sigLine: { borderBottomWidth: 1, borderBottomColor: '#333', borderBottomStyle: 'solid', marginBottom: 4, marginTop: 35 },
     sigHint: { fontSize: 7, color: '#888', fontFamily: 'Helvetica-Oblique' },
     sigImage: { maxWidth: 140, maxHeight: 55, marginTop: 4 },
+    // Watermark
+    watermark: {
+      position: 'absolute', top: '40%', left: '15%', right: '15%',
+      transform: 'rotate(-35deg)', opacity: 0.04,
+      fontSize: 72, fontFamily: 'Helvetica-Bold', color: '#000',
+      textAlign: 'center',
+    },
+    // Legal disclaimer
+    disclaimer: {
+      marginTop: 16, padding: 6, borderWidth: 0.5, borderColor: '#e6d800',
+      borderStyle: 'solid', borderRadius: 2,
+      fontSize: 6.5, color: '#777', lineHeight: 1.3,
+    },
     // Footer
     footer: { position: 'absolute', bottom: 24, left: 52, right: 52 },
     footerLine: { borderTopWidth: 0.5, borderTopColor: '#ddd', borderTopStyle: 'solid', paddingTop: 4 },
@@ -168,6 +181,9 @@ const ContractPDF: React.FC<{ data: ContractTemplateData }> = ({ data }) => {
   return (
     <Document title={`${title} — ${data.employeeFirstName} ${data.employeeLastName}`} author={data.companyName}>
       <Page size="A4" style={S.page}>
+        {/* ── Watermark ── */}
+        <Text style={S.watermark} fixed>CONFIDENTIEL</Text>
+
         {/* ── Header ── */}
         <View style={S.header} fixed>
           <View>
@@ -267,6 +283,12 @@ const ContractPDF: React.FC<{ data: ContractTemplateData }> = ({ data }) => {
           <Text style={{ fontSize: 7.5, color: '#888', fontFamily: 'Helvetica-Oblique', textAlign: 'center', marginTop: 20 }}>
             L'employeur reconnaît avoir remis un exemplaire du présent contrat au salarié.
           </Text>
+
+          {/* ── Legal disclaimer ── */}
+          <View style={S.disclaimer}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 6.5, color: '#555' }}>Avertissement :</Text>
+            <Text>Ce document a été généré automatiquement par Factu.me à partir des informations fournies. Il constitue un modèle de contrat de travail et ne remplace pas l'avis d'un professionnel du droit (avocat, expert-comptable ou juriste). Vérifiez la conformité avec la convention collective applicable et la réglementation en vigueur avant toute signature.</Text>
+          </View>
         </View>
 
         {/* ── Footer (every page) ── */}

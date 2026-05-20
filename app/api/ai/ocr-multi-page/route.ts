@@ -25,6 +25,9 @@ interface OCRResult {
   success: boolean;
   segment?: InvoiceSegment;
   expense?: Record<string, unknown>;
+  extracted?: Record<string, unknown>;
+  receipt_url?: string;
+  receipt_storage_path?: string;
   error?: string;
 }
 

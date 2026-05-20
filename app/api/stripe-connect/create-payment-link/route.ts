@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Get invoice details
-    const { data: invoice } = await supabase
+    const admin = createAdminClient();
+    const { data: invoice } = await admin
       .from('invoices')
       .select('*, client:clients(*)')
       .eq('id', invoiceId)
@@ -29,82 +30,88 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    // Get user's Stripe Connect account
-    const { data: profile } = await supabase
+    // Get user's Stripe Connect account ID (stored as stripe_connect_id)
+    const { data: profile } = await admin
       .from('profiles')
-      .select('stripe_connect_account_id, stripe_connect_access_token')
+      .select('stripe_connect_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_connect_account_id) {
+    if (!profile?.stripe_connect_id) {
       return NextResponse.json({
         error: 'Vous devez connecter votre compte Stripe avant de créer des liens de paiement',
-        requiresConnect: true
+        requiresConnect: true,
       }, { status: 400 });
     }
 
-    // Initialize Stripe with the user's access token
-    const stripe = new Stripe(profile.stripe_connect_access_token);
+    // Use platform secret key with stripeAccount for Connect Standard
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      stripeAccount: profile.stripe_connect_id,
+    });
 
-    // Create line items from invoice items for better detail
-    const lineItems = await Promise.all(
-      invoice.items.map(async (item: any) => {
-        // Calculate TTC price including VAT
-        const ttcPrice = item.unit_price * (1 + (item.vat_rate / 100));
-
-        // Create a product for each invoice item
-        const product = await stripe.products.create({
-          name: item.description.substring(0, 100), // Stripe limits product name length
-          description: item.description,
-          metadata: {
-            invoice_id: invoice.id,
-            invoice_item_id: item.id,
-          },
-        });
-
-        // Create a price for this product (TTC amount)
-        const price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: Math.round(ttcPrice * 100), // Convert to cents, use TTC price
-          currency: 'eur',
-        });
-
+    // Build line items from invoice items
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (invoice.items || []).map(
+      (item: { description: string; unit_price: number; vat_rate: number; quantity: number; total: number }) => {
+        const ttcPrice = item.unit_price * (1 + (item.vat_rate ?? 20) / 100);
         return {
-          price: price.id,
-          quantity: item.quantity,
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: (item.description || 'Prestation').substring(0, 100),
+            },
+            unit_amount: Math.round(ttcPrice * 100),
+          },
+          quantity: item.quantity || 1,
         };
-      })
+      },
     );
 
-    // Create a payment link with all line items
-    const paymentLink = await stripe.paymentLinks.create({
-      line_items: lineItems,
-      after_completion: {
-        type: 'redirect',
-        redirect: {
-          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invoices/${invoice.id}?payment=success`,
+    // Fallback if no items
+    if (lineItems.length === 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `Facture ${invoice.number}` },
+          unit_amount: Math.round((invoice.total || 0) * 100),
         },
-      },
+        quantity: 1,
+      });
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+    // Create a checkout session on the connected account
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      success_url: `${appUrl}/invoices/${invoice.id}?paid=true`,
+      cancel_url: `${appUrl}/invoices/${invoice.id}`,
       metadata: {
         invoice_id: invoice.id,
         user_id: user.id,
-        invoice_number: invoice.number,
+        invoice_number: invoice.number || '',
+      },
+      payment_intent_data: {
+        metadata: {
+          invoice_id: invoice.id,
+          user_id: user.id,
+        },
       },
     });
 
-    // Update invoice with Stripe payment link
-    await supabase
+    // Update invoice with Stripe payment info
+    await admin
       .from('invoices')
       .update({
-        stripe_payment_link_id: paymentLink.id,
-        stripe_payment_link_url: paymentLink.url,
+        stripe_payment_url: session.url,
+        payment_link: session.url,
       })
       .eq('id', invoiceId);
 
     return NextResponse.json({
-      paymentLinkId: paymentLink.id,
-      paymentLinkUrl: paymentLink.url,
-      shortUrl: paymentLink.url,
+      paymentLinkId: session.id,
+      paymentLinkUrl: session.url,
+      shortUrl: session.url,
     });
   } catch (error: any) {
     console.error('[Stripe Connect Payment Link]', error);

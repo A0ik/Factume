@@ -15,7 +15,11 @@ import {
   Zap,
   AlertCircle,
   CheckCircle,
-  FileText
+  FileText,
+  Cookie,
+  Globe,
+  Users,
+  Scale
 } from 'lucide-react';
 
 export default function Confidentialite() {
@@ -25,47 +29,51 @@ export default function Confidentialite() {
       title: '1. Responsable du traitement',
       color: 'from-blue-500 to-cyan-500',
       content: `
-        <p class="mb-3">La société <strong class="text-primary">Factu.me</strong>, SAS au capital variable, immatriculée au RCS de Paris, est le responsable du traitement des données personnelles collectées sur la plateforme.</p>
-        <p><strong>Adresse de contact :</strong> <a href="mailto:contact@factu.me" class="text-primary hover:underline">contact@factu.me</a></p>
+        <p class="mb-3">La societe <strong class="text-primary">Factu.me</strong>, SAS au capital variable, immatriculee au RCS de Paris, est le responsable du traitement des donnees personnelles collectees sur la plateforme.</p>
+        <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 mt-3">
+          <p class="font-semibold text-gray-900 dark:text-white mb-2">DPO - Delegue a la Protection des Donnees</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Pour toute question relative a la protection de vos donnees personnelles, vous pouvez contacter notre Delegue a la Protection des Donnees :</p>
+          <p class="text-sm mt-2"><strong>Email :</strong> <a href="mailto:contact@factu.me" class="text-primary hover:underline">contact@factu.me</a></p>
+        </div>
       `
     },
     {
       icon: Database,
-      title: '2. Données collectées',
+      title: '2. Donnees collectees',
       color: 'from-purple-500 to-pink-500',
       items: [
         {
-          subtitle: 'Données d\'inscription',
-          description: 'Nom, prénom, adresse email, mot de passe (chiffré)'
+          subtitle: 'Donnees d\'inscription',
+          description: 'Nom, prenom, adresse email, mot de passe (chiffre)'
         },
         {
-          subtitle: 'Données professionnelles',
-          description: 'Nom de l\'entreprise, SIRET, adresse, secteur d\'activité'
+          subtitle: 'Donnees professionnelles',
+          description: 'Nom de l\'entreprise, SIRET, adresse, secteur d\'activite'
         },
         {
-          subtitle: 'Données d\'utilisation',
-          description: 'Documents créés, clients, historique de connexion'
+          subtitle: 'Donnees d\'utilisation',
+          description: 'Documents crees, clients, historique de connexion'
         },
         {
-          subtitle: 'Données de paiement',
-          description: 'Traitées directement par Stripe (PCI-DSS compliant) - Factu.me ne stocke aucune donnée bancaire'
+          subtitle: 'Donnees de paiement',
+          description: 'Traitees directement par Stripe et SumUp (PCI-DSS compliant) - Factu.me ne stocke aucune donnee bancaire'
         }
       ]
     },
     {
       icon: Eye,
-      title: '3. Finalités du traitement',
+      title: '3. Finalites du traitement',
       color: 'from-emerald-500 to-teal-500',
       items: [
-        { subtitle: 'Fourniture du service', description: 'Création et gestion de documents commerciaux' },
-        { subtitle: 'Support technique', description: 'Assistance et amélioration du service' },
-        { subtitle: 'Conformité légale', description: 'Obligations fiscales et comptables' },
-        { subtitle: 'Communication', description: 'Avec consentement préalable pour les newsletters' }
+        { subtitle: 'Fourniture du service', description: 'Creation et gestion de documents commerciaux' },
+        { subtitle: 'Support technique', description: 'Assistance et amelioration du service' },
+        { subtitle: 'Conformite legale', description: 'Obligations fiscales et comptables' },
+        { subtitle: 'Communication', description: 'Avec consentement prealable pour les newsletters' }
       ]
     },
     {
       icon: Lock,
-      title: '4. Sécurité des données',
+      title: '4. Securite des donnees',
       color: 'from-orange-500 to-red-500',
       content: `
         <div class="space-y-3">
@@ -84,7 +92,7 @@ export default function Confidentialite() {
             </div>
             <div>
               <p class="font-semibold text-gray-900 dark:text-white">Localisation</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Serveurs hébergés en France (Paris)</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Serveurs heberges en France (Paris)</p>
             </div>
           </div>
           <div class="flex items-start gap-3">
@@ -101,25 +109,39 @@ export default function Confidentialite() {
     },
     {
       icon: Clock,
-      title: '5. Durée de conservation',
+      title: '5. Duree de conservation',
       color: 'from-indigo-500 to-violet-500',
       content: `
         <div class="space-y-3">
-          <p>Les données sont conservées pendant la durée du contrat, puis :</p>
+          <p>Les donnees sont conservees pendant la duree du contrat, puis :</p>
           <ul class="space-y-2">
             <li class="flex items-start gap-2">
               <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <span><strong class="text-gray-900 dark:text-white">Compte actif :</strong> Conservation illimitée durant la souscription</span>
+              <span><strong class="text-gray-900 dark:text-white">Compte actif :</strong> Conservation illimitee durant la souscription</span>
             </li>
             <li class="flex items-start gap-2">
               <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <span><strong class="text-gray-900 dark:text-white">Après résiliation :</strong> Suppression dans un délai de 30 jours</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              <span><strong class="text-gray-900 dark:text-white">Données fiscales :</strong> Conservation de 10 ans (obligation légale)</span>
+              <span><strong class="text-gray-900 dark:text-white">Apres resiliation :</strong> Suppression dans un delai de 30 jours</span>
             </li>
           </ul>
+          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800 mt-4">
+            <p class="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase mb-2">Durees legales specifiques</p>
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+              <li class="flex items-start gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-2"></div>
+                <span><strong>10 ans</strong> pour les donnees fiscales et comptables, conformement a l'article L.123-22 du Code de commerce</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-2"></div>
+                <span><strong>3 ans</strong> pour les donnees de clients inactifs (derniere connexion ou interaction), apres quoi elles sont anonymisees ou supprimees</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-2"></div>
+                <span><strong>13 mois</strong> pour les cookies de mesure d'audience (consentement renouvele annuellement)</span>
+              </li>
+            </ul>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">A l'issue de ces durees, les donnees sont supprimees definitivement de nos serveurs, sauf obligation legale contraire.</p>
         </div>
       `
     },
@@ -129,24 +151,28 @@ export default function Confidentialite() {
       color: 'from-amber-500 to-yellow-500',
       items: [
         {
-          subtitle: 'Droit d\'accès (Article 15)',
-          description: 'Obtenir une copie de vos données personnelles'
+          subtitle: 'Droit d\'acces (Art. 15)',
+          description: 'Obtenir la confirmation du traitement de vos donnees et une copie de celles-ci, ainsi que les informations relatives aux finalites, aux categories de donnees et aux destinataires'
         },
         {
-          subtitle: 'Droit de rectification (Article 16)',
-          description: 'Corriger des données inexactes ou incomplètes'
+          subtitle: 'Droit de rectification (Art. 16)',
+          description: 'Corriger des donnees inexactes ou incompletes. Vous pouvez modifier vos informations directement depuis votre espace utilisateur'
         },
         {
-          subtitle: 'Droit à l\'effacement (Article 17)',
-          description: 'Demander la suppression de vos données (« droit à l\'oubli »)'
+          subtitle: 'Droit a l\'effacement (Art. 17)',
+          description: 'Demander la suppression de vos donnees personnelles (« droit a l\'oubli »), sous reserve des obligations legales de conservation'
         },
         {
-          subtitle: 'Droit à la portabilité (Article 20)',
-          description: 'Exporter vos données dans un format structuré'
+          subtitle: 'Droit a la limitation (Art. 18)',
+          description: 'Demander la limitation du traitement de vos donnees pendant la duree necessaire a la verification de l\'exactitude ou en cas de contestation'
         },
         {
-          subtitle: 'Droit d\'opposition (Article 21)',
-          description: 'Vous opposer au traitement de vos données'
+          subtitle: 'Droit a la portabilite (Art. 20)',
+          description: 'Exporter vos donnees dans un format structure, couramment utilise et lisible par machine (JSON, CSV). Disponible directement depuis les parametres de votre compte'
+        },
+        {
+          subtitle: 'Droit d\'opposition (Art. 21)',
+          description: 'Vous opposer au traitement de vos donnees pour des motifs legitimes, ou vous opposer a la prospection commerciale a tout moment'
         }
       ]
     },
@@ -155,18 +181,153 @@ export default function Confidentialite() {
       title: '7. Sous-traitants',
       color: 'from-rose-500 to-pink-600',
       content: `
+        <p class="mb-4">Factu.me fait appel aux sous-traitants suivants pour le traitement de vos donnees. Chaque sous-traitant est lie par un contrat de sous-traitance conforme a l'article 28 du RGPD :</p>
         <div class="space-y-3">
-          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4">
-            <p class="font-semibold text-gray-900 dark:text-white mb-1">Supabase</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Hébergement et base de données (serveurs à Paris) - Conforme RGPD</p>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">Supabase</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                EU
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Hebergement de la base de donnees et des fichiers. Serveurs localises a Frankfort, Allemagne. Conforme RGPD, certifie SOC 2 Type II.</p>
           </div>
-          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4">
-            <p class="font-semibold text-gray-900 dark:text-white mb-1">Stripe</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Traitement des paiements (conforme PCI-DSS Level 1)</p>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">Stripe</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                EU / US
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Traitement des paiements par carte bancaire. Certifie PCI-DSS Level 1. Donnees traitees dans l'Union europeenne conformement au RGPD.</p>
           </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">SumUp</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                EU
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Traitement des paiements par terminal de paiement. Conforme PCI-DSS. Sie social a Londres, Royaume-Uni (adequation RGPD reconnue).</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">Vercel</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                EU
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Hebergement de l'application web. Infrastructures certifiees ISO 27001, SOC 2 Type II. Serveurs localises a Paris, France.</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">Resend</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                EU
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Envoi d'emails transactionnels (factures, notifications, confirmation de compte). Donnees hebergees en Union europeenne.</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">OpenRouter</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                US
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Services d'intelligence artificielle pour la generation et la modification de documents. Heberge aux Etats-Unis. Transfert encadre par des clauses contractuelles types (SCCs) conformement au RGPD.</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-semibold text-gray-900 dark:text-white">Google Analytics</p>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                US
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Mesure d'audience et analyse du trafic. Heberge aux Etats-Unis. Transfert encadre par les clauses contractuelles types et protocole Privacy Shield. Donnees anonymisees le cas echeant.</p>
+          </div>
+        </div>
+      `
+    },
+    {
+      icon: Cookie,
+      title: '8. Cookies',
+      color: 'from-teal-500 to-cyan-600',
+      content: `
+        <div class="space-y-3">
+          <p class="mb-3">Factu.me utilise des cookies pour ameliorer votre experience de navigation et assurer le bon fonctionnement du service. Vous pouvez gerer vos preferences de cookies a tout moment depuis les parametres de votre navigateur.</p>
+          <div class="space-y-3">
+            <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <Lock class="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white">Cookies essentiels</p>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Necessaires au fonctionnement du service : session utilisateur, authentification (token JWT), preferences linguistiques et theme (sombre/clair). Ces cookies ne necessitent pas de consentement.</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Duree : session + 30 jours maximum</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Eye class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white">Google Analytics</p>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Mesure d'audience et analyse comportementale (pages visitees, duree de visite, source de trafic). Donnees anonymisees via l'option IP anonymisation. Soumis a votre consentement prealable.</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Duree : 13 mois maximum (renouvellement par consentement)</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4 border border-gray-100 dark:border-white/5">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Zap class="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                </div>
+                <p class="font-semibold text-gray-900 dark:text-white">Vercel Analytics</p>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Analyse des performances techniques (temps de chargement, Core Web Vitals, erreurs). Aucune donnee personnelle n'est collectee, uniquement des metriques de performance agregees.</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Duree : session en cours</p>
+            </div>
+          </div>
+        </div>
+      `
+    },
+    {
+      icon: Globe,
+      title: '9. Transferts hors UE',
+      color: 'from-slate-500 to-gray-600',
+      content: `
+        <div class="space-y-3">
+          <p class="mb-3">Certains de nos sous-traitants (OpenRouter, Google Analytics) sont susceptibles de traiter des donnees en dehors de l'Union europeenne (Etats-Unis). Ces transferts sont encadres par :</p>
+          <ul class="space-y-2">
+            <li class="flex items-start gap-2">
+              <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <span><strong class="text-gray-900 dark:text-white">Clauses contractuelles types (SCCs)</strong> approuvees par la Commission europeenne</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <span><strong class="text-gray-900 dark:text-white">Evaluations d'impact</strong> sur la protection des donnees (AIPD) lorsqu'elles sont requises</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <CheckCircle class="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <span><strong class="text-gray-900 dark:text-white">Mesures techniques complementaires</strong> : chiffrement des donnees en transit et au repos, minimisation des donnees transferees</span>
+            </li>
+          </ul>
+        </div>
+      `
+    },
+    {
+      icon: Scale,
+      title: '10. Reclamations',
+      color: 'from-violet-500 to-purple-600',
+      content: `
+        <div class="space-y-3">
+          <p class="mb-3">Si vous estimez que le traitement de vos donnees personnelles n'est pas conforme a la reglementation, vous disposez du droit d'introduire une reclamation aupres de l'autorite de controle :</p>
           <div class="bg-gray-50 dark:bg-slate-900/50 rounded-xl p-4">
-            <p class="font-semibold text-gray-900 dark:text-white mb-1">Vercel</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Hébergement de l\'application (infrastructures certifiées ISO 27001)</p>
+            <p class="font-semibold text-gray-900 dark:text-white mb-2">CNIL - Commission Nationale de l'Informatique et des Libertes</p>
+            <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>Site web : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">www.cnil.fr</a></li>
+              <li>Adresse : 3 Place de Fontenoy, TSA 80715, 75334 PARIS CEDEX 07</li>
+            </ul>
           </div>
         </div>
       `
@@ -187,7 +348,7 @@ export default function Confidentialite() {
             className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
-            Retour à l'accueil
+            Retour a l'accueil
           </Link>
 
           <div className="flex items-center gap-4 mb-4">
@@ -196,17 +357,17 @@ export default function Confidentialite() {
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                Politique de Confidentialité
+                Politique de Confidentialite
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Conformément au RGPD (Règlement UE 2016/679)
+                Conformement au RGPD (Reglement UE 2016/679)
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <Zap className="w-4 h-4" />
-            Dernière mise à jour : avril 2026
+            Derniere mise a jour : mai 2026
           </div>
         </motion.div>
 
@@ -223,11 +384,12 @@ export default function Confidentialite() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                Protection de vos données
+                Protection de vos donnees
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                Factu.me s\'engage à protéger vos données personnelles et à respecter votre vie privée.
-                Cette politique décrit comment nous collectons, utilisons et sécurisons vos informations.
+                Factu.me s'engage a proteger vos donnees personnelles et a respecter votre vie privee.
+                Cette politique decrit comment nous collectons, utilisons, conservons et securisons vos informations,
+                conformement au Reglement General sur la Protection des Donnees (RGPD) et a la loi Informatique et Libertes.
               </p>
             </div>
           </div>
@@ -242,7 +404,7 @@ export default function Confidentialite() {
                 key={section.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
+                transition={{ delay: 0.05 * index }}
                 className="bg-white dark:bg-slate-800/50 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300"
               >
                 <div className="flex items-center gap-4 mb-6">
@@ -297,7 +459,7 @@ export default function Confidentialite() {
               <div>
                 <h3 className="text-xl font-bold mb-1">Exercez vos droits</h3>
                 <p className="text-white/80 text-sm">
-                  Pour exercer vos droits RGPD, contactez-nous
+                  DPO : contact@factu.me - Reponse sous 30 jours maximum
                 </p>
               </div>
             </div>
@@ -321,13 +483,17 @@ export default function Confidentialite() {
         >
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
             <Link href="/legal/mentions-legales" className="hover:text-primary transition-colors">
-              Mentions légales
+              Mentions legales
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
             <Link href="/legal/cgu" className="hover:text-primary transition-colors">
-              Conditions Générales d'Utilisation
+              CGU
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <Link href="/legal/cgv" className="hover:text-primary transition-colors">
+              CGV
+            </Link>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
             <Link href="/" className="hover:text-primary transition-colors flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Retour sur Factu.me
