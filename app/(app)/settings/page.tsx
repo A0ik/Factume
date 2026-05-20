@@ -11,7 +11,7 @@ import { CURRENCIES, LEGAL_STATUSES, SECTORS, ACCENT_COLORS } from '@/lib/utils'
 import Modal from '@/components/ui/Modal';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 
-import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette, Users } from 'lucide-react';
+import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette, Users, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
@@ -233,17 +233,36 @@ export default function SettingsPage() {
     const params = new URLSearchParams(window.location.search);
     const stripeConnect = params.get('stripe-connect');
     const stripeConnectError = params.get('stripe-connect-error');
+    const sumupConnected = params.get('sumup');
+    const sumupError = params.get('sumup_error');
 
     if (stripeConnect === 'success') {
       setStripeStatus('connected');
       toast.success('Stripe connecté avec succès !');
       fetchProfile(profile?.id ?? '');
-      // Clean URL
       window.history.replaceState({}, '', window.location.pathname);
     } else if (stripeConnectError) {
       setStripeStatus('error');
       toast.error(`Erreur de connexion Stripe: ${stripeConnectError}`);
-      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    if (sumupConnected === 'connected') {
+      toast.success('SumUp connecté avec succès !');
+      fetchProfile(profile?.id ?? '');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (sumupError) {
+      const errorMessages: Record<string, string> = {
+        'access_denied': 'Vous avez refusé l\'accès à SumUp.',
+        'invalid_state': 'Session expirée. Veuillez réessayer.',
+        'no_code': 'Code d\'autorisation manquant. Veuillez réessayer.',
+        'no_user': 'Session expirée. Veuillez vous reconnecter.',
+        'token_exchange_failed': 'Impossible d\'obtenir les identifiants SumUp. Vérifiez vos identifiants sur Vercel.',
+        'profile_fetch_failed': 'Impossible de récupérer votre profil SumUp.',
+        'db_update_failed': 'Erreur lors de la sauvegarde. Veuillez réessayer.',
+        'unknown': 'Erreur inattendue. Veuillez réessayer.',
+      };
+      toast.error(errorMessages[sumupError] || `Erreur SumUp: ${sumupError}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -890,30 +909,54 @@ export default function SettingsPage() {
       title: 'Paiement en ligne (SumUp)',
       fields: (
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Acceptez des paiements en ligne directement sur vos factures avec SumUp. Connexion sécurisée via OAuth 2.0.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Acceptez des paiements en ligne directement sur vos factures avec SumUp.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowSumupTutorial(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+              <HelpCircle size={12} />
+              Comment ça marche ?
+            </button>
+          </div>
 
           {sumupConnected ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3.5 bg-green-50 rounded-xl border border-green-100">
-                <div className="w-9 h-9 rounded-lg bg-white border border-green-200 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 size={16} className="text-green-600" />
+              <div className="flex items-center gap-3 p-3.5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800/40">
+                <div className="w-9 h-9 rounded-lg bg-white dark:bg-green-900/40 border border-green-200 dark:border-green-700 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 size={16} className="text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-green-800">Compte SumUp connecté</p>
-                  <p className="text-xs text-green-600 font-mono truncate">{sumupMerchantCode}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-green-800 dark:text-green-300">Compte SumUp connecté</p>
+                    <span className="px-1.5 py-0.5 rounded-full bg-green-200 dark:bg-green-800 text-[9px] font-bold text-green-700 dark:text-green-300 uppercase">Actif</span>
+                  </div>
+                  <p className="text-xs text-green-600 dark:text-green-400 font-mono truncate">{sumupMerchantCode}</p>
                   {sumupTokenExpiresAt && (
-                    <p className="text-[10px] text-green-500 mt-0.5">
-                      Token expire: {new Date(sumupTokenExpiresAt).toLocaleDateString('fr-FR')}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[10px] text-green-500 dark:text-green-500">
+                        Token expire: {new Date(sumupTokenExpiresAt).toLocaleDateString('fr-FR')}
+                      </p>
+                      {new Date(sumupTokenExpiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
+                        <button
+                          type="button"
+                          onClick={handleConnectSumUp}
+                          className="text-[10px] font-semibold text-amber-600 hover:text-amber-700 underline"
+                        >
+                          Reconnecter
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/40">
                 <Link2 size={14} className="text-blue-500 flex-shrink-0" />
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-blue-700 dark:text-blue-400">
                   Un bouton <strong>Payer avec SumUp</strong> apparaît sur vos factures. Les paiements arrivent directement sur votre compte SumUp.
                 </p>
               </div>
@@ -922,7 +965,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleDisconnectSumUp}
                 disabled={sumupLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/40 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
               >
                 <Unlink size={14} />
                 Déconnecter SumUp
@@ -930,6 +973,11 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Status badge - disconnected */}
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Non connecté</span>
+              </div>
+
               {/* Feature highlights */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
@@ -937,9 +985,9 @@ export default function SettingsPage() {
                   { label: 'Terminal', desc: 'En personne', icon: Smartphone },
                   { label: 'Auto', desc: 'Statut mis à jour', icon: RefreshCw },
                 ].map((f) => (
-                  <div key={f.label} className="p-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                  <div key={f.label} className="p-2.5 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-gray-700/40">
                     <f.icon size={16} className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-[10px] font-semibold text-gray-700">{f.label}</p>
+                    <p className="text-[10px] font-semibold text-gray-700 dark:text-gray-300">{f.label}</p>
                     <p className="text-[9px] text-gray-400">{f.desc}</p>
                   </div>
                 ))}
@@ -966,7 +1014,7 @@ export default function SettingsPage() {
               </button>
 
               <p className="text-[10px] text-gray-400 text-center">
-                Vous serez redirigé vers SumUp pour autoriser l'accès à votre compte.
+                Vous serez redirigé vers SumUp pour autoriser l'accès à votre compte en toute sécurité.
               </p>
             </div>
           )}

@@ -8,6 +8,7 @@ import { useCabinetStore } from '@/stores/cabinetStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 export default function CabinetSettingsPage() {
   const router = useRouter();
@@ -91,6 +92,7 @@ export default function CabinetSettingsPage() {
   };
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-lg">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -326,5 +328,6 @@ export default function CabinetSettingsPage() {
         )}
       </div>
     </motion.div>
+    </CabinetGuard>
   );
 }

@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn } from '@/lib/utils';
@@ -40,9 +41,14 @@ export default function MobileDrawer({ open, onClose }: Props) {
   const { profile, user } = useAuthStore();
   const { invoices } = useDataStore();
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
+  const { cabinet } = useCabinetStore();
   const sub = useSubscription();
   const { theme, toggle } = useThemeStore();
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
+  const hasCabinet = !!cabinet;
+  const canAccessCabinet = (sub.isBusiness || sub.isTrialActive);
+  const cabinetLocked = !canAccessCabinet;
+  const cabinetItemsLocked = !canAccessCabinet || !hasCabinet;
 
   // Auto-expand sections based on current path
   const getInitialExpanded = useCallback(() => {
@@ -132,16 +138,16 @@ export default function MobileDrawer({ open, onClose }: Props) {
       label: 'Cabinet',
       icon: Briefcase,
       items: [
-        { href: '/cabinet', icon: LayoutDashboard, label: 'Dashboard', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/clients', icon: Users, label: 'Clients', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/facturation', icon: FilePlus2, label: 'Facturation', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/relances', icon: Bell, label: 'Relances', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/social', icon: UsersRound, label: 'Social', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/salaries', icon: Users, label: 'Salariés', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/missions', icon: FileCheck, label: 'Missions', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/juridique', icon: Shield, label: 'Juridique', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/echeances', icon: Calendar, label: 'Échéances', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
-        { href: '/cabinet/settings', icon: Settings, label: 'Paramètres', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
+        { href: '/cabinet', icon: LayoutDashboard, label: 'Dashboard', locked: cabinetLocked, lockTier: 'business' },
+        { href: '/cabinet/clients', icon: Users, label: 'Clients', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/facturation', icon: FilePlus2, label: 'Facturation', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/relances', icon: Bell, label: 'Relances', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/social', icon: UsersRound, label: 'Social', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/salaries', icon: Users, label: 'Salariés', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/missions', icon: FileCheck, label: 'Missions', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/juridique', icon: Shield, label: 'Juridique', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/echeances', icon: Calendar, label: 'Échéances', locked: cabinetItemsLocked, lockTier: 'business' },
+        { href: '/cabinet/settings', icon: Settings, label: 'Paramètres', locked: cabinetItemsLocked, lockTier: 'business' },
       ],
     },
     {
@@ -163,8 +169,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
   const SubItemRow = ({ href, icon: Icon, label, locked, lockTier }: SubItem) => {
     const active = pathname.startsWith(href);
     if (locked) {
+      const isCabinetItem = href.startsWith('/cabinet/') && canAccessCabinet && !hasCabinet;
+      const tooltip = isCabinetItem
+        ? 'Créez d\'abord votre cabinet'
+        : `Disponible avec ${lockTier === 'pro' ? 'Pro' : 'Business'}`;
       return (
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={`Disponible avec ${lockTier === 'pro' ? 'Pro' : 'Business'}`}>
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={tooltip}>
           <Icon size={16} strokeWidth={1.8} />
           <span className="flex-1">{label}</span>
           <Lock size={12} className="text-gray-400" />

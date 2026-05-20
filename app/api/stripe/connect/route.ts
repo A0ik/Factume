@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
     const response = await stripe.oauth.token({ grant_type: 'authorization_code', code });
     const supabase = createAdminClient();
     await supabase.from('profiles')
-      .update({ stripe_connect_id: response.stripe_user_id })
+      .update({ stripe_connect_account_id: response.stripe_user_id })
       .eq('id', user.id);
     return NextResponse.redirect(new URL('/settings?stripe=connected', req.url));
   } catch (err: any) {
@@ -102,22 +102,22 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createAdminClient();
     const { data: profile } = await supabase.from('profiles')
-      .select('stripe_connect_id')
+      .select('stripe_connect_account_id')
       .eq('id', user.id)
       .single();
 
-    if (profile?.stripe_connect_id) {
+    if (profile?.stripe_connect_account_id) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
         await stripe.oauth.deauthorize({
           client_id: process.env.STRIPE_CONNECT_CLIENT_ID!,
-          stripe_user_id: profile.stripe_connect_id,
+          stripe_user_id: profile.stripe_connect_account_id,
         });
       } catch { /* ignore deauth errors — still remove from profile */ }
     }
 
     await supabase.from('profiles')
-      .update({ stripe_connect_id: null })
+      .update({ stripe_connect_account_id: null })
       .eq('id', user.id);
 
     return NextResponse.json({ success: true });

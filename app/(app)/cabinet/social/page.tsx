@@ -10,8 +10,10 @@ import {
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,46 +88,13 @@ function shortMonth(key: string): string {
   return MONTHS_FR[parseInt(m, 10) - 1].slice(0, 3);
 }
 
-// ─── Mock Data Generator ──────────────────────────────────────────────────────
-
-function generateMockData(year: number, month: number): ClientSocialRow[] {
-  const clients = [
-    'Boulangerie Martin', 'Restaurant Le Provencal', 'Auto Ecole Express',
-    'Plomberie Dubois', 'Informatique Plus', 'Coiffure Style',
-    'Menuiserie Leroy', 'Electricite Rapide',
-  ];
-  const statuses: DSNStatus[] = ['envoyee', 'envoyee', 'en_attente', 'bloquee', 'nc'];
-  return clients.map((name, i) => ({
-    id: `cl-${i}`,
-    clientName: name,
-    nbSalaries: Math.floor(Math.random() * 25) + 1,
-    bsEmis: Math.floor(Math.random() * 20) + 1,
-    bsValidated: Math.floor(Math.random() * 15),
-    dsnStatus: statuses[Math.floor(Math.random() * statuses.length)],
-    stc: Math.floor(Math.random() * 5000),
-    contrats: Math.floor(Math.random() * 3),
-    avenants: Math.floor(Math.random() * 2),
-    atMp: Math.floor(Math.random() * 3),
-    observations: i === 3 ? 'DSN bloquee - regularization needed' : i === 5 ? 'New contract pending' : '',
-  }));
-}
-
-function generateMockDocuments(): DocumentToProcess[] {
-  const docs: DocumentToProcess[] = [
-    { id: 'd1', clientName: 'Boulangerie Martin', type: 'BS', description: 'Bulletin de salaire a valider - Janvier', date: '2026-01-15', priority: 'haute' },
-    { id: 'd2', clientName: 'Restaurant Le Provencal', type: 'Contrat', description: 'Contrat CDD - nouveau serveur', date: '2026-01-10', priority: 'moyenne' },
-    { id: 'd3', clientName: 'Plomberie Dubois', type: 'DSN', description: 'DSN bloquee - erreur SIRET', date: '2026-01-12', priority: 'haute' },
-    { id: 'd4', clientName: 'Auto Ecole Express', type: 'Avenant', description: 'Avenant temps partiel', date: '2026-01-08', priority: 'basse' },
-    { id: 'd5', clientName: 'Informatique Plus', type: 'AT/MP', description: 'Declaration accident travail', date: '2026-01-05', priority: 'haute' },
-  ];
-  return docs;
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetSocialPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
+  const router = useRouter();
+  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
 
   // Month / Year selector
   const now = new Date();
@@ -149,24 +118,55 @@ export default function CabinetSocialPage() {
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      // In production, this would fetch from an API. Using mock data for now.
-      // const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      // const { data: { session } } = await supabase.auth.getSession();
-      // const res = await fetch(`/api/cabinet/social?year=${selectedYear}&month=${selectedMonth}`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      await new Promise((r) => setTimeout(r, 400));
-      const rows = generateMockData(selectedYear, selectedMonth);
-      const docs = generateMockDocuments();
-      setClientRows(rows);
-      setDocuments(docs);
+      const headers = { Authorization: `Bearer ${session.access_token}` };
 
-      // Build annual data
-      const aMap = new Map<string, ClientSocialRow[]>();
-      for (let m = 0; m < 12; m++) {
-        const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
-        aMap.set(key, generateMockData(selectedYear, m + 1));
+      const res = await fetch(`/api/cabinet/social?year=${selectedYear}&month=${selectedMonth}`, { headers });
+      if (res.ok) {
+        const { tracking } = await res.json();
+        const mapped: ClientSocialRow[] = (tracking || []).map((t: any) => ({
+          id: t.id || t.client_id,
+          clientName: t.client_name || '',
+          nbSalaries: t.nb_employees || 0,
+          bsEmis: t.bs_issued || 0,
+          bsValidated: t.bs_validated || 0,
+          dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
+          stc: t.stc || 0,
+          contrats: t.contracts_count || 0,
+          avenants: t.amendments_count || 0,
+          atMp: t.at_mp ? 1 : 0,
+          observations: t.observations || '',
+        }));
+        setClientRows(mapped);
+
+        const aMap = new Map<string, ClientSocialRow[]>();
+        for (let m = 0; m < 12; m++) {
+          const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
+          const monthRes = await fetch(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { headers });
+          if (monthRes.ok) {
+            const { tracking: monthTracking } = await monthRes.json();
+            aMap.set(key, (monthTracking || []).map((t: any) => ({
+              id: t.id || t.client_id,
+              clientName: t.client_name || '',
+              nbSalaries: t.nb_employees || 0,
+              bsEmis: t.bs_issued || 0,
+              bsValidated: t.bs_validated || 0,
+              dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
+              stc: t.stc || 0,
+              contrats: t.contracts_count || 0,
+              avenants: t.amendments_count || 0,
+              atMp: t.at_mp ? 1 : 0,
+              observations: t.observations || '',
+            })));
+          }
+        }
+        setAnnualData(aMap);
       }
-      setAnnualData(aMap);
+
+      setDocuments([]);
     } catch (error: any) {
       console.error('[loadData] Error:', error);
       toast.error(error.message || 'Erreur de chargement');
@@ -176,7 +176,19 @@ export default function CabinetSocialPage() {
     }
   }, [selectedYear, selectedMonth]);
 
-  useEffect(() => { if (profile) loadData(); }, [profile, loadData]);
+  useEffect(() => {
+    if (profile) {
+      fetchCabinet();
+    }
+  }, [profile, fetchCabinet]);
+
+  useEffect(() => {
+    if (profile && cabinet) loadData();
+    else if (profile && !cabinetLoading && !cabinet) {
+      toast.error('Creez d\'abord votre cabinet');
+      router.push('/cabinet');
+    }
+  }, [profile, cabinet, cabinetLoading, loadData, router]);
 
   // Filtered rows
   const filteredRows = useMemo(() => {

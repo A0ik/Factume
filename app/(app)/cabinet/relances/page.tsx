@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -293,6 +294,7 @@ export default function CabinetRelancesPage() {
   const hasEligible = data.invoices.some((inv) => inv.days_overdue > 5);
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -653,5 +655,6 @@ export default function CabinetRelancesPage() {
         )}
       </div>
     </motion.div>
+    </CabinetGuard>
   );
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 export default function CabinetClientsPage() {
   const { clients, cabinet, fetchCabinet, inviteClient, loading } = useCabinetStore();
@@ -35,6 +36,7 @@ export default function CabinetClientsPage() {
   };
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/cabinet" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
@@ -117,5 +119,6 @@ export default function CabinetClientsPage() {
         </div>
       )}
     </motion.div>
+    </CabinetGuard>
   );
 }

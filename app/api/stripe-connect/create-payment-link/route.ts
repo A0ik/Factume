@@ -30,14 +30,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    // Get user's Stripe Connect account ID (stored as stripe_connect_id)
+    // Get user's Stripe Connect account ID (stored as stripe_connect_account_id)
     const { data: profile } = await admin
       .from('profiles')
-      .select('stripe_connect_id')
+      .select('stripe_connect_account_id')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.stripe_connect_id) {
+    if (!profile?.stripe_connect_account_id) {
       return NextResponse.json({
         error: 'Vous devez connecter votre compte Stripe avant de créer des liens de paiement',
         requiresConnect: true,
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     // Use platform secret key with stripeAccount for Connect Standard
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      stripeAccount: profile.stripe_connect_id,
+      stripeAccount: profile.stripe_connect_account_id,
     });
 
     // Build line items from invoice items

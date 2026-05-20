@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { randomBytes } from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,8 +30,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuration Stripe Connect manquante' }, { status: 500 });
     }
 
-    // Generate the OAuth link
-    const state = Math.random().toString(36).substring(7); // Simple state for CSRF protection
+    // Generate the OAuth link with cryptographically secure CSRF state
+    const state = randomBytes(32).toString('hex');
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)

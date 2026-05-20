@@ -11,8 +11,10 @@ import {
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,45 +108,6 @@ const EMPTY_FORM: EmployeeForm = {
   dateDebut: '', dateFin: '', clientId: '',
 };
 
-// ─── Mock Data Generator ──────────────────────────────────────────────────────
-
-function generateMockEmployees(): Employee[] {
-  const firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Luc', 'Isabelle', 'Thomas', 'Claire', 'Nicolas', 'Anne', 'Ahmed', 'Fatima'];
-  const lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Benali', 'Haddad'];
-  const posts = ['Serveur', 'Boulanger', 'Developpeur', 'Comptable', 'Chauffeur', 'Cuisinier', 'Soudeur', 'Secretaire', 'Chef d\'equipe', 'Apprenti'];
-  const clients: ClientOption[] = [
-    { id: 'cl-0', name: 'Boulangerie Martin' },
-    { id: 'cl-1', name: 'Restaurant Le Provencal' },
-    { id: 'cl-2', name: 'Auto Ecole Express' },
-    { id: 'cl-3', name: 'Plomberie Dubois' },
-    { id: 'cl-4', name: 'Informatique Plus' },
-  ];
-  const statuses: EmployeeStatus[] = ['actif', 'actif', 'actif', 'suspendu', 'termine'];
-  const contracts: ContractType[] = ['CDI', 'CDI', 'CDD', 'CDD usage', 'Interim', 'Stage', 'Apprentissage'];
-
-  return Array.from({ length: 18 }, (_, i) => ({
-    id: `emp-${i}`,
-    clientId: clients[i % clients.length].id,
-    clientName: clients[i % clients.length].name,
-    civilite: i % 3 === 0 ? 'Mme' : 'M.',
-    nom: lastNames[i % lastNames.length],
-    prenom: firstNames[i % firstNames.length],
-    dateNaissance: `199${i % 10}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
-    lieuNaissance: ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux'][i % 5],
-    nationalite: 'Francaise',
-    nss: `1${i % 2} ${(10 + i).toString().padStart(2, '0')} ${String((i % 12) + 1).padStart(2, '0')} ${(75 + i).toString().padStart(3, '0')} ${String(100 + i * 13).slice(0, 3)} ${String(10 + i).padStart(2, '0')}`,
-    adresse: `${i * 12 + 1} Rue de la Republique, ${75001 + i * 100} Paris`,
-    poste: posts[i % posts.length],
-    typeContrat: contracts[i % contracts.length],
-    salaireBrut: 1800 + Math.floor(Math.random() * 2200),
-    tauxHoraire: 12 + Math.floor(Math.random() * 15),
-    heuresSemaine: [35, 39, 35, 20, 35, 25, 35][i % 7],
-    dateDebut: `202${i % 4}-${String((i % 12) + 1).padStart(2, '0')}-01`,
-    dateFin: i % 4 === 2 ? `202${i % 4 + 1}-${String((i % 12) + 1).padStart(2, '0')}-01` : null,
-    status: statuses[i % statuses.length],
-    createdAt: `2024-${String((i % 12) + 1).padStart(2, '0')}-15`,
-  }));
-}
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -180,6 +143,8 @@ function ContractBadge({ type }: { type: ContractType }) {
 export default function CabinetSalariesPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
+  const router = useRouter();
+  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -206,20 +171,48 @@ export default function CabinetSalariesPage() {
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      // In production, fetch from API:
-      // const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      // const { data: { session } } = await supabase.auth.getSession();
-      // const res = await fetch('/api/cabinet/salaries', { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-      await new Promise((r) => setTimeout(r, 400));
-      setEmployees(generateMockEmployees());
-      setClients([
-        { id: 'cl-0', name: 'Boulangerie Martin' },
-        { id: 'cl-1', name: 'Restaurant Le Provencal' },
-        { id: 'cl-2', name: 'Auto Ecole Express' },
-        { id: 'cl-3', name: 'Plomberie Dubois' },
-        { id: 'cl-4', name: 'Informatique Plus' },
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+
+      const [empRes, cabRes] = await Promise.all([
+        fetch('/api/cabinet/employees', { headers }),
+        fetch('/api/cabinet/clients', { headers }),
       ]);
+
+      if (empRes.ok) {
+        const { employees: apiEmps } = await empRes.json();
+        const mapped: Employee[] = (apiEmps || []).map((e: any) => ({
+          id: e.id,
+          clientId: e.client_id,
+          clientName: e.client_name || '',
+          civilite: e.gender === 'F' ? 'Mme' : 'M.',
+          nom: e.last_name,
+          prenom: e.first_name,
+          dateNaissance: e.birth_date || '',
+          lieuNaissance: e.birth_place || '',
+          nationalite: e.nationality || 'Francaise',
+          nss: e.nss || '',
+          adresse: e.address || '',
+          poste: e.job_title || '',
+          typeContrat: e.contract_type || 'CDI',
+          salaireBrut: e.salary_brut_monthly || 0,
+          tauxHoraire: e.hourly_rate || 0,
+          heuresSemaine: e.weekly_hours || 35,
+          dateDebut: e.start_date || '',
+          dateFin: e.end_date || null,
+          status: e.status || 'actif',
+          createdAt: e.created_at || '',
+        }));
+        setEmployees(mapped);
+      }
+
+      if (cabRes.ok) {
+        const { clients: cabClients } = await cabRes.json();
+        setClients((cabClients || []).map((c: any) => ({ id: c.id || c.user_id, name: c.name || c.display_name || c.email || '' })));
+      }
     } catch (error: any) {
       console.error('[loadData] Error:', error);
       toast.error(error.message || 'Erreur de chargement');
@@ -229,7 +222,19 @@ export default function CabinetSalariesPage() {
     }
   }, []);
 
-  useEffect(() => { if (profile) loadData(); }, [profile, loadData]);
+  useEffect(() => {
+    if (profile) {
+      fetchCabinet();
+    }
+  }, [profile, fetchCabinet]);
+
+  useEffect(() => {
+    if (profile && cabinet) loadData();
+    else if (profile && !cabinetLoading && !cabinet) {
+      toast.error('Creez d\'abord votre cabinet');
+      router.push('/cabinet');
+    }
+  }, [profile, cabinet, cabinetLoading, loadData, router]);
 
   // Filtered employees
   const filteredEmployees = useMemo(() => {
@@ -273,34 +278,42 @@ export default function CabinetSalariesPage() {
     }
     setSaving(true);
     try {
-      await new Promise((r) => setTimeout(r, 500));
-      const client = clients.find((c) => c.id === form.clientId);
-      const newEmployee: Employee = {
-        id: `emp-${Date.now()}`,
-        clientId: form.clientId,
-        clientName: client?.name || 'Inconnu',
-        civilite: form.civilite,
-        nom: form.nom.trim(),
-        prenom: form.prenom.trim(),
-        dateNaissance: form.dateNaissance,
-        lieuNaissance: form.lieuNaissance,
-        nationalite: form.nationalite,
-        nss: form.nss,
-        adresse: form.adresse,
-        poste: form.poste.trim(),
-        typeContrat: form.typeContrat,
-        salaireBrut: parseFloat(form.salaireBrut) || 0,
-        tauxHoraire: parseFloat(form.tauxHoraire) || 0,
-        heuresSemaine: parseInt(form.heuresSemaine) || 35,
-        dateDebut: form.dateDebut,
-        dateFin: form.dateFin || null,
-        status: 'actif',
-        createdAt: new Date().toISOString(),
-      };
-      setEmployees((prev) => [newEmployee, ...prev]);
+      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch('/api/cabinet/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          client_id: form.clientId,
+          first_name: form.prenom.trim(),
+          last_name: form.nom.trim(),
+          gender: form.civilite === 'Mme' ? 'F' : 'M',
+          birth_date: form.dateNaissance || null,
+          birth_place: form.lieuNaissance || null,
+          nationality: form.nationalite || null,
+          nss: form.nss || null,
+          address: form.adresse || null,
+          job_title: form.poste.trim(),
+          contract_type: form.typeContrat,
+          salary_brut_monthly: parseFloat(form.salaireBrut) || 0,
+          hourly_rate: parseFloat(form.tauxHoraire) || 0,
+          weekly_hours: parseInt(form.heuresSemaine) || 35,
+          start_date: form.dateDebut,
+          end_date: form.dateFin || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({}));
+        throw new Error(error || 'Erreur lors de l\'ajout');
+      }
+
       toast.success('Salarie ajoute avec succes');
       setShowAddModal(false);
       setForm({ ...EMPTY_FORM });
+      loadData(true);
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de l\'ajout');
     } finally {
@@ -311,7 +324,19 @@ export default function CabinetSalariesPage() {
   const handleDeleteEmployee = async (id: string) => {
     if (!confirm('Supprimer ce salarie ?')) return;
     try {
-      await new Promise((r) => setTimeout(r, 300));
+      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/cabinet/employees?id=${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error('Erreur lors de la suppression');
+      }
+
       setEmployees((prev) => prev.filter((e) => e.id !== id));
       toast.success('Salarie supprime');
       if (selectedEmployee?.id === id) {

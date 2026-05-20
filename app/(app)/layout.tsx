@@ -29,6 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [showInvoiceCounter, setShowInvoiceCounter] = useState(true);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -95,15 +96,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Upgrade Banner - shows for free users on specific pages */}
-      {isFree && !hideBanners && pathname === '/invoices' && (
+      {/* Upgrade Banner - shows for free users only on /invoices */}
+      {isFree && !hideBanners && !pathname.startsWith('/cabinet') && showUpgradeBanner && pathname === '/invoices' && (
         <div className="container mx-auto px-4 lg:px-8 pt-4">
           <UpgradeBanner
             type="limit"
             buttonText="Activer l'essai gratuit"
             description="7 jours d'accès complet à toutes les fonctionnalités"
             onClick={() => router.push('/trial')}
-            onClose={() => setShowInvoiceCounter(false)}
+            onClose={() => setShowUpgradeBanner(false)}
           />
         </div>
       )}
