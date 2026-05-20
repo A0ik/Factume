@@ -77,11 +77,14 @@ export async function POST(req: NextRequest) {
     console.log('[sumup-payment-link] Creating checkout with OAuth token — invoice:', invoiceId, 'amount:', amount, 'currency:', currency);
 
     // Build checkout request
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`;
+
     const checkoutBody: Record<string, unknown> = {
       checkout_reference: invoiceId,
       amount,
       currency,
       description: `${invoice.document_type === 'quote' ? 'Devis' : 'Facture'} ${invoice.number}`,
+      return_url: `${appUrl}/api/sumup/webhook`,
     };
 
     // Call SumUp API with OAuth token
