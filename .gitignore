@@ -48,3 +48,6 @@ uploads/
 .vercel
 .env*.local
 node_modules
+
+# Claude Code worktrees
+.claude/worktrees/
