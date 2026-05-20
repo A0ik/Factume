@@ -1,14 +1,5 @@
 import type { Metadata } from 'next';
-import dynamic from 'next/dynamic';
-
-const LandingPageClient = dynamic(() => import('./LandingPageClient'), {
-  ssr: false,
-  loading: () => (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D1B2A]">
-      <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-    </div>
-  ),
-});
+import LandingPageClient from './LandingPageClient';
 
 export const metadata: Metadata = {
   title: 'Factu.me — Logiciel de facturation gratuit pour auto-entrepreneurs et TPE',
