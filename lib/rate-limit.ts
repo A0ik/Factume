@@ -1,9 +1,16 @@
 /**
- * In-memory rate limiter for edge runtime.
+ * Rate limiter for edge runtime.
  *
- * Each Vercel edge function instance maintains its own Map.
- * This is sufficient for moderate traffic — for high-traffic production,
- * upgrade to Redis (Upstash) for distributed rate limiting.
+ * IMPORTANT: In-memory rate limiting is NOT effective in serverless
+ * environments (Vercel, AWS Lambda) where each invocation may run on
+ * a different instance. For production, migrate to Upstash Redis:
+ *
+ *   import { Redis } from '@upstash/redis'
+ *   const redis = Redis.fromEnv()
+ *   const count = await redis.incr(key)
+ *   await redis.expire(key, windowMs / 1000)
+ *
+ * The in-memory fallback below is kept for development and low-traffic deploys.
  */
 
 interface RateLimitEntry {
@@ -12,8 +19,6 @@ interface RateLimitEntry {
 }
 
 const rateLimitMap = new Map<string, RateLimitEntry>();
-
-// Periodic cleanup: sweep expired entries every 100 checks
 let cleanupCounter = 0;
 
 /**

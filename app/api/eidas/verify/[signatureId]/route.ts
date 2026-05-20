@@ -1,49 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 
 /**
- * API de vérification de signature eIDAS (AdES)
  * GET /api/eidas/verify/[signatureId]
- *
- * Permet de vérifier la validité d'une signature
- * Accessible publiquement pour permettre la vérification par les tiers
+ * Public verification endpoint for eIDAS signatures.
+ * Intentionally public — anyone with a signature ID can verify it.
  */
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ signatureId: string }> }
 ) {
   try {
     const { signatureId } = await params;
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Validate signatureId format (should be a UUID or similar)
+    if (!signatureId || signatureId.length < 8 || signatureId.length > 128) {
+      return NextResponse.json({ error: 'Identifiant invalide' }, { status: 400 });
+    }
 
-    // Récupérer la signature
-    const { data: signature, error } = await supabase
+    const admin = createAdminClient();
+
+    const { data: signature, error } = await admin
       .from('eidas_signatures')
-      .select('*')
+      .select('signature_id, document_id, document_type, signer_name, signer_email, timestamp, document_hash, ip_address')
       .eq('signature_id', signatureId)
       .single();
 
     if (error || !signature) {
-      return NextResponse.json(
-        {
-          error: 'Signature introuvable',
-          message: 'Aucune signature trouvée avec cet identifiant'
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Signature introuvable' }, { status: 404 });
     }
 
-    // Marquer comme vérifié
-    await supabase
+    // Mark as verified (non-blocking)
+    await admin
       .from('eidas_signatures')
       .update({ verified_at: new Date().toISOString() })
       .eq('signature_id', signatureId);
 
-    // Calculer l'intégrité du document
+    // Verify integrity
     const documentContent = JSON.stringify({
       documentId: signature.document_id,
       documentType: signature.document_type,
@@ -67,7 +60,6 @@ export async function GET(
         signerName: signature.signer_name,
         signerEmail: signature.signer_email,
         timestamp: signature.timestamp,
-        ipAddress: signature.ip_address,
         eidasLevel: 'advanced (AdES)',
         valid: integrityValid,
         integrityValid
@@ -76,32 +68,17 @@ export async function GET(
         regulation: 'Règlement (UE) N° 910/2014',
         level: 'advanced (AdES)',
         legalValue: 'Reconnu juridiquement dans l\'UE pour les transactions B2B',
-        features: {
-          uniqueLink: true,
-          identification: true,
-          timestamp: true,
-          integrity: integrityValid,
-          immutableLog: true,
-          publicVerification: true
-        }
       },
       verification: {
         verifiedAt: new Date().toISOString(),
         verificationMethod: 'eidas-ades'
       }
     });
-  } catch (error: any) {
-    console.error('Erreur vérification signature:', error);
-    return NextResponse.json(
-      { error: error.message || 'Erreur lors de la vérification' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: 'Erreur lors de la vérification' }, { status: 500 });
   }
 }
 
-/**
- * OPTIONS pour CORS
- */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,

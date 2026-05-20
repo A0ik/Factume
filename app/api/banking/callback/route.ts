@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 import {
   getRequisition,
   getAccount,
   getAccountIban,
   deleteRequisition,
-  storeNordigenConnection,
 } from '@/lib/nordigen/client';
 
-/**
- * GET /api/banking/callback
- * Handle OAuth callback from Nordigen after user connects their bank
- */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,7 +18,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get requisition details
     const requisition = await getRequisition(requisitionId);
 
     if (requisition.status !== 'LN') {
@@ -32,7 +26,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the first account ID from the requisition
     const accountId = requisition.accounts?.[0];
     if (!accountId) {
       return NextResponse.redirect(
@@ -40,11 +33,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get account details
     const account = await getAccount(accountId, requisition.secret || '');
     const ibanData = await getAccountIban(accountId, requisition.secret || '');
 
-    // Get institution details
     const institutions = await fetch(
       `https://ob.nordigen.com/api/v2/institutions/${requisition.institution_id}/`,
       {
@@ -54,13 +45,9 @@ export async function GET(request: NextRequest) {
       }
     ).then(r => r.json());
 
-    // Find the pending connection for this user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const admin = createAdminClient();
 
-    const { data: pendingConnection } = await supabase
+    const { data: pendingConnection } = await admin
       .from('nordigen_connections')
       .select('*')
       .eq('account_id', requisitionId)
@@ -73,8 +60,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Update the connection with actual account details
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from('nordigen_connections')
       .update({
         institution_id: requisition.institution_id,
@@ -92,15 +78,12 @@ export async function GET(request: NextRequest) {
       console.error('Error updating connection:', updateError);
     }
 
-    // Clean up requisition
     await deleteRequisition(requisitionId);
 
-    // Redirect back to settings
     return NextResponse.redirect(
       new URL('/settings/banking?success=connected', request.url)
     );
-  } catch (error) {
-    console.error('Error in bank callback:', error);
+  } catch {
     return NextResponse.redirect(
       new URL('/settings/banking?error=callback_failed', request.url)
     );

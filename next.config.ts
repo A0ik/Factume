@@ -2,13 +2,21 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
-  // Keep pdf-parse and html-pdf-node (puppeteer/chrome) out of the webpack bundle
-  serverExternalPackages: ['pdf-parse', 'canvas', 'pdf-lib', 'html-pdf-node', 'puppeteer', 'puppeteer-core'],
+  serverExternalPackages: ['pdf-parse', 'canvas', 'pdf-lib'],
 
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.supabase.co' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+    ],
+  },
+
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      'recharts',
+      'date-fns',
     ],
   },
 
@@ -26,25 +34,16 @@ const nextConfig: NextConfig = {
 
   webpack(config, { isServer }) {
     if (isServer) {
-      // Prevent webpack from trying to bundle native node modules
       config.externals = [
         ...(Array.isArray(config.externals) ? config.externals : []),
         'pdf-parse',
         'canvas',
-        'html-pdf-node',
-        'puppeteer',
-        'puppeteer-core',
-        'emitter',
-        'inline-css',
-        'extract-css',
-        'batch',
       ];
     }
     return config;
   },
 };
 
-// Export with Sentry configuration
 export default withSentryConfig(nextConfig, {
   silent: true,
   tunnelRoute: '/monitoring',

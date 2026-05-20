@@ -18,6 +18,9 @@ const PUBLIC_PREFIXES = [
   '/api/integrations/pennylane/webhook',
   '/api/bank-feed/callback',
   '/api/cron/',
+  '/api/health',
+  '/api/eidas/verify/',
+  '/api/sumup/webhook',
   '/share/',
   '/client/',
   '/sign/',
@@ -70,7 +73,7 @@ export async function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' blob: data:`,
+    `script-src 'self' 'nonce-${nonce}' blob:${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https://factu.me https://*.supabase.co https://lh3.googleusercontent.com`,
     `font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com`,
@@ -82,6 +85,7 @@ export async function middleware(req: NextRequest) {
     `base-uri 'self'`,
     `object-src 'none'`,
     `frame-ancestors 'none'`,
+    `upgrade-insecure-requests`,
   ].join('; ');
 
   res.headers.set('Content-Security-Policy', csp);

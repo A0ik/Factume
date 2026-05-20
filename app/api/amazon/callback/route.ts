@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getAccessToken, getMarketplaceParticipations, storeAmazonConnection } from '@/lib/amazon/sp-api-client';
+import { createAdminClient } from '@/lib/supabase-server';
+import { getAccessToken, getMarketplaceParticipations } from '@/lib/amazon/sp-api-client';
 
-/**
- * GET /api/amazon/callback
- * Handle LWA callback from Amazon Seller Central
- */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,13 +15,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find pending connection
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const admin = createAdminClient();
 
-    const { data: pendingConnection } = await supabase
+    // Find pending connection using state as lookup key
+    const { data: pendingConnection } = await admin
       .from('amazon_connections')
       .select('*')
       .eq('seller_id', state)
@@ -60,10 +53,8 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
 
-    // Get access token to fetch seller info
     const accessTokenData = await getAccessToken(tokenData.refresh_token);
 
-    // Get marketplace participations to verify seller
     const participations = await getMarketplaceParticipations(
       accessTokenData.access_token
     );
@@ -72,8 +63,7 @@ export async function GET(request: NextRequest) {
       throw new Error('No marketplace participations found');
     }
 
-    // Update connection
-    await supabase
+    await admin
       .from('amazon_connections')
       .update({
         seller_id: sellingPartnerId || participations[0].marketplaceId,
@@ -81,15 +71,14 @@ export async function GET(request: NextRequest) {
         access_token: accessTokenData.access_token,
         token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
         status: 'active',
-        seller_name: 'Amazon Seller', // Can be fetched from seller API
+        seller_name: 'Amazon Seller',
       })
       .eq('id', pendingConnection.id);
 
     return NextResponse.redirect(
       new URL('/settings/amazon?success=connected', request.url)
     );
-  } catch (error) {
-    console.error('Error in Amazon callback:', error);
+  } catch {
     return NextResponse.redirect(
       new URL('/settings/amazon?error=callback_failed', request.url)
     );

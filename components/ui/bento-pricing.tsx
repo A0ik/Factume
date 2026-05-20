@@ -24,7 +24,7 @@ const PLANS: PlanConfig[] = [
     description: "L'essentiel pour tester l'outil.",
     recommended: false,
     features: [
-      '10 factures et devis par mois',
+      '3 factures et devis par mois',
       '10 clients enregistrés',
       '1 template basique',
       { label: 'Envoi par email', included: false },

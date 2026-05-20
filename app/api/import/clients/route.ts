@@ -147,8 +147,16 @@ function cleanCompanies(companies: any[]) {
 
 export async function POST(req: NextRequest) {
   try {
+    // --- Auth check ---
+    const { createServerSupabaseClient } = await import('@/lib/supabase-server');
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     if (!process.env.OPENROUTER_API_KEY) {
-      return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
+      return NextResponse.json({ error: 'Service indisponible' }, { status: 500 });
     }
 
     const formData = await req.formData();
@@ -166,6 +174,43 @@ export async function POST(req: NextRequest) {
     const fileName = file.name.toLowerCase();
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // --- Validate file type with magic bytes ---
+    const ALLOWED_MIME_TYPES = new Set([
+      'application/pdf',
+      'text/csv', 'text/plain', 'text/xml',
+      'application/json', 'application/xml',
+      'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/msword',
+    ]);
+
+    const MAGIC_BYTES: Record<string, number[]> = {
+      'application/pdf': [0x25, 0x50, 0x44, 0x46], // %PDF
+      'image/png': [0x89, 0x50, 0x4E, 0x47],
+      'image/jpeg': [0xFF, 0xD8, 0xFF],
+      'image/gif': [0x47, 0x49, 0x46],
+    };
+
+    // Check file extension
+    const allowedExtensions = /\.(pdf|png|jpg|jpeg|webp|gif|csv|txt|json|xml|tsv|vcf|docx|xlsx|doc|xls|ods)$/i;
+    if (!allowedExtensions.test(fileName)) {
+      return NextResponse.json({ error: 'Type de fichier non supporté' }, { status: 415 });
+    }
+
+    // Verify magic bytes for known binary formats
+    for (const [mime, magic] of Object.entries(MAGIC_BYTES)) {
+      if (fileName.endsWith(mime === 'application/pdf' ? '.pdf' : `.${mime.split('/')[1]}`)) {
+        const header = Array.from(buffer.subarray(0, magic.length));
+        const matches = magic.every((byte, i) => header[i] === byte);
+        if (!matches) {
+          return NextResponse.json({ error: 'Le contenu du fichier ne correspond pas à son extension' }, { status: 415 });
+        }
+        break;
+      }
+    }
 
     let result: any;
 
@@ -275,12 +320,12 @@ export async function POST(req: NextRequest) {
     console.error('[import/clients] error:', error?.message, error?.status);
 
     if (error?.status === 401 || error?.status === 403) {
-      return NextResponse.json({ error: 'Clé API OpenRouter invalide. Vérifiez OPENROUTER_API_KEY dans vos variables d\'environnement.' }, { status: 500 });
+      return NextResponse.json({ error: 'Erreur de configuration serveur' }, { status: 500 });
     }
     if (error?.status === 429) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
     }
 
-    return NextResponse.json({ error: error?.message || 'Erreur serveur inattendue' }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur lors du traitement du fichier' }, { status: 500 });
   }
 }

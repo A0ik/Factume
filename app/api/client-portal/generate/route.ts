@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
     const { clientId } = await req.json();
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Authenticate caller
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
+    const admin = createAdminClient();
+
     // Verify user owns this client
-    const { data: client } = await supabase
+    const { data: client } = await admin
       .from('clients')
       .select('user_id')
       .eq('id', clientId)
@@ -29,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Return existing token if present
-    const { data: existing } = await supabase
+    const { data: existing } = await admin
       .from('client_portal_tokens')
       .select('token')
       .eq('client_id', clientId)
@@ -39,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (existing) return NextResponse.json({ token: existing.token });
 
     // Create a new one
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('client_portal_tokens')
       .insert({ client_id: clientId, user_id: user.id })
       .select('token')
@@ -47,8 +40,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ token: data.token });
-  } catch (error: any) {
-    console.error('[client-portal/generate]', error);
+  } catch {
     return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
   }
 }

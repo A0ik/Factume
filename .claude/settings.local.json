@@ -219,7 +219,18 @@
       "Bash(grep -r \"from ['\\\\\"]@/factume-backend\" --include=\"*.ts\" --include=\"*.tsx\" -l)",
       "Bash(cat vercel.json)",
       "Bash(cat .vercel/project.json)",
-      "Bash(grep -E \"\\\\.tsx$\")"
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(npm outdated *)",
+      "Bash(sleep 2 && cat \"C:\\\\Users\\\\salma\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-salma-Desktop-FACTU-ME-PACKAGE-Factu.me\\\\8cc6db5a-5ec4-499e-b7ef-b08686ac5dee\\\\tasks\\\\bkwejkqy0.output\")",
+      "Read(//c/Users/salma/AppData/Local/Temp/claude/c--Users-salma-Desktop-FACTU-ME-PACKAGE-Factu.me/8cc6db5a-5ec4-499e-b7ef-b08686ac5dee/tasks/**)",
+      "Bash(sleep 2 && cat \"C:\\\\Users\\\\salma\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-salma-Desktop-FACTU-ME-PACKAGE-Factu.me\\\\8cc6db5a-5ec4-499e-b7ef-b08686ac5dee\\\\tasks\\\\bim683t1i.output\")",
+      "Bash(sleep 2 && cat \"C:\\\\Users\\\\salma\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-salma-Desktop-FACTU-ME-PACKAGE-Factu.me\\\\8cc6db5a-5ec4-499e-b7ef-b08686ac5dee\\\\tasks\\\\bf1skvy7h.output\")",
+      "Bash(sleep 2 && cat \"C:\\\\Users\\\\salma\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-salma-Desktop-FACTU-ME-PACKAGE-Factu.me\\\\8cc6db5a-5ec4-499e-b7ef-b08686ac5dee\\\\tasks\\\\b1s0az3i9.output\")",
+      "Bash(rm \"c:/Users/salma/Desktop/FACTU.ME PACKAGE/Factu.me/nouvellefonctionnalité.html\")",
+      "Bash(npm uninstall *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me"
     ]
   },
   "enableAllProjectMcpServers": true,

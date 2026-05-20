@@ -11,7 +11,7 @@ interface UpgradeBannerProps {
   onClose?: () => void;
   onClick?: () => void;
   className?: string;
-  type?: 'warning' | 'trial' | 'limit';
+  type?: 'warning' | 'trial' | 'limit' | 'nudge';
 }
 
 const WarningIcon = ({ className }: { className?: string }) => (
@@ -117,6 +117,19 @@ export function UpgradeBanner({
           darkTextPrimary: 'dark:text-[#FCA5A5]',
           darkTextSecondary: 'dark:text-[#F87171]',
           darkHover: 'dark:hover:bg-[#2A0A0A]',
+        };
+      case 'nudge':
+        return {
+          border: 'border-[#BBF7D0]',
+          bg: 'bg-[#F0FDF4]',
+          textPrimary: 'text-[#166534]',
+          textSecondary: 'text-[#16A34A]',
+          hover: 'hover:bg-[#DCFCE7]',
+          darkBorder: 'dark:border-[#14532D]',
+          darkBg: 'dark:bg-[#0A1A0F]',
+          darkTextPrimary: 'dark:text-[#BBF7D0]',
+          darkTextSecondary: 'dark:text-[#4ADE80]',
+          darkHover: 'dark:hover:bg-[#0F2918]',
         };
       default: // warning
         return {

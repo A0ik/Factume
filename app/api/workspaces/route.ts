@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-
-// Lazy initialization to avoid build-time execution
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -24,8 +14,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    const admin = createAdminClient();
+
     // Check user's subscription tier and existing workspace count
-    const { data: profile } = await getSupabaseAdmin()
+    const { data: profile } = await admin
       .from('profiles')
       .select('subscription_tier')
       .eq('id', user_id)
@@ -34,19 +26,19 @@ export async function POST(req: NextRequest) {
     const tier = profile?.subscription_tier || 'free';
 
     // Count existing workspaces owned by this user
-    const { count: workspaceCount } = await getSupabaseAdmin()
+    const { count: workspaceCount } = await admin
       .from('workspaces')
       .select('*', { count: 'exact', head: true })
       .eq('owner_id', user_id);
 
     // Enforce workspace limits
-    if (tier !== 'pro' && workspaceCount !== null && workspaceCount >= 1) {
+    if (tier !== 'pro' && tier !== 'business' && workspaceCount !== null && workspaceCount >= 1) {
       return NextResponse.json({
         error: 'Limitation de plan',
-        message: 'La création de plusieurs dossiers nécessite un abonnement Pro. Passez à Pro pour créer plusieurs dossiers d\'entreprise.',
+        message: 'La création de plusieurs dossiers nécessite un abonnement Pro.',
         tier,
         currentWorkspaces: workspaceCount,
-        limit: tier === 'pro' ? Infinity : 1
+        limit: 1
       }, { status: 403 });
     }
 
@@ -54,12 +46,12 @@ export async function POST(req: NextRequest) {
     const slug = name
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
     // Check if slug already exists
-    const { data: existing } = await getSupabaseAdmin()
+    const { data: existing } = await admin
       .from('workspaces')
       .select('id')
       .eq('slug', slug)
@@ -70,7 +62,7 @@ export async function POST(req: NextRequest) {
       : slug;
 
     // Create workspace
-    const { data: workspace, error } = await getSupabaseAdmin()
+    const { data: workspace, error } = await admin
       .from('workspaces')
       .insert({
         name,
@@ -86,43 +78,40 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
 
     // Add owner as admin member
-    await getSupabaseAdmin()
+    await admin
       .from('workspace_members')
       .insert({
         workspace_id: workspace.id,
         user_id,
-        email: '', // Will be filled from profile if needed
+        email: '',
         role: 'admin',
         status: 'active',
       });
 
     return NextResponse.json({ workspace });
-  } catch (err: any) {
-    console.error('Create Workspace Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Auth check
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    const userId = user.id;
+    const admin = createAdminClient();
 
-    const { data: workspaces, error } = await getSupabaseAdmin()
+    const { data: workspaces, error } = await admin
       .from('workspaces')
       .select('*')
-      .eq('owner_id', userId)
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
     return NextResponse.json({ workspaces });
-  } catch (err: any) {
-    console.error('List Workspaces Error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

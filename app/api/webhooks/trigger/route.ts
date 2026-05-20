@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 
 function getInternalSecret() {
   const secret = process.env.WEBHOOK_INTERNAL_SECRET;
@@ -7,11 +7,7 @@ function getInternalSecret() {
   return secret;
 }
 
-// Internal endpoint to trigger outgoing webhooks for invoice events.
-// Called by internal server code (not exposed to end users directly).
-// Requires the X-Internal-Secret header to match WEBHOOK_INTERNAL_SECRET env var.
 export async function POST(req: NextRequest) {
-  // Validate internal secret header
   const secret = req.headers.get('x-internal-secret');
   if (secret !== getInternalSecret()) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,13 +25,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing userId or event' }, { status: 400 });
   }
 
-  // Use service-role client to bypass RLS
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const supabase = createAdminClient();
 
-  // Fetch active webhook endpoints for this user that subscribe to this event
   const { data: endpoints, error } = await supabase
     .from('webhook_endpoints')
     .select('*')
@@ -70,7 +61,7 @@ export async function POST(req: NextRequest) {
           'User-Agent': 'Facturme-Webhooks/1.0',
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10_000), // 10s timeout
+        signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status} from ${ep.url}`);

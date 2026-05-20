@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 import OpenAI from 'openai';
 import crypto from 'crypto';
 import { processAndSaveExpense } from '@/lib/ocr-core';
@@ -9,14 +9,6 @@ import { buildOcrPrompt } from '@/lib/ocr-helpers';
 // Resend Inbound Parse webhook — handles forwarded receipts / invoices sent to
 // depenses@factu.me.  Resend POSTs a JSON payload for every inbound email.
 // ---------------------------------------------------------------------------
-
-// Lazy-initialized admin client (service-role) — no user session available
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-}
 
 // ---------------------------------------------------------------------------
 // 1. Webhook signature verification  (HMAC-SHA256)
@@ -31,8 +23,6 @@ function verifySignature(body: string, signatureHeader: string | null): boolean 
     return false;
   }
 
-  // Resend may send multiple signatures separated by spaces (e.g. t=...,v1=... v1=...)
-  // We verify against the first valid v1 signature we find.
   const parts = signatureHeader.split(' ');
   for (const part of parts) {
     const match = part.match(/^v1=(.+)$/);
@@ -43,7 +33,6 @@ function verifySignature(body: string, signatureHeader: string | null): boolean 
       .update(body, 'utf8')
       .digest('hex');
 
-    // Constant-time comparison to prevent timing attacks
     const expectedBuf = Buffer.from(expected);
     const sigBuf = Buffer.from(match[1]);
     if (expectedBuf.length !== sigBuf.length) continue;
@@ -56,14 +45,11 @@ function verifySignature(body: string, signatureHeader: string | null): boolean 
 }
 
 // ---------------------------------------------------------------------------
-// 2. OCR via OpenRouter — returns raw AI response for processAndSaveExpense
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// 3. Duplicate detection
+// 2. Duplicate detection
 // ---------------------------------------------------------------------------
 
 async function isDuplicate(
+  admin: ReturnType<typeof createAdminClient>,
   userId: string,
   vendor: string | null,
   amount: number | null,
@@ -71,7 +57,7 @@ async function isDuplicate(
 ): Promise<boolean> {
   if (!amount || !date) return false;
 
-  const { data: existing } = await getSupabaseAdmin()
+  const { data: existing } = await admin
     .from('expenses')
     .select('id, vendor, amount, date')
     .eq('user_id', userId)
@@ -82,19 +68,16 @@ async function isDuplicate(
   if (!existing || existing.length === 0) return false;
 
   for (const row of existing) {
-    // Amount within 5 % tolerance
     const rowAmount = Number(row.amount) || 0;
     if (rowAmount === 0) continue;
     const diff = Math.abs(rowAmount - amount);
     if (diff > Math.abs(amount) * 0.05) continue;
 
-    // Vendor similarity (fuzzy)
     if (vendor && row.vendor) {
       const a = vendor.toLowerCase().trim();
       const b = (row.vendor as string).toLowerCase().trim();
       if (a.includes(b) || b.includes(a)) return true;
     } else {
-      // Same amount + same date, no vendor info — likely duplicate
       return true;
     }
   }
@@ -103,7 +86,7 @@ async function isDuplicate(
 }
 
 // ---------------------------------------------------------------------------
-// 4. Run OCR via OpenRouter — returns raw parsed JSON for ocr-core
+// 3. Run OCR via OpenRouter
 // ---------------------------------------------------------------------------
 
 async function runOcr(
@@ -150,7 +133,7 @@ async function runOcr(
 }
 
 // ---------------------------------------------------------------------------
-// 6. Process a single attachment
+// 4. Process a single attachment
 // ---------------------------------------------------------------------------
 
 interface ProcessResult {
@@ -163,21 +146,20 @@ interface ProcessResult {
 }
 
 async function processAttachment(
+  admin: ReturnType<typeof createAdminClient>,
   userId: string,
   attachment: { filename: string; content_type: string; content: string },
 ): Promise<ProcessResult> {
   const { filename, content_type, content } = attachment;
 
   try {
-    // Decode base64
     const buffer = Buffer.from(content, 'base64');
 
-    // Upload to Supabase Storage bucket "receipts"
     const timestamp = Date.now();
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = `${userId}/${timestamp}_${sanitizedFilename}`;
 
-    const { error: uploadError } = await getSupabaseAdmin()
+    const { error: uploadError } = await admin
       .storage
       .from('receipts')
       .upload(storagePath, buffer, { contentType: content_type, upsert: false });
@@ -187,7 +169,7 @@ async function processAttachment(
       return { success: false, filename, error: 'Storage upload failed' };
     }
 
-    const { data: urlData } = getSupabaseAdmin()
+    const { data: urlData } = admin
       .storage
       .from('receipts')
       .getPublicUrl(storagePath);
@@ -195,7 +177,6 @@ async function processAttachment(
     const receiptUrl = urlData.publicUrl;
     const isPdf = content_type === 'application/pdf';
 
-    // Preprocess image for better OCR accuracy (skip PDFs)
     let ocrBase64 = content;
     let ocrMime = isPdf ? 'application/pdf' : content_type;
     if (!isPdf) {
@@ -207,11 +188,9 @@ async function processAttachment(
       } catch {}
     }
 
-    // Run OCR
     const raw = await runOcr(ocrBase64, ocrMime);
     if (!raw) {
-      // Save minimal record even without OCR
-      const { data: saved } = await getSupabaseAdmin()
+      const { data: saved } = await admin
         .from('expenses')
         .insert({
           user_id: userId,
@@ -231,28 +210,24 @@ async function processAttachment(
       return { success: true, expenseId: saved?.id, filename };
     }
 
-    // Duplicate check
     const amount = raw.amount as number | undefined;
     const vendor = raw.vendor as string | undefined;
     const date = raw.date as string | undefined;
-    const dup = await isDuplicate(userId, vendor ?? null, amount ?? null, date ?? null);
+    const dup = await isDuplicate(admin, userId, vendor ?? null, amount ?? null, date ?? null);
     if (dup) {
       console.log(`[resend-inbound] Duplicate detected: vendor=${vendor} amount=${amount} date=${date}`);
       return { success: false, filename, error: 'Duplicate expense', vendor, amount };
     }
 
-    // Use ocr-core for sanitize + accounts + journal + DB save
-    const supabase = getSupabaseAdmin();
-    const result = await processAndSaveExpense(raw, userId, supabase, {
+    const result = await processAndSaveExpense(raw, userId, admin, {
       receiptUrl,
       storagePath,
       fileName: filename,
       isPdf,
     });
 
-    // Add source: 'email' to the saved record
     if (result.savedExpense?.id) {
-      await supabase.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
+      await admin.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
     }
 
     return {
@@ -270,10 +245,11 @@ async function processAttachment(
 }
 
 // ---------------------------------------------------------------------------
-// 7. Extract info from HTML email body (no attachments)
+// 5. Extract info from HTML email body
 // ---------------------------------------------------------------------------
 
 async function extractFromHtmlBody(
+  admin: ReturnType<typeof createAdminClient>,
   userId: string,
   html: string | undefined,
   text: string | undefined,
@@ -307,31 +283,26 @@ async function extractFromHtmlBody(
 
     const raw = JSON.parse(rawContent) as Record<string, unknown>;
 
-    // Only save if we extracted a meaningful amount
     const amount = raw.amount as number | undefined;
     if (!amount || amount <= 0) return null;
 
     const vendor = raw.vendor as string | undefined;
     const date = raw.date as string | undefined;
 
-    // Duplicate check
-    const dup = await isDuplicate(userId, vendor ?? null, amount, date ?? null);
+    const dup = await isDuplicate(admin, userId, vendor ?? null, amount, date ?? null);
     if (dup) {
       return { success: false, filename: 'email-body', error: 'Duplicate expense', vendor, amount };
     }
 
-    // Use ocr-core for sanitize + accounts + journal + DB save
-    const supabase = getSupabaseAdmin();
-    const result = await processAndSaveExpense(raw, userId, supabase, {
+    const result = await processAndSaveExpense(raw, userId, admin, {
       receiptUrl: '',
       storagePath: '',
       fileName: 'email-body',
       isPdf: false,
     });
 
-    // Add source: 'email'
     if (result.savedExpense?.id) {
-      await supabase.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
+      await admin.from('expenses').update({ source: 'email' }).eq('id', result.savedExpense.id);
     }
 
     return {
@@ -349,11 +320,10 @@ async function extractFromHtmlBody(
 }
 
 // ---------------------------------------------------------------------------
-// 8. POST handler
+// 6. POST handler
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
-  // Always read body as text first for signature verification
   const rawBody = await req.text();
 
   // --- Signature verification ---
@@ -363,7 +333,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  // Parse JSON payload
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(rawBody);
@@ -372,9 +341,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 200 });
   }
 
-  // Extract email fields from Resend inbound format
-  // Resend uses nested objects: { from: { address: "..." }, to: [...], ... }
-  // But also flat strings in some configurations. Handle both.
   const fromRaw = payload.from;
   const fromEmail = typeof fromRaw === 'string'
     ? fromRaw
@@ -389,20 +355,19 @@ export async function POST(req: NextRequest) {
 
   console.log(`[resend-inbound] Processing email from ${fromEmail}`);
 
-  // --- Identify user ---
-  const { data: profile } = await getSupabaseAdmin()
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('id, subscription_tier, is_trial_active')
     .eq('email', fromEmail)
     .single();
 
   if (!profile) {
-    // Silently ignore — do not reveal user existence to random senders
     console.log(`[resend-inbound] No profile found for ${fromEmail}, ignoring`);
     return NextResponse.json({ received: true });
   }
 
-  // --- Subscription check ---
   const isBusiness = profile.subscription_tier === 'business';
   const isTrial = profile.is_trial_active === true;
 
@@ -416,15 +381,12 @@ export async function POST(req: NextRequest) {
   const html = payload.html as string | undefined;
   const text = payload.text as string | undefined;
 
-  // Resend inbound attachments format:
-  // attachments: [{ filename, content_type, content (base64) }]
   const attachments = (payload.attachments as Array<{
     filename?: string;
     content_type?: string;
     content?: string;
   }>) || [];
 
-  // Filter to supported types (images + PDFs)
   const supportedAttachments = attachments.filter((att) => {
     const ct = att.content_type || '';
     return ct === 'application/pdf' || ct.startsWith('image/');
@@ -432,12 +394,11 @@ export async function POST(req: NextRequest) {
 
   const results: ProcessResult[] = [];
 
-  // --- Process each supported attachment ---
   if (supportedAttachments.length > 0) {
     for (const att of supportedAttachments) {
       if (!att.content || !att.filename) continue;
 
-      const result = await processAttachment(userId, {
+      const result = await processAttachment(admin, userId, {
         filename: att.filename,
         content_type: att.content_type || 'application/octet-stream',
         content: att.content,
@@ -447,15 +408,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // --- If no attachments (or none were supported), try email body ---
   if (supportedAttachments.length === 0) {
-    const bodyResult = await extractFromHtmlBody(userId, html, text, subject);
+    const bodyResult = await extractFromHtmlBody(admin, userId, html, text, subject);
     if (bodyResult) {
       results.push(bodyResult);
     }
   }
 
-  // --- Summary ---
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
   const duplicateCount = results.filter((r) => r.error === 'Duplicate expense').length;
@@ -464,7 +423,6 @@ export async function POST(req: NextRequest) {
     `[resend-inbound] Done for ${fromEmail}: ${successCount} processed, ${duplicateCount} duplicates, ${failCount} failed`,
   );
 
-  // --- Send notification ---
   if (successCount > 0 || duplicateCount > 0) {
     try {
       let notificationBody: string;
@@ -476,7 +434,7 @@ export async function POST(req: NextRequest) {
         notificationBody = `${duplicateCount} justificatif${duplicateCount > 1 ? 's' : ''} ignoré${duplicateCount > 1 ? 's' : ''} (doublon${duplicateCount > 1 ? 's' : ''}).`;
       }
 
-      await getSupabaseAdmin().from('notifications').insert({
+      await admin.from('notifications').insert({
         user_id: userId,
         type: 'expense_email',
         title: `${successCount} justificatif${successCount > 1 ? 's' : ''} traité${successCount > 1 ? 's' : ''} par email`,
@@ -485,12 +443,10 @@ export async function POST(req: NextRequest) {
         read: false,
       });
     } catch (notifErr) {
-      // Non-critical — log but don't fail the webhook
       console.error('[resend-inbound] Notification insert error:', notifErr);
     }
   }
 
-  // Always return 200 — webhooks need 200 to stop retrying
   return NextResponse.json({
     received: true,
     processed: successCount,

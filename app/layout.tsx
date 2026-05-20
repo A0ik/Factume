@@ -95,6 +95,10 @@ export const metadata: Metadata = {
     canonical: 'https://factu.me',
     languages: {
       'fr': 'https://factu.me',
+      'fr-BE': 'https://factu.me',
+      'fr-CH': 'https://factu.me',
+      'fr-LU': 'https://factu.me',
+      'fr-CA': 'https://factu.me',
       'x-default': 'https://factu.me',
     },
   },

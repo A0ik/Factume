@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-
-// Lazy initialization to avoid build-time execution
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,11 +9,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Provider required' }, { status: 400 });
   }
 
-  // Generate a state parameter for security
-  const state = Buffer.from(JSON.stringify({ provider, timestamp: Date.now() })).toString('base64');
+  // Auth check
+  const supabaseAuth = await createServerSupabaseClient();
+  const { data: { user } } = await supabaseAuth.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-  // In production, redirect to the actual OAuth authorization URL
-  // For now, return a mock response
+  // Generate a secure state parameter with timestamp
+  const state = Buffer.from(JSON.stringify({ provider, userId: user.id, timestamp: Date.now() })).toString('base64');
+
+  // Set state cookie for CSRF protection in callback
   const oauthUrls: Record<string, string> = {
     amazon: 'https://sellercentral.amazon.com/ap/oa',
     orange: 'https://api.orange.com/oauth/v2/authorize',
@@ -35,7 +30,6 @@ export async function GET(req: NextRequest) {
   const authUrl = oauthUrls[provider];
 
   if (authUrl) {
-    // Build OAuth URL with parameters
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: process.env[`MERCHANT_${provider.toUpperCase()}_CLIENT_ID`] || '',
@@ -44,37 +38,38 @@ export async function GET(req: NextRequest) {
       state: state,
     });
 
-    return NextResponse.redirect(`${authUrl}?${params.toString()}`);
+    const res = NextResponse.redirect(`${authUrl}?${params.toString()}`);
+    res.cookies.set('merchant_oauth_state', state, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+    return res;
   }
 
-  // For demo purposes, create a mock connection
   return NextResponse.json({
     message: 'OAuth flow not configured for this provider',
     provider,
-    note: 'In production, this would redirect to the OAuth authorization URL'
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     const { provider, credentials } = await req.json();
-    const user_id = user.id;
 
-    // In production, this would be called after OAuth callback
-    // with the authorization code to exchange for access token
-
-    const { data: conn, error } = await getSupabaseAdmin()
+    const admin = createAdminClient();
+    const { data: conn, error } = await admin
       .from('merchant_connections')
       .insert({
-        user_id,
+        user_id: user.id,
         provider,
         provider_account_id: `mock_${provider}_${Date.now()}`,
-        credentials_encrypted: JSON.stringify(credentials), // In production, encrypt this!
+        credentials_encrypted: JSON.stringify(credentials),
         status: 'active',
         auto_import: true,
       })
@@ -84,8 +79,8 @@ export async function POST(req: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, connection: conn });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 

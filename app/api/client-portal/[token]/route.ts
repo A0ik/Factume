@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 
 export async function GET(
   _req: NextRequest,
@@ -7,15 +7,12 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const admin = createAdminClient();
 
-    // Resolve the token
-    const { data: portalToken, error: tokenError } = await supabase
+    // Resolve the token — admin client needed to read portal tokens
+    const { data: portalToken, error: tokenError } = await admin
       .from('client_portal_tokens')
-      .select('*, client:clients(*)')
+      .select('client_id, user_id, expires_at, client:clients(*)')
       .eq('token', token)
       .single();
 
@@ -23,17 +20,22 @@ export async function GET(
       return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 404 });
     }
 
-    // Profile of the freelancer
-    const { data: profile } = await supabase
+    // Check token expiry
+    if (portalToken.expires_at && new Date(portalToken.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Lien expiré' }, { status: 410 });
+    }
+
+    // Profile of the freelancer — only expose public-facing fields
+    const { data: profile } = await admin
       .from('profiles')
-      .select('*')
+      .select('company_name,address,city,postal_code,country,phone,siret,logo_url,accent_color,language,currency,payment_terms')
       .eq('id', portalToken.user_id)
       .single();
 
     // All non-draft invoices for this client
-    const { data: invoices } = await supabase
+    const { data: invoices } = await admin
       .from('invoices')
-      .select('*, items:invoice_items(*)')
+      .select('id, number, status, issue_date, due_date, total, currency, paid_at, items:invoice_items(*)')
       .eq('client_id', portalToken.client_id)
       .eq('user_id', portalToken.user_id)
       .neq('status', 'draft')
@@ -44,7 +46,7 @@ export async function GET(
       profile,
       invoices: invoices || [],
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
