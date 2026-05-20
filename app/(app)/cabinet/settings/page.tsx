@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2, Save, Building2, Hash, Trash2, AlertTriangle, Palette, Eye, Globe, Type } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Building2, Hash, Trash2, AlertTriangle, Palette, Eye, Globe, Type, Phone, Mail, MapPin, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCabinetStore } from '@/stores/cabinetStore';
@@ -14,7 +14,7 @@ export default function CabinetSettingsPage() {
   const router = useRouter();
   const { cabinet, fetchCabinet, updateCabinet } = useCabinetStore();
   const sub = useSubscription();
-  const [name, setName]   = useState('');
+  const [name, setName] = useState('');
 
   if (!sub.isBusiness && !sub.isTrialActive) {
     router.push('/cabinet');
@@ -29,6 +29,12 @@ export default function CabinetSettingsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [address, setAddress] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
 
   useEffect(() => { fetchCabinet(); }, []);
 
@@ -40,6 +46,13 @@ export default function CabinetSettingsPage() {
       setLogoUrl(cabinet.logo_url || '');
       setWhiteLabelName(cabinet.white_label_name || '');
       setHideFactuBranding(cabinet.hide_factu_branding || false);
+      const s = (cabinet as any).settings || {};
+      setAddress(s.address || '');
+      setZipCode(s.zip_code || '');
+      setCity(s.city || '');
+      setPhone(s.phone || '');
+      setEmail(s.email || '');
+      setVatNumber(s.vat_number || '');
     }
   }, [cabinet]);
 
@@ -54,6 +67,14 @@ export default function CabinetSettingsPage() {
         logo_url: logoUrl.trim() || undefined,
         white_label_name: whiteLabelName.trim() || undefined,
         hide_factu_branding: hideFactuBranding,
+        settings: {
+          address: address.trim() || undefined,
+          zip_code: zipCode.trim() || undefined,
+          city: city.trim() || undefined,
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
+          vat_number: vatNumber.trim() || undefined,
+        },
       });
       toast.success('Parametres sauvegardes');
     } catch {
@@ -101,7 +122,7 @@ export default function CabinetSettingsPage() {
             <ArrowLeft size={18} className="text-gray-400" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Paramètres du cabinet</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Parametres du cabinet</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Informations et configuration</p>
           </div>
         </div>
@@ -131,7 +152,7 @@ export default function CabinetSettingsPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex : Cabinet Dubois & Associés"
+            placeholder="Ex : Cabinet Dubois & Associes"
             className={cn(
               'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
@@ -154,7 +175,110 @@ export default function CabinetSettingsPage() {
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
             )}
           />
-          <p className="text-xs text-gray-400 mt-1.5">Apparaît sur vos documents officiels</p>
+          <p className="text-xs text-gray-400 mt-1.5">Apparait sur vos documents officiels</p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+            <span className="flex items-center gap-1.5"><Hash size={11} />N° TVA intracommunautaire</span>
+          </label>
+          <input
+            type="text"
+            value={vatNumber}
+            onChange={(e) => setVatNumber(e.target.value)}
+            placeholder="FR 12 345678901"
+            className={cn(
+              'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all font-mono',
+              'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
+            )}
+          />
+        </div>
+      </div>
+
+      {/* Contact & Address */}
+      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+          <MapPin size={15} className="text-emerald-500" />
+          Coordonnees
+        </h3>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+            <span className="flex items-center gap-1.5"><MapPin size={11} />Adresse</span>
+          </label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="12 rue de la Paix"
+            className={cn(
+              'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
+              'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Code postal</label>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              placeholder="75002"
+              maxLength={5}
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all font-mono',
+                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+              )}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Ville</label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Paris"
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
+                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+              <span className="flex items-center gap-1.5"><Phone size={11} />Telephone</span>
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="01 23 45 67 89"
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
+                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+              )}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+              <span className="flex items-center gap-1.5"><Mail size={11} />Email</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="contact@cabinet.fr"
+              className={cn(
+                'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
+                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+              )}
+            />
+          </div>
         </div>
       </div>
 
@@ -170,7 +294,6 @@ export default function CabinetSettingsPage() {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Primary color */}
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
                 <span className="flex items-center gap-1.5"><Palette size={11} />Couleur principale</span>
@@ -195,7 +318,6 @@ export default function CabinetSettingsPage() {
               </div>
             </div>
 
-            {/* White label name */}
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
                 <span className="flex items-center gap-1.5"><Type size={11} />Nom de marque</span>
@@ -213,7 +335,6 @@ export default function CabinetSettingsPage() {
             </div>
           </div>
 
-          {/* Logo URL */}
           <div>
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
               <span className="flex items-center gap-1.5"><Globe size={11} />URL du logo</span>
@@ -231,7 +352,6 @@ export default function CabinetSettingsPage() {
             <p className="text-xs text-gray-400 mt-1.5">Logo affiche dans la barre de navigation du cabinet</p>
           </div>
 
-          {/* Hide Factu.me branding toggle */}
           <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-3">
               <Eye size={16} className="text-gray-400" />
@@ -257,7 +377,6 @@ export default function CabinetSettingsPage() {
             </button>
           </div>
 
-          {/* Preview */}
           <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-2 font-bold">Apercu</p>
             <div className="flex items-center gap-3">

@@ -1,17 +1,21 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Briefcase, Users, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
+  BarChart3, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
   Search, ChevronRight, Crown, Settings, UserPlus, RefreshCw,
-  CheckCircle2, Clock, XCircle, Building2, Euro, BarChart3, Landmark,
+  CheckCircle2, Clock, XCircle, Building2, Euro, Users, Landmark,
+  FileText, Calendar, Bell, Briefcase, Download, Activity as ActivityIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, downloadCSV } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
+} from 'recharts';
 
 interface ClientStat {
   id: string;
@@ -49,6 +53,19 @@ function HealthDot({ health }: { health: string }) {
   );
 }
 
+const NAV_ITEMS = [
+  { href: '/cabinet', label: 'Dashboard', icon: Building2 },
+  { href: '/cabinet/clients', label: 'Clients', icon: Users },
+  { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
+  { href: '/cabinet/facturation', label: 'Facturation', icon: FileText },
+  { href: '/cabinet/relances', label: 'Relances', icon: Bell },
+  { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
+  { href: '/cabinet/missions', label: 'Missions', icon: Briefcase },
+  { href: '/cabinet/echeances', label: 'Echeances', icon: Calendar },
+  { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
+  { href: '/cabinet/settings', label: 'Parametres', icon: Settings },
+];
+
 export default function CabinetPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
@@ -59,6 +76,7 @@ export default function CabinetPage() {
   const [cabinetName, setCabinetName] = useState('');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'revenue' | 'health'>('name');
 
   useEffect(() => { if (profile) loadDashboard(); }, [profile]);
 
@@ -66,10 +84,9 @@ export default function CabinetPage() {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      // Fix: use non-blocking auth state instead of getSession()
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        toast.error('Session expirée. Veuillez vous reconnecter.');
+        toast.error('Session expiree. Veuillez vous reconnecter.');
         return;
       }
       const res = await fetch('/api/cabinet/dashboard', {
@@ -96,7 +113,7 @@ export default function CabinetPage() {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        toast.error('Session expirée. Veuillez vous reconnecter.');
+        toast.error('Session expiree. Veuillez vous reconnecter.');
         return;
       }
       const res = await fetch('/api/cabinet/clients', {
@@ -105,29 +122,63 @@ export default function CabinetPage() {
         body: JSON.stringify({ name: cabinetName.trim() }),
       });
       if (res.ok) {
-        toast.success('Cabinet créé avec succès');
+        toast.success('Cabinet cree avec succes');
         setCabinetName('');
         await loadDashboard();
       } else {
-        const error = await res.json().catch(() => ({ error: 'Erreur lors de la création' }));
-        toast.error(error.error || 'Erreur lors de la création');
+        const error = await res.json().catch(() => ({ error: 'Erreur lors de la creation' }));
+        toast.error(error.error || 'Erreur lors de la creation');
       }
     } catch (error: any) {
       console.error('[handleCreateCabinet] Error:', error);
-      toast.error(error.message || 'Erreur lors de la création');
+      toast.error(error.message || 'Erreur lors de la creation');
     } finally {
       setCreating(false);
     }
   };
 
+  const handleExportCSV = () => {
+    if (!data?.clientStats?.length) return;
+    downloadCSV(
+      `cabinet-clients-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Client', 'Email', 'Sante', 'CA', 'Depenses', 'Factures en retard'],
+      data.clientStats.map(c => [
+        c.name,
+        c.email || '',
+        c.health === 'good' ? 'Bon' : c.health === 'critical' ? 'Critique' : 'Attention',
+        formatCurrency(c.revenue),
+        formatCurrency(c.expenses),
+        String(c.overdueCount || 0),
+      ])
+    );
+    toast.success('Export CSV telecharge');
+  };
+
   const filteredClients = useMemo(() => {
     if (!data?.clientStats) return [];
-    if (!search.trim()) return data.clientStats;
-    const q = search.toLowerCase();
-    return data.clientStats.filter(c =>
-      c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
-    );
-  }, [data?.clientStats, search]);
+    let result = data.clientStats;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q)
+      );
+    }
+    if (sortBy === 'revenue') result = [...result].sort((a, b) => b.revenue - a.revenue);
+    else if (sortBy === 'health') {
+      const order = { critical: 0, warning: 1, good: 2 };
+      result = [...result].sort((a, b) => order[a.health] - order[b.health]);
+    }
+    return result;
+  }, [data?.clientStats, search, sortBy]);
+
+  const chartData = useMemo(() => {
+    if (!data?.clientStats?.length) return [];
+    return data.clientStats.slice(0, 10).map(c => ({
+      name: c.name.length > 12 ? c.name.slice(0, 12) + '...' : c.name,
+      CA: c.revenue,
+      Depenses: c.expenses,
+    }));
+  }, [data?.clientStats]);
 
   if (!sub.isBusiness && !sub.isTrialActive) {
     return (
@@ -138,7 +189,7 @@ export default function CabinetPage() {
           </div>
           <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Cabinet Expert-Comptable</h1>
           <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            Gérez tous vos clients depuis un tableau de bord unique. Consultez leurs factures, dépenses et indicateurs de santé financière.
+            Gerez tous vos clients depuis un tableau de bord unique. Consultez leurs factures, depenses et indicateurs de sante financiere.
           </p>
           <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/35 transition-all">
             <Crown size={18} />
@@ -163,16 +214,16 @@ export default function CabinetPage() {
         <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-blue-500/20">
           <Building2 size={40} className="text-blue-500" />
         </div>
-        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Créer votre cabinet</h1>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Creer votre cabinet</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md leading-relaxed">
-          Donnez un nom à votre cabinet comptable pour commencer à inviter des clients et centraliser leur gestion.
+          Donnez un nom a votre cabinet comptable pour commencer a inviter des clients et centraliser leur gestion.
         </p>
         <div className="flex items-center gap-3 w-full max-w-sm">
           <input
             type="text"
             value={cabinetName}
             onChange={(e) => setCabinetName(e.target.value)}
-            placeholder="Ex : Cabinet Dubois & Associés"
+            placeholder="Ex : Cabinet Dubois & Associes"
             className="flex-1 px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none shadow-sm"
             onKeyDown={(e) => e.key === 'Enter' && handleCreateCabinet()}
           />
@@ -181,7 +232,7 @@ export default function CabinetPage() {
             disabled={!cabinetName.trim() || creating}
             className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm disabled:opacity-50 shadow-md"
           >
-            {creating ? <Loader2 size={16} className="animate-spin" /> : 'Créer'}
+            {creating ? <Loader2 size={16} className="animate-spin" /> : 'Creer'}
           </button>
         </div>
       </motion.div>
@@ -193,6 +244,20 @@ export default function CabinetPage() {
   const brandName = data.cabinet?.hide_factu_branding && data.cabinet?.white_label_name
     ? data.cabinet.white_label_name
     : data.cabinet?.white_label_name || 'Factu.me';
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-lg">
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} className="text-xs" style={{ color: p.color }}>
+            {p.name}: {formatCurrency(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -220,6 +285,13 @@ export default function CabinetPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleExportCSV}
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            title="Exporter CSV"
+          >
+            <Download size={16} />
+          </button>
+          <button
             onClick={() => loadDashboard(true)}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
@@ -227,7 +299,7 @@ export default function CabinetPage() {
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
           </button>
-          <Link href="/cabinet/settings" className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors" title="Paramètres">
+          <Link href="/cabinet/settings" className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors" title="Parametres">
             <Settings size={16} />
           </Link>
           <Link
@@ -236,29 +308,22 @@ export default function CabinetPage() {
             style={{ backgroundColor: primaryColor, boxShadow: `0 4px 14px -3px ${primaryColor}40` }}
           >
             <UserPlus size={15} />
-            Inviter un client
+            <span className="hidden sm:inline">Inviter</span>
           </Link>
         </div>
       </div>
 
-      {/* Cabinet Navigation */}
+      {/* Cabinet Navigation - Full */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-        {[
-          { href: '/cabinet', label: 'Tableau de bord', icon: Building2 },
-          { href: '/cabinet/clients', label: 'Clients', icon: Users },
-          { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
-          { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
-          { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
-          { href: '/cabinet/settings', label: 'Parametres', icon: Settings },
-        ].map(({ href, label, icon: NavIcon }) => (
+        {NAV_ITEMS.map(({ href, label, icon: NavIcon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0',
+              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 border border-transparent',
               pathname === href
-                ? 'border border-transparent'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 border border-transparent'
+                ? ''
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
             )}
             style={pathname === href ? { backgroundColor: `${primaryColor}18`, color: primaryColor, borderColor: `${primaryColor}40` } : undefined}
           >
@@ -280,7 +345,7 @@ export default function CabinetPage() {
             text: 'text-emerald-700 dark:text-emerald-400',
           },
           {
-            label: 'Dépenses totales',
+            label: 'Depenses totales',
             value: formatCurrency(data.stats?.totalExpenses || 0),
             icon: Euro,
             color: 'from-red-500 to-rose-600',
@@ -288,7 +353,7 @@ export default function CabinetPage() {
             text: 'text-red-700 dark:text-red-400',
           },
           {
-            label: 'Solde net consolidé',
+            label: 'Solde net consolide',
             value: formatCurrency(netBalance),
             icon: Shield,
             color: netBalance >= 0 ? 'from-blue-500 to-indigo-600' : 'from-red-500 to-rose-600',
@@ -314,21 +379,81 @@ export default function CabinetPage() {
         ))}
       </div>
 
+      {/* Revenue Chart */}
+      {chartData.length > 0 && (
+        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 shadow-sm">
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2 mb-4">
+            <BarChart3 size={15} className="text-blue-500" />
+            CA / Depenses par client
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.15)" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="CA" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Depenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-emerald-500" />
+              <span className="text-xs text-gray-500">Chiffre d&apos;affaires</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-red-500" />
+              <span className="text-xs text-gray-500">Depenses</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Banner */}
+      {(data.stats?.totalOverdue || 0) > 0 && (
+        <Link
+          href="/cabinet/relances"
+          className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/60 dark:border-amber-800/30 hover:shadow-md transition-all group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+            <Bell size={18} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+              {data.stats.totalOverdue} facture{data.stats.totalOverdue > 1 ? 's' : ''} en retard de paiement
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">Cliquez pour gerer les relances</p>
+          </div>
+          <ChevronRight size={16} className="text-amber-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
+      )}
+
       {/* Client List */}
       <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-        {/* List header with search */}
+        {/* List header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/5">
           <Users size={16} className="text-gray-400 flex-shrink-0" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-sm flex-1">Mes clients</h3>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher..."
-              className="pl-8 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-48"
-            />
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm flex-1">Mes clients ({filteredClients.length})</h3>
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-800 text-gray-500 outline-none"
+            >
+              <option value="name">Nom</option>
+              <option value="revenue">CA</option>
+              <option value="health">Sante</option>
+            </select>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher..."
+                className="pl-8 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-40"
+              />
+            </div>
           </div>
         </div>
 
@@ -337,8 +462,8 @@ export default function CabinetPage() {
             <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
               <Users size={28} className="text-gray-300 dark:text-gray-600" />
             </div>
-            <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun client connecté</p>
-            <p className="text-sm text-gray-400 mb-5">Invitez vos clients pour accéder à leurs données.</p>
+            <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun client connecte</p>
+            <p className="text-sm text-gray-400 mb-5">Invitez vos clients pour acceder a leurs donnees.</p>
             <Link href="/cabinet/invitations" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm transition-colors" style={{ backgroundColor: primaryColor }}>
               <Plus size={15} />
               Inviter un client
@@ -346,7 +471,7 @@ export default function CabinetPage() {
           </div>
         ) : filteredClients.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
-            Aucun client correspondant à &ldquo;{search}&rdquo;
+            Aucun client correspondant a &ldquo;{search}&rdquo;
           </div>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
@@ -362,7 +487,6 @@ export default function CabinetPage() {
                     href={`/cabinet/clients/${client.id}`}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group"
                   >
-                    {/* Avatar */}
                     <div className={cn(
                       'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
                       client.health === 'good'
@@ -374,7 +498,6 @@ export default function CabinetPage() {
                       {client.name.charAt(0).toUpperCase()}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <HealthDot health={client.health} />
@@ -385,19 +508,17 @@ export default function CabinetPage() {
                       )}
                     </div>
 
-                    {/* Financials */}
                     <div className="hidden md:flex items-center gap-6 text-right">
                       <div>
                         <p className="text-xs text-gray-400">CA</p>
                         <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(client.revenue)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400">Dépenses</p>
+                        <p className="text-xs text-gray-400">Depenses</p>
                         <p className="text-sm font-bold text-red-500 dark:text-red-400">{formatCurrency(client.expenses)}</p>
                       </div>
                     </div>
 
-                    {/* Health badge */}
                     <div className={cn(
                       'hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold',
                       client.health === 'good'
@@ -407,7 +528,7 @@ export default function CabinetPage() {
                         : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                     )}>
                       {client.health === 'good'
-                        ? <><CheckCircle2 size={11} />Bon état</>
+                        ? <><CheckCircle2 size={11} />Bon etat</>
                         : client.health === 'critical'
                         ? <><XCircle size={11} />Critique</>
                         : <><AlertTriangle size={11} />Attention</>
