@@ -56,14 +56,14 @@ async function refreshAccessToken(userId: string, refreshToken: string): Promise
     const response = await fetch(SUMUP_TOKEN_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
+      body: new URLSearchParams({
         grant_type: 'refresh_token',
-        client_id: process.env.SUMUP_CLIENT_ID,
-        client_secret: process.env.SUMUP_CLIENT_SECRET,
+        client_id: process.env.SUMUP_CLIENT_ID!,
+        client_secret: process.env.SUMUP_CLIENT_SECRET!,
         refresh_token: refreshToken,
-      }),
+      }).toString(),
     });
 
     if (!response.ok) {

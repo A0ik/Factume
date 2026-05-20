@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartp
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Auto-Entrepreneur – 100% Conforme & Gratuit',
   description: 'Logiciel de facturation auto-entrepreneur : factures sans TVA (art. 293B), mentions URSSAF obligatoires, format conforme. 100% gratuit pour démarrer.',
-  keywords: [
-    'logiciel facture auto-entrepreneur',
-    'facture auto-entrepreneur gratuit',
-    'générer facture auto-entrepreneur',
-    'créer facture micro-entrepreneur',
-    'modèle facture auto-entrepreneur',
-    'facture sans TVA',
-    'facture conforme URSSAF',
-    'logiciel facture micro-entreprise',
-    'facture auto-entrepreneur en ligne',
-    'outil facture auto-entrepreneur',
-    'facture auto-entrepreneur mobile',
-    'facturation vocale auto-entrepreneur',
-  ],
   openGraph: {
     title: 'Logiciel de Facture Auto-Entrepreneur – 100% Conforme & Gratuit',
     description: 'Factures sans TVA, mentions URSSAF, article 293B : tout est automatique. Gratuit pour démarrer.',

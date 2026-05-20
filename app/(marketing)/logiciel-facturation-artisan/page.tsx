@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartp
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Artisan – Gérez Votre Activité Simplement',
   description: 'Logiciel de facturation pour artisans : devis chantier, factures d\'acompte, de situation et de solde. Gestion TVA, SIRET automatique. Gratuit pour démarrer.',
-  keywords: [
-    'logiciel facturation artisan',
-    'facture artisan',
-    'logiciel facture artisan batiment',
-    'facturation artisan du batiment',
-    'logiciel devis facture artisan',
-    'facture acompte artisan',
-    'facturation chantier',
-    'logiciel facturation plumber electricien',
-    'facture artisan gratuit',
-    'outil facturation artisan',
-    'devis facture artisan gratuit',
-    'logiciel artisan btp',
-  ],
   openGraph: {
     title: 'Logiciel de Facturation Artisan – Gérez Votre Activité Simplement',
     description: 'Devis chantier, acomptes, situations, TVA : tout est géré automatiquement. Factu.me simplifie la facturation artisanale.',

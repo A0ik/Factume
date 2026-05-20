@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Sparkles, MessageSquareText, Calculator, S
 export const metadata: Metadata = {
   title: 'Générateur de Facture – Créez Vos Factures Instantanément',
   description: 'Générateur de facture IA : décrivez votre prestation en texte, l\'IA crée la facture complète. Calculs automatiques, envoi instantané.',
-  keywords: [
-    'generateur facture',
-    'generateur facture ia',
-    'creer facture automatique',
-    'generateur facture gratuit',
-    'facture automatique ia',
-    'generer facture en ligne',
-    'facture instantanee',
-    'ia facturation',
-    'generateur facture pdf',
-    'creation facture rapide',
-    'facture auto remplit',
-    'generateur facture francais',
-  ],
   openGraph: {
     title: 'Générateur de Facture – Créez Vos Factures Instantanément',
     description: 'Décrivez votre prestation, l\'IA génère la facture complète. Calculs auto, envoi instantané.',

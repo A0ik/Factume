@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Ruler, Euro, Shield, Clock, Camera, Messag
 export const metadata: Metadata = {
   title: 'Facturation Menuiserie – Créez Vos Factures Rapidement | Factu.me',
   description: 'Logiciel de facturation pour menuisiers : devis sur mesure, détail matériaux et main-d\'oeuvre, dictée vocale sur chantier, photos joints. Essai gratuit.',
-  keywords: [
-    'facturation menuiserie',
-    'logiciel facturation menuisier',
-    'devis menuiserie en ligne',
-    'facture menuisier',
-    'logiciel menuiserie bois',
-    'facturation artisan menuisier',
-    'devis cuisine sur mesure',
-    'facture ébéniste',
-    'logiciel charpentier',
-    'facturation agencement bois',
-  ],
   openGraph: {
     title: 'Facturation Menuiserie – Créez Vos Factures Rapidement',
     description: 'Devis sur mesure, détail bois et fournitures, dictée vocale depuis l\'atelier. Le logiciel pensé pour les menuisiers.',

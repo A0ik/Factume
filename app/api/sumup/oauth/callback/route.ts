@@ -61,15 +61,15 @@ export async function GET(req: NextRequest) {
     const tokenResponse = await fetch(SUMUP_TOKEN_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
+      body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: process.env.SUMUP_CLIENT_ID,
-        client_secret: process.env.SUMUP_CLIENT_SECRET,
+        client_id: process.env.SUMUP_CLIENT_ID!,
+        client_secret: process.env.SUMUP_CLIENT_SECRET!,
         code,
         redirect_uri: callbackUrl,
-      }),
+      }).toString(),
     });
 
     if (!tokenResponse.ok) {

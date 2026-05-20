@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Users, BarChart3, Shield, Clock, Globe, Se
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation PME – Gérez Toute Votre Facturation',
   description: 'Logiciel de facturation pour PME et TPE : multi-utilisateurs, CRM intégré, export comptable, Factur-X 2026. Gérez votre équipe et vos clients en un seul outil.',
-  keywords: [
-    'logiciel facturation PME',
-    'facturation TPE',
-    'logiciel facturation entreprise',
-    'facturation multi-utilisateurs',
-    'logiciel facture PME',
-    'CRM facturation',
-    'facturation équipe',
-    'export comptable facturation',
-    'Factur-X PME',
-    'logiciel facturation collaborative',
-    'facturation B2B',
-    'gestion factures entreprise',
-  ],
   openGraph: {
     title: 'Logiciel de Facturation PME – Gérez Toute Votre Facturation',
     description: 'Logiciel de facturation PME : multi-utilisateurs, CRM, export comptable, Factur-X. Tout pour gérer la facturation de votre entreprise.',

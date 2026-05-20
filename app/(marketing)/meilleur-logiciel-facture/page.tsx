@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Trophy, BarChart3, Star, Sparkles, Users, 
 export const metadata: Metadata = {
   title: 'Meilleur Logiciel de Facture 2025 – Comparatif & Avis | Factu.me',
   description: 'Comparatif des meilleurs logiciels de facture 2025. Tarifs, fonctionnalités, avis. Découvrez pourquoi Factu.me est le choix n°1 des freelances et auto-entrepreneurs.',
-  keywords: [
-    'meilleur logiciel facture',
-    'meilleur logiciel facturation',
-    'comparatif logiciel facture 2025',
-    'avis logiciel facture',
-    'meilleur logiciel facture freelance',
-    'logiciel facture comparatif',
-    'quel logiciel facture choisir',
-    'top logiciel facturation 2025',
-    'meilleur logiciel facture auto entrepreneur',
-    'classement logiciel facture',
-  ],
   openGraph: {
     title: 'Meilleur Logiciel de Facture 2025 – Comparatif & Avis',
     description: 'Comparatif complet des logiciels de facture. Tarifs, features, pourquoi Factu.me arrive en tête.',

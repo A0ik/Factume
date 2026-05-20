@@ -17,20 +17,6 @@ const faqs = getFAQsForPage('facturation-auto-entrepreneur');
 export const metadata: Metadata = {
   title,
   description,
-  keywords: [
-    'facturation auto-entrepreneur',
-    'logiciel facturation micro-entrepreneur',
-    'facture auto-entrepreneur gratuit',
-    'facturation micro-entreprise',
-    'logiciel facture auto-entrepreneur',
-    'facture URSSAF',
-    'facturation sans TVA',
-    'auto-entrepreneur facture en ligne',
-    'outil facturation auto-entrepreneur',
-    'facturation vocale auto-entrepreneur',
-    'micro-entrepreneur facture gratuite',
-    'créer facture auto-entrepreneur',
-  ],
   openGraph: {
     title,
     description,
@@ -47,20 +33,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://factu.me/facturation-auto-entrepreneur',
-  },
-  other: {
-    'application/ld+json': JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: faqs.map((faq) => ({
-        '@type': 'Question',
-        name: faq.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: faq.answer,
-        },
-      })),
-    }),
   },
 };
 
@@ -163,6 +135,44 @@ const useCases = [
 export default function AutoEntrepreneurPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Breadcrumb + FAQ Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                  { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://factu.me' },
+                  { '@type': 'ListItem', position: 2, name: 'Facturation Auto-Entrepreneur', item: 'https://factu.me/facturation-auto-entrepreneur' },
+                ],
+              },
+              ...(faqs.length > 0
+                ? [{
+                    '@type': 'FAQPage',
+                    mainEntity: faqs.map((faq) => ({
+                      '@type': 'Question',
+                      name: faq.question,
+                      acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+                    })),
+                  }]
+                : []),
+            ],
+          }),
+        }}
+      />
+
+      {/* Breadcrumb nav */}
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6" aria-label="Fil d'Ariane">
+        <ol className="flex items-center gap-2 text-sm text-gray-500">
+          <li><Link href="/" className="hover:text-emerald-600 transition-colors">Accueil</Link></li>
+          <li>/</li>
+          <li className="text-gray-900 font-medium">Facturation Auto-Entrepreneur</li>
+        </ol>
+      </nav>
+
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-green-50" />
@@ -240,7 +250,7 @@ export default function AutoEntrepreneurPage() {
       <section className="py-16 sm:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-16">
-            Tout ce qu\'un auto-entrepreneur besoin
+            Tout ce dont un auto-entrepreneur a besoin
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, i) => (

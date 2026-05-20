@@ -2,7 +2,7 @@
   "name": "Factu.me – Facturation intelligente",
   "short_name": "Factu.me",
   "description": "Créez des factures, devis et avoirs en quelques secondes",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1D9E75",

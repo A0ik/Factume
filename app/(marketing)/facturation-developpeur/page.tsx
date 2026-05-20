@@ -8,18 +8,6 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 export const metadata: Metadata = {
   title: 'Facturation Développeur – Pour les Pros du Code | Factu.me',
   description: 'Logiciel de facturation pour développeurs web et mobile : facturation au forfait ou au temps passé, multi-devise, clients internationaux. Essai gratuit.',
-  keywords: [
-    'facturation développeur',
-    'logiciel facturation dev',
-    'facture développeur web',
-    'facturation freelance dev',
-    'facture multi-devise',
-    'facturation développeur mobile',
-    'logiciel facturation informaticien',
-    'facture prestation informatique',
-    'facturation TJM développeur',
-    'devis projet informatique',
-  ],
   openGraph: {
     title: 'Facturation Développeur – Pour les Pros du Code',
     description: 'Facturation au TJM ou au forfait, multi-devise, clients internationaux. Le logiciel de facturation pensé pour les devs.',

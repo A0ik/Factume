@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Rocket, Bot, FileDown, Mail, CreditCard, L
 export const metadata: Metadata = {
   title: 'Créer une Facture – En 30 Secondes avec l\'IA',
   description: 'Créez une facture professionnelle en 30 secondes : l\'IA remplit automatiquement les champs, génère le PDF et l\'envoie par email. Suivi de paiement inclus.',
-  keywords: [
-    'creer facture',
-    'creer une facture',
-    'creer facture en ligne',
-    'creer facture gratuite',
-    'creer facture rapidement',
-    'creer facture ia',
-    'faire une facture',
-    'creer facture pdf',
-    'creer facture auto entrepreneur',
-    'creer facture freelance',
-    'comment creer une facture',
-    'creer facture professionnelle',
-  ],
   openGraph: {
     title: 'Créer une Facture – En 30 Secondes avec l\'IA',
     description: 'L\'IA remplit les champs, génère le PDF et envoie par email. Suivi de paiement inclus.',

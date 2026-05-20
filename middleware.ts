@@ -93,7 +93,10 @@ export async function middleware(req: NextRequest) {
   // Expose nonce so layout can read it via headers()
   res.headers.set('x-nonce', nonce);
 
-  // Rate limiting
+  // Rate limiting — exempt known search crawlers
+  const userAgent = req.headers.get('user-agent') || '';
+  const isCrawler = /googlebot|bingbot|yandexbot|duckduckbot|slurp|baiduspider|facebot|ia_archiver|mj12bot|ahrefsbot|semrushbot/i.test(userAgent);
+
   const ip = getClientIp(req);
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
@@ -103,6 +106,7 @@ export async function middleware(req: NextRequest) {
   if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
   if (isAuthRoute) { rlLimit = 5; rlWindow = 3_600_000; }
   if (pathname === '/api/stripe/trial-subscription') { rlLimit = 3; rlWindow = 86_400_000; }
+  if (isCrawler) { rlLimit = 5000; rlWindow = 60_000; }
 
   const rl = rateLimit({ key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`, limit: rlLimit, windowMs: rlWindow });
   if (!rl.success) {

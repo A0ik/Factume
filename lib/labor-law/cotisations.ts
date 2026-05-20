@@ -61,13 +61,13 @@ export interface CotisationResult {
 const TAUX_2026 = {
   patronales: {
     maladie: 13.00, // Maladie-Maternité-Invalidité-Décès
-    vieillesse: 10.55, // Vieillesse plafonnée (8.55%) + déplafonnée (2.00%)
-    allocations_familiales_reduit: 3.45, // AF taux réduit (salaire ≤ 3.5 SMIC)
-    allocations_familiales_plein: 5.25, // AF taux plein (salaire > 3.5 SMIC)
+    vieillesse: 10.66, // Vieillesse plafonnée (8.55%) + déplafonnée (2.11%) — revalorisée 2026
+    allocations_familiales_reduit: 3.45, // AF taux réduit — uniquement LODEOM/ZFRR (régimes dérogatoires)
+    allocations_familiales_plein: 5.25, // AF taux plein — régime général unique depuis fusion RGDU 2026
     accident_du_travail: 0.70, // Taux moyen (variable selon risque, 0.4% à 3.2%)
     solidarite_autonomie: 0.30,
-    fnal: 0.10, // Fond National d'Aide au Logement (< 50 salariés) ou 0.50% (≥ 50)
-    chomage: 4.05, // Assurance chômage (taux 2025-2026)
+    fnal: 0.10, // FNAL (< 50 salariés, base plafonnée PASS) ou 0.50% (≥ 50, base déplafonnée)
+    chomage: 4.00, // Assurance chômage (taux 2026, en baisse)
     // AGIRC-ARRCO taux appelés (taux contractuels × 127%) — Source : AGIRC-ARRCO 2026
     agirc_arrco_t1: 4.72, // Tranche 1 patronal (tous salariés, jusqu'au PASS)
     agirc_arrco_t2: 12.95, // Tranche 2 patronal (cadres, entre 1x et 8x PASS)
@@ -78,7 +78,7 @@ const TAUX_2026 = {
     cet: 0.21, // CET patronal
     // APEC — cadres uniquement
     apec: 0.036,
-    ags: 0.15,
+    ags: 0.25, // AGS (FNGS) 2026 — revalorisé
     formation: 0.55,
     prevoyance: 1.50, // Prévoyance obligatoire pour cadres
     supplementaire_sante: 0.60,
@@ -86,7 +86,7 @@ const TAUX_2026 = {
   },
   salariales: {
     maladie: 0.00, // Supprimée depuis 1998
-    vieillesse: 6.93, // Vieillesse plafonnée
+    vieillesse: 6.90, // Vieillesse plafonnée (taux 2026)
     vieillesse_deplafonnee: 0.40,
     // AGIRC-ARRCO taux appelés
     agirc_arrco_t1: 3.15, // Tranche 1 salarial (tous salariés)
@@ -127,12 +127,9 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   // Vieillesse (sur salaire brut, dans la limite du plafond)
   const vieillessePatronale = Math.min(salaireBrut, plafondMensuel) * (TAUX_2026.patronales.vieillesse / 100);
 
-  // Allocations familiales : taux réduit ≤ 3.5 SMIC, taux plein au-delà
-  const seuilAfPlein = SMIC_MENSUEL_2026 * 3.5;
-  const tauxAF = salaireBrut <= seuilAfPlein
-    ? TAUX_2026.patronales.allocations_familiales_reduit
-    : TAUX_2026.patronales.allocations_familiales_plein;
-  const allocationsFamiliales = salaireBrut * (tauxAF / 100);
+  // Allocations familiales : 5.25% taux unique depuis RGDU 2026
+  // (la réduction 3.45% est supprimée et compensée par le RGDU)
+  const allocationsFamiliales = salaireBrut * (TAUX_2026.patronales.allocations_familiales_plein / 100);
 
   // Accident du travail (taux personnalisé ou défaut)
   const tauxAT = tauxAccidentTravail ?? TAUX_2026.patronales.accident_du_travail;
@@ -141,8 +138,9 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   // Solidarité autonomie
   const solidariteAutonomie = salaireBrut * (TAUX_2026.patronales.solidarite_autonomie / 100);
 
-  // FNAL
-  const fnal = salaireBrut * (TAUX_2026.patronales.fnal / 100);
+  // FNAL (< 50 salariés : base plafonnée au PASS, ≥ 50 : base déplafonnée à 0.50%)
+  // Par défaut on applique le taux < 50 salariés (0.10%, base plafonnée PASS)
+  const fnal = Math.min(salaireBrut, plafondMensuel) * (TAUX_2026.patronales.fnal / 100);
 
   // Chômage (sur salaire brut, plafonné à 4x le plafond SS)
   const plafondChomage = 4 * plafondMensuel;
@@ -232,24 +230,33 @@ export function calculerCotisations(data: CotisationData): CotisationResult {
   // Coût employeur (avant réduction Fillon)
   const coutEmployerAvantReduction = salaireBrut + totalPatronal;
 
-  // === RÉDUCTION GÉNÉRALE (ex-Fillon) ===
-  const calculerReductionFillon = (salaireBrut: number, nombreSalaries: number = 1): { montant: number; coefficient: number } => {
-    if (salaireBrut >= SMIC_MENSUEL_2026 * 1.6) return { montant: 0, coefficient: 0 }; // Pas de réduction au-dessus de 1.6 SMIC
+  // === RÉDUCTION GÉNÉRALE DÉGRESSIVE UNIQUE (RGDU) — ex-Fillon, formule 2026 ===
+  // Référence : service-public.gouv.fr/F24542, décret n°2025-887
+  // Formule : C = Tmin + (Tdelta × [(1/2) × (3 × SMIC_annuel / R_annuel) - 1]^P)
+  const calculerRGDU = (salaireBrut: number, nombreSalaries: number = 1): { montant: number; coefficient: number } => {
+    const SMIC_ANNUEL = 21876.40; // SMIC annuel brut 2026 (12.02€ × 1820h)
+    const salaireAnnuel = salaireBrut * 12;
 
-    const smicMensuel = SMIC_MENSUEL_2026;
+    // Seuil d'éligibilité : rémunération < 3 × SMIC
+    if (salaireAnnuel >= 3 * SMIC_ANNUEL) return { montant: 0, coefficient: 0 };
 
-    // Taux maximum selon effectif
-    const tauxMax = nombreSalaries < 50 ? 0.3956 : 0.3996; // 39,56% ou 39,96% selon effectif
+    const Tmin = 0.0200;
+    // Tdelta selon le taux FNAL (0.10% si < 50 salariés, 0.50% si ≥ 50)
+    const Tdelta = nombreSalaries < 50 ? 0.3781 : 0.3821;
+    const P = 1.75;
 
-    // Formule officielle : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
-    const coefficientCalc = Math.max(0, (tauxMax / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
-    const coefficient = Math.min(coefficientCalc, tauxMax);
-    const reduction = salaireBrut * coefficient;
+    const inner = 0.5 * ((3 * SMIC_ANNUEL / salaireAnnuel) - 1);
+    const coefficientCalc = Tmin + Tdelta * Math.pow(Math.max(0, inner), P);
+    const coefficient = Math.min(coefficientCalc, Tmin + Tdelta); // Plafonné à Tmax
 
-    return { montant: reduction, coefficient };
+    // Arrondi à 4 décimales (au dix-millième le plus proche)
+    const coefficientArrondi = Math.round(coefficient * 10000) / 10000;
+    const reduction = salaireBrut * coefficientArrondi;
+
+    return { montant: reduction, coefficient: coefficientArrondi };
   };
 
-  const fillonResult = calculerReductionFillon(salaireBrut);
+  const fillonResult = calculerRGDU(salaireBrut);
   const reductionFillon = fillonResult.montant;
   const reductionFillonTaux = fillonResult.coefficient;
 
@@ -367,7 +374,7 @@ export const SMIC_2026 = {
   annuel: 21876.36, // €/an (1823.03 × 12)
 };
 
-// Fonction pour calculer la réduction Fillon séparément (2026)
+// Fonction pour calculer la RGDU séparément (2026)
 export function calculerReductionFillon(
   salaireBrut: number,
   nombreSalaries: number = 50,
@@ -378,31 +385,37 @@ export function calculerReductionFillon(
     return { montant: 0, coefficient: 0, details: 'Salaire nul ou négatif' };
   }
 
+  const SMIC_ANNUEL = 21876.40; // SMIC annuel brut 2026 (12.02€ × 1820h)
+  let smicAnnuel = SMIC_ANNUEL;
+
   // Ajustement du SMIC pour temps partiel
-  let smicMensuel = SMIC_2026.mensuel_35h;
   if (tempsPartiel) {
-    smicMensuel = smicMensuel * (heuresHebdo / 35);
+    smicAnnuel = smicAnnuel * (heuresHebdo / 35);
   }
 
-  // Éligible uniquement si salaire < 1.6 SMIC
-  if (salaireBrut >= smicMensuel * 1.6) {
-    return { montant: 0, coefficient: 0, details: 'Salaire ≥ 1.6 SMIC (non éligible)' };
+  const salaireAnnuel = salaireBrut * 12;
+
+  // Éligible uniquement si rémunération < 3 × SMIC
+  if (salaireAnnuel >= 3 * smicAnnuel) {
+    return { montant: 0, coefficient: 0, details: `Rémunération ≥ 3 SMIC (non éligible)` };
   }
 
-  // Taux maximum selon effectif
-  const tauxMax = nombreSalaries < 50 ? 0.3956 : 0.3996; // 39,56% ou 39,96%
+  const Tmin = 0.0200;
+  const Tdelta = nombreSalaries < 50 ? 0.3781 : 0.3821;
+  const P = 1.75;
 
-  // Formule officielle : Coefficient = (T/0,6) × [(1,6 × SMIC / salaire brut) - 1]
-  const ratio = salaireBrut / smicMensuel;
-  const coefficient = Math.max(0, (tauxMax / 0.6) * ((1.6 * smicMensuel / salaireBrut) - 1));
+  const inner = 0.5 * ((3 * smicAnnuel / salaireAnnuel) - 1);
+  const coefficientCalc = Tmin + Tdelta * Math.pow(Math.max(0, inner), P);
+  const coefficient = Math.min(coefficientCalc, Tmin + Tdelta);
+  const coefficientArrondi = Math.round(coefficient * 10000) / 10000;
 
-  // Montant de la réduction (plafonné au taux max)
-  const montant = salaireBrut * Math.min(coefficient, tauxMax);
+  const montant = salaireBrut * coefficientArrondi;
+  const ratio = salaireAnnuel / smicAnnuel;
 
   return {
     montant,
-    coefficient: Math.min(coefficient, tauxMax),
-    details: `Ratio: ${ratio.toFixed(3)} SMIC, Coefficient: ${Math.min(coefficient, tauxMax).toFixed(4)}, Taux max: ${(tauxMax * 100).toFixed(2)}%`
+    coefficient: coefficientArrondi,
+    details: `Ratio: ${ratio.toFixed(3)} SMIC, Coefficient RGDU: ${coefficientArrondi.toFixed(4)}, Taux max: ${((Tmin + Tdelta) * 100).toFixed(2)}%`
   };
 }
 
@@ -449,7 +462,7 @@ export function getCotisationsDisplay(result: CotisationResult) {
   // Ajouter la réduction Fillon si applicable
   if (result.patronales.reduction_fillon > 0) {
     patronales.push({
-      label: 'Réduction Fillon 2026',
+      label: 'Réduction RGDU 2026',
       value: result.patronales.reduction_fillon,
       taux: (result.patronales.reduction_fillon_taux * 100).toFixed(2) + '%'
     });

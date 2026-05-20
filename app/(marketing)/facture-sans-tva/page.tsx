@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Scale, ShieldCheck, Stamp, Receipt, FileCh
 export const metadata: Metadata = {
   title: 'Facture sans TVA – Auto-Entrepreneurs & Micro-Entreprises | Factu.me',
   description: 'Créez vos factures sans TVA conformément a l\'article 293 B du CGI. Mention "TVA non applicable" automatique. Ideal auto-entrepreneurs et micro-entreprises.',
-  keywords: [
-    'facture sans tva',
-    'facture ht auto entrepreneur',
-    'facture micro entreprise',
-    'article 293 b cgi',
-    'tva non applicable facture',
-    'facture sans tva auto entrepreneur',
-    'facture exoneration tva',
-    'facture ht seulement',
-    'mention tva non applicable',
-    'facture auto entrepreneur urssaf',
-    'facture micro entreprise sans tva',
-    'creer facture sans tva',
-  ],
   openGraph: {
     title: 'Facture sans TVA – Auto-Entrepreneurs & Micro-Entreprises',
     description: 'Factures HT conformes article 293 B CGI. Mention legale automatique. Pret pour declaration URSSAF.',

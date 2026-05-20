@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Bell, AlertTriangle, DollarSign, TrendingU
 export const metadata: Metadata = {
   title: 'Suivi de Paiement – Relancez Automatiquement vos Impayés | Factu.me',
   description: 'Suivez vos paiements et relancez automatiquement les impayés. Tableau de bord des échéances, alertes retard, relances email automatiques.',
-  keywords: [
-    'suivi paiement',
-    'suivi paiement facture',
-    'relance impaye automatique',
-    'suivi paiement freelance',
-    'tableau de bord paiement',
-    'alerte retard paiement',
-    'suivi encaissement',
-    'gestion impayes',
-    'relance facture automatique',
-    'suivi tresorerie',
-  ],
   openGraph: {
     title: 'Suivi de Paiement – Relancez Automatiquement vos Impayés',
     description: 'Ne perdez plus d\'argent. Alertes retard, relances auto, tableau de bord des paiements.',

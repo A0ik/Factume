@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Palette, Euro, Shield, Clock, PenTool, Lay
 export const metadata: Metadata = {
   title: 'Facturation Designer – Des Factures Aussi Belles Que Vos Créations | Factu.me',
   description: 'Logiciel de facturation pour designers UI/UX et graphistes : templates élégants, branding personnalisé, jalons de projet, factures d\'acompte. Essai gratuit.',
-  keywords: [
-    'facturation designer',
-    'logiciel facturation graphiste',
-    'facture designer UI UX',
-    'facturation freelance design',
-    'facture prestation graphique',
-    'devis projet design',
-    'logiciel facturation illustrateur',
-    'facture branding identité visuelle',
-    'facturation creative studio',
-    'devis prestation créative',
-  ],
   openGraph: {
     title: 'Facturation Designer – Créez des Factures Aussi Belles Que Vos Créations',
     description: 'Templates élégants, branding personnalisé, jalons de projet. La facturation pensée pour les créatifs.',

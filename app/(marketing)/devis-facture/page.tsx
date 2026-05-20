@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Repeat, Send, FileCheck, Clock, Eye, Arrow
 export const metadata: Metadata = {
   title: 'Devis et Facture – Créez, Envoyez, Convertissez | Factu.me',
   description: 'Gérez vos devis et factures dans un seul outil. Créez des devis pro, suivez leur acceptation, convertissez en facture en 1 clic. Essai gratuit.',
-  keywords: [
-    'devis et facture',
-    'logiciel devis facture',
-    'creer devis facture',
-    'devis facture en ligne',
-    'outil devis facture',
-    'conversion devis facture',
-    'devis facture gratuit',
-    'devis facture freelance',
-    'devis facture auto entrepreneur',
-    'logiciel devis facture en ligne',
-  ],
   openGraph: {
     title: 'Devis et Facture – Créez, Envoyez, Convertissez',
     description: 'Devis pro, suivi d\'acceptation, conversion en facture en 1 clic. Tout dans un seul outil.',

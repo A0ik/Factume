@@ -8,18 +8,6 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 export const metadata: Metadata = {
   title: 'Facturation BTP – Logiciel Adapté aux Entreprises du Bâtiment | Factu.me',
   description: 'Logiciel de facturation BTP : acomptes, factures de situation, taux de TVA spécifiques, garanties de rétention. Simplifiez la gestion financière de vos chantiers.',
-  keywords: [
-    'facturation BTP',
-    'logiciel facturation bâtiment',
-    'facture situation BTP',
-    'acompte chantier',
-    'facturation entreprise BTP',
-    'facture artisan bâtiment',
-    'logiciel facturation chantier',
-    'retention garantie BTP',
-    'TVA BTP facturation',
-    'devis chantier bâtiment',
-  ],
   openGraph: {
     title: 'Facturation BTP – Le Logiciel Adapté aux Entreprises du Bâtiment',
     description: 'Acomptes, factures de situation, TVA spécifiques BTP. Gérez toute la facturation de vos chantiers.',

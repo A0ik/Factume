@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Layout, Palette, Download, Eye, Type, Wand
 export const metadata: Metadata = {
   title: 'Modèle de Facture – Templates Professionnels Gratuit',
   description: 'Téléchargez des modèles de facture professionnels gratuits : classique, moderne, minimal. Personnalisez et exportez en PDF en quelques clics.',
-  keywords: [
-    'modele facture',
-    'modele facture gratuit',
-    'template facture',
-    'modele facture excel',
-    'modele facture word',
-    'modele facture pdf',
-    'modele facture professionnel',
-    'template facture gratuit',
-    'modele facture auto entrepreneur',
-    'modele facture freelance',
-    'facture vierge a remplir',
-    'exemple facture',
-  ],
   openGraph: {
     title: 'Modèle de Facture – Templates Professionnels Gratuit',
     description: 'Modèles de facture gratuits : classique, moderne, minimal. Personnalisez et téléchargez en PDF.',

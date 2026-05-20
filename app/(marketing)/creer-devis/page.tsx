@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Timer, MessageSquare, Calculator, Download
 export const metadata: Metadata = {
   title: 'Créer un Devis – En Moins de 2 Minutes | Factu.me',
   description: 'Créez un devis professionnel en moins de 2 minutes. IA assistée, calculs automatiques, PDF professionnel, envoi par email. Essai gratuit.',
-  keywords: [
-    'creer devis',
-    'creer un devis gratuit',
-    'creer devis en ligne',
-    'creer devis rapidement',
-    'faire un devis',
-    'creer devis professionnel',
-    'creer devis auto entrepreneur',
-    'creer devis freelance',
-    'devis rapide en ligne',
-    'creer devis pdf',
-  ],
   openGraph: {
     title: 'Créer un Devis – En Moins de 2 Minutes',
     description: 'IA assistée, calculs auto, PDF pro. Votre devis prêt en 120 secondes.',

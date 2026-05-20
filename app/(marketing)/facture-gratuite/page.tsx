@@ -5,21 +5,6 @@ import { CheckCircle2, FileText, Download, Mail, Shield, Star, ArrowRight } from
 export const metadata: Metadata = {
   title: 'Facture Gratuite en Ligne – Créez vos Factures PDF Gratuitement',
   description: 'Créez des factures professionnelles gratuites en PDF. Sans inscription, sans limite. Modèles conformes, TVA automatique, envoi par email. Essayez maintenant !',
-  keywords: [
-    'facture gratuite',
-    'facture gratuit',
-    'creer facture gratuite',
-    'facture en ligne gratuit',
-    'logiciel facture gratuit',
-    'facture pdf gratuit',
-    'modele facture gratuit',
-    'faire une facture gratuit',
-    'facture sans inscription',
-    'editeur facture gratuit',
-    'generateur facture gratuit',
-    'facture auto entrepreneur gratuit',
-    'facture freelance gratuit',
-  ],
   openGraph: {
     title: 'Facture Gratuite en Ligne – Créez vos Factures PDF Gratuitement',
     description: 'Créez des factures professionnelles gratuites en PDF. Sans inscription, sans limite.',

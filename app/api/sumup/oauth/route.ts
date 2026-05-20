@@ -7,7 +7,7 @@ const SUMUP_AUTH_URL = 'https://api.sumup.com/authorize';
 const SUMUP_TOKEN_URL = 'https://api.sumup.com/token';
 
 // Scopes needed for checkout creation
-const SCOPES = ['payments', 'user.profile_read'].join(' ');
+const SCOPES = ['payments', 'user.profile_readonly'].join(' ');
 
 export async function GET(req: NextRequest) {
   try {

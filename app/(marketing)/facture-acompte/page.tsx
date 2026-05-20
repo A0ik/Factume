@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Wallet, TrendingUp, FileSpreadsheet, Landm
 export const metadata: Metadata = {
   title: 'Facture d\'Acompte – Gerez Vos Paiements Partiels | Factu.me',
   description: 'Creez des factures d\'acompte professionnelles. Gerez les paiements partiels, les situations, la TVA sur acomptes. Mention "pour acompte" automatique.',
-  keywords: [
-    'facture acompte',
-    'facture d acompte',
-    'facture acompte auto entrepreneur',
-    'paiement partiel facture',
-    'facture situation acompte',
-    'facture pour acompte',
-    'tva sur acompte',
-    'facture acompte freelance',
-    'creer facture acompte',
-    'facture situation chantier',
-    'gestion acomptes',
-    'facture avancement',
-  ],
   openGraph: {
     title: 'Facture d\'Acompte – Gerez Vos Paiements Partiels',
     description: 'Factures d\'acompte conformes, TVA geree, suivi des paiements partiels. Securisez vos projets.',

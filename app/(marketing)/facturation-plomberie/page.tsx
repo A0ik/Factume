@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Droplets, Euro, Shield, Clock, Phone, Mess
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Plomberie – Simple & Mobile | Factu.me',
   description: 'Logiciel de facturation pour plombiers : interventions d\'urgence, pièces et main-d\'oeuvre, dictée vocale depuis le terrain. Facture en 30 secondes.',
-  keywords: [
-    'facturation plomberie',
-    'logiciel facturation plombier',
-    'facture plombier en ligne',
-    'devis plomberie gratuit',
-    'logiciel plombier chauffagiste',
-    'facture intervention plomberie',
-    'devis urgence plomberie',
-    'facturation artisan plombier',
-    'logiciel facture sanitaire',
-    'facturation dépannage plomberie',
-  ],
   openGraph: {
     title: 'Logiciel de Facturation Plomberie – Simple & Mobile',
     description: 'Facturez vos interventions d\'urgence depuis votre téléphone. Pièces + main-d\'oeuvre, dictée vocale, facture en 30 secondes.',

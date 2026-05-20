@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Flag, Shield, Lock, MapPin, Building, Scal
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Français – 100% Made in France | Factu.me',
   description: 'Logiciel de facture 100% français. Conforme RGPD, données hébergées en UE, conformité URSSAF et DGFiP, Factur-X 2026. Support en français.',
-  keywords: [
-    'logiciel facture francais',
-    'logiciel facturation francais',
-    'facture made in france',
-    'logiciel facture france',
-    'logiciel facture rgpd',
-    'facture conforme urssaf',
-    'facture conforme dgfip',
-    'logiciel facture hebergement europe',
-    'facturation francaise',
-    'logiciel facture conforme loi francaise',
-  ],
   openGraph: {
     title: 'Logiciel de Facture Français – 100% Made in France',
     description: 'Données en UE, conforme RGPD, URSSAF, DGFiP, Factur-X. Support 100% français.',

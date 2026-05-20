@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, PenTool, Palette, Mail, BarChart3, Clock, 
 export const metadata: Metadata = {
   title: 'Logiciel de Devis en Ligne – Professionnel & Rapide | Factu.me',
   description: 'Créez des devis professionnels en ligne. Templates personnalisables, signature électronique, suivi d\'acceptation, conversion en facture. Essai gratuit.',
-  keywords: [
-    'logiciel devis en ligne',
-    'creer devis en ligne',
-    'logiciel devis professionnel',
-    'devis en ligne gratuit',
-    'logiciel devis facture',
-    'outil devis',
-    'devis rapide',
-    'devis professionnel en ligne',
-    'logiciel devis freelance',
-    'logiciel devis auto entrepreneur',
-  ],
   openGraph: {
     title: 'Logiciel de Devis en Ligne – Professionnel & Rapide',
     description: 'Devis pro en 2 minutes. Templates, signature électronique, suivi, conversion facture.',

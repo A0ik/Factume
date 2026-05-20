@@ -8,18 +8,6 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Gratuit – Jusqu\'à 10 Factures par Mois | Factu.me',
   description: 'Logiciel de facture gratuit sans carte bancaire. Créez jusqu\'à 10 factures par mois, devis, suivi clients. Passez au pro quand vous êtes prêt.',
-  keywords: [
-    'logiciel facture gratuit',
-    'facture gratuite en ligne',
-    'logiciel facturation gratuit',
-    'facturation gratuite',
-    'creer facture gratuite',
-    'logiciel facture sans carte bancaire',
-    'facture gratuit auto entrepreneur',
-    'facture gratuit freelance',
-    'logiciel facture gratuit france',
-    'facturation gratuite illimitee',
-  ],
   openGraph: {
     title: 'Logiciel de Facture Gratuit – Jusqu\'à 10 Factures par Mois',
     description: 'Facturez gratuitement sans carte bancaire. 10 factures/mois, devis, suivi clients inclus.',

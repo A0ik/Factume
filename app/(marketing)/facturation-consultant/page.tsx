@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Briefcase, Clock, TrendingUp, FileSpreadsh
 export const metadata: Metadata = {
   title: 'Facturation Consultant – Facturez Vos Prestations en un Clic',
   description: 'Logiciel de facturation pour consultants : taux journaliers, gestion de missions, frais de déplacement, facturation par étapes. Essai gratuit.',
-  keywords: [
-    'facturation consultant',
-    'logiciel facturation consultant',
-    'facture consultant independant',
-    'facture taux journalier',
-    'facturation mission conseil',
-    'facture frais deplacement',
-    'facturation milestone',
-    'facture consulting',
-    'facture management conseil',
-    'facture consultant IT',
-    'logiciel facturation conseil',
-    'facture TJM',
-  ],
   openGraph: {
     title: 'Facturation Consultant – Facturez Vos Prestations en un Clic',
     description: 'Taux journaliers, missions, frais, facturation par étapes. Le logiciel fait pour les consultants.',

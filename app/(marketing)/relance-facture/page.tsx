@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Mail, Scale, Send, ShieldCheck, Clock, Ale
 export const metadata: Metadata = {
   title: 'Relance de Facture – Automatisez Vos Relances d\'Impayés | Factu.me',
   description: 'Automatisez vos relances de factures impayées. Séquences d\'emails, escalade juridique, récupération de paiement. Fini les impayés oubliés.',
-  keywords: [
-    'relance facture',
-    'relance facture automatique',
-    'relance impaye',
-    'email relance facture',
-    'mise en demeure',
-    'relance facture freelance',
-    'automatiser relance facture',
-    'relance paiement',
-    'recouvrement facture',
-    'relance facture gratuite',
-  ],
   openGraph: {
     title: 'Relance de Facture – Automatisez Vos Relances d\'Impayés',
     description: 'Séquences d\'emails auto, escalade juridique. Récupérez vos impayés sans effort.',

@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Globe, Languages, ArrowRightLeft, Banknote
 export const metadata: Metadata = {
   title: 'Facture en Anglais – Créez des Invoices pour Vos Clients Internationaux',
   description: 'Créez des factures bilingues français-anglais pour vos clients internationaux. Multi-devises (EUR, USD, GBP), modèles professionnels. Essai gratuit.',
-  keywords: [
-    'facture en anglais',
-    'invoice en français',
-    'facture bilingue',
-    'facture client international',
-    'facture multi devise',
-    'facture en dollars',
-    'facture en livres',
-    'invoice template français',
-    'facture export',
-    'facture devises étrangères',
-    'facture anglais français',
-    'créer invoice',
-  ],
   openGraph: {
     title: 'Facture en Anglais – Créez des Invoices pour Vos Clients Internationaux',
     description: 'Factures bilingues, multi-devises, modèles professionnels. Conquérez le marché international.',

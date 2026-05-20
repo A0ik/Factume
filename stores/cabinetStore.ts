@@ -83,6 +83,8 @@ interface CabinetSocialTracking {
 
 interface CabinetState {
   cabinet: Cabinet | null;
+  cabinets: Cabinet[];
+  activeCabinetId: string | null;
   members: CabinetMember[];
   clients: CabinetClient[];
   invoices: CabinetInvoice[];
@@ -93,9 +95,12 @@ interface CabinetState {
   socialTracking: CabinetSocialTracking[];
   loading: boolean;
 
+  fetchCabinets: () => Promise<void>;
   fetchCabinet: () => Promise<void>;
-  createCabinet: (name: string, siret?: string) => Promise<void>;
+  createCabinet: (name: string, siret?: string) => Promise<Cabinet | null>;
   updateCabinet: (data: Partial<Cabinet>) => Promise<void>;
+  switchCabinet: (cabinetId: string) => Promise<void>;
+  deleteCabinet: (cabinetId: string) => Promise<void>;
   inviteClient: (email: string) => Promise<void>;
   removeClient: (clientUserId: string) => Promise<void>;
   fetchClientData: (clientUserId: string) => Promise<any>;
@@ -118,8 +123,14 @@ async function getAuthHeaders(): Promise<Record<string, string> | null> {
   };
 }
 
+const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';
+
 export const useCabinetStore = create<CabinetState>((set, get) => ({
   cabinet: null,
+  cabinets: [],
+  activeCabinetId: typeof window !== 'undefined'
+    ? localStorage.getItem(ACTIVE_CABINET_KEY)
+    : null,
   members: [],
   clients: [],
   invoices: [],
@@ -129,6 +140,29 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
   deadlines: [],
   socialTracking: [],
   loading: false,
+
+  fetchCabinets: async () => {
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+
+    try {
+      const res = await fetch('/api/cabinet/list', { headers });
+      if (res.ok) {
+        const { cabinets } = await res.json();
+        set({ cabinets: cabinets || [] });
+
+        // If no active cabinet is set, pick the first one
+        const currentActive = get().activeCabinetId;
+        if (!currentActive && cabinets?.length > 0) {
+          const firstId = cabinets[0].id;
+          localStorage.setItem(ACTIVE_CABINET_KEY, firstId);
+          set({ activeCabinetId: firstId });
+        }
+      }
+    } catch {
+      // Silently fail — cabinets list is non-critical
+    }
+  },
 
   fetchCabinet: async () => {
     const headers = await getAuthHeaders();
@@ -148,7 +182,7 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
 
   createCabinet: async (name, siret) => {
     const headers = await getAuthHeaders();
-    if (!headers) return;
+    if (!headers) return null;
 
     set({ loading: true });
     try {
@@ -160,9 +194,63 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       if (res.ok) {
         const { cabinet } = await res.json();
         set({ cabinet });
+
+        // Auto-switch to newly created cabinet and refresh the list
+        if (cabinet?.id) {
+          localStorage.setItem(ACTIVE_CABINET_KEY, cabinet.id);
+          set({ activeCabinetId: cabinet.id });
+          await get().fetchCabinets();
+        }
+        return cabinet;
       }
+      return null;
     } finally {
       set({ loading: false });
+    }
+  },
+
+  switchCabinet: async (cabinetId) => {
+    localStorage.setItem(ACTIVE_CABINET_KEY, cabinetId);
+    set({ activeCabinetId: cabinetId });
+
+    // Refetch all data for the new cabinet
+    const { fetchCabinet, fetchInvoices, fetchEmployees, fetchMissions, fetchLegalActs, fetchDeadlines } = get();
+    await Promise.all([
+      fetchCabinet(),
+      fetchInvoices(),
+      fetchEmployees(),
+      fetchMissions(),
+      fetchLegalActs(),
+      fetchDeadlines(),
+    ]);
+  },
+
+  deleteCabinet: async (cabinetId) => {
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+
+    const res = await fetch('/api/cabinet/list', {
+      method: 'DELETE',
+      headers,
+      body: JSON.stringify({ cabinetId }),
+    });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      throw new Error(error || 'Erreur lors de la suppression du cabinet');
+    }
+
+    // Refresh the cabinets list
+    await get().fetchCabinets();
+
+    // If the deleted cabinet was active, switch to the first available
+    const { activeCabinetId, cabinets } = get();
+    if (activeCabinetId === cabinetId) {
+      if (cabinets.length > 0) {
+        await get().switchCabinet(cabinets[0].id);
+      } else {
+        localStorage.removeItem(ACTIVE_CABINET_KEY);
+        set({ activeCabinetId: null, cabinet: null, clients: [], invoices: [], employees: [], missions: [], legalActs: [], deadlines: [], socialTracking: [] });
+      }
     }
   },
 

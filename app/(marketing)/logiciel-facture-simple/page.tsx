@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, MousePointer, MessageSquare, Shield, Clock
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Simple – Pas de Prise de Tête | Factu.me',
   description: 'Logiciel de facture le plus simple du marché. Interface épurée, dictée vocale, zéro complexité. Créez vos factures en quelques clics.',
-  keywords: [
-    'logiciel facture simple',
-    'facture simple en ligne',
-    'logiciel facturation simple',
-    'facture facile',
-    'creer facture facilement',
-    'logiciel facture sans prise de tete',
-    'facture en ligne simple',
-    'outil facturation simple',
-    'facture rapide',
-    'logiciel facture intuitif',
-  ],
   openGraph: {
     title: 'Logiciel de Facture Simple – Pas de Prise de Tête',
     description: 'L\'interface la plus simple pour vos factures. Dictée vocale, 3 clics, c\'est envoyé.',

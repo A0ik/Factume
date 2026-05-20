@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, ArrowRight, Mic, FileCheck, PenTool, Spark
 export const metadata: Metadata = {
   title: 'Alternative Henrri – Pourquoi Choisir Factu.me | Comparatif',
   description: 'Factu.me vs Henrri : comparatif détaillé. Dictée vocale IA, Factur-X, signatures électroniques, prix plus bas. Migration facile depuis Henrri.',
-  keywords: [
-    'alternative henrri',
-    'factume vs henrri',
-    'logiciel comme henrri',
-    'meilleur que henrri',
-    'henrri alternative gratuite',
-    'comparatif henrri factume',
-    'quitter henrri',
-    'migration henrri',
-    'logiciel facture henrri',
-    'concurrent henrri',
-  ],
   openGraph: {
     title: 'Alternative Henrri – Pourquoi Choisir Factu.me',
     description: 'IA vocale, Factur-X, signatures, prix. Découvrez pourquoi les utilisateurs Henrri migrent vers Factu.me.',

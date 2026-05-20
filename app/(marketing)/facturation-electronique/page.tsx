@@ -5,20 +5,6 @@ import { CheckCircle2, Zap, FileText, Shield, FileCheck, Scale, AlertTriangle, B
 export const metadata: Metadata = {
   title: 'Facturation Électronique – Conforme à la Réforme 2026 | Factu.me',
   description: 'Préparez-vous à la facturation électronique obligatoire 2026. Conforme Factur-X, EN 16931, PDP. Logiciel e-invoicing pour entreprises françaises.',
-  keywords: [
-    'facturation électronique',
-    'facture électronique 2026',
-    'réforme facturation électronique',
-    'e-invoicing France',
-    'Factur-X',
-    'EN 16931',
-    'PDP facturation',
-    'portail dématérialisation',
-    'facture électronique B2B',
-    'conformité facture électronique',
-    'obligation facture électronique',
-    'logiciel e-invoicing',
-  ],
   openGraph: {
     title: 'Facturation Électronique – Conforme à la Réforme 2026',
     description: 'Logiciel de facturation électronique conforme à la réforme 2026. Factur-X, EN 16931, PDP intégrés.',

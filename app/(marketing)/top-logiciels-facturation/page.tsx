@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Award, ListOrdered, Crown, Medal, Target, 
 export const metadata: Metadata = {
   title: 'Top Logiciels de Facturation – Classement 2025 | Factu.me',
   description: 'Le classement des meilleurs logiciels de facturation 2025. Top 5 comparé avec tarifs, fonctionnalités et avis. Factu.me n°1 pour les indépendants.',
-  keywords: [
-    'top logiciels facturation',
-    'meilleurs logiciels facture 2025',
-    'classement logiciel facturation',
-    'top 5 logiciel facture',
-    'comparatif logiciel facturation france',
-    'meilleur logiciel facturation independant',
-    'logiciel facturation top',
-    'classement facturation en ligne',
-    'selection logiciel facture',
-    'guide logiciel facturation 2025',
-  ],
   openGraph: {
     title: 'Top Logiciels de Facturation – Classement 2025',
     description: 'Le top 5 des logiciels de facturation français comparés. Tarifs, features, notre verdict.',

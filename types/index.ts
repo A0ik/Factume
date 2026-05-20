@@ -444,6 +444,18 @@ export interface Cabinet {
   white_label_name?: string;
   hide_factu_branding?: boolean;
   custom_domain?: string;
+  address?: string;
+  zip_code?: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+  vat_number?: string;
+  ape_code?: string;
+  urssaf_number?: string;
+  ccn_id?: string;
+  effectif?: number;
+  slug?: string;
+  clientCount?: number;
 }
 
 export interface CabinetMember {

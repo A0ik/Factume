@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Building, Euro, Shield, Clock, MapPin, Har
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Construction – Gérez Vos Chantiers | Factu.me',
   description: 'Logiciel de facturation pour entreprises de construction : factures d\'avancement, situations de travaux, retenues de garantie, multi-chantiers. Essai gratuit.',
-  keywords: [
-    'facturation construction',
-    'logiciel facturation chantier',
-    'facture avancement construction',
-    'facture situation travaux',
-    'devis construction en ligne',
-    'logiciel entreprise construction',
-    'retenue garantie construction',
-    'facturation multi-chantiers',
-    'gestion financière chantier',
-    'facturation promoteur immobilier',
-  ],
   openGraph: {
     title: 'Logiciel de Facturation Construction – Gérez Vos Chantiers',
     description: 'Factures d\'avancement, situations de travaux, retenues de garantie. Le logiciel de facturation pour les entreprises de construction.',

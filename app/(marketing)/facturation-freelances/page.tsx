@@ -8,20 +8,6 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
   description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois. Factur-X 2026 prêt.',
-  keywords: [
-    'logiciel facturation freelance',
-    'facturation freelance',
-    'logiciel facture freelance',
-    'logiciel facturation freelance gratuit',
-    'facture freelance en ligne',
-    'application facturation freelance',
-    'facturation consultant',
-    'facturation developpeur',
-    'facturation designer',
-    'facturation auto-entrepreneur',
-    'facturation independant',
-    'facturation vocale freelance',
-  ],
   openGraph: {
     title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
     description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois.',

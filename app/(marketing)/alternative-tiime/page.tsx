@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, ArrowRight, Brain, Users, Handshake, FileS
 export const metadata: Metadata = {
   title: 'Alternative Tiime – La Facturation Intelligente | Factu.me',
   description: 'Factu.me vs Tiime : comparatif complet. Dictée vocale IA, contrats, CRM, prix inférieur. Découvrez pourquoi choisir Factu.me plutôt que Tiime.',
-  keywords: [
-    'alternative tiime',
-    'factume vs tiime',
-    'logiciel comme tiime',
-    'meilleur que tiime',
-    'tiime alternative facturation',
-    'comparatif tiime factume',
-    'quitter tiime',
-    'migration tiime',
-    'concurrent tiime',
-    'logiciel facture tiime',
-  ],
   openGraph: {
     title: 'Alternative Tiime – La Facturation Intelligente',
     description: 'IA vocale, contrats, CRM, prix imbattable. Pourquoi les utilisateurs Tiime passent à Factu.me.',

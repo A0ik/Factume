@@ -6,6 +6,7 @@ import {
   Search, ChevronRight, Crown, Settings, UserPlus, RefreshCw,
   CheckCircle2, Clock, XCircle, Building2, Euro, Users, Landmark,
   FileText, Calendar, Bell, Briefcase, Download, Activity as ActivityIcon,
+  Heart, ClipboardList, FileBadge, Receipt, UsersRound,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -56,14 +57,20 @@ function HealthDot({ health }: { health: string }) {
 const NAV_ITEMS = [
   { href: '/cabinet', label: 'Dashboard', icon: Building2 },
   { href: '/cabinet/clients', label: 'Clients', icon: Users },
+  { href: '/cabinet/salaries', label: 'Salariés', icon: UsersRound },
+  { href: '/cabinet/contrats', label: 'Contrats', icon: ClipboardList },
+  { href: '/cabinet/paie', label: 'Paie', icon: Receipt },
+  { href: '/cabinet/dpae', label: 'DPAE', icon: FileBadge },
+  { href: '/cabinet/dsn', label: 'DSN', icon: Shield },
   { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
   { href: '/cabinet/facturation', label: 'Facturation', icon: FileText },
   { href: '/cabinet/relances', label: 'Relances', icon: Bell },
   { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
   { href: '/cabinet/missions', label: 'Missions', icon: Briefcase },
-  { href: '/cabinet/echeances', label: 'Echeances', icon: Calendar },
+  { href: '/cabinet/echeances', label: 'Échéances', icon: Calendar },
+  { href: '/cabinet/social', label: 'Social', icon: Heart },
   { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
-  { href: '/cabinet/settings', label: 'Parametres', icon: Settings },
+  { href: '/cabinet/settings', label: 'Paramètres', icon: Settings },
 ];
 
 export default function CabinetPage() {

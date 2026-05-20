@@ -8,20 +8,6 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
   description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois. Factur-X 2026 prêt.',
-  keywords: [
-    'logiciel facturation artisan',
-    'facturation artisan',
-    'logiciel facture artisan',
-    'facturation btp',
-    'facturation menuisier',
-    'facturation plomberie',
-    'facturation electricien',
-    'facturation construction',
-    'logiciel facturation artisan gratuit',
-    'facture artisan en ligne',
-    'application facturation artisan',
-    'facturation vocale artisan',
-  ],
   openGraph: {
     title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
     description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois.',

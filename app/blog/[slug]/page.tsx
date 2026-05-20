@@ -28,10 +28,10 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
   const post = getBlogPost(slug);
   if (!post) return {};
 
-  const ogImage = post.image || '/og-default.jpg';
+  const ogImage = post.image || '/api/og?title=Blog%20Factu.me&theme=blue';
 
   return {
-    title: `${post.title} | Blog Factu.me`,
+    title: `${post.title} | Factu.me`,
     description: post.description,
     alternates: {
       canonical: `https://factu.me/blog/${post.slug}`,
@@ -56,6 +56,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
+      images: [ogImage],
     },
   };
 }
@@ -112,8 +113,18 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               headline: post.title,
               description: post.description,
               datePublished: post.date,
+              dateModified: post.date,
+              image: post.image || 'https://factu.me/api/og?title=Blog%20Factu.me&theme=blue',
               author: { '@type': 'Person', name: post.author },
-              publisher: { '@type': 'Organization', name: 'Factu.me', url: 'https://factu.me' },
+              publisher: {
+                '@type': 'Organization',
+                name: 'Factu.me',
+                url: 'https://factu.me',
+                logo: {
+                  '@type': 'ImageObject',
+                  url: 'https://factu.me/logo-xl.png',
+                },
+              },
               mainEntityOfPage: `https://factu.me/blog/${post.slug}`,
             }),
           }}
@@ -241,8 +252,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               Simplifiez votre facturation avec Factu.me
             </h3>
             <p className="text-white/90 max-w-lg mx-auto mb-6">
-              Creation de factures par dictee vocale, relances automatisees, conformite
-              legale. Testez gratuitement pendant 4 jours.
+              Création de factures par dictée vocale, relances automatisées, conformité
+              légale. Testez gratuitement pendant 4 jours.
             </p>
             <Link
               href="/register?plan=solo&trial=4"
@@ -281,7 +292,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </span>
           </Link>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {new Date().getFullYear()} Factu.me – Tous droits reserves.
+            {new Date().getFullYear()} Factu.me – Tous droits réservés.
           </p>
         </div>
       </footer>

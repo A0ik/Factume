@@ -5,22 +5,6 @@ import { Building2, Users, BarChart3, FileText, Shield, Clock, CheckCircle2, Tre
 export const metadata: Metadata = {
   title: 'Logiciel Cabinet Comptable – Gerez Tous Vos Clients | Factu.me',
   description: 'Logiciel tout-en-un pour cabinets d\'expertise comptable : tableau de bord multi-clients, relances automatiques, rapprochement bancaire, echeances fiscales, lettres de mission. Essai gratuit 7 jours.',
-  keywords: [
-    'logiciel cabinet comptable',
-    'logiciel expert comptable',
-    'cabinet comptable en ligne',
-    'gestion cabinet comptable',
-    'logiciel comptable cabinet',
-    'relances automatiques cabinet',
-    'rapprochement bancaire cabinet',
-    'tableau de bord multi clients',
-    'lettres de mission',
-    'echeances fiscales cabinet',
-    'logiciel facturation cabinet',
-    'cabinet expert comptable logiciel',
-    'gestion portefeuille clients comptable',
-    'outil cabinet comptable',
-  ],
   openGraph: {
     title: 'Logiciel Cabinet Comptable – Gerez Tous Vos Clients | Factu.me',
     description: 'Le logiciel tout-en-un pour cabinets d\'expertise comptable. Tableau de bord multi-clients, relances, rapprochement, echeances fiscales.',

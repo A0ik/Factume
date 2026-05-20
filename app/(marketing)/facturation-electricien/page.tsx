@@ -5,18 +5,6 @@ import { CheckCircle2, Zap, FileText, Plug, Euro, Shield, Clock, Car, MessageSqu
 export const metadata: Metadata = {
   title: 'Facturation Électricien – Votre Logiciel de Facturation Mobile | Factu.me',
   description: 'Logiciel de facturation pour électriciens : rapports d\'intervention, tarifs matériaux, taux horaires, frais de déplacement. Facturez depuis votre smartphone.',
-  keywords: [
-    'facturation électricien',
-    'logiciel facturation electricien',
-    'facture electricien en ligne',
-    'devis installation électrique',
-    'logiciel artisan électricien',
-    'facture intervention électrique',
-    'devis mise aux normes',
-    'facturation dépannage électrique',
-    'rapport intervention électricien',
-    'logiciel auto-entrepreneur electricien',
-  ],
   openGraph: {
     title: 'Facturation Électricien – Votre Logiciel de Facturation Mobile',
     description: 'Rapports d\'intervention, tarifs matériaux, taux horaires, frais de déplacement. Le logiciel mobile pour électriciens.',
