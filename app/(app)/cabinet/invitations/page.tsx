@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 export default function CabinetInvitationsPage() {
   const { clients, fetchCabinet, inviteClient, removeClient, loading } = useCabinetStore();
@@ -51,6 +52,7 @@ export default function CabinetInvitationsPage() {
   const active  = (clients as any[]).filter((c) => c.status === 'active');
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -182,5 +184,6 @@ export default function CabinetInvitationsPage() {
         </div>
       )}
     </motion.div>
+    </CabinetGuard>
   );
 }

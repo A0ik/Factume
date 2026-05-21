@@ -33,9 +33,10 @@ export async function GET(req: NextRequest) {
     // Generate state parameter for CSRF protection
     const state = crypto.randomUUID();
 
-    // Store state in cookie for verification in callback
-    const redirectUrl = new URL(req.url);
-    const callbackUrl = `${redirectUrl.protocol}//${redirectUrl.host}/api/sumup/oauth/callback`;
+    // Build callback URL using environment variable or forwarded headers
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      || `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('x-forwarded-host') || req.headers.get('host')}`;
+    const callbackUrl = `${baseUrl}/api/sumup/oauth/callback`;
 
     const authUrl = new URL(SUMUP_AUTH_URL);
     authUrl.searchParams.set('client_id', process.env.SUMUP_CLIENT_ID!);

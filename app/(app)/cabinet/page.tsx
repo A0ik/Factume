@@ -1,15 +1,13 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
   Search, ChevronRight, Crown, Settings, UserPlus, RefreshCw,
-  CheckCircle2, Clock, XCircle, Building2, Euro, Users, Landmark,
-  FileText, Calendar, Bell, Briefcase, Download, Activity as ActivityIcon,
-  Heart, ClipboardList, FileBadge, Receipt, UsersRound,
+  CheckCircle2, Clock, XCircle, Building2, Euro, Users,
+  Bell, Download, AlertCircle, CalendarClock, FileWarning,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, downloadCSV } from '@/lib/utils';
@@ -43,6 +41,25 @@ interface CabinetData {
   activeClients: number;
   stats: { totalRevenue: number; totalExpenses: number; totalOverdue: number };
   clientStats: ClientStat[];
+  alerts?: {
+    id: string;
+    type: 'overdue' | 'warning' | 'deadline' | 'dsn';
+    severity: 'critical' | 'warning' | 'info';
+    title: string;
+    description: string;
+    clientName?: string;
+    amount?: number;
+    daysOverdue?: number;
+    href?: string;
+  }[];
+  upcomingDeadlines?: {
+    id: string;
+    date: string;
+    label: string;
+    type: string;
+    description: string;
+    daysUntil: number;
+  }[];
 }
 
 function HealthDot({ health }: { health: string }) {
@@ -54,29 +71,11 @@ function HealthDot({ health }: { health: string }) {
   );
 }
 
-const NAV_ITEMS = [
-  { href: '/cabinet', label: 'Dashboard', icon: Building2 },
-  { href: '/cabinet/clients', label: 'Clients', icon: Users },
-  { href: '/cabinet/salaries', label: 'Salariés', icon: UsersRound },
-  { href: '/cabinet/contrats', label: 'Contrats', icon: ClipboardList },
-  { href: '/cabinet/paie', label: 'Paie', icon: Receipt },
-  { href: '/cabinet/dpae', label: 'DPAE', icon: FileBadge },
-  { href: '/cabinet/dsn', label: 'DSN', icon: Shield },
-  { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
-  { href: '/cabinet/facturation', label: 'Facturation', icon: FileText },
-  { href: '/cabinet/relances', label: 'Relances', icon: Bell },
-  { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
-  { href: '/cabinet/missions', label: 'Missions', icon: Briefcase },
-  { href: '/cabinet/echeances', label: 'Échéances', icon: Calendar },
-  { href: '/cabinet/social', label: 'Social', icon: Heart },
-  { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
-  { href: '/cabinet/settings', label: 'Paramètres', icon: Settings },
-];
+// Navigation moved to cabinet/layout.tsx sidebar
 
 export default function CabinetPage() {
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const sub = useSubscription();
-  const pathname = usePathname();
   const [data, setData] = useState<CabinetData | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -85,7 +84,7 @@ export default function CabinetPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'revenue' | 'health'>('name');
 
-  useEffect(() => { if (profile) loadDashboard(); }, [profile]);
+  useEffect(() => { if (initialized && profile) loadDashboard(); }, [initialized, profile]);
 
   const loadDashboard = async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
@@ -320,28 +319,9 @@ export default function CabinetPage() {
         </div>
       </div>
 
-      {/* Cabinet Navigation - Full */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-        {NAV_ITEMS.map(({ href, label, icon: NavIcon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 border border-transparent',
-              pathname === href
-                ? ''
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
-            )}
-            style={pathname === href ? { backgroundColor: `${primaryColor}18`, color: primaryColor, borderColor: `${primaryColor}40` } : undefined}
-          >
-            <NavIcon size={13} />
-            {label}
-          </Link>
-        ))}
-      </div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
         {[
           {
             label: 'CA total des clients',
@@ -376,7 +356,7 @@ export default function CabinetPage() {
             text: (data.stats?.totalOverdue || 0) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400',
           },
         ].map(({ label, value, icon: Icon, color, bg, text }) => (
-          <div key={label} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
+          <div key={label} className={cn('p-3 lg:p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
             <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', color)}>
               <Icon size={16} className="text-white" />
             </div>
@@ -385,6 +365,80 @@ export default function CabinetPage() {
           </div>
         ))}
       </div>
+
+
+      {/* Alerts Panel */}
+      {data.alerts && data.alerts.length > 0 && (
+        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-white/5">
+            <AlertCircle size={15} className="text-amber-500" />
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Alertes ({data.alerts.length})</h3>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
+            {data.alerts.map((alert) => (
+              <Link
+                key={alert.id}
+                href={alert.href || '#'}
+                className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+              >
+                <div className={cn(
+                  'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
+                  alert.severity === 'critical' ? 'bg-red-100 dark:bg-red-900/30' :
+                  alert.severity === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30' :
+                  'bg-blue-100 dark:bg-blue-900/30'
+                )}>
+                  {alert.type === 'overdue' ? <FileWarning size={14} className={alert.severity === 'critical' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'} /> :
+                  alert.type === 'dsn' ? <Shield size={14} className="text-blue-600 dark:text-blue-400" /> :
+                  <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    'text-sm font-semibold truncate',
+                    alert.severity === 'critical' ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'
+                  )}>
+                    {alert.title}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{alert.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Fiscal Deadlines */}
+      {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 && (
+        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-white/5">
+            <CalendarClock size={15} className="text-blue-500" />
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Prochaines echeances fiscales</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 sm:gap-3 p-3 lg:p-4">
+            {data.upcomingDeadlines.slice(0, 8).map((dl) => (
+              <div key={dl.id} className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                dl.daysUntil < 0 ? 'bg-red-50 dark:bg-red-900/10' :
+                dl.daysUntil <= 3 ? 'bg-amber-50 dark:bg-amber-900/10' :
+                'bg-gray-50 dark:bg-white/[0.02]'
+              )}>
+                <div className={cn(
+                  'text-center flex-shrink-0',
+                  dl.daysUntil < 0 ? 'text-red-600 dark:text-red-400' :
+                  dl.daysUntil <= 3 ? 'text-amber-600 dark:text-amber-400' :
+                  'text-gray-500 dark:text-gray-400'
+                )}>
+                  <p className="text-lg font-black leading-none">{dl.daysUntil < 0 ? '!' : dl.daysUntil === 0 ? 'J' : dl.daysUntil}</p>
+                  <p className="text-[9px] font-semibold mt-0.5">{dl.daysUntil < 0 ? 'Depasse' : dl.daysUntil === 0 ? 'Ce jour' : 'jours'}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{dl.label}</p>
+                  <p className="text-[10px] text-gray-400">{new Date(dl.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Revenue Chart */}
       {chartData.length > 0 && (
@@ -525,9 +579,19 @@ export default function CabinetPage() {
                         <p className="text-sm font-bold text-red-500 dark:text-red-400">{formatCurrency(client.expenses)}</p>
                       </div>
                     </div>
+                    <div className="flex md:hidden items-center gap-3 text-right">
+                      <div>
+                        <p className="text-[10px] text-gray-400">CA</p>
+                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(client.revenue)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400">Dep.</p>
+                        <p className="text-xs font-bold text-red-500 dark:text-red-400">{formatCurrency(client.expenses)}</p>
+                      </div>
+                    </div>
 
                     <div className={cn(
-                      'hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold',
+                      'flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold sm:text-xs sm:px-3 sm:py-1.5',
                       client.health === 'good'
                         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                         : client.health === 'critical'

@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, downloadCSV } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   LineChart, Line, PieChart, Pie, Cell as RechartsCell, Legend,
@@ -276,6 +277,7 @@ export default function CabinetAnalyticsPage() {
   const maxClientRevenue = Math.max(...data.topClients.map(c => c.revenue), 1);
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -496,5 +498,6 @@ export default function CabinetAnalyticsPage() {
         </div>
       )}
     </motion.div>
+    </CabinetGuard>
   );
 }

@@ -9,6 +9,7 @@ import {
 import Link from 'next/link';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 type Tab = 'overview' | 'invoices' | 'expenses' | 'health';
 
@@ -157,6 +158,7 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
   );
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* Header */}
@@ -442,5 +444,6 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </motion.div>
+    </CabinetGuard>
   );
 }

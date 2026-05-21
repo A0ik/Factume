@@ -15,7 +15,6 @@ export async function getCabinetForUser(userId: string) {
     .from('cabinet_members')
     .select('cabinet_id, role')
     .eq('user_id', userId)
-    .eq('status', 'active')
     .maybeSingle();
 
   if (!membership) return null;

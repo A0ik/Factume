@@ -14,6 +14,7 @@ import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -263,6 +264,7 @@ export default function CabinetSocialPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -713,5 +715,6 @@ export default function CabinetSocialPage() {
         </AnimatePresence>
       </div>
     </motion.div>
+    </CabinetGuard>
   );
 }

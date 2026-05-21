@@ -9,7 +9,7 @@ import {
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
+import { cn, formatCurrency, formatDateShort, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
@@ -259,15 +259,44 @@ export default function CabinetFacturationPage() {
             </p>
           </div>
         </div>
-        <motion.button
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (filtered.length === 0) return;
+              downloadXLSX(
+                `cabinet-facturation-${new Date().toISOString().slice(0, 10)}.xlsx`,
+                [{
+                  name: 'Factures',
+                  headers: ['N° Facture', 'Client', 'Objet', 'Montant HT', 'TVA', 'TTC', 'Date', 'Echeance', 'Statut'],
+                  rows: filtered.map((inv) => [
+                    inv.number,
+                    inv.client_name,
+                    inv.object || '',
+                    inv.subtotal,
+                    inv.vat_amount,
+                    inv.total,
+                    inv.issue_date,
+                    inv.due_date || '',
+                    STATUS_CONFIG[inv.status]?.label || inv.status,
+                  ]),
+                }]
+              );
+              toast.success('Export Excel telecharge');
+            }}
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            title="Exporter Excel"
+          >
+            <Download size={16} />
+          </button>
+          <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowNewInvoiceForm(!showNewInvoiceForm)}
           className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all"
         >
           <Plus size={16} />
-          Nouvelle facture
-        </motion.button>
+          Nouvelle facture          </motion.button>
+        </div>
       </div>
 
       {/* New invoice form (collapsible) */}

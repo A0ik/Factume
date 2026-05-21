@@ -54,9 +54,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/settings?sumup_error=no_user', req.url));
     }
 
-    // Exchange authorization code for access token
-    const redirectUrl = new URL(req.url);
-    const callbackUrl = `${redirectUrl.protocol}//${redirectUrl.host}/api/sumup/oauth/callback`;
+    // Build callback URL using environment variable or forwarded headers
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      || `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('x-forwarded-host') || req.headers.get('host')}`;
+    const callbackUrl = `${baseUrl}/api/sumup/oauth/callback`;
 
     const tokenResponse = await fetch(SUMUP_TOKEN_URL, {
       method: 'POST',

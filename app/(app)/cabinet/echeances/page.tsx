@@ -4,13 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, Calendar, Filter, Plus, ChevronLeft, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, XCircle, Search, RefreshCw,
-  FileText, Receipt, Shield, Landmark, TrendingUp, X,
+  FileText, Receipt, Shield, Landmark, TrendingUp, X, Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -399,6 +400,7 @@ export default function CabinetEcheancesPage() {
   // Render
   // ---------------------------------------------------------------------------
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -440,6 +442,35 @@ export default function CabinetEcheancesPage() {
           >
             <Plus size={15} />
             Ajouter
+          </button>
+          <button
+            onClick={() => {
+              if (filteredDeadlines.length === 0) return;
+              const TypeLabel = TYPE_CONFIG;
+              const PrioLabel = PRIORITY_CONFIG;
+              const StatusLabel = STATUS_CONFIG;
+              downloadXLSX(
+                `cabinet-echeances-${new Date().toISOString().slice(0, 10)}.xlsx`,
+                [{
+                  name: 'Echeances',
+                  headers: ['Date', 'Client', 'Type', 'Description', 'Responsable', 'Priorite', 'Statut'],
+                  rows: filteredDeadlines.map((d) => [
+                    d.deadline_date,
+                    getClientName(d),
+                    TypeLabel[d.deadline_type]?.label || d.deadline_type,
+                    d.description,
+                    d.responsible || '',
+                    PrioLabel[d.priority]?.label || d.priority,
+                    StatusLabel[d.status]?.label || d.status,
+                  ]),
+                }]
+              );
+              toast.success('Export Excel telecharge');
+            }}
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            title="Exporter Excel"
+          >
+            <Download size={16} />
           </button>
         </div>
       </div>
@@ -1005,5 +1036,6 @@ export default function CabinetEcheancesPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </CabinetGuard>
   );
 }

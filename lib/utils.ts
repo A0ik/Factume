@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import * as XLSX from 'xlsx';
 
 export function generateId(): string { return uuidv4(); }
 
@@ -134,6 +135,16 @@ export function downloadCSV(filename: string, headers: string[], rows: (string |
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+export function downloadXLSX(filename: string, sheets: { name: string; headers: string[]; rows: (string | number | undefined | null)[][] }[]): void {
+  const wb = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const data = [sheet.headers, ...sheet.rows];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, sheet.name.slice(0, 31));
+  }
+  XLSX.writeFile(wb, filename);
 }
 
 export function validateSiret(siret: string): boolean {

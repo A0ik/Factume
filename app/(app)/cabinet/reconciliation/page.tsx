@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 interface Transaction {
   id: string;
@@ -210,6 +211,7 @@ export default function CabinetReconciliationPage() {
   }
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -441,5 +443,6 @@ export default function CabinetReconciliationPage() {
         )}
       </div>
     </motion.div>
+    </CabinetGuard>
   );
 }

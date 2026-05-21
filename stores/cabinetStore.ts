@@ -113,14 +113,19 @@ interface CabinetState {
   fetchSocialTracking: (month: number, year: number, clientId?: string) => Promise<void>;
 }
 
-async function getAuthHeaders(): Promise<Record<string, string> | null> {
+async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | null> {
   const supabase = getSupabaseClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) return null;
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${session.access_token}`,
-  };
+  for (let i = 0; i < maxRetries; i++) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  return null;
 }
 
 const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';

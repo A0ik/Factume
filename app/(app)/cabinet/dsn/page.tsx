@@ -24,6 +24,7 @@ import {
   type DSNData,
   type DSNSalarie,
 } from '@/lib/labor-law/dsn-generator';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -311,6 +312,7 @@ export default function CabinetDSNPage() {
   }
 
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -613,5 +615,6 @@ export default function CabinetDSNPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </CabinetGuard>
   );
 }

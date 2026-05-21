@@ -12,9 +12,10 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
-import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { cn, formatCurrency, formatDate, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ function ContractBadge({ type }: { type: ContractType }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetSalariesPage() {
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
   const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
@@ -182,12 +183,28 @@ export default function CabinetSalariesPage() {
         fetch('/api/cabinet/clients', { headers }),
       ]);
 
-      if (empRes.ok) {
+      if (empRes.ok && cabRes.ok) {
         const { employees: apiEmps } = await empRes.json();
+        const { clients: cabClients } = await cabRes.json();
+
+        // Build client lookup map
+        const clientMap = new Map<string, string>();
+        for (const c of (cabClients || [])) {
+          const name = c.client_type === 'manual'
+            ? (c.company_name || 'Client')
+            : (c.profile?.company_name || c.profile?.first_name || c.profile?.email || 'Client');
+          clientMap.set(c.id, name);
+        }
+
+        setClients((cabClients || []).map((c: any) => ({
+          id: c.id || c.client_user_id,
+          name: clientMap.get(c.id) || 'Client',
+        })));
+
         const mapped: Employee[] = (apiEmps || []).map((e: any) => ({
           id: e.id,
           clientId: e.client_id,
-          clientName: e.client_name || '',
+          clientName: clientMap.get(e.client_id) || '',
           civilite: e.gender === 'F' ? 'Mme' : 'M.',
           nom: e.last_name,
           prenom: e.first_name,
@@ -207,11 +224,20 @@ export default function CabinetSalariesPage() {
           createdAt: e.created_at || '',
         }));
         setEmployees(mapped);
-      }
-
-      if (cabRes.ok) {
-        const { clients: cabClients } = await cabRes.json();
-        setClients((cabClients || []).map((c: any) => ({ id: c.id || c.user_id, name: c.name || c.display_name || c.email || '' })));
+      } else {
+        if (empRes.ok) {
+          const { employees: apiEmps } = await empRes.json();
+          setEmployees((apiEmps || []).map((e: any) => ({
+            id: e.id, clientId: e.client_id, clientName: '',
+            civilite: e.gender === 'F' ? 'Mme' : 'M.', nom: e.last_name, prenom: e.first_name,
+            dateNaissance: e.birth_date || '', lieuNaissance: e.birth_place || '',
+            nationalite: e.nationality || 'Francaise', nss: e.nss || '', adresse: e.address || '',
+            poste: e.job_title || '', typeContrat: e.contract_type || 'CDI',
+            salaireBrut: e.salary_brut_monthly || 0, tauxHoraire: e.hourly_rate || 0,
+            heuresSemaine: e.weekly_hours || 35, dateDebut: e.start_date || '',
+            dateFin: e.end_date || null, status: e.status || 'actif', createdAt: e.created_at || '',
+          })));
+        }
       }
     } catch (error: any) {
       console.error('[loadData] Error:', error);
@@ -223,18 +249,18 @@ export default function CabinetSalariesPage() {
   }, []);
 
   useEffect(() => {
-    if (profile) {
+    if (initialized && profile) {
       fetchCabinet();
     }
-  }, [profile, fetchCabinet]);
+  }, [initialized, profile, fetchCabinet]);
 
   useEffect(() => {
-    if (profile && cabinet) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
+    if (initialized && profile && cabinet) loadData();
+    else if (initialized && profile && !cabinetLoading && !cabinet) {
       toast.error('Creez d\'abord votre cabinet');
       router.push('/cabinet');
     }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [initialized, profile, cabinet, cabinetLoading, loadData, router]);
 
   // Filtered employees
   const filteredEmployees = useMemo(() => {
@@ -387,6 +413,7 @@ export default function CabinetSalariesPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
+    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -401,6 +428,27 @@ export default function CabinetSalariesPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (filteredEmployees.length === 0) return;
+              downloadXLSX(
+                `cabinet-salaries-${new Date().toISOString().slice(0, 10)}.xlsx`,
+                [{
+                  name: 'Salaries',
+                  headers: ['Civilite', 'Nom', 'Prenom', 'NSS', 'Poste', 'Contrat', 'Salaire brut', 'Statut', 'Client', 'Date debut', 'Date fin'],
+                  rows: filteredEmployees.map((e) => [
+                    e.civilite, e.nom, e.prenom, e.nss, e.poste, e.typeContrat,
+                    e.salaireBrut, e.status, e.clientName, e.dateDebut, e.dateFin || '',
+                  ]),
+                }]
+              );
+              toast.success('Export Excel telecharge');
+            }}
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            title="Exporter Excel"
+          >
+            <Download size={16} />
+          </button>
           <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
@@ -1179,5 +1227,6 @@ export default function CabinetSalariesPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </CabinetGuard>
   );
 }

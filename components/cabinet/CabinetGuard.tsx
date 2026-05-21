@@ -8,26 +8,26 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CabinetGuard({ children }: { children: React.ReactNode }) {
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const { cabinet, fetchCabinet, loading } = useCabinetStore();
   const router = useRouter();
   const redirected = useRef(false);
   const fetched = useRef(false);
 
   useEffect(() => {
-    if (profile && !fetched.current) {
+    if (initialized && profile && !fetched.current) {
       fetched.current = true;
       fetchCabinet();
     }
-  }, [profile, fetchCabinet]);
+  }, [initialized, profile, fetchCabinet]);
 
   useEffect(() => {
-    if (profile && !loading && !cabinet && !redirected.current) {
+    if (initialized && profile && !loading && !cabinet && !redirected.current) {
       redirected.current = true;
       toast.error('Creez d\'abord votre cabinet');
       router.push('/cabinet');
     }
-  }, [profile, loading, cabinet, router]);
+  }, [initialized, profile, loading, cabinet, router]);
 
   if (!profile || loading) {
     return (
