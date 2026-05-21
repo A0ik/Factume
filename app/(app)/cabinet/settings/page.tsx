@@ -81,8 +81,6 @@ export default function CabinetSettingsPage() {
     }
   }, [cabinet]);
 
-  useEffect(() => { if (cabinet) fetchMembers(); }, [cabinet, fetchMembers]);
-
   const fetchMembers = async () => {
     setMembersLoading(true);
     try {
