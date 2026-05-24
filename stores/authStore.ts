@@ -32,6 +32,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     if (_authUnsubscribe) { _authUnsubscribe(); _authUnsubscribe = null; }
+
+    // Setup listener BEFORE getSession to avoid race conditions
+    let profileDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        set({ user: session.user, session });
+        // Debounce fetchProfile to prevent duplicate calls
+        const uid = session.user.id;
+        if (profileDebounceTimer) clearTimeout(profileDebounceTimer);
+        profileDebounceTimer = setTimeout(() => get().fetchProfile(uid), 300);
+      } else if (event === 'SIGNED_OUT') {
+        set({ user: null, session: null, profile: null });
+      }
+    });
+    _authUnsubscribe = () => {
+      subscription.unsubscribe();
+      if (profileDebounceTimer) clearTimeout(profileDebounceTimer);
+    };
+
     try {
       const { data: { session }, error } = await getSupabaseClient().auth.getSession();
       if (error) { await getSupabaseClient().auth.signOut(); }
@@ -39,12 +58,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e: any) {
       if (e?.message?.includes('Refresh Token')) await getSupabaseClient().auth.signOut();
     } finally { set({ initialized: true }); }
-
-    const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) { set({ user: session.user, session }); await get().fetchProfile(session.user.id); }
-      else if (event === 'SIGNED_OUT') set({ user: null, session: null, profile: null });
-    });
-    _authUnsubscribe = () => subscription.unsubscribe();
   },
 
   signIn: async (email, password) => {

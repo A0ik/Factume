@@ -4,12 +4,12 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BarChart3, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
-  ChevronRight, Crown, Settings, UserPlus, RefreshCw,
-  CheckCircle2, Clock, XCircle, Building2, Euro, Users, Landmark,
-  FileText, Calendar, Bell, Briefcase, Download, Activity as ActivityIcon,
+  BarChart3, Shield,
+  Settings, UserPlus,
+  CheckCircle2, Clock, XCircle, Building2, Users, Landmark,
+  FileText, Calendar, Bell, Briefcase,
   Heart, ClipboardList, FileBadge, Receipt, UsersRound,
-  X, Menu, Gavel, FileSpreadsheet, Scale, CreditCard,
+  X, Menu, Scale, ArrowLeft, Activity as ActivityIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,19 +18,19 @@ const NAV_ITEMS = [
   { href: '/cabinet/clients', label: 'Clients', icon: Users },
   { href: '/cabinet/salaries', label: 'Salaries', icon: UsersRound },
   { href: '/cabinet/contrats', label: 'Contrats', icon: ClipboardList },
+  { href: '/cabinet/facturation', label: 'Facturation', icon: FileText },
+  { href: '/cabinet/relances', label: 'Relances', icon: Bell },
+  { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
   { href: '/cabinet/paie', label: 'Paie', icon: Receipt },
   { href: '/cabinet/dpae', label: 'DPAE', icon: FileBadge },
   { href: '/cabinet/dsn', label: 'DSN', icon: Shield },
-  { href: '/cabinet/analytics', label: 'Analyses', icon: BarChart3 },
-  { href: '/cabinet/facturation', label: 'Facturation', icon: FileText },
-  { href: '/cabinet/relances', label: 'Relances', icon: Bell },
-  { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
-  { href: '/cabinet/missions', label: 'Missions', icon: Briefcase },
-  { href: '/cabinet/agenda', label: 'Agenda', icon: Calendar },
-  { href: '/cabinet/echeances', label: 'Echeances', icon: Clock },
   { href: '/cabinet/social', label: 'Social', icon: Heart },
-  { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
+  { href: '/cabinet/missions', label: 'Missions', icon: Briefcase },
+  { href: '/cabinet/reconciliation', label: 'Rapprochement', icon: Landmark },
+  { href: '/cabinet/agenda', label: 'Agenda', icon: Calendar },
   { href: '/cabinet/juridique', label: 'Juridique', icon: Scale },
+  { href: '/cabinet/echeances', label: 'Echeances', icon: Clock },
+  { href: '/cabinet/invitations', label: 'Invitations', icon: UserPlus },
   { href: '/cabinet/settings', label: 'Parametres', icon: Settings },
 ];
 
@@ -47,6 +47,10 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-56 flex-shrink-0 border-r border-gray-200/70 dark:border-gray-700/40 bg-white/50 dark:bg-slate-900/50 overflow-y-auto">
         <div className="p-3 pt-4">
+          <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 mb-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-xs">
+            <ArrowLeft size={13} />
+            Retour
+          </Link>
           <Link href="/cabinet" className="flex items-center gap-2.5 px-3 py-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
               <Building2 size={15} className="text-white" />

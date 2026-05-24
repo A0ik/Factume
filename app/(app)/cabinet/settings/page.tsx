@@ -57,7 +57,7 @@ export default function CabinetSettingsPage() {
     return null;
   }
 
-  useEffect(() => { fetchCabinet(); }, []);
+  useEffect(() => { fetchCabinet(); fetchMembers(); }, []);
 
   useEffect(() => {
     if (cabinet) {

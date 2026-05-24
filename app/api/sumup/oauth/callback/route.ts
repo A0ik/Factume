@@ -55,9 +55,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Build callback URL using environment variable or forwarded headers
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    // Must use the exact same URL as the initial OAuth request
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('x-forwarded-host') || req.headers.get('host')}`;
     const callbackUrl = `${baseUrl}/api/sumup/oauth/callback`;
+
+    console.log('[sumup-oauth-callback] token exchange redirect_uri:', callbackUrl);
 
     const tokenResponse = await fetch(SUMUP_TOKEN_URL, {
       method: 'POST',

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
@@ -43,13 +44,13 @@ interface EventForm {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const EVENT_TYPE_CONFIG: Record<EventType, { label: string; icon: any; bg: string; text: string; dot: string }> = {
-  rdv_client:       { label: 'RDV client',       icon: Users,       bg: 'bg-blue-100 dark:bg-blue-900/30',       text: 'text-blue-700 dark:text-blue-400',       dot: 'bg-blue-500' },
-  echeance_fiscale: { label: 'Echeance fiscale', icon: Bell,        bg: 'bg-amber-100 dark:bg-amber-900/30',     text: 'text-amber-700 dark:text-amber-400',     dot: 'bg-amber-500' },
-  relance:          { label: 'Relance',           icon: AlertCircle, bg: 'bg-red-100 dark:bg-red-900/30',        text: 'text-red-700 dark:text-red-400',         dot: 'bg-red-500' },
-  dsn:              { label: 'DSN',               icon: Shield,      bg: 'bg-purple-100 dark:bg-purple-900/30',   text: 'text-purple-700 dark:text-purple-400',   dot: 'bg-purple-500' },
-  paie:             { label: 'Paie',              icon: Euro,        bg: 'bg-emerald-100 dark:bg-emerald-900/30',  text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  autre:            { label: 'Autre',             icon: Tag,         bg: 'bg-gray-100 dark:bg-gray-800',           text: 'text-gray-600 dark:text-gray-400',       dot: 'bg-gray-400' },
+const EVENT_TYPE_CONFIG: Record<EventType, { label: string; icon: any; bg: string; text: string; dot: string; activeBg: string }> = {
+  rdv_client:       { label: 'RDV client',       icon: Users,       bg: 'bg-blue-100 dark:bg-blue-900/30',       text: 'text-blue-700 dark:text-blue-400',       dot: 'bg-blue-500',   activeBg: 'bg-blue-600 text-white' },
+  echeance_fiscale: { label: 'Echeance fiscale', icon: Bell,        bg: 'bg-amber-100 dark:bg-amber-900/30',     text: 'text-amber-700 dark:text-amber-400',     dot: 'bg-amber-500',  activeBg: 'bg-amber-600 text-white' },
+  relance:          { label: 'Relance',           icon: AlertCircle, bg: 'bg-red-100 dark:bg-red-900/30',        text: 'text-red-700 dark:text-red-400',         dot: 'bg-red-500',    activeBg: 'bg-red-600 text-white' },
+  dsn:              { label: 'DSN',               icon: Shield,      bg: 'bg-purple-100 dark:bg-purple-900/30',   text: 'text-purple-700 dark:text-purple-400',   dot: 'bg-purple-500', activeBg: 'bg-purple-600 text-white' },
+  paie:             { label: 'Paie',              icon: Euro,        bg: 'bg-emerald-100 dark:bg-emerald-900/30',  text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', activeBg: 'bg-emerald-600 text-white' },
+  autre:            { label: 'Autre',             icon: Tag,         bg: 'bg-gray-100 dark:bg-gray-800',           text: 'text-gray-600 dark:text-gray-400',       dot: 'bg-gray-400',   activeBg: 'bg-gray-600 text-white' },
 };
 
 const EVENT_TYPES: EventType[] = ['rdv_client', 'echeance_fiscale', 'relance', 'dsn', 'paie', 'autre'];
@@ -97,7 +98,7 @@ function today(): Date {
 
 export default function CabinetAgendaPage() {
   const { profile, initialized } = useAuthStore();
-
+  const sub = useSubscription();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<AgendaEvent[]>([]);
 
@@ -313,6 +314,25 @@ export default function CabinetAgendaPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />
       </div>
+    );
+  }
+
+  // ─── Subscription paywall ────────────────────────────────────────────────
+
+  if (!sub.isBusiness && !sub.isTrialActive) {
+    return (
+      <CabinetGuard>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-5">
+            <CalendarIcon size={32} className="text-violet-500" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Agenda Cabinet</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Disponible avec le plan Business.</p>
+          <Link href="/paywall?plan=business" className="px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm">
+            Passer a Business
+          </Link>
+        </div>
+      </CabinetGuard>
     );
   }
 
@@ -545,7 +565,7 @@ export default function CabinetAgendaPage() {
                     className={cn(
                       'text-[10px] font-bold px-2.5 py-1.5 rounded-full transition-colors',
                       filterType === type
-                        ? `${cfg.dot.replace('bg-', 'bg-').replace('500', '600')} text-white bg-${cfg.dot.split('-')[1]}-600`
+                        ? cfg.activeBg
                         : `${cfg.bg} ${cfg.text}`
                     )}
                   >

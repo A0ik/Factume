@@ -34,9 +34,11 @@ export async function GET(req: NextRequest) {
     const state = crypto.randomUUID();
 
     // Build callback URL using environment variable or forwarded headers
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || `${req.headers.get('x-forwarded-proto') || 'https'}://${req.headers.get('x-forwarded-host') || req.headers.get('host')}`;
     const callbackUrl = `${baseUrl}/api/sumup/oauth/callback`;
+
+    console.log('[sumup-oauth] redirect_uri:', callbackUrl, '| NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL || '(not set)');
 
     const authUrl = new URL(SUMUP_AUTH_URL);
     authUrl.searchParams.set('client_id', process.env.SUMUP_CLIENT_ID!);

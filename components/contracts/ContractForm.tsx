@@ -537,7 +537,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       validateRequired();
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('__timeout__')), 7000)
+        setTimeout(() => reject(new Error('__timeout__')), 30000)
       );
 
       if (mode === 'edit' && contractId) {
@@ -550,7 +550,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contractId, contractType, contractData: formData, comment: 'Mise à jour' }),
-        }).catch(() => {});
+        }).catch((e) => console.warn('[ContractForm] version history failed:', e));
 
         toast.success('Contrat mis à jour !');
         onSaved?.(contractId, formData.contract_number || '');
@@ -569,7 +569,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contractId: result.id, contractType, contractData: formData, comment: 'Version initiale' }),
-        }).catch(() => {});
+        }).catch((e) => console.warn('[ContractForm] version history failed:', e));
 
         toast.success('Contrat sauvegardé !');
         setStep('success');

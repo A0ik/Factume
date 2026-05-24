@@ -84,6 +84,10 @@ export default function Sidebar() {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // When inside cabinet pages, collapse the cabinet section in main sidebar
+  // (the cabinet layout has its own dedicated sidebar)
+  const isInCabinet = pathname.startsWith('/cabinet');
+
   // ── Section definitions ──
   const sections: NavSection[] = [
     {
@@ -300,7 +304,9 @@ export default function Sidebar() {
         </Link>
 
         {/* Collapsible sections */}
-        {sections.map(section => <Section key={section.id} section={section} />)}
+        {sections
+          .filter(section => !(section.id === 'cabinet' && isInCabinet))
+          .map(section => <Section key={section.id} section={section} />)}
 
         {/* Quick stats */}
         <div className="pt-4 pb-2">

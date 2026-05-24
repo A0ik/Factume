@@ -129,9 +129,16 @@ async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | 
 }
 
 const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';
+const CABINET_DATA_KEY = 'factume_cabinet_data';
 
 export const useCabinetStore = create<CabinetState>((set, get) => ({
-  cabinet: null,
+  cabinet: (() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem(CABINET_DATA_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  })(),
   cabinets: [],
   activeCabinetId: typeof window !== 'undefined'
     ? localStorage.getItem(ACTIVE_CABINET_KEY)
@@ -179,6 +186,11 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       if (res.ok) {
         const { clients, cabinet } = await res.json();
         set({ clients, cabinet });
+        if (cabinet) {
+          try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
+        } else {
+          try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
+        }
       }
     } finally {
       set({ loading: false });
@@ -199,6 +211,9 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       if (res.ok) {
         const { cabinet } = await res.json();
         set({ cabinet });
+        if (cabinet) {
+          try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
+        }
 
         // Auto-switch to newly created cabinet and refresh the list
         if (cabinet?.id) {
@@ -255,6 +270,7 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       } else {
         localStorage.removeItem(ACTIVE_CABINET_KEY);
         set({ activeCabinetId: null, cabinet: null, clients: [], invoices: [], employees: [], missions: [], legalActs: [], deadlines: [], socialTracking: [] });
+        try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
       }
     }
   },

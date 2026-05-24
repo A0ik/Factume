@@ -14,7 +14,7 @@ export default function LoginPage() {
     setError('');
     try {
       await signIn(email, password);
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Identifiants incorrects');
     }
