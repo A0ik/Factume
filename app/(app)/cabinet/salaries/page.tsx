@@ -249,12 +249,6 @@ export default function CabinetSalariesPage() {
   }, []);
 
   useEffect(() => {
-    if (initialized && profile) {
-      fetchCabinet();
-    }
-  }, [initialized, profile, fetchCabinet]);
-
-  useEffect(() => {
     if (initialized && profile && cabinet) loadData();
   }, [initialized, profile, cabinet, loadData]);
 

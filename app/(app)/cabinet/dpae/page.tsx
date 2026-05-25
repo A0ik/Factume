@@ -116,10 +116,6 @@ export default function CabinetDPAEPage() {
   }, []);
 
   useEffect(() => {
-    if (profile) fetchCabinet();
-  }, [profile, fetchCabinet]);
-
-  useEffect(() => {
     if (profile && cabinet) loadData();
   }, [profile, cabinet, loadData]);
 

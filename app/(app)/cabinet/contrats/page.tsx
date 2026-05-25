@@ -152,10 +152,6 @@ export default function CabinetContratsPage() {
   }, []);
 
   useEffect(() => {
-    if (profile) fetchCabinet();
-  }, [profile, fetchCabinet]);
-
-  useEffect(() => {
     if (profile && cabinet) loadData();
   }, [profile, cabinet, loadData]);
 

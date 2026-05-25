@@ -157,10 +157,6 @@ export default function CabinetDSNPage() {
   }, [selectedMois, selectedAnnee]);
 
   useEffect(() => {
-    if (profile) fetchCabinet();
-  }, [profile, fetchCabinet]);
-
-  useEffect(() => {
     if (profile && cabinet && periodReady) loadData();
   }, [profile, cabinet, loadData, periodReady]);
 

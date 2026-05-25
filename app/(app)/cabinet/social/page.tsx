@@ -185,12 +185,6 @@ export default function CabinetSocialPage() {
   }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
-    if (profile) {
-      fetchCabinet();
-    }
-  }, [profile, fetchCabinet]);
-
-  useEffect(() => {
     if (profile && cabinet) loadData();
   }, [profile, cabinet, loadData]);
 

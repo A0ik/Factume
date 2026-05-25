@@ -944,7 +944,7 @@ function generateArticles(data: ContractTemplateData): string {
   A("Protection des données personnelles", `
     <p>Dans le cadre de la relation contractuelle, ${company}, en tant que responsable de traitement,
     collecte et traite des données personnelles concernant ${fullName} aux fins de :</p>
-    <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+    <ul>
       <li>Gestion de la paie et de l'administration du personnel</li>
       <li>Accomplissement des obligations légales et réglementaires (déclarations sociales, fiscales)</li>
       <li>Gestion de la carrière et de la formation professionnelle</li>
@@ -957,7 +957,7 @@ function generateArticles(data: ContractTemplateData): string {
     <p><strong>Destinataires&nbsp;:</strong> service RH, service paie, organismes sociaux (URSSAF, CPAM),
     administration fiscale, et le cas échéant les prestataires de services dûment autorisés.</p>
     <p>${fullName} dispose des droits suivants, exercables auprès du DPO de ${company} :</p>
-    <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+    <ul>
       <li>Droit d'accès, de rectification et d'effacement (Art.&nbsp;15-17 RGPD)</li>
       <li>Droit à la portabilité des données (Art.&nbsp;20 RGPD)</li>
       <li>Droit d'opposition et à la limitation du traitement (Art.&nbsp;18-21 RGPD)</li>
@@ -1006,7 +1006,7 @@ function generateArticles(data: ContractTemplateData): string {
       du Code du travail et à l'accord national interprofessionnel du 26&nbsp;novembre 2020.</p>
       <p>En cas de télétravail régulier, les modalités seront définies par accord d'entreprise ou,
       à défaut, par charte soumise au CSE, précisant :</p>
-      <ul style="margin: 4px 0 8px 16px; font-size: 8.5pt;">
+      <ul>
         <li>Les conditions d'éligibilité et les jours de télétravail</li>
         <li>Les plages horaires de contactabilité</li>
         <li>La prise en charge des frais liés au télétravail (équipement, connexion)</li>
@@ -1183,7 +1183,6 @@ function buildContractHTML(data: ContractTemplateData): string {
     </div>
     <div class="doc-header-meta">
       <div class="doc-ref">Réf. ${docRef}</div>
-      <div>Document confidentiel — ne pas diffuser</div>
       <div>2 exemplaires originaux</div>
     </div>
   </div>

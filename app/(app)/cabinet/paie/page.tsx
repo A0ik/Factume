@@ -155,10 +155,6 @@ export default function CabinetPaiePage() {
   }, [selectedMois, selectedAnnee]);
 
   useEffect(() => {
-    if (profile) fetchCabinet();
-  }, [profile, fetchCabinet]);
-
-  useEffect(() => {
     if (profile && cabinet) loadData();
   }, [profile, cabinet, loadData]);
 
