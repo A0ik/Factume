@@ -1,10 +1,9 @@
 'use client';
 
-import { X, Loader2, Download, ExternalLink, Smartphone } from 'lucide-react';
+import { X, Loader2, Download, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import React from 'react';
 import { Invoice, Profile } from '@/types';
-import { generateInvoiceHtml } from '@/lib/pdf';
 
 interface PdfPreviewModalProps {
   invoice: Invoice;
@@ -12,63 +11,17 @@ interface PdfPreviewModalProps {
   onClose: () => void;
 }
 
-const MOBILE_REGEX = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i;
-
-function isMobileDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return MOBILE_REGEX.test(navigator.userAgent);
-}
-
 export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string>('');
-  const [html, setHtml] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [useHtmlFallback, setUseHtmlFallback] = useState(false);
+  const [error, setError] = useState<string>('');
   const urlRef = useRef<string>('');
-  const isMobile = isMobileDevice();
 
   useEffect(() => {
     let cancelled = false;
 
     const generate = async () => {
-      // Custom templates can't be rendered by React-PDF → use HTML
-      if (profile?.custom_template_html) {
-        setHtml(generateInvoiceHtml(invoice, profile));
-        setUseHtmlFallback(true);
-        setLoading(false);
-        return;
-      }
-
-      // On mobile, fetch server-side PDF for consistent rendering with download
-      if (isMobile) {
-        try {
-          const response = await fetch(`/api/download/pdf/${invoice.id}`);
-          if (response.ok && !cancelled) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            urlRef.current = url;
-            setPdfUrl(url);
-            setLoading(false);
-          } else {
-            // Server PDF failed, fall back to HTML
-            if (!cancelled) {
-              setHtml(generateInvoiceHtml(invoice, profile));
-              setUseHtmlFallback(true);
-              setLoading(false);
-            }
-          }
-        } catch {
-          // Network error, fall back to HTML
-          if (!cancelled) {
-            setHtml(generateInvoiceHtml(invoice, profile));
-            setUseHtmlFallback(true);
-            setLoading(false);
-          }
-        }
-        return;
-      }
-
-      // Desktop: use React-PDF for high quality rendering
+      // Strategy: try client-side React-PDF first (fast, no network), then server endpoint
       try {
         const { pdf } = await import('@react-pdf/renderer');
         const { PdfDocument } = await import('@/components/pdf-document');
@@ -79,11 +32,27 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
         urlRef.current = url;
         setPdfUrl(url);
         setLoading(false);
+        return;
       } catch {
-        // Fallback to HTML if React-PDF fails
+        // Client-side failed, try server endpoint
+      }
+
+      // Fallback: server-side PDF generation — always produces a real PDF with correct template
+      try {
+        const response = await fetch(`/api/download/pdf/${invoice.id}`);
+        if (response.ok && !cancelled) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          urlRef.current = url;
+          setPdfUrl(url);
+          setLoading(false);
+        } else if (!cancelled) {
+          setError('Impossible de générer l\'aperçu PDF');
+          setLoading(false);
+        }
+      } catch {
         if (!cancelled) {
-          setHtml(generateInvoiceHtml(invoice, profile));
-          setUseHtmlFallback(true);
+          setError('Erreur réseau lors de la génération du PDF');
           setLoading(false);
         }
       }
@@ -94,27 +63,11 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
       cancelled = true;
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
-  }, [invoice, profile, isMobile]);
+  }, [invoice, profile]);
 
   const handleDownload = async () => {
     try {
-      if (isMobile) {
-        // On mobile, always use server endpoint for download (consistent with preview)
-        window.location.href = `/api/download/pdf/${invoice.id}`;
-        return;
-      }
-
-      if (useHtmlFallback) {
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${invoice.number.replace(/\//g, '-')}.html`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-      } else if (pdfUrl) {
+      if (pdfUrl) {
         const response = await fetch(pdfUrl);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
@@ -125,31 +78,25 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
         document.body.appendChild(a);
         a.click();
         setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+      } else {
+        window.location.href = `/api/download/pdf/${invoice.id}`;
       }
-    } catch (error) {
-      console.error('[PDF Download Error]', error);
-      // Ultimate fallback: use server endpoint
+    } catch {
       window.location.href = `/api/download/pdf/${invoice.id}`;
     }
   };
 
   const handleOpenNewTab = () => {
-    if (isMobile || !pdfUrl) {
-      // On mobile or no PDF blob, use server endpoint
-      window.open(`/api/download/pdf/${invoice.id}`, '_blank');
-    } else if (useHtmlFallback) {
-      const blob = new Blob([html], { type: 'text/html' });
-      window.open(URL.createObjectURL(blob), '_blank');
-    } else {
+    if (pdfUrl) {
       window.open(pdfUrl, '_blank');
+    } else {
+      window.open(`/api/download/pdf/${invoice.id}`, '_blank');
     }
   };
 
-  const isReady = !loading && (pdfUrl || html);
-
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex flex-col">
-      {/* Header - Mobile First Design */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -159,10 +106,7 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
           </div>
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-gray-900 truncate">Aperçu PDF</h2>
-            <p className="text-[10px] text-gray-500 truncate">
-              {invoice.number}
-              {isMobile && useHtmlFallback && !pdfUrl && ' • Aperçu HTML'}
-            </p>
+            <p className="text-[10px] text-gray-500 truncate">{invoice.number}</p>
           </div>
         </div>
 
@@ -178,26 +122,20 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
       <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 overflow-x-auto">
         <button
           onClick={handleDownload}
-          disabled={!isReady}
+          disabled={!pdfUrl && !error}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50 flex-shrink-0"
         >
           <Download size={14} />
-          <span>{isMobile ? 'Ouvrir PDF' : 'Télécharger'}</span>
+          Télécharger PDF
         </button>
         <button
           onClick={handleOpenNewTab}
-          disabled={!isReady}
+          disabled={!pdfUrl && !error}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 flex-shrink-0"
         >
           <ExternalLink size={14} />
-          <span>Nouvel onglet</span>
+          Nouvel onglet
         </button>
-        {isMobile && useHtmlFallback && (
-          <div className="flex items-center gap-1 text-[10px] text-gray-400 flex-shrink-0">
-            <Smartphone size={12} />
-            Aperçu optimisé mobile
-          </div>
-        )}
       </div>
 
       {/* Content */}
@@ -206,16 +144,24 @@ export function PdfPreviewModal({ invoice, profile, onClose }: PdfPreviewModalPr
           <div className="h-full flex items-center justify-center">
             <div className="text-center px-4">
               <Loader2 size={32} className="animate-spin text-primary mx-auto mb-3" />
-              <p className="text-sm text-gray-500">Génération de l'aperçu...</p>
+              <p className="text-sm text-gray-500">Génération de l'aperçu PDF...</p>
             </div>
           </div>
-        ) : useHtmlFallback ? (
-          <iframe
-            srcDoc={html}
-            className="w-full h-full rounded-xl border-0 shadow-lg bg-white"
-            title="PDF Preview"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-modals"
-          />
+        ) : error ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center px-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                <X size={24} className="text-red-500" />
+              </div>
+              <p className="text-sm text-red-600 mb-4">{error}</p>
+              <button
+                onClick={handleOpenNewTab}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold"
+              >
+                Réessayer dans un nouvel onglet
+              </button>
+            </div>
+          </div>
         ) : (
           <iframe
             src={pdfUrl}
