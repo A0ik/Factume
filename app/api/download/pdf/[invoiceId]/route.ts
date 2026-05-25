@@ -40,11 +40,15 @@ export async function GET(
 
     const filename = `${invoice.number.replace(/[/\r\n"']/g, '-')}.pdf`;
 
+    // If mode=preview, use Content-Disposition: inline so browsers/iOS render it in iframe
+    const mode = req.nextUrl.searchParams.get('mode');
+    const disposition = mode === 'preview' ? `inline; filename="${filename}"` : `attachment; filename="${filename}"`;
+
     return new NextResponse(Buffer.from(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': disposition,
         'Content-Length': pdfBuffer.length.toString(),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
