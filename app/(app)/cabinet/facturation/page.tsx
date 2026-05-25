@@ -79,7 +79,7 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => {
 // ---------------------------------------------------------------------------
 
 export default function CabinetFacturationPage() {
-  const { profile } = useAuthStore();
+  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
   const [data, setData] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export default function CabinetFacturationPage() {
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false);
 
-  useEffect(() => { if (profile) loadInvoices(); }, [profile]);
+  useEffect(() => { if (profile) loadInvoices(); }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Data loading

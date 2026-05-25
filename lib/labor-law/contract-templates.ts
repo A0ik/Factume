@@ -259,12 +259,6 @@ function getStyles(accent: string): string {
         font-size: 7pt;
         color: #888;
       }
-      @bottom-left {
-        content: "Document confidentiel";
-        font-family: 'Inter', Helvetica, Arial, sans-serif;
-        font-size: 7pt;
-        color: #bbb;
-      }
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -1346,6 +1340,13 @@ function stripHtml(html: string): string {
     .replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '\n')
     .replace(/<div[^>]*>/gi, ' ').replace(/<\/div>/gi, '\n')
     .replace(/<span[^>]*>/gi, '').replace(/<\/span>/gi, '')
+    .replace(/<ul[^>]*>/gi, '').replace(/<\/ul>/gi, '\n')
+    .replace(/<ol[^>]*>/gi, '').replace(/<\/ol>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n\u2022 ').replace(/<\/li>/gi, '')
+    .replace(/<a[^>]*>/gi, '').replace(/<\/a>/gi, '')
+    .replace(/<h[1-6][^>]*>/gi, '').replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<table[^>]*>[\s\S]*?<\/table>/gi, '')
+    .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/gi, '\u00a0')
     .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
     .replace(/[ \t]+/g, ' ')
@@ -1371,11 +1372,11 @@ export function getContractArticles(data: ContractTemplateData): { title: string
     const bodyMatch = block.match(/<div class="article-body">([\s\S]+)/);
     const bodyRaw = bodyMatch ? bodyMatch[1].replace(/<\/div>\s*$/, '') : '';
 
-    // Sépare par <p> et par les .legal-note / .highlight-box (traités comme des paragraphes)
+    // Sépare par <p>, <li> et par les .legal-note / .highlight-box (traités comme des paragraphes)
     const chunks = bodyRaw
-      .split(/<\/p>|<\/div>/)
+      .split(/<\/p>|<\/div>|<\/li>/)
       .map(chunk => stripHtml(chunk))
-      .filter(t => t.trim().length > 5);
+      .filter(t => t.trim().length > 3);
 
     return { title, paragraphs: chunks };
   });

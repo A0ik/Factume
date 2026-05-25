@@ -92,10 +92,10 @@ function shortMonth(key: string): string {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetSocialPage() {
-  const { profile } = useAuthStore();
+  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
+  const cabinet = useCabinetStore(state => state.cabinet);
 
   // Month / Year selector
   const [selectedYear, setSelectedYear] = useState(2026);
@@ -151,26 +151,28 @@ export default function CabinetSocialPage() {
         setClientRows(mapped);
 
         const aMap = new Map<string, ClientSocialRow[]>();
-        for (let m = 0; m < 12; m++) {
+        const annualPromises = Array.from({ length: 12 }, (_, m) => {
           const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
-          const monthRes = await fetch(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { headers });
-          if (monthRes.ok) {
-            const { tracking: monthTracking } = await monthRes.json();
-            aMap.set(key, (monthTracking || []).map((t: any) => ({
-              id: t.id || t.client_id,
-              clientName: t.client_name || '',
-              nbSalaries: t.nb_employees || 0,
-              bsEmis: t.bs_issued || 0,
-              bsValidated: t.bs_validated || 0,
-              dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
-              stc: t.stc || 0,
-              contrats: t.contracts_count || 0,
-              avenants: t.amendments_count || 0,
-              atMp: t.at_mp ? 1 : 0,
-              observations: t.observations || '',
-            })));
-          }
-        }
+          return fetch(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { headers })
+            .then(r => r.ok ? r.json() : { tracking: [] })
+            .then(({ tracking: monthTracking }) => {
+              aMap.set(key, (monthTracking || []).map((t: any) => ({
+                id: t.id || t.client_id,
+                clientName: t.client_name || '',
+                nbSalaries: t.nb_employees || 0,
+                bsEmis: t.bs_issued || 0,
+                bsValidated: t.bs_validated || 0,
+                dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
+                stc: t.stc || 0,
+                contrats: t.contracts_count || 0,
+                avenants: t.amendments_count || 0,
+                atMp: t.at_mp ? 1 : 0,
+                observations: t.observations || '',
+              })));
+            })
+            .catch(() => {});
+        });
+        await Promise.all(annualPromises);
         setAnnualData(aMap);
       }
 

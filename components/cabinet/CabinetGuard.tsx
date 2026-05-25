@@ -8,8 +8,10 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CabinetGuard({ children }: { children: React.ReactNode }) {
-  const { profile, initialized } = useAuthStore();
-  const { cabinet, fetchCabinet, loading } = useCabinetStore();
+  const profile = useAuthStore(state => state.profile);
+  const initialized = useAuthStore(state => state.initialized);
+  const cabinet = useCabinetStore(state => state.cabinet);
+  const loading = useCabinetStore(state => state.loading);
   const router = useRouter();
   const pathname = usePathname();
   const redirected = useRef(false);
@@ -20,19 +22,15 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
     if (initialized && profile && !fetched.current) {
       fetched.current = true;
       useCabinetStore.getState().hydrateFromCache();
-      fetchCabinet().then(() => {
-        // Only mark fetch as completed if the store actually loaded
-        // (loading went to true and then false, meaning the fetch ran)
-        // Check by reading the latest store state
+      useCabinetStore.getState().fetchCabinet().then(() => {
         const { cabinet: freshCabinet } = useCabinetStore.getState();
         setFetchCompleted(true);
-        // If cabinet was found, clear any previous redirect
         if (freshCabinet) {
           redirected.current = false;
         }
       });
     }
-  }, [initialized, profile, fetchCabinet]);
+  }, [initialized, profile]);
 
   // Only redirect to cabinet creation after fetch has completed and no cabinet found
   // Skip redirect if we're already on the cabinet dashboard page (it has its own creation UI)

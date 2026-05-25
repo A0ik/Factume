@@ -123,13 +123,6 @@ function makeStyles(accent: string) {
     sigLine: { borderBottomWidth: 1, borderBottomColor: '#333', borderBottomStyle: 'solid', marginBottom: 4, marginTop: 35 },
     sigHint: { fontSize: 7, color: '#888', fontFamily: 'Helvetica-Oblique' },
     sigImage: { maxWidth: 140, maxHeight: 55, marginTop: 4 },
-    // Watermark
-    watermark: {
-      position: 'absolute', top: '40%', left: '15%', right: '15%',
-      transform: 'rotate(-35deg)', opacity: 0.04,
-      fontSize: 72, fontFamily: 'Helvetica-Bold', color: '#000',
-      textAlign: 'center',
-    },
     // Legal disclaimer
     disclaimer: {
       marginTop: 16, padding: 6, borderWidth: 0.5, borderColor: '#e6d800',
@@ -181,9 +174,6 @@ const ContractPDF: React.FC<{ data: ContractTemplateData }> = ({ data }) => {
   return (
     <Document title={`${title} — ${data.employeeFirstName} ${data.employeeLastName}`} author={data.companyName}>
       <Page size="A4" style={S.page}>
-        {/* ── Watermark ── */}
-        <Text style={S.watermark} fixed>CONFIDENTIEL</Text>
-
         {/* ── Header ── */}
         <View style={S.header} fixed>
           <View>
@@ -193,7 +183,6 @@ const ContractPDF: React.FC<{ data: ContractTemplateData }> = ({ data }) => {
           </View>
           <View>
             <Text style={S.docMeta}>Réf. {docRef}</Text>
-            <Text style={S.docMeta}>Document confidentiel</Text>
             <Text style={S.docMeta}>2 exemplaires originaux</Text>
           </View>
         </View>

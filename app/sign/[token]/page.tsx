@@ -276,6 +276,22 @@ export default function ContractSigningPage({ params }: { params: Promise<{ toke
                 </div>
               </div>
             </div>
+
+            {/* Employer signature */}
+            {contract.employer_signature && (
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Signature de l&apos;employeur</p>
+                <img
+                  src={contract.employer_signature.startsWith('data:') ? contract.employer_signature : `data:image/png;base64,${contract.employer_signature}`}
+                  alt="Signature employeur"
+                  className="max-w-[200px] max-h-[80px] object-contain"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {contract.employer_name || profile?.company_name || 'Employeur'}
+                  {contract.employer_signature_date && ` — Signé le ${fmtDate(contract.employer_signature_date)}`}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

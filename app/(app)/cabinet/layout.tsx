@@ -80,20 +80,20 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
         </nav>
       </aside>
 
-      {/* Mobile Top Bar */}
-      <div className="lg:hidden fixed top-[53px] left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-2 flex items-center justify-between shadow-sm">
+      {/* Mobile Top Bar — only visible on mobile, positioned below main navbar */}
+      <div className="lg:hidden fixed top-[57px] left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-2.5 flex items-center justify-between shadow-sm">
         <button
           onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 text-xs font-semibold"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
         >
-          <Menu size={14} />
+          <Menu size={16} />
           Cabinet
         </button>
         <Link
           href="/cabinet"
-          className="flex items-center gap-1.5 text-xs font-semibold text-primary"
+          className="flex items-center gap-1.5 text-sm font-semibold text-primary"
         >
-          <Building2 size={13} />
+          <Building2 size={15} />
           Dashboard
         </Link>
       </div>
@@ -156,7 +156,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
       </AnimatePresence>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 overflow-y-auto px-4 lg:px-6 py-5 lg:py-6 pt-14 lg:pt-6">
+      <div className="flex-1 min-w-0 overflow-y-auto px-4 lg:px-6 py-5 lg:py-6 pt-24 lg:pt-6">
         {children}
       </div>
     </div>

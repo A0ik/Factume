@@ -186,6 +186,79 @@ export async function POST(
       console.error('Erreur notification employeur:', emailErr);
     }
 
+    // Envoyer une confirmation au salarié avec le contrat signé en PDF
+    try {
+      const employeeEmail = tokenRecord.employee_email;
+      if (employeeEmail) {
+        const { data: fullContract } = await admin
+          .from(tableName)
+          .select('*')
+          .eq('id', tokenRecord.contract_id)
+          .single();
+
+        let employeeAttachments: Array<{ filename: string; content: Buffer }> = [];
+        if (fullContract) {
+          try {
+            const { data: userProfile } = await admin
+              .from('profiles')
+              .select('accent_color')
+              .eq('id', tokenRecord.user_id)
+              .single();
+
+            const templateData = dbToContractTemplate(fullContract, tokenRecord.contract_type);
+            if (userProfile?.accent_color) {
+              templateData.accentColor = userProfile.accent_color;
+            }
+            const pdfBytes = await generateContractPdfBuffer(templateData);
+            employeeAttachments = [{
+              filename: `Contrat_signe_${CONTRACT_LABELS[tokenRecord.contract_type]}.pdf`,
+              content: Buffer.from(pdfBytes),
+            }];
+          } catch { /* PDF generation failed, send without attachment */ }
+        }
+
+        const label = CONTRACT_LABELS[tokenRecord.contract_type] || 'Contrat';
+        const RESEND_API_KEY = process.env.RESEND_API_KEY;
+        if (RESEND_API_KEY) {
+          const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+          const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
+
+          const resend = new Resend(RESEND_API_KEY);
+          await resend.emails.send({
+            from: `${senderName} <${senderEmail}>`,
+            to: [employeeEmail],
+            subject: `Votre ${label} signé`,
+            html: `
+              <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
+                <div style="background:#1D9E75;padding:20px 24px;border-radius:8px 8px 0 0;">
+                  <h2 style="color:#fff;margin:0;font-size:18px;">Contrat signé avec succès</h2>
+                </div>
+                <div style="background:#fff;padding:24px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;">
+                  <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">
+                    Bonjour <strong>${signerName}</strong>,
+                  </p>
+                  <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">
+                    Votre ${label} a été signé électroniquement avec succès. Les deux parties ont apposé leur signature.
+                  </p>
+                  <p style="font-size:13px;color:#666;margin:0 0 16px;">
+                    Vous trouverez le contrat signé en pièce jointe de cet email. Conservez-le précieusement.
+                  </p>
+                  <p style="font-size:12px;color:#888;margin:0;">
+                    Signature horodatée le ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                  </p>
+                  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+                  <p style="font-size:11px;color:#aaa;margin:0;">Document généré par Factu.me — Signature électronique conforme eIDAS</p>
+                </div>
+              </div>
+            `,
+            attachments: employeeAttachments.length > 0 ? employeeAttachments : undefined,
+          });
+        }
+      }
+    } catch (empEmailErr) {
+      console.error('Erreur notification salarié:', empEmailErr);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const err = error as Error;

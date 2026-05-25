@@ -98,10 +98,10 @@ function StatusBadge({ status }: { status: DSNStatus }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetDSNPage() {
-  const { profile } = useAuthStore();
+  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
+  const cabinet = useCabinetStore(state => state.cabinet);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
