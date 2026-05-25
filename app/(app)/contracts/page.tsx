@@ -14,6 +14,7 @@ import { ContractCard } from '@/components/contracts/ContractCard';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { downloadCSV } from '@/lib/utils';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'Tous' },
@@ -36,6 +37,19 @@ export default function ContractsPage() {
   const { profile } = useAuthStore();
   const { canUseContracts } = useSubscription();
   const { contracts, stats, loading, fetchContracts, deleteContract, duplicateContract } = useContractStore();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'salary' | 'name' | 'status'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  useEffect(() => { fetchContracts(); }, []);
 
   // Vérifier les droits d'accès aux contrats
   useEffect(() => {
@@ -68,18 +82,6 @@ export default function ContractsPage() {
       </div>
     );
   }
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [dateRangeStart, setDateRangeStart] = useState('');
-  const [dateRangeEnd, setDateRangeEnd] = useState('');
-  const [salaryMin, setSalaryMin] = useState('');
-  const [salaryMax, setSalaryMax] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'salary' | 'name' | 'status'>('date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-
-  useEffect(() => { fetchContracts(); }, []);
 
   const filtered = contracts
     .filter((c) => {
@@ -166,7 +168,6 @@ export default function ContractsPage() {
   };
 
   const handleBulkExportCSV = () => {
-    const { downloadCSV } = require('@/lib/utils');
     const headers = ['Numero', 'Type', 'Salarie', 'Entreprise', 'Poste', 'Debut', 'Fin', 'Statut'];
     const rows = filtered.map(c => [
       c.contract_number || '',

@@ -70,13 +70,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <meta name="robots" content="noindex, nofollow" />
-      <script dangerouslySetInnerHTML={{
-        __html: `
-        try {
-          const t = localStorage.getItem('theme');
-          if (t === 'dark') document.documentElement.classList.add('dark');
-        } catch(e) {}
-      ` }} />
       <Toaster position="top-right" richColors closeButton />
       <ServiceWorkerRegistration />
       <CommandPalette />

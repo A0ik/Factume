@@ -45,10 +45,13 @@ export default function DashboardPage() {
   const sub = useSubscription();
   const [period, setPeriod] = useState<1 | 3 | 6 | 12>(6);
 
-  // Streak counter for gamification
+  // Greeting - client-only to avoid hydration mismatch
+  const [greeting, setGreeting] = useState('');
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir');
+  }, []);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
   const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
   // Memoize monthly chart data - O(n) operation

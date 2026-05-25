@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 const SUMUP_AUTH_URL = 'https://api.sumup.com/authorize';
 const SUMUP_TOKEN_URL = 'https://api.sumup.com/token';
 
-// Scopes needed for checkout creation
+// Scopes needed for checkout creation + profile access
 const SCOPES = ['payments', 'user.profile_readonly'].join(' ');
 
 export async function GET(req: NextRequest) {

@@ -112,7 +112,20 @@ export default function CabinetFacturationPage() {
         const err = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
         throw new Error(err.error || 'Erreur de chargement');
       }
-      setData(await res.json());
+      const raw = await res.json();
+      // Transform API 'stats' (Record<status, {count, total}>) into expected 'kpis' format
+      const stats = raw.stats || {};
+      const kpis = {
+        total_facture: Object.values(stats).reduce((s: number, v: any) => s + (v?.count || 0), 0),
+        total_payees: stats.paid?.count || 0,
+        total_en_attente: stats.sent?.count || 0,
+        total_en_retard: stats.overdue?.count || 0,
+        montant_facture: Object.values(stats).reduce((s: number, v: any) => s + (v?.total || 0), 0),
+        montant_payees: stats.paid?.total || 0,
+        montant_en_attente: stats.sent?.total || 0,
+        montant_en_retard: stats.overdue?.total || 0,
+      };
+      setData({ invoices: raw.invoices || [], kpis });
     } catch (error: any) {
       console.error('[CabinetFacturation] load error:', error);
       toast.error(error.message || 'Erreur de chargement des factures');
@@ -241,7 +254,10 @@ export default function CabinetFacturationPage() {
   // Render
   // ---------------------------------------------------------------------------
 
-  const kpis = data.kpis;
+  const kpis = data.kpis || {
+    total_facture: 0, total_payees: 0, total_en_attente: 0, total_en_retard: 0,
+    montant_facture: 0, montant_payees: 0, montant_en_attente: 0, montant_en_retard: 0,
+  };
 
   return (
     <CabinetGuard>

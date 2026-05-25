@@ -142,7 +142,12 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
-  const [issueDate, setIssueDate] = useState(invoice?.issue_date || new Date().toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState(invoice?.issue_date || '');
+  useEffect(() => {
+    if (!invoice?.issue_date && !issueDate) {
+      setIssueDate(new Date().toISOString().split('T')[0]);
+    }
+  }, []);
   const _initialDays = invoice?.due_date
     ? Math.round((new Date(invoice.due_date).getTime() - new Date(invoice.issue_date).getTime()) / (1000 * 60 * 60 * 24))
     : 30;

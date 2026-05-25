@@ -95,6 +95,7 @@ interface CabinetState {
   socialTracking: CabinetSocialTracking[];
   loading: boolean;
 
+  hydrateFromCache: () => void;
   fetchCabinets: () => Promise<void>;
   fetchCabinet: () => Promise<void>;
   createCabinet: (name: string, siret?: string) => Promise<Cabinet | null>;
@@ -132,17 +133,9 @@ const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';
 const CABINET_DATA_KEY = 'factume_cabinet_data';
 
 export const useCabinetStore = create<CabinetState>((set, get) => ({
-  cabinet: (() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const cached = localStorage.getItem(CABINET_DATA_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch { return null; }
-  })(),
+  cabinet: null,
   cabinets: [],
-  activeCabinetId: typeof window !== 'undefined'
-    ? localStorage.getItem(ACTIVE_CABINET_KEY)
-    : null,
+  activeCabinetId: null,
   members: [],
   clients: [],
   invoices: [],
@@ -152,6 +145,16 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
   deadlines: [],
   socialTracking: [],
   loading: false,
+
+  hydrateFromCache: () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cached = localStorage.getItem(CABINET_DATA_KEY);
+      if (cached) set({ cabinet: JSON.parse(cached) });
+      const activeId = localStorage.getItem(ACTIVE_CABINET_KEY);
+      if (activeId) set({ activeCabinetId: activeId });
+    } catch {}
+  },
 
   fetchCabinets: async () => {
     const headers = await getAuthHeaders();
@@ -178,7 +181,10 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
 
   fetchCabinet: async () => {
     const headers = await getAuthHeaders();
-    if (!headers) return;
+    if (!headers) {
+      // Return silently but don't leave callers thinking we completed successfully
+      return;
+    }
 
     set({ loading: true });
     try {

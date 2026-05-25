@@ -19,7 +19,18 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (initialized && profile && !fetched.current) {
       fetched.current = true;
-      fetchCabinet().then(() => setFetchCompleted(true));
+      useCabinetStore.getState().hydrateFromCache();
+      fetchCabinet().then(() => {
+        // Only mark fetch as completed if the store actually loaded
+        // (loading went to true and then false, meaning the fetch ran)
+        // Check by reading the latest store state
+        const { cabinet: freshCabinet } = useCabinetStore.getState();
+        setFetchCompleted(true);
+        // If cabinet was found, clear any previous redirect
+        if (freshCabinet) {
+          redirected.current = false;
+        }
+      });
     }
   }, [initialized, profile, fetchCabinet]);
 

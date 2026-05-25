@@ -131,9 +131,16 @@ export default function CabinetEcheancesPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Calendar navigation
-  const today = useMemo(() => new Date(), []);
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(0);
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [periodReady, setPeriodReady] = useState(false);
+
+  useEffect(() => {
+    const now = new Date();
+    setCurrentMonth(now.getMonth());
+    setCurrentYear(now.getFullYear());
+    setPeriodReady(true);
+  }, []);
 
   // View mode
   const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');

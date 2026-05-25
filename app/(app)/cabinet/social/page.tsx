@@ -98,9 +98,16 @@ export default function CabinetSocialPage() {
   const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
 
   // Month / Year selector
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [periodReady, setPeriodReady] = useState(false);
+
+  useEffect(() => {
+    const now = new Date();
+    setSelectedYear(now.getFullYear());
+    setSelectedMonth(now.getMonth() + 1);
+    setPeriodReady(true);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

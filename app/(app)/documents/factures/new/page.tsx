@@ -91,7 +91,8 @@ export default function NewFacturePage() {
 
   const [notes, setNotes] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState('');
+  useEffect(() => { if (!issueDate) setIssueDate(new Date().toISOString().split('T')[0]); }, []);
   const [paymentDays, setPaymentDays] = useState<number>(30);
   const [paymentTermId, setPaymentTermId] = useState<string>('days30');
   const [showCalendar, setShowCalendar] = useState(false);

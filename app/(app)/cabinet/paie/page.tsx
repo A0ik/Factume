@@ -105,9 +105,16 @@ export default function CabinetPaiePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   // Period selector
-  const now = new Date();
-  const [selectedMois, setSelectedMois] = useState(now.getMonth() + 1);
-  const [selectedAnnee, setSelectedAnnee] = useState(now.getFullYear());
+  const [selectedMois, setSelectedMois] = useState(1);
+  const [selectedAnnee, setSelectedAnnee] = useState(2026);
+  const [periodReady, setPeriodReady] = useState(false);
+
+  useEffect(() => {
+    const now = new Date();
+    setSelectedMois(now.getMonth() + 1);
+    setSelectedAnnee(now.getFullYear());
+    setPeriodReady(true);
+  }, []);
 
   // Preview modal
   const [showPreview, setShowPreview] = useState(false);

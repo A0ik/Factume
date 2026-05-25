@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, downloadCSV } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -116,24 +117,14 @@ export default function CabinetPage() {
     if (!cabinetName.trim()) return;
     setCreating(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Session expiree. Veuillez vous reconnecter.');
-        return;
-      }
-      const res = await fetch('/api/cabinet/clients', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ name: cabinetName.trim() }),
-      });
-      if (res.ok) {
+      const { createCabinet } = useCabinetStore.getState();
+      const cabinet = await createCabinet(cabinetName.trim());
+      if (cabinet) {
         toast.success('Cabinet cree avec succes');
         setCabinetName('');
         await loadDashboard();
       } else {
-        const error = await res.json().catch(() => ({ error: 'Erreur lors de la creation' }));
-        toast.error(error.error || 'Erreur lors de la creation');
+        toast.error('Erreur lors de la creation');
       }
     } catch (error: any) {
       console.error('[handleCreateCabinet] Error:', error);

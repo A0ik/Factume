@@ -108,9 +108,16 @@ export default function CabinetDSNPage() {
   const [dsnList, setDsnList] = useState<DSN[]>([]);
 
   // Period
-  const now = new Date();
-  const [selectedMois, setSelectedMois] = useState(now.getMonth() + 1);
-  const [selectedAnnee, setSelectedAnnee] = useState(now.getFullYear());
+  const [selectedMois, setSelectedMois] = useState(1);
+  const [selectedAnnee, setSelectedAnnee] = useState(2026);
+  const [periodReady, setPeriodReady] = useState(false);
+
+  useEffect(() => {
+    const now = new Date();
+    setSelectedMois(now.getMonth() + 1);
+    setSelectedAnnee(now.getFullYear());
+    setPeriodReady(true);
+  }, []);
 
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
@@ -137,8 +144,8 @@ export default function CabinetDSNPage() {
       });
 
       if (res.ok) {
-        const { dsn } = await res.json();
-        setDsnList(dsn || []);
+        const data = await res.json();
+        setDsnList(data?.dsn || []);
       }
     } catch (error: any) {
       console.error('[loadData] Error:', error);
@@ -154,7 +161,7 @@ export default function CabinetDSNPage() {
   }, [profile, fetchCabinet]);
 
   useEffect(() => {
-    if (profile && cabinet) loadData();
+    if (profile && cabinet && periodReady) loadData();
     else if (profile && !cabinetLoading && !cabinet) {
       toast.error('Créez d\'abord votre cabinet');
       router.push('/cabinet');
