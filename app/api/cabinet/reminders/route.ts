@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       console.error('[reminders GET] Invoices query error:', invoicesError);
       // Table might not exist yet
       if (invoicesError.code === '42P01') {
-        return NextResponse.json({ relance1: [], relance2: [], mise_en_demeure: [] });
+        return NextResponse.json({ invoices: [], summary: { total_overdue: 0, total_amount: 0, level_1_count: 0, level_2_count: 0, level_3_count: 0 } });
       }
       throw invoicesError;
     }
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       if (remindersError) {
         console.error('[reminders GET] Reminders query error:', remindersError);
         if (remindersError.code === '42P01') {
-          return NextResponse.json({ relance1: [], relance2: [], mise_en_demeure: [] });
+          return NextResponse.json({ invoices: [], summary: { total_overdue: 0, total_amount: 0, level_1_count: 0, level_2_count: 0, level_3_count: 0 } });
         }
         throw remindersError;
       }
@@ -76,10 +76,8 @@ export async function GET(req: NextRequest) {
       remindersByInvoice[r.invoice_id].push(r);
     }
 
-    // Calculate days overdue and group by urgency
-    const relance1: any[] = [];
-    const relance2: any[] = [];
-    const mise_en_demeure: any[] = [];
+    // Calculate days overdue and build flat invoice list
+    const allOverdue: any[] = [];
 
     for (const inv of invoices || []) {
       const dueDate = inv.due_date ? new Date(inv.due_date) : null;
@@ -88,25 +86,44 @@ export async function GET(req: NextRequest) {
       const daysOverdue = Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysOverdue < 1) continue;
 
-      const invoiceWithDetails = {
-        ...inv,
-        days_overdue: daysOverdue,
-        reminders: remindersByInvoice[inv.id] || [],
+      const invReminders = remindersByInvoice[inv.id] || [];
+      const maxLevel = invReminders.length > 0
+        ? Math.max(...invReminders.map((r: any) => r.level || 0))
+        : 0;
+
+      allOverdue.push({
+        id: inv.id,
+        number: inv.number || '',
         client_name: inv.client?.profile?.company_name
           || [inv.client?.profile?.first_name, inv.client?.profile?.last_name].filter(Boolean).join(' ')
           || 'Client',
-      };
-
-      if (daysOverdue > 60) {
-        mise_en_demeure.push(invoiceWithDetails);
-      } else if (daysOverdue > 30) {
-        relance2.push(invoiceWithDetails);
-      } else if (daysOverdue > 7) {
-        relance1.push(invoiceWithDetails);
-      }
+        client_email: inv.client?.profile?.email || undefined,
+        total: inv.amount_ttc || inv.total || 0,
+        due_date: inv.due_date,
+        issue_date: inv.issue_date || '',
+        days_overdue: daysOverdue,
+        reminder_level: maxLevel as 0 | 1 | 2 | 3,
+        last_reminder_date: invReminders.length > 0
+          ? invReminders[invReminders.length - 1].sent_at || null
+          : null,
+      });
     }
 
-    return NextResponse.json({ relance1, relance2, mise_en_demeure });
+    const level1 = allOverdue.filter((i) => i.days_overdue > 7).length;
+    const level2 = allOverdue.filter((i) => i.days_overdue > 30).length;
+    const level3 = allOverdue.filter((i) => i.days_overdue > 60).length;
+    const totalAmount = allOverdue.reduce((sum, i) => sum + i.total, 0);
+
+    return NextResponse.json({
+      invoices: allOverdue,
+      summary: {
+        total_overdue: allOverdue.length,
+        total_amount: totalAmount,
+        level_1_count: level1,
+        level_2_count: level2,
+        level_3_count: level3,
+      },
+    });
   } catch (err: any) {
     console.error('[reminders GET] Error:', err);
     return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
