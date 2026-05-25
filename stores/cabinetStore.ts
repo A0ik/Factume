@@ -131,6 +131,7 @@ async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | 
 
 const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';
 const CABINET_DATA_KEY = 'factume_cabinet_data';
+let _fetchCabinetPromise: Promise<void> | null = null;
 
 export const useCabinetStore = create<CabinetState>((set, get) => ({
   cabinet: null,
@@ -180,27 +181,32 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
   },
 
   fetchCabinet: async () => {
-    const headers = await getAuthHeaders();
-    if (!headers) {
-      // Return silently but don't leave callers thinking we completed successfully
-      return;
-    }
+    // Deduplicate: if a fetch is already in progress, reuse it
+    if (_fetchCabinetPromise) return _fetchCabinetPromise;
 
-    set({ loading: true });
-    try {
-      const res = await fetch('/api/cabinet/clients', { headers });
-      if (res.ok) {
-        const { clients, cabinet } = await res.json();
-        set({ clients, cabinet });
-        if (cabinet) {
-          try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
-        } else {
-          try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
+    const headers = await getAuthHeaders();
+    if (!headers) return;
+
+    _fetchCabinetPromise = (async () => {
+      set({ loading: true });
+      try {
+        const res = await fetch('/api/cabinet/clients', { headers });
+        if (res.ok) {
+          const { clients, cabinet } = await res.json();
+          set({ clients, cabinet });
+          if (cabinet) {
+            try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
+          } else {
+            try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
+          }
         }
+      } finally {
+        set({ loading: false });
+        _fetchCabinetPromise = null;
       }
-    } finally {
-      set({ loading: false });
-    }
+    })();
+
+    return _fetchCabinetPromise;
   },
 
   createCabinet: async (name, siret) => {

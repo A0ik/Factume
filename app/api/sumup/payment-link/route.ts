@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
       checkout_reference: invoiceId,
       amount,
       currency,
+      merchant_code: profile?.sumup_merchant_code,
       description: `${invoice.document_type === 'quote' ? 'Devis' : 'Facture'} ${invoice.number}`,
       return_url: `${appUrl}/api/sumup/webhook`,
     };
