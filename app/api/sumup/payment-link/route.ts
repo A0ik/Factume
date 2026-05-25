@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // If checkout already exists, return existing URL
     if (invoice.sumup_checkout_id) {
-      const existingUrl = `https://pay.sumup.com/b2c/${invoice.sumup_checkout_id}`;
+      const existingUrl = invoice.payment_link || `https://pay.sumup.com/b2c/${invoice.sumup_checkout_id}`;
       return NextResponse.json({ url: existingUrl, checkoutId: invoice.sumup_checkout_id });
     }
 
@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
       merchant_code: profile?.sumup_merchant_code,
       description: `${invoice.document_type === 'quote' ? 'Devis' : 'Facture'} ${invoice.number}`,
       return_url: `${appUrl}/api/sumup/webhook`,
+      hosted_checkout: { enabled: true },
     };
 
     // Call SumUp API with OAuth token
@@ -143,27 +144,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const paymentUrl = `https://pay.sumup.com/b2c/${checkout.id}`;
-
-    // Verify payment page accessibility (optional)
-    try {
-      const verifyRes = await fetch(paymentUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-      if (verifyRes.status === 404) {
-        console.warn('[sumup-payment-link] Payment URL returns 404 — online payments not enabled:', checkout.id);
-        await supabase
-          .from('invoices')
-          .update({ sumup_checkout_id: checkout.id, payment_link: paymentUrl })
-          .eq('id', invoiceId);
-
-        return NextResponse.json({
-          url: paymentUrl,
-          checkoutId: checkout.id,
-          warning: 'Le checkout a été créé mais la page de paiement retourne une erreur 404. Activez les paiements en ligne dans votre portail SumUp.',
-        });
-      }
-    } catch {
-      // Ignore verification errors
-    }
+    const paymentUrl = checkout.hosted_checkout_url || `https://pay.sumup.com/b2c/${checkout.id}`;
 
     // Save checkout to invoice
     await supabase
