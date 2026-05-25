@@ -121,12 +121,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className={cn(
-            "flex-1 w-full mx-auto px-4 lg:px-8 py-5 lg:py-6",
-            pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/cabinet') || pathname.startsWith('/banking/transactions')
+            "flex-1 w-full py-5 lg:py-6",
+            pathname.startsWith('/cabinet')
+              ? "px-0 lg:px-0"
+              : "mx-auto px-4 lg:px-8",
+            pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
               ? "max-w-[1800px]"
               : pathname.startsWith('/contracts')
               ? "max-w-[1400px]"
-              : "max-w-5xl"
+              : !pathname.startsWith('/cabinet')
+              ? "max-w-5xl"
+              : ""
           )}>
             {children}
           </div>

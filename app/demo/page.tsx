@@ -234,7 +234,7 @@ export default function DemoPage() {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
-      const response = await fetch('/api/process-voice', {
+      const response = await fetch('/api/process-voice-demo', {
         method: 'POST',
         body: formData,
       });
@@ -497,9 +497,7 @@ export default function DemoPage() {
       <header className="relative z-10 border-b border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="Factu.me" className="h-10 w-auto group-hover:scale-105 transition-transform" />
             <span className="text-xl font-bold text-gray-900 dark:text-white">Factu<span className="text-primary">.me</span></span>
           </Link>
           <Link

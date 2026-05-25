@@ -256,11 +256,7 @@ export default function CabinetSalariesPage() {
 
   useEffect(() => {
     if (initialized && profile && cabinet) loadData();
-    else if (initialized && profile && !cabinetLoading && !cabinet) {
-      toast.error('Creez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [initialized, profile, cabinet, cabinetLoading, loadData, router]);
+  }, [initialized, profile, cabinet, loadData]);
 
   // Filtered employees
   const filteredEmployees = useMemo(() => {

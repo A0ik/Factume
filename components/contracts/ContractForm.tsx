@@ -178,6 +178,12 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  // Fields that belong to the user's own company and should NOT be overwritten by document analysis
+  const COMPANY_FIELDS = new Set([
+    'companyName', 'companyAddress', 'companyPostalCode', 'companyCity',
+    'companySiret', 'employerName', 'employerTitle',
+  ]);
+
   // Converts camelCase AI response keys → snake_case form keys
   const mapAIParsed = (parsed: Record<string, unknown>): Partial<ContractFormData> => {
     const keyMap: Record<string, string> = {
@@ -228,7 +234,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
     };
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(parsed)) {
-      if (value !== null && value !== undefined && value !== '') {
+      if (value !== null && value !== undefined && value !== '' && !COMPANY_FIELDS.has(key)) {
         out[keyMap[key] ?? key] = value;
       }
     }

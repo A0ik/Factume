@@ -503,6 +503,19 @@ function getStyles(accent: string): string {
       overflow-wrap: break-word;
     }
     .article-body p:last-child { margin-bottom: 0; }
+    .article-body ul {
+      margin: 4px 0 8px 16px;
+      padding-left: 16px;
+      list-style-type: disc;
+    }
+    .article-body li {
+      margin-bottom: 4px;
+      font-size: 8.5pt;
+      line-height: 1.55;
+    }
+    .article-body strong {
+      font-weight: 700;
+    }
     .highlight-box {
       background: #fafafa;
       border-left: 2px solid ${accent};
@@ -1081,7 +1094,7 @@ function buildContractHTML(data: ContractTemplateData): string {
         color: #888;
       }
       @top-right {
-        content: "${esc(data.companyName)} — Confidentiel";
+        content: "${esc(data.companyName)}";
         font-family: 'Segoe UI', Arial, sans-serif;
         font-size: 7.5pt;
         color: #aaa;
@@ -1170,7 +1183,7 @@ function buildContractHTML(data: ContractTemplateData): string {
     </div>
     <div class="doc-header-meta">
       <div class="doc-ref">Réf. ${docRef}</div>
-      <div>Document confidentiel</div>
+      <div>Document confidentiel — ne pas diffuser</div>
       <div>2 exemplaires originaux</div>
     </div>
   </div>
@@ -1315,7 +1328,7 @@ function buildContractHTML(data: ContractTemplateData): string {
       &nbsp;·&nbsp; SIRET ${esc(data.companySiret)}
       &nbsp;·&nbsp; ${esc(data.companyAddress)}, ${esc(data.companyPostalCode)} ${esc(data.companyCity)}
     </div>
-    <div>Réf. ${docRef} &nbsp;·&nbsp; Document confidentiel</div>
+    <div>Réf. ${docRef}</div>
   </div>
 
 </body>

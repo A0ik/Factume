@@ -160,11 +160,7 @@ export default function CabinetPaiePage() {
 
   useEffect(() => {
     if (profile && cabinet) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
-      toast.error('Créez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [profile, cabinet, loadData]);
 
   // Enrich bulletins with employee data
   const enrichedBulletins = useMemo(() => {

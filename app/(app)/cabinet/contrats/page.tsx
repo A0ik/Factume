@@ -157,11 +157,7 @@ export default function CabinetContratsPage() {
 
   useEffect(() => {
     if (profile && cabinet) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
-      toast.error('Créez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [profile, cabinet, loadData]);
 
   // Filtered contracts
   const filteredContracts = useMemo(() => {

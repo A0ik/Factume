@@ -487,17 +487,38 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     needPage();
     y -= 8;
 
-    const boxH = 48;
+    // Fetch QR code image for the payment URL
+    const qrImage = await fetchAndEmbedImage(pdfDoc, `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(paymentUrl)}`);
+    const boxH = qrImage ? 70 : 48;
     page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
 
     const method = invoice.stripe_payment_url ? 'PAIEMENT EN LIGNE (STRIPE)' : 'PAIEMENT EN LIGNE (SUMUP)';
     drawText(page, method, margin + 14, y - 8, 7, bold, accent);
 
-    const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
-    centreText(page, btnLabel, margin, contentW, y - 22, 10, bold, accent);
+    if (qrImage) {
+      // Draw text on the left, QR code on the right
+      const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
+      drawText(page, btnLabel, margin + 14, y - 22, 10, bold, accent);
 
-    const urlText = safe(paymentUrl).slice(0, 80);
-    centreText(page, urlText, margin, contentW, y - 35, 6.5, reg, muted);
+      const urlText = safe(paymentUrl).slice(0, 50);
+      drawText(page, urlText, margin + 14, y - 36, 6.5, reg, muted);
+
+      drawText(page, 'Scannez pour payer :', margin + 14, y - 52, 7, reg, muted);
+
+      const qrSize = 48;
+      page.drawImage(qrImage, {
+        x: W - margin - qrSize - 10,
+        y: y - boxH + 14,
+        width: qrSize,
+        height: qrSize,
+      });
+    } else {
+      const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
+      centreText(page, btnLabel, margin, contentW, y - 22, 10, bold, accent);
+
+      const urlText = safe(paymentUrl).slice(0, 80);
+      centreText(page, urlText, margin, contentW, y - 35, 6.5, reg, muted);
+    }
 
     y -= boxH + 6;
   }

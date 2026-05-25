@@ -121,11 +121,7 @@ export default function CabinetDPAEPage() {
 
   useEffect(() => {
     if (profile && cabinet) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
-      toast.error('Créez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [profile, cabinet, loadData]);
 
   // Filtered
   const filteredDPAE = useMemo(() => {

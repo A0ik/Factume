@@ -192,11 +192,7 @@ export default function CabinetSocialPage() {
 
   useEffect(() => {
     if (profile && cabinet) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
-      toast.error('Creez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [profile, cabinet, loadData]);
 
   // Filtered rows
   const filteredRows = useMemo(() => {

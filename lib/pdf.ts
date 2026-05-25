@@ -70,13 +70,6 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
     return;
   }
 
-  const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-
-  if (isMobile) {
-    window.location.href = `/api/download/pdf/${invoice.id}`;
-    return;
-  }
-
   try {
     const { pdf } = await import('@react-pdf/renderer');
     const { PdfDocument } = await import('@/components/pdf-document');
@@ -96,7 +89,29 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
       URL.revokeObjectURL(url);
     }, 100);
   } catch {
-    downloadHtmlPdf(invoice, profile);
+    // Fallback: download via server-side endpoint
+    try {
+      const res = await fetch(`/api/download/pdf/${invoice.id}`);
+      if (res.ok) {
+        const serverBlob = await res.blob();
+        const serverUrl = URL.createObjectURL(serverBlob);
+        const a = document.createElement('a');
+        a.href = serverUrl;
+        a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(serverUrl);
+        }, 100);
+      } else {
+        throw new Error('Server PDF generation failed');
+      }
+    } catch {
+      // Last resort: open server PDF in new tab
+      window.open(`/api/download/pdf/${invoice.id}`, '_blank');
+    }
   }
 }
 

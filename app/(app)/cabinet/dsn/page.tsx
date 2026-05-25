@@ -162,11 +162,7 @@ export default function CabinetDSNPage() {
 
   useEffect(() => {
     if (profile && cabinet && periodReady) loadData();
-    else if (profile && !cabinetLoading && !cabinet) {
-      toast.error('Créez d\'abord votre cabinet');
-      router.push('/cabinet');
-    }
-  }, [profile, cabinet, cabinetLoading, loadData, router]);
+  }, [profile, cabinet, loadData, periodReady]);
 
   // Filtered
   const filteredDSN = useMemo(() => {
