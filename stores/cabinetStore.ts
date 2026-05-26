@@ -131,7 +131,11 @@ async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | 
 
 const ACTIVE_CABINET_KEY = 'factume_active_cabinet_id';
 const CABINET_DATA_KEY = 'factume_cabinet_data';
+const CABINET_CLIENTS_KEY = 'factume_cabinet_clients';
+const CABINET_EMPLOYEES_KEY = 'factume_cabinet_employees';
 let _fetchCabinetPromise: Promise<void> | null = null;
+let _fetchClientsPromise: Promise<void> | null = null;
+let _fetchEmployeesPromise: Promise<void> | null = null;
 
 export const useCabinetStore = create<CabinetState>((set, get) => ({
   cabinet: null,
@@ -154,6 +158,10 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
       if (cached) set({ cabinet: JSON.parse(cached) });
       const activeId = localStorage.getItem(ACTIVE_CABINET_KEY);
       if (activeId) set({ activeCabinetId: activeId });
+      const cachedClients = localStorage.getItem(CABINET_CLIENTS_KEY);
+      if (cachedClients) set({ clients: JSON.parse(cachedClients) });
+      const cachedEmployees = localStorage.getItem(CABINET_EMPLOYEES_KEY);
+      if (cachedEmployees) set({ employees: JSON.parse(cachedEmployees) });
     } catch {}
   },
 
@@ -198,6 +206,9 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
             try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
           } else {
             try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
+          }
+          if (clients) {
+            try { localStorage.setItem(CABINET_CLIENTS_KEY, JSON.stringify(clients)); } catch {}
           }
         } else {
           throw new Error(`Cabinet fetch failed: ${res.status}`);
@@ -367,15 +378,29 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
   },
 
   fetchEmployees: async (filters) => {
+    // Deduplicate: if a fetch is already in progress, reuse it
+    if (_fetchEmployeesPromise && !filters) return _fetchEmployeesPromise;
+
     const headers = await getAuthHeaders();
     if (!headers) return;
 
-    const params = new URLSearchParams(filters || {});
-    const res = await fetch(`/api/cabinet/employees?${params}`, { headers });
-    if (res.ok) {
-      const { employees } = await res.json();
-      set({ employees: employees || [] });
+    const doFetch = async () => {
+      const params = new URLSearchParams(filters || {});
+      const res = await fetch(`/api/cabinet/employees?${params}`, { headers });
+      if (res.ok) {
+        const { employees } = await res.json();
+        set({ employees: employees || [] });
+        if (employees && !filters) {
+          try { localStorage.setItem(CABINET_EMPLOYEES_KEY, JSON.stringify(employees)); } catch {}
+        }
+      }
+    };
+
+    if (!filters) {
+      _fetchEmployeesPromise = doFetch().finally(() => { _fetchEmployeesPromise = null; });
+      return _fetchEmployeesPromise;
     }
+    return doFetch();
   },
 
   fetchMissions: async (filters) => {

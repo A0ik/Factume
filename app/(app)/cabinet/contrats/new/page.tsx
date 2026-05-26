@@ -104,7 +104,7 @@ export default function NewContractPage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet } = useCabinetStore();
+  const { cabinet, fetchEmployees } = useCabinetStore();
 
   const [form, setForm] = useState<ContractForm>({ ...EMPTY_FORM });
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
@@ -112,35 +112,26 @@ export default function NewContractPage() {
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Load employees
+  // Load employees — use store (deduplicated)
   const loadEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/cabinet/employees', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (res.ok) {
-        const { employees: apiEmps } = await res.json();
-        setEmployees(
-          (apiEmps || []).map((e: any) => ({
-            id: e.id,
-            name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
-            poste: e.job_title || '',
-            typeContrat: e.contract_type || 'CDI',
-          }))
-        );
-      }
+      await fetchEmployees();
+      const storeEmps = useCabinetStore.getState().employees;
+      setEmployees(
+        (storeEmps || []).map((e: any) => ({
+          id: e.id,
+          name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+          poste: e.job_title || '',
+          typeContrat: e.contract_type || 'CDI',
+        }))
+      );
     } catch (error: any) {
       toast.error('Erreur lors du chargement des salariés');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchEmployees]);
 
   useEffect(() => {
     if (profile) loadEmployees();

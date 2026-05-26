@@ -97,7 +97,7 @@ export default function CabinetPaiePage() {
   const { profile } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
+  const { cabinet, fetchCabinet, fetchEmployees, loading: cabinetLoading } = useCabinetStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +121,7 @@ export default function CabinetPaiePage() {
   const [previewBulletin, setPreviewBulletin] = useState<Bulletin | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Load data
+  // Load data — use store for employees, only fetch payroll directly
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
@@ -131,19 +131,15 @@ export default function CabinetPaiePage() {
 
       const headers = { Authorization: `Bearer ${session.access_token}` };
 
-      const [bulRes, empRes] = await Promise.all([
-        fetch(`/api/cabinet/payroll?mois=${selectedMois}&annee=${selectedAnnee}`, { headers }),
-        fetch('/api/cabinet/employees', { headers }),
-      ]);
+      // Fetch employees via store (deduplicated) + payroll directly
+      await fetchEmployees();
+      const storeEmps = useCabinetStore.getState().employees as any[];
+      setEmployees(storeEmps || []);
 
+      const bulRes = await fetch(`/api/cabinet/payroll?mois=${selectedMois}&annee=${selectedAnnee}`, { headers });
       if (bulRes.ok) {
         const { bulletins: apiBul } = await bulRes.json();
         setBulletins(apiBul || []);
-      }
-
-      if (empRes.ok) {
-        const { employees: apiEmps } = await empRes.json();
-        setEmployees(apiEmps || []);
       }
     } catch (error: any) {
       console.error('[loadData] Error:', error);
@@ -152,7 +148,7 @@ export default function CabinetPaiePage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedMois, selectedAnnee]);
+  }, [selectedMois, selectedAnnee, fetchEmployees]);
 
   useEffect(() => {
     if (profile && cabinet) loadData();

@@ -145,7 +145,7 @@ export default function CabinetSalariesPage() {
   const { profile, initialized } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet, fetchCabinet, loading: cabinetLoading } = useCabinetStore();
+  const { cabinet, clients: storeClients, fetchCabinet, fetchEmployees, employees: storeEmployees, loading: cabinetLoading } = useCabinetStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -168,77 +168,51 @@ export default function CabinetSalariesPage() {
   const [saving, setSaving] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  // Load data
+  // Load data — use store cache for clients, fetch employees via store
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-
-      const [empRes, cabRes] = await Promise.all([
-        fetch('/api/cabinet/employees', { headers }),
-        fetch('/api/cabinet/clients', { headers }),
-      ]);
-
-      if (empRes.ok && cabRes.ok) {
-        const { employees: apiEmps } = await empRes.json();
-        const { clients: cabClients } = await cabRes.json();
-
-        // Build client lookup map
-        const clientMap = new Map<string, string>();
-        for (const c of (cabClients || [])) {
-          const name = c.client_type === 'manual'
-            ? (c.company_name || 'Client')
-            : (c.profile?.company_name || c.profile?.first_name || c.profile?.email || 'Client');
-          clientMap.set(c.id, name);
-        }
-
-        setClients((cabClients || []).map((c: any) => ({
-          id: c.id || c.client_user_id,
-          name: clientMap.get(c.id) || 'Client',
-        })));
-
-        const mapped: Employee[] = (apiEmps || []).map((e: any) => ({
-          id: e.id,
-          clientId: e.client_id,
-          clientName: clientMap.get(e.client_id) || '',
-          civilite: e.gender === 'F' ? 'Mme' : 'M.',
-          nom: e.last_name,
-          prenom: e.first_name,
-          dateNaissance: e.birth_date || '',
-          lieuNaissance: e.birth_place || '',
-          nationalite: e.nationality || 'Francaise',
-          nss: e.nss || '',
-          adresse: e.address || '',
-          poste: e.job_title || '',
-          typeContrat: e.contract_type || 'CDI',
-          salaireBrut: e.salary_brut_monthly || 0,
-          tauxHoraire: e.hourly_rate || 0,
-          heuresSemaine: e.weekly_hours || 35,
-          dateDebut: e.start_date || '',
-          dateFin: e.end_date || null,
-          status: e.status || 'actif',
-          createdAt: e.created_at || '',
-        }));
-        setEmployees(mapped);
-      } else {
-        if (empRes.ok) {
-          const { employees: apiEmps } = await empRes.json();
-          setEmployees((apiEmps || []).map((e: any) => ({
-            id: e.id, clientId: e.client_id, clientName: '',
-            civilite: e.gender === 'F' ? 'Mme' : 'M.', nom: e.last_name, prenom: e.first_name,
-            dateNaissance: e.birth_date || '', lieuNaissance: e.birth_place || '',
-            nationalite: e.nationality || 'Francaise', nss: e.nss || '', adresse: e.address || '',
-            poste: e.job_title || '', typeContrat: e.contract_type || 'CDI',
-            salaireBrut: e.salary_brut_monthly || 0, tauxHoraire: e.hourly_rate || 0,
-            heuresSemaine: e.weekly_hours || 35, dateDebut: e.start_date || '',
-            dateFin: e.end_date || null, status: e.status || 'actif', createdAt: e.created_at || '',
-          })));
-        }
+      // Build client lookup from store (already loaded by CabinetGuard)
+      const cabClients = storeClients as any[];
+      const clientMap = new Map<string, string>();
+      for (const c of (cabClients || [])) {
+        const name = c.client_type === 'manual'
+          ? (c.company_name || 'Client')
+          : (c.profile?.company_name || c.profile?.first_name || c.profile?.email || 'Client');
+        clientMap.set(c.id, name);
       }
+      setClients((cabClients || []).map((c: any) => ({
+        id: c.id || c.client_user_id,
+        name: clientMap.get(c.id) || 'Client',
+      })));
+
+      // Fetch employees via store (deduplicated)
+      await fetchEmployees();
+      const apiEmps = useCabinetStore.getState().employees as any[];
+
+      const mapped: Employee[] = (apiEmps || []).map((e) => ({
+        id: e.id,
+        clientId: e.client_id,
+        clientName: clientMap.get(e.client_id) || '',
+        civilite: e.gender === 'F' ? 'Mme' : 'M.',
+        nom: e.last_name,
+        prenom: e.first_name,
+        dateNaissance: e.birth_date || '',
+        lieuNaissance: e.birth_place || '',
+        nationalite: e.nationality || 'Francaise',
+        nss: e.nss || '',
+        adresse: e.address || '',
+        poste: e.job_title || '',
+        typeContrat: e.contract_type || 'CDI',
+        salaireBrut: e.salary_brut_monthly || 0,
+        tauxHoraire: e.hourly_rate || 0,
+        heuresSemaine: e.weekly_hours || 35,
+        dateDebut: e.start_date || '',
+        dateFin: e.end_date || null,
+        status: e.status || 'actif',
+        createdAt: e.created_at || '',
+      }));
+      setEmployees(mapped);
     } catch (error: any) {
       console.error('[loadData] Error:', error);
       toast.error(error.message || 'Erreur de chargement');
@@ -246,7 +220,7 @@ export default function CabinetSalariesPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [storeClients, fetchEmployees]);
 
   useEffect(() => {
     if (initialized && profile && cabinet) loadData();

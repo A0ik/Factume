@@ -103,12 +103,17 @@ export async function middleware(req: NextRequest) {
 
   let rlLimit = 300;
   let rlWindow = 60_000;
-  if (isApiRoute) { rlLimit = 100; rlWindow = 60_000; }
+  if (isApiRoute) { rlLimit = 300; rlWindow = 60_000; }
   if (isAuthRoute) { rlLimit = 5; rlWindow = 3_600_000; }
   if (pathname === '/api/stripe/trial-subscription') { rlLimit = 3; rlWindow = 86_400_000; }
   if (isCrawler) { rlLimit = 5000; rlWindow = 60_000; }
 
-  const rl = rateLimit({ key: `mw:${ip}:${pathname.startsWith('/api/') ? 'api' : isAuthRoute ? 'auth' : 'page'}`, limit: rlLimit, windowMs: rlWindow });
+  // Use per-path-group key so /api/cabinet/* doesn't share the same bucket as /api/stripe/*
+  const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
+    : isApiRoute ? 'api'
+    : isAuthRoute ? 'auth'
+    : 'page';
+  const rl = rateLimit({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit, windowMs: rlWindow });
   if (!rl.success) {
     const retryAfter = Math.ceil((rl.resetTime - Date.now()) / 1000);
     return new Response('Too Many Requests', {
