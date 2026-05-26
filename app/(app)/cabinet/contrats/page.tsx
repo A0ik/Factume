@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, RefreshCw, Search, Plus, X, ChevronDown,
@@ -8,13 +8,12 @@ import {
   ChevronRight, Info, Shield, Ban, PauseCircle, PlayCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,14 +107,12 @@ function StatusBadge({ status }: { status: ContractStatus }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetContratsPage() {
-  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
-  const router = useRouter();
   const cabinet = useCabinetStore(state => state.cabinet);
 
-  const [loading, setLoading] = useState(true);
+  // Data fetching via useCabinetData hook
+  const { data: contracts, loading, error, refresh } = useCabinetData<Contract[]>('/api/cabinet/contracts');
   const [refreshing, setRefreshing] = useState(false);
-  const [contracts, setContracts] = useState<Contract[]>([]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,37 +124,19 @@ export default function CabinetContratsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
-  // Load data
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-      const res = await fetch('/api/cabinet/contracts', { headers });
-
-      if (res.ok) {
-        const { contracts: apiContracts } = await res.json();
-        setContracts(apiContracts || []);
-      }
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
+      await refresh();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (profile && cabinet) loadData();
-  }, [profile, cabinet, loadData]);
+  };
 
   // Filtered contracts
   const filteredContracts = useMemo(() => {
-    let result = contracts;
+    let result = contracts || [];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -179,10 +158,11 @@ export default function CabinetContratsPage() {
 
   // KPIs
   const kpis = useMemo(() => {
-    const total = contracts.length;
-    const enCours = contracts.filter((c) => c.status === 'en_cours').length;
-    const cdd = contracts.filter((c) => ['CDD', 'CDD_usage', 'CDD_reconversion'].includes(c.type_contrat)).length;
-    const termines = contracts.filter((c) => c.status === 'termine' || c.status === 'rompu').length;
+    const all = contracts || [];
+    const total = all.length;
+    const enCours = all.filter((c) => c.status === 'en_cours').length;
+    const cdd = all.filter((c) => ['CDD', 'CDD_usage', 'CDD_reconversion'].includes(c.type_contrat)).length;
+    const termines = all.filter((c) => c.status === 'termine' || c.status === 'rompu').length;
     return { total, enCours, cdd, termines };
   }, [contracts]);
 
@@ -190,18 +170,11 @@ export default function CabinetContratsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce contrat ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      await cabinetMutation(`/api/cabinet/contracts?id=${id}`, 'DELETE');
 
-      const res = await fetch(`/api/cabinet/contracts?id=${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      clearCabinetCache('/api/cabinet/contracts');
+      await refresh();
 
-      if (!res.ok) throw new Error('Erreur lors de la suppression');
-
-      setContracts((prev) => prev.filter((c) => c.id !== id));
       toast.success('Contrat supprimé');
       if (selectedContract?.id === id) {
         setShowDetailModal(false);
@@ -248,9 +221,28 @@ export default function CabinetContratsPage() {
     );
   }
 
+  // ─── Error ────────────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-5">{error}</p>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
+        >
+          <RefreshCw size={15} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -261,7 +253,7 @@ export default function CabinetContratsPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">Contrats de travail</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{contracts.length} contrats</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{(contracts || []).length} contrats</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -273,7 +265,7 @@ export default function CabinetContratsPage() {
             <span className="hidden sm:inline">Nouveau contrat</span>
           </Link>
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
@@ -624,6 +616,5 @@ export default function CabinetContratsPage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, RefreshCw, Users, Search, ChevronDown, ChevronLeft,
@@ -8,13 +8,13 @@ import {
   UserCheck, FileCheck, FileWarning, StickyNote, Crown, Building2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,6 @@ function shortMonth(key: string): string {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetSocialPage() {
-  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
   const router = useRouter();
   const cabinet = useCabinetStore(state => state.cabinet);
@@ -108,7 +107,7 @@ export default function CabinetSocialPage() {
     setSelectedMonth(now.getMonth() + 1);
     setPeriodReady(true);
   }, []);
-  const [loading, setLoading] = useState(true);
+
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dsnFilter, setDsnFilter] = useState<DSNStatus | 'all'>('all');
@@ -117,78 +116,87 @@ export default function CabinetSocialPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-  // Data
-  const [clientRows, setClientRows] = useState<ClientSocialRow[]>([]);
-  const [documents, setDocuments] = useState<DocumentToProcess[]>([]);
+  // Data — useCabinetData handles fetching, loading, error, and re-fetch on param changes
+  const { data: rawTracking, loading, error: fetchError, refresh } = useCabinetData<any[]>(
+    '/api/cabinet/social',
+    { params: { month: String(selectedMonth), year: String(selectedYear) } }
+  );
+
+  // Map raw API data to ClientSocialRow
+  const clientRows = useMemo<ClientSocialRow[]>(() => {
+    if (!rawTracking) return [];
+    return rawTracking.map((t: any) => ({
+      id: t.id || t.client_id,
+      clientName: t.client_name || '',
+      nbSalaries: t.nb_employees || 0,
+      bsEmis: t.bs_issued || 0,
+      bsValidated: t.bs_validated || 0,
+      dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
+      stc: t.stc || 0,
+      contrats: t.contracts_count || 0,
+      avenants: t.amendments_count || 0,
+      atMp: t.at_mp ? 1 : 0,
+      observations: t.observations || '',
+    }));
+  }, [rawTracking]);
+
+  // Documents placeholder (no dedicated API endpoint yet)
+  const [documents] = useState<DocumentToProcess[]>([]);
+
+  // Annual data — fetched via a second useCabinetData per visible year
   const [annualData, setAnnualData] = useState<Map<string, ClientSocialRow[]>>(new Map());
 
-  // Load data
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+  useEffect(() => {
+    if (!periodReady) return;
+    let cancelled = false;
 
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-
-      const res = await fetch(`/api/cabinet/social?year=${selectedYear}&month=${selectedMonth}`, { headers });
-      if (res.ok) {
-        const { tracking } = await res.json();
-        const mapped: ClientSocialRow[] = (tracking || []).map((t: any) => ({
-          id: t.id || t.client_id,
-          clientName: t.client_name || '',
-          nbSalaries: t.nb_employees || 0,
-          bsEmis: t.bs_issued || 0,
-          bsValidated: t.bs_validated || 0,
-          dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
-          stc: t.stc || 0,
-          contrats: t.contracts_count || 0,
-          avenants: t.amendments_count || 0,
-          atMp: t.at_mp ? 1 : 0,
-          observations: t.observations || '',
-        }));
-        setClientRows(mapped);
-
+    async function loadAnnual() {
+      try {
+        const { cabinetFetch } = await import('@/hooks/useCabinetFetch');
         const aMap = new Map<string, ClientSocialRow[]>();
+
         const annualPromises = Array.from({ length: 12 }, (_, m) => {
           const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
-          return fetch(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { headers })
-            .then(r => r.ok ? r.json() : { tracking: [] })
-            .then(({ tracking: monthTracking }) => {
-              aMap.set(key, (monthTracking || []).map((t: any) => ({
-                id: t.id || t.client_id,
-                clientName: t.client_name || '',
-                nbSalaries: t.nb_employees || 0,
-                bsEmis: t.bs_issued || 0,
-                bsValidated: t.bs_validated || 0,
-                dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
-                stc: t.stc || 0,
-                contrats: t.contracts_count || 0,
-                avenants: t.amendments_count || 0,
-                atMp: t.at_mp ? 1 : 0,
-                observations: t.observations || '',
-              })));
+          return cabinetFetch<any[]>(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { dataKey: 'tracking' })
+            .then((monthTracking) => {
+              if (!cancelled) {
+                aMap.set(key, (monthTracking || []).map((t: any) => ({
+                  id: t.id || t.client_id,
+                  clientName: t.client_name || '',
+                  nbSalaries: t.nb_employees || 0,
+                  bsEmis: t.bs_issued || 0,
+                  bsValidated: t.bs_validated || 0,
+                  dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
+                  stc: t.stc || 0,
+                  contrats: t.contracts_count || 0,
+                  avenants: t.amendments_count || 0,
+                  atMp: t.at_mp ? 1 : 0,
+                  observations: t.observations || '',
+                })));
+              }
             })
             .catch(() => {});
         });
         await Promise.all(annualPromises);
-        setAnnualData(aMap);
+        if (!cancelled) setAnnualData(aMap);
+      } catch (err) {
+        console.error('[loadAnnual] Error:', err);
       }
+    }
 
-      setDocuments([]);
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
+    loadAnnual();
+    return () => { cancelled = true; };
+  }, [selectedYear, periodReady]);
+
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedYear, selectedMonth]);
-
-  useEffect(() => {
-    if (profile && cabinet) loadData();
-  }, [profile, cabinet, loadData]);
+  };
 
   // Filtered rows
   const filteredRows = useMemo(() => {
@@ -261,9 +269,28 @@ export default function CabinetSocialPage() {
     );
   }
 
+  // ─── Error state ──────────────────────────────────────────────────────────
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-4">{fetchError}</p>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Reessayer
+        </button>
+      </div>
+    );
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -291,7 +318,7 @@ export default function CabinetSocialPage() {
             DSN
           </button>
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
@@ -714,6 +741,5 @@ export default function CabinetSocialPage() {
         </AnimatePresence>
       </div>
     </motion.div>
-    </CabinetGuard>
   );
 }

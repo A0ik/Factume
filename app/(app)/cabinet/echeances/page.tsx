@@ -7,11 +7,12 @@ import {
   FileText, Receipt, Shield, Landmark, TrendingUp, X, Download,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
+
 import { cn, formatDate, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,14 +122,7 @@ function buildCalendarCells(year: number, month: number): CalendarCell[] {
 // Main Component
 // ---------------------------------------------------------------------------
 export default function CabinetEcheancesPage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
-
-  // Data
-  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Calendar navigation
   const [currentMonth, setCurrentMonth] = useState(0);
@@ -141,6 +135,42 @@ export default function CabinetEcheancesPage() {
     setCurrentYear(now.getFullYear());
     setPeriodReady(true);
   }, []);
+
+  // Build the URL for the current month — null until period is ready
+  const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  const nextMonthNum = currentMonth === 11 ? 0 : currentMonth + 1;
+  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+  const nextMonthStr = `${nextYear}-${String(nextMonthNum + 1).padStart(2, '0')}`;
+
+  const deadlineUrl = periodReady ? `/api/cabinet/deadlines?month=${currentMonthStr}` : null;
+  const nextMonthUrl = periodReady ? `/api/cabinet/deadlines?month=${nextMonthStr}` : null;
+
+  // Fetch current month deadlines (returns deadlines array via auto-detect)
+  const { data: deadlinesRaw, loading, error: fetchError, refresh: refreshCurrent } = useCabinetData<Deadline[]>(deadlineUrl);
+  // Fetch next month deadlines
+  const { data: nextMonthDeadlines, refresh: refreshNext } = useCabinetData<Deadline[]>(nextMonthUrl);
+
+  // Merge both months
+  const deadlines = useMemo(() => {
+    const current = deadlinesRaw || [];
+    const next = nextMonthDeadlines || [];
+    const existingIds = new Set(current.map(d => d.id));
+    const unique = next.filter(d => !existingIds.has(d.id));
+    return [...current, ...unique];
+  }, [deadlinesRaw, nextMonthDeadlines]);
+
+  // Clients — fetched from the same deadlines endpoint with dataKey
+  const { data: clientsRaw } = useCabinetData<any[]>(deadlineUrl, { dataKey: 'clients' });
+  const clients: ClientOption[] = useMemo(
+    () => (clientsRaw || []).map((c: any) => ({
+      id: c.id,
+      name: c.profile?.company_name || c.profile?.first_name || c.name || 'Client',
+    })),
+    [clientsRaw],
+  );
+
+  // Refreshing state for the manual refresh button
+  const [refreshing, setRefreshing] = useState(false);
 
   // View mode
   const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');
@@ -170,63 +200,16 @@ export default function CabinetEcheancesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Data loading
+  // Manual refresh
   // ---------------------------------------------------------------------------
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Session expiree');
-        return;
-      }
-
-      // Build month range: current month + next month
-      const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const nextMonthDate = new Date(currentYear, currentMonth + 2, 1);
-      const monthEnd = nextMonthDate.toISOString().split('T')[0];
-
-      const res = await fetch(`/api/cabinet/deadlines?month=${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
-        throw new Error(err.error || 'Erreur de chargement');
-      }
-
-      const data = await res.json();
-      setDeadlines(data.deadlines || []);
-      setClients(data.clients || []);
-
-      // Also fetch next month's deadlines
-      const nextMonthNum = currentMonth === 11 ? 0 : currentMonth + 1;
-      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-      const nextMonthStr = `${nextYear}-${String(nextMonthNum + 1).padStart(2, '0')}`;
-
-      const res2 = await fetch(`/api/cabinet/deadlines?month=${nextMonthStr}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (res2.ok) {
-        const data2 = await res2.json();
-        setDeadlines(prev => {
-          const existingIds = new Set(prev.map(d => d.id));
-          const newOnes = (data2.deadlines || []).filter((d: Deadline) => !existingIds.has(d.id));
-          return [...prev, ...newOnes];
-        });
-      }
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
+      await Promise.all([refreshCurrent(), refreshNext()]);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [currentMonth, currentYear]);
-
-  useEffect(() => { if (profile) loadData(); }, [profile, loadData]);
+  }, [refreshCurrent, refreshNext]);
 
   // ---------------------------------------------------------------------------
   // Calendar navigation
@@ -308,33 +291,20 @@ export default function CabinetEcheancesPage() {
     }
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expiree'); return; }
-
-      const res = await fetch('/api/cabinet/deadlines', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          client_id: form.client_id || null,
-          deadline_type: form.deadline_type,
-          description: form.description.trim(),
-          deadline_date: form.deadline_date,
-          priority: form.priority,
-          responsible: form.responsible || null,
-          notes: form.notes || null,
-        }),
+      await cabinetMutation('/api/cabinet/deadlines', 'POST', {
+        client_id: form.client_id || null,
+        deadline_type: form.deadline_type,
+        description: form.description.trim(),
+        deadline_date: form.deadline_date,
+        priority: form.priority,
+        responsible: form.responsible || null,
+        notes: form.notes || null,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || 'Erreur');
-      }
 
       toast.success('Echeance creee');
       setShowAddForm(false);
       setForm({ client_id: '', deadline_type: 'tva', description: '', deadline_date: '', priority: 'normal', responsible: '', notes: '' });
-      await loadData(true);
+      await handleRefresh();
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
     } finally {
@@ -346,23 +316,14 @@ export default function CabinetEcheancesPage() {
     const newStatus: 'pending' | 'done' = deadline.status === 'done' ? 'pending' : 'done';
     setUpdatingId(deadline.id);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expiree'); return; }
-
-      const res = await fetch('/api/cabinet/deadlines', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id: deadline.id, status: newStatus }),
+      await cabinetMutation('/api/cabinet/deadlines', 'PATCH', {
+        id: deadline.id,
+        status: newStatus,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || 'Erreur');
-      }
-
-      setDeadlines(prev => prev.map(d => d.id === deadline.id ? { ...d, status: newStatus } : d));
       toast.success(newStatus === 'done' ? 'Echeance traitee' : 'Echeance remise en attente');
+      // Optimistic update not needed — refresh data
+      await handleRefresh();
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
     } finally {
@@ -395,7 +356,7 @@ export default function CabinetEcheancesPage() {
   // ---------------------------------------------------------------------------
   // Loading
   // ---------------------------------------------------------------------------
-  if (loading) {
+  if (loading && deadlines.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />
@@ -407,8 +368,21 @@ export default function CabinetEcheancesPage() {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      {/* Error state */}
+      {fetchError && (
+        <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-4 flex items-center gap-3">
+          <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Erreur de chargement</p>
+            <p className="text-xs text-red-600/70 dark:text-red-400/70">{fetchError}</p>
+          </div>
+          <button onClick={handleRefresh} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+            Reessayer
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -436,7 +410,7 @@ export default function CabinetEcheancesPage() {
             Filtres
           </button>
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
@@ -1043,6 +1017,5 @@ export default function CabinetEcheancesPage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

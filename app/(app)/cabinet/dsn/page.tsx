@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, RefreshCw, Search, Plus, X, ChevronDown,
@@ -9,12 +9,12 @@ import {
   ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache, cabinetFetch } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 import {
   DSN_TYPES,
   DSN_STATUSES,
@@ -24,7 +24,6 @@ import {
   type DSNData,
   type DSNSalarie,
 } from '@/lib/labor-law/dsn-generator';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -98,26 +97,19 @@ function StatusBadge({ status }: { status: DSNStatus }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetDSNPage() {
-  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
-  const router = useRouter();
   const cabinet = useCabinetStore(state => state.cabinet);
 
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dsnList, setDsnList] = useState<DSN[]>([]);
 
   // Period
-  const [selectedMois, setSelectedMois] = useState(1);
-  const [selectedAnnee, setSelectedAnnee] = useState(2026);
-  const [periodReady, setPeriodReady] = useState(false);
+  const [selectedMois, setSelectedMois] = useState(() => new Date().getMonth() + 1);
+  const [selectedAnnee, setSelectedAnnee] = useState(() => new Date().getFullYear());
 
-  useEffect(() => {
-    const now = new Date();
-    setSelectedMois(now.getMonth() + 1);
-    setSelectedAnnee(now.getFullYear());
-    setPeriodReady(true);
-  }, []);
+  // Data fetching via hook
+  const { data: dsnList, loading, error, refresh } = useCabinetData<DSN[]>('/api/cabinet/dsn', {
+    params: { mois: String(selectedMois), annee: String(selectedAnnee) },
+  });
 
   // Filters
   const [filterType, setFilterType] = useState<string>('all');
@@ -131,38 +123,16 @@ export default function CabinetDSNPage() {
   // Consistency check
   const [checking, setChecking] = useState(false);
 
-  // Load data
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(`/api/cabinet/dsn?mois=${selectedMois}&annee=${selectedAnnee}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setDsnList(data?.dsn || []);
-      }
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [selectedMois, selectedAnnee]);
-
-  useEffect(() => {
-    if (profile && cabinet && periodReady) loadData();
-  }, [profile, cabinet, loadData, periodReady]);
+  // Manual refresh wrapper
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
 
   // Filtered
   const filteredDSN = useMemo(() => {
-    let result = dsnList;
+    let result = dsnList || [];
     if (filterType !== 'all') result = result.filter((d) => d.type_dsn === filterType);
     if (filterStatus !== 'all') result = result.filter((d) => d.status === filterStatus);
     return result;
@@ -170,10 +140,11 @@ export default function CabinetDSNPage() {
 
   // KPIs
   const kpis = useMemo(() => {
-    const total = dsnList.length;
-    const enPreparation = dsnList.filter((d) => d.status === 'en_preparation').length;
-    const envoyees = dsnList.filter((d) => d.status === 'envoyee').length;
-    const acceptees = dsnList.filter((d) => d.status === 'acceptee').length;
+    const list = dsnList || [];
+    const total = list.length;
+    const enPreparation = list.filter((d) => d.status === 'en_preparation').length;
+    const envoyees = list.filter((d) => d.status === 'envoyee').length;
+    const acceptees = list.filter((d) => d.status === 'acceptee').length;
     return { total, enPreparation, envoyees, acceptees };
   }, [dsnList]);
 
@@ -198,32 +169,20 @@ export default function CabinetDSNPage() {
   const handleCreateDSN = async (typeDsn: DSNType) => {
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/cabinet/dsn', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          mois: selectedMois,
-          annee: selectedAnnee,
-          type_dsn: typeDsn,
-          status: 'en_preparation',
-          effectif: cabinet?.effectif || 0,
-          siret: cabinet?.siret || '',
-          raison_sociale: cabinet?.name || '',
-        }),
+      await cabinetMutation('/api/cabinet/dsn', 'POST', {
+        mois: selectedMois,
+        annee: selectedAnnee,
+        type_dsn: typeDsn,
+        status: 'en_preparation',
+        effectif: cabinet?.effectif || 0,
+        siret: cabinet?.siret || '',
+        raison_sociale: cabinet?.name || '',
       });
-
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || 'Erreur');
-      }
 
       toast.success('DSN créée');
       setShowNewModal(false);
-      loadData(true);
+      clearCabinetCache();
+      refresh();
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
     } finally {
@@ -235,20 +194,10 @@ export default function CabinetDSNPage() {
   const handleConsistencyCheck = async () => {
     setChecking(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-
-      // Fetch employees and bulletins for the period
-      const [empRes, bulRes] = await Promise.all([
-        fetch('/api/cabinet/employees', { headers }),
-        fetch(`/api/cabinet/payroll?mois=${selectedMois}&annee=${selectedAnnee}`, { headers }),
+      const [employees, bulletins] = await Promise.all([
+        cabinetFetch<any>('/api/cabinet/employees'),
+        cabinetFetch<any>(`/api/cabinet/payroll?mois=${selectedMois}&annee=${selectedAnnee}`),
       ]);
-
-      const { employees } = await empRes.json();
-      const { bulletins } = await bulRes.json();
 
       const activeEmployees = (employees || []).filter((e: any) => e.status === 'active');
       const issues: string[] = [];
@@ -310,8 +259,27 @@ export default function CabinetDSNPage() {
     );
   }
 
+  // ─── Error state ──────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-5">{error}</p>
+        <button
+          onClick={() => { clearCabinetCache(); refresh(); }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
+        >
+          <RefreshCw size={15} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -342,7 +310,7 @@ export default function CabinetDSNPage() {
             <span className="hidden sm:inline">Nouvelle DSN</span>
           </button>
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
           >
@@ -360,7 +328,7 @@ export default function CabinetDSNPage() {
           <p className="text-xl font-black text-gray-900 dark:text-white">
             {MOIS_LABELS[selectedMois - 1]} {selectedAnnee}
           </p>
-          <p className="text-xs text-gray-400">{dsnList.length} déclaration(s)</p>
+          <p className="text-xs text-gray-400">{(dsnList || []).length} déclaration(s)</p>
         </div>
         <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
           <ChevronRight size={18} className="text-gray-400" />
@@ -614,6 +582,5 @@ export default function CabinetDSNPage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

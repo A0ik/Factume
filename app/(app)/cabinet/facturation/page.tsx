@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader2, Search, FileText, Euro, Clock,
@@ -7,11 +7,12 @@ import {
   SlidersHorizontal, Send, TrendingUp, Receipt, Filter,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { cn, formatCurrency, formatDateShort, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
+import { useCabinetStore } from '@/stores/cabinetStore';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,10 +80,14 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => {
 // ---------------------------------------------------------------------------
 
 export default function CabinetFacturationPage() {
-  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
-  const [data, setData] = useState<InvoiceData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const clients = useCabinetStore(state => state.clients);
+
+  // Data fetching via useCabinetData hook
+  const { data: invoices, loading, error: fetchError, refresh } = useCabinetData<CabinetInvoice[]>(
+    '/api/cabinet/invoices',
+  );
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
@@ -90,49 +95,24 @@ export default function CabinetFacturationPage() {
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false);
 
-  useEffect(() => { if (profile) loadInvoices(); }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ---------------------------------------------------------------------------
-  // Data loading
+  // Derived KPIs from invoices
   // ---------------------------------------------------------------------------
 
-  const loadInvoices = async () => {
-    setLoading(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Session expirée.');
-        return;
-      }
-      const res = await fetch('/api/cabinet/invoices', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
-        throw new Error(err.error || 'Erreur de chargement');
-      }
-      const raw = await res.json();
-      // Transform API 'stats' (Record<status, {count, total}>) into expected 'kpis' format
-      const stats = raw.stats || {};
-      const kpis = {
-        total_facture: Object.values(stats).reduce((s: number, v: any) => s + (v?.count || 0), 0),
-        total_payees: stats.paid?.count || 0,
-        total_en_attente: stats.sent?.count || 0,
-        total_en_retard: stats.overdue?.count || 0,
-        montant_facture: Object.values(stats).reduce((s: number, v: any) => s + (v?.total || 0), 0),
-        montant_payees: stats.paid?.total || 0,
-        montant_en_attente: stats.sent?.total || 0,
-        montant_en_retard: stats.overdue?.total || 0,
-      };
-      setData({ invoices: raw.invoices || [], kpis });
-    } catch (error: any) {
-      console.error('[CabinetFacturation] load error:', error);
-      toast.error(error.message || 'Erreur de chargement des factures');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const kpis = useMemo(() => {
+    const list = invoices || [];
+    const byStatus = (status: string) => list.filter((inv) => inv.status === status);
+    return {
+      total_facture: list.length,
+      total_payees: byStatus('paid').length,
+      total_en_attente: byStatus('sent').length,
+      total_en_retard: byStatus('overdue').length,
+      montant_facture: list.reduce((s, i) => s + (i.total || 0), 0),
+      montant_payees: byStatus('paid').reduce((s, i) => s + (i.total || 0), 0),
+      montant_en_attente: byStatus('sent').reduce((s, i) => s + (i.total || 0), 0),
+      montant_en_retard: byStatus('overdue').reduce((s, i) => s + (i.total || 0), 0),
+    };
+  }, [invoices]);
 
   // ---------------------------------------------------------------------------
   // Actions
@@ -162,17 +142,7 @@ export default function CabinetFacturationPage() {
     }
     setSendingEmail(invoice.id);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/cabinet/invoices/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ invoiceId: invoice.id }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || "Erreur lors de l'envoi");
-      }
+      await cabinetMutation('/api/cabinet/invoices/send', 'POST', { invoiceId: invoice.id });
       toast.success(`Facture ${invoice.number} envoyée à ${invoice.client_email}`);
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de l'envoi");
@@ -186,9 +156,9 @@ export default function CabinetFacturationPage() {
   // ---------------------------------------------------------------------------
 
   const filtered = useMemo(() => {
-    if (!data?.invoices) return [];
+    if (!invoices) return [];
     const q = search.toLowerCase();
-    return data.invoices.filter((inv) => {
+    return invoices.filter((inv) => {
       const matchSearch = !q
         || inv.number.toLowerCase().includes(q)
         || inv.client_name.toLowerCase().includes(q)
@@ -197,7 +167,7 @@ export default function CabinetFacturationPage() {
       const matchMonth = !monthFilter || inv.issue_date.startsWith(monthFilter);
       return matchSearch && matchStatus && matchMonth;
     });
-  }, [data?.invoices, search, statusFilter, monthFilter]);
+  }, [invoices, search, statusFilter, monthFilter]);
 
   // ---------------------------------------------------------------------------
   // Paywall
@@ -235,14 +205,36 @@ export default function CabinetFacturationPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Error state
+  // ---------------------------------------------------------------------------
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <p className="font-bold text-gray-700 dark:text-gray-300 text-sm mb-1">Erreur de chargement</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 max-w-xs">{fetchError}</p>
+        <button
+          onClick={refresh}
+          className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Empty state
   // ---------------------------------------------------------------------------
 
-  if (!data) {
+  if (!invoices || invoices.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <FileText size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
-        <p className="text-gray-500 dark:text-gray-400">Aucune donnée disponible</p>
+        <p className="text-gray-500 dark:text-gray-400">Aucune facture cabinet</p>
         <Link href="/cabinet" className="mt-4 text-sm text-blue-500 hover:text-blue-600">
           Retour au cabinet
         </Link>
@@ -254,13 +246,7 @@ export default function CabinetFacturationPage() {
   // Render
   // ---------------------------------------------------------------------------
 
-  const kpis = data.kpis || {
-    total_facture: 0, total_payees: 0, total_en_attente: 0, total_en_retard: 0,
-    montant_facture: 0, montant_payees: 0, montant_en_attente: 0, montant_en_retard: 0,
-  };
-
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -271,7 +257,7 @@ export default function CabinetFacturationPage() {
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">Facturation</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {data.invoices.length} facture{data.invoices.length !== 1 ? 's' : ''} &middot; Facturation propre du cabinet
+              {invoices.length} facture{invoices.length !== 1 ? 's' : ''} &middot; Facturation propre du cabinet
             </p>
           </div>
         </div>
@@ -718,6 +704,5 @@ export default function CabinetFacturationPage() {
         )}
       </div>
     </motion.div>
-    </CabinetGuard>
   );
 }

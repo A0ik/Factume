@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, RefreshCw, Search, Plus, X, ChevronDown,
@@ -8,14 +8,13 @@ import {
   Maximize2, Minimize2, ChevronLeft, ChevronRight, Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 import PayslipPreview from '@/components/cabinet/PayslipPreview';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,65 +93,30 @@ function StatusBadge({ status }: { status: BulletinStatus }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetPaiePage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
-  const router = useRouter();
-  const { cabinet, fetchCabinet, fetchEmployees, loading: cabinetLoading } = useCabinetStore();
+  const { cabinet } = useCabinetStore();
 
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [bulletins, setBulletins] = useState<Bulletin[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
 
   // Period selector
-  const [selectedMois, setSelectedMois] = useState(1);
-  const [selectedAnnee, setSelectedAnnee] = useState(2026);
-  const [periodReady, setPeriodReady] = useState(false);
+  const [selectedMois, setSelectedMois] = useState(() => new Date().getMonth() + 1);
+  const [selectedAnnee, setSelectedAnnee] = useState(() => new Date().getFullYear());
 
-  useEffect(() => {
-    const now = new Date();
-    setSelectedMois(now.getMonth() + 1);
-    setSelectedAnnee(now.getFullYear());
-    setPeriodReady(true);
-  }, []);
+  // Data hooks
+  const { data: apiEmployees, loading: empLoading } = useCabinetData<any[]>('/api/cabinet/employees');
+  const { data: apiBulletins, loading: bulLoading, error, refresh: refreshBulletins } = useCabinetData<any[]>(
+    '/api/cabinet/payroll',
+    { params: { mois: String(selectedMois), annee: String(selectedAnnee) } }
+  );
+  const loading = empLoading || bulLoading;
+
+  const bulletins = (apiBulletins || []) as Bulletin[];
+  const employees = (apiEmployees || []) as Employee[];
 
   // Preview modal
   const [showPreview, setShowPreview] = useState(false);
   const [previewBulletin, setPreviewBulletin] = useState<Bulletin | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
-
-  // Load data — use store for employees, only fetch payroll directly
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-
-      // Fetch employees via store (deduplicated) + payroll directly
-      await fetchEmployees();
-      const storeEmps = useCabinetStore.getState().employees as any[];
-      setEmployees(storeEmps || []);
-
-      const bulRes = await fetch(`/api/cabinet/payroll?mois=${selectedMois}&annee=${selectedAnnee}`, { headers });
-      if (bulRes.ok) {
-        const { bulletins: apiBul } = await bulRes.json();
-        setBulletins(apiBul || []);
-      }
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [selectedMois, selectedAnnee, fetchEmployees]);
-
-  useEffect(() => {
-    if (profile && cabinet) loadData();
-  }, [profile, cabinet, loadData]);
 
   // Enrich bulletins with employee data
   const enrichedBulletins = useMemo(() => {
@@ -180,6 +144,18 @@ export default function CabinetPaiePage() {
     return employees.filter((e) => e.status === 'active' && !withBulletin.has(e.id));
   }, [employees, bulletins]);
 
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      clearCabinetCache('/api/cabinet/employees');
+      clearCabinetCache('/api/cabinet/payroll');
+      await refreshBulletins();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Generate missing bulletins
   const handleGenerateAll = async () => {
     if (employeesWithoutBulletin.length === 0) {
@@ -188,15 +164,6 @@ export default function CabinetPaiePage() {
     }
 
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      };
-
       let generated = 0;
       for (const emp of employeesWithoutBulletin) {
         // Calculate period dates
@@ -204,41 +171,38 @@ export default function CabinetPaiePage() {
         const lastDay = new Date(selectedAnnee, selectedMois, 0).getDate();
         const periodeFin = new Date(selectedAnnee, selectedMois - 1, lastDay).toISOString().split('T')[0];
 
-        const res = await fetch('/api/cabinet/payroll', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            employee_id: emp.id,
-            mois: selectedMois,
-            annee: selectedAnnee,
-            salaire_brut: emp.salary_brut_monthly || 0,
-            salaire_brut_annuel: (emp.salary_brut_monthly || 0) * 12,
-            heures_mensuelles: emp.weekly_hours ? (emp.weekly_hours / 35) * 151.67 : 151.67,
-            taux_horaire: emp.hourly_rate || (emp.salary_brut_monthly ? emp.salary_brut_monthly / 151.67 : 0),
-            statut_cadre: 'non_cadre',
-            periode_debut: periodeDebut,
-            periode_fin: periodeFin,
-            nombre_jours_ouvres: 22,
-            employee_data: {
-              nom: emp.last_name,
-              prenom: emp.first_name,
-              nir: emp.social_security_number || '',
-              dateNaissance: emp.birth_date || '',
-              adresse: emp.address || '',
-              poste: emp.job_title || '',
-            },
-            company_data: {
-              raisonSociale: cabinet?.name || '',
-              siret: cabinet?.siret || '',
-            },
-          }),
+        await cabinetMutation('/api/cabinet/payroll', 'POST', {
+          employee_id: emp.id,
+          mois: selectedMois,
+          annee: selectedAnnee,
+          salaire_brut: emp.salary_brut_monthly || 0,
+          salaire_brut_annuel: (emp.salary_brut_monthly || 0) * 12,
+          heures_mensuelles: emp.weekly_hours ? (emp.weekly_hours / 35) * 151.67 : 151.67,
+          taux_horaire: emp.hourly_rate || (emp.salary_brut_monthly ? emp.salary_brut_monthly / 151.67 : 0),
+          statut_cadre: 'non_cadre',
+          periode_debut: periodeDebut,
+          periode_fin: periodeFin,
+          nombre_jours_ouvres: 22,
+          employee_data: {
+            nom: emp.last_name,
+            prenom: emp.first_name,
+            nir: emp.social_security_number || '',
+            dateNaissance: emp.birth_date || '',
+            adresse: emp.address || '',
+            poste: emp.job_title || '',
+          },
+          company_data: {
+            raisonSociale: cabinet?.name || '',
+            siret: cabinet?.siret || '',
+          },
         });
 
-        if (res.ok) generated++;
+        generated++;
       }
 
       toast.success(`${generated} bulletin(s) généré(s)`);
-      loadData(true);
+      clearCabinetCache('/api/cabinet/payroll');
+      await refreshBulletins();
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la génération');
     }
@@ -247,22 +211,11 @@ export default function CabinetPaiePage() {
   // Change status
   const handleStatusChange = async (id: string, newStatus: BulletinStatus) => {
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      await cabinetMutation('/api/cabinet/payroll', 'PATCH', { id, status: newStatus });
 
-      const res = await fetch('/api/cabinet/payroll', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, status: newStatus }),
-      });
-
-      if (!res.ok) throw new Error('Erreur');
-
-      setBulletins((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
-      );
       toast.success(`Bulletin ${newStatus === 'valide' ? 'validé' : newStatus === 'paye' ? 'marqué payé' : 'passé en brouillon'}`);
+      clearCabinetCache('/api/cabinet/payroll');
+      await refreshBulletins();
     } catch {
       toast.error('Erreur lors du changement de statut');
     }
@@ -323,8 +276,21 @@ export default function CabinetPaiePage() {
     );
   }
 
+  // ─── Error ────────────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <AlertCircle size={36} className="text-red-400 mb-3" />
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-4">{error}</p>
+        <button onClick={handleRefresh} className="px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm">
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -349,7 +315,7 @@ export default function CabinetPaiePage() {
             </button>
           )}
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
@@ -629,6 +595,5 @@ export default function CabinetPaiePage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

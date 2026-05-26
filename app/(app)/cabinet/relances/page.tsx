@@ -1,17 +1,17 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft, Loader2, AlertTriangle, Clock, Send, Mail,
   FileText, Bell, BellRing, ShieldAlert, CheckCircle2,
   X, RefreshCw, ChevronDown, ChevronUp, Euro,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,45 +111,12 @@ function getNextLevel(currentLevel: number): number {
 // ---------------------------------------------------------------------------
 
 export default function CabinetRelancesPage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
-  const [data, setData] = useState<ReminderData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error, refresh } = useCabinetData<ReminderData>('/api/cabinet/reminders');
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [batchSending, setBatchSending] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterLevel, setFilterLevel] = useState<number | null>(null);
-
-  useEffect(() => { if (profile) loadReminders(); }, [profile]);
-
-  // ---------------------------------------------------------------------------
-  // Data loading
-  // ---------------------------------------------------------------------------
-
-  const loadReminders = async () => {
-    setLoading(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Session expirée.');
-        return;
-      }
-      const res = await fetch('/api/cabinet/reminders', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
-        throw new Error(err.error || 'Erreur de chargement');
-      }
-      setData(await res.json());
-    } catch (error: any) {
-      console.error('[CabinetRelances] load error:', error);
-      toast.error(error.message || 'Erreur de chargement des relances');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ---------------------------------------------------------------------------
   // Actions
@@ -158,21 +125,11 @@ export default function CabinetRelancesPage() {
   const handleSendReminder = async (invoiceId: string, level: number) => {
     setSendingIds((prev) => new Set(prev).add(invoiceId));
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/cabinet/reminders/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ invoiceId, level }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || "Erreur lors de l'envoi de la relance");
-      }
+      await cabinetMutation('/api/cabinet/reminders/send', 'POST', { invoiceId, level });
       toast.success('Relance envoyée avec succès');
-      await loadReminders();
-    } catch (error: any) {
-      toast.error(error.message || "Erreur lors de l'envoi");
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'envoi");
     } finally {
       setSendingIds((prev) => {
         const next = new Set(prev);
@@ -196,27 +153,17 @@ export default function CabinetRelancesPage() {
 
     setBatchSending(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/cabinet/reminders/batch-send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({
-          invoices: eligible.map((inv) => ({
-            invoiceId: inv.id,
-            level: getNextLevel(inv.reminder_level),
-          })),
-        }),
+      const result = await cabinetMutation<{ sent?: number }>('/api/cabinet/reminders/batch-send', 'POST', {
+        invoices: eligible.map((inv) => ({
+          invoiceId: inv.id,
+          level: getNextLevel(inv.reminder_level),
+        })),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || 'Erreur lors de l\'envoi groupé');
-      }
-      const result = await res.json();
-      toast.success(`${result.sent || eligible.length} relance${(result.sent || eligible.length) !== 1 ? 's' : ''} envoyée${(result.sent || eligible.length) !== 1 ? 's' : ''}`);
-      await loadReminders();
-    } catch (error: any) {
-      toast.error(error.message || "Erreur lors de l'envoi groupé");
+      const count = result.sent || eligible.length;
+      toast.success(`${count} relance${count !== 1 ? 's' : ''} envoyée${count !== 1 ? 's' : ''}`);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'envoi groupé");
     } finally {
       setBatchSending(false);
     }
@@ -271,6 +218,29 @@ export default function CabinetRelancesPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Error state
+  // ---------------------------------------------------------------------------
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <p className="font-bold text-gray-700 dark:text-gray-300 text-sm mb-1">Erreur de chargement</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">{error}</p>
+        <button
+          onClick={refresh}
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Empty state
   // ---------------------------------------------------------------------------
 
@@ -294,7 +264,6 @@ export default function CabinetRelancesPage() {
   const hasEligible = data.invoices.some((inv) => inv.days_overdue > 5);
 
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -313,7 +282,7 @@ export default function CabinetRelancesPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={loadReminders}
+            onClick={refresh}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
           >
@@ -655,6 +624,5 @@ export default function CabinetRelancesPage() {
         )}
       </div>
     </motion.div>
-    </CabinetGuard>
   );
 }

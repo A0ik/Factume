@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, RefreshCw, Search, Plus, X, ChevronDown,
@@ -8,13 +8,11 @@ import {
   ChevronRight, Calendar, Euro,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,56 +70,29 @@ function StatusBadge({ status }: { status: DPAEStatus }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetDPAEPage() {
-  const profile = useAuthStore(state => state.profile);
   const sub = useSubscription();
-  const router = useRouter();
-  const cabinet = useCabinetStore(state => state.cabinet);
-
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [dpaeList, setDpaeList] = useState<DPAE[]>([]);
+  const { data: dpaeList, loading, error, refresh } = useCabinetData<DPAE[]>('/api/cabinet/dpae');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<DPAEStatus | 'all'>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Detail modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDPAE, setSelectedDPAE] = useState<DPAE | null>(null);
 
-  // Load data
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/cabinet/dpae', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (res.ok) {
-        const { dpae } = await res.json();
-        setDpaeList(dpae || []);
-      }
-    } catch (error: any) {
-      console.error('[loadData] Error:', error);
-      toast.error(error.message || 'Erreur de chargement');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (profile && cabinet) loadData();
-  }, [profile, cabinet, loadData]);
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
 
   // Filtered
   const filteredDPAE = useMemo(() => {
-    let result = dpaeList;
+    let result = dpaeList || [];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -140,31 +111,23 @@ export default function CabinetDPAEPage() {
 
   // KPIs
   const kpis = useMemo(() => {
-    const total = dpaeList.length;
-    const enPreparation = dpaeList.filter((d) => d.status === 'en_preparation').length;
-    const envoyees = dpaeList.filter((d) => d.status === 'envoyee').length;
-    const confirmees = dpaeList.filter((d) => d.status === 'confirmee').length;
+    const list = dpaeList || [];
+    const total = list.length;
+    const enPreparation = list.filter((d) => d.status === 'en_preparation').length;
+    const envoyees = list.filter((d) => d.status === 'envoyee').length;
+    const confirmees = list.filter((d) => d.status === 'confirmee').length;
     return { total, enPreparation, envoyees, confirmees };
   }, [dpaeList]);
 
   // Update status
   const handleUpdateStatus = async (id: string, status: DPAEStatus) => {
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      await cabinetMutation('/api/cabinet/dpae', 'PATCH', { id, status });
 
-      const res = await fetch('/api/cabinet/dpae', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, status }),
-      });
+      // Update local state optimistically by clearing cache and refreshing
+      clearCabinetCache('/api/cabinet/dpae');
+      await refresh();
 
-      if (!res.ok) throw new Error('Erreur');
-
-      setDpaeList((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status } : d))
-      );
       toast.success(`DPAE ${status === 'envoyee' ? 'envoyée' : status === 'confirmee' ? 'confirmée' : 'mise à jour'}`);
       if (selectedDPAE?.id === id) {
         setSelectedDPAE((prev) => prev ? { ...prev, status } : null);
@@ -178,18 +141,11 @@ export default function CabinetDPAEPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette DPAE ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      await cabinetMutation(`/api/cabinet/dpae?id=${id}`, 'DELETE');
 
-      const res = await fetch(`/api/cabinet/dpae?id=${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      clearCabinetCache('/api/cabinet/dpae');
+      await refresh();
 
-      if (!res.ok) throw new Error('Erreur');
-
-      setDpaeList((prev) => prev.filter((d) => d.id !== id));
       toast.success('DPAE supprimée');
       if (selectedDPAE?.id === id) {
         setShowDetailModal(false);
@@ -235,8 +191,27 @@ export default function CabinetDPAEPage() {
     );
   }
 
+  // ─── Error state ──────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-5">{error}</p>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ────────────────────────────────────────────────────────── */}
@@ -259,7 +234,7 @@ export default function CabinetDPAEPage() {
             <span className="hidden sm:inline">Nouvelle DPAE</span>
           </Link>
           <button
-            onClick={() => loadData(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
           >
@@ -577,6 +552,5 @@ export default function CabinetDPAEPage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

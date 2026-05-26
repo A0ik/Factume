@@ -16,47 +16,44 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const redirected = useRef(false);
   const fetched = useRef(false);
-  const [fetchCompleted, setFetchCompleted] = useState(false);
-  const [fetchSucceeded, setFetchSucceeded] = useState(false);
+  const [fetchDone, setFetchDone] = useState(false);
 
+  // Fetch cabinet data once when auth is ready
   useEffect(() => {
     if (initialized && profile && !fetched.current) {
       fetched.current = true;
       useCabinetStore.getState().hydrateFromCache();
       useCabinetStore.getState().fetchCabinet().then(() => {
-        const { cabinet: freshCabinet } = useCabinetStore.getState();
-        setFetchCompleted(true);
-        setFetchSucceeded(true);
-        if (freshCabinet) {
-          redirected.current = false;
-        }
+        setFetchDone(true);
       }).catch(() => {
-        // Fetch failed — don't redirect, let user retry
-        setFetchCompleted(true);
-        setFetchSucceeded(false);
+        // Network error — still mark as done, use cached data
+        setFetchDone(true);
       });
     }
   }, [initialized, profile]);
 
-  // Only redirect to cabinet creation after fetch has completed successfully and no cabinet found
+  // Redirect to cabinet creation only if fetch succeeded and no cabinet
   useEffect(() => {
     if (
       initialized &&
       profile &&
-      fetchCompleted &&
-      fetchSucceeded &&
+      fetchDone &&
       !loading &&
       !cabinet &&
       !redirected.current &&
       pathname !== '/cabinet'
     ) {
-      redirected.current = true;
-      toast.error('Créez d\'abord votre cabinet');
-      router.push('/cabinet');
+      const freshCabinet = useCabinetStore.getState().cabinet;
+      if (!freshCabinet) {
+        redirected.current = true;
+        toast.error('Créez d\'abord votre cabinet');
+        router.push('/cabinet');
+      }
     }
-  }, [initialized, profile, fetchCompleted, fetchSucceeded, loading, cabinet, router, pathname]);
+  }, [initialized, profile, fetchDone, loading, cabinet, router, pathname]);
 
-  if (!profile || loading || !fetchCompleted) {
+  // Loading state while fetching
+  if (!profile || !fetchDone || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />
@@ -64,9 +61,10 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
     );
   }
 
+  // No cabinet — show creation page or redirect
   if (!cabinet) {
     if (pathname !== '/cabinet') {
-      if (fetchSucceeded && !redirected.current) {
+      if (!redirected.current) {
         redirected.current = true;
         router.push('/cabinet');
       }

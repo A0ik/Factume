@@ -1,6 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
+import { setSessionToken } from '@/hooks/useCabinetFetch';
 import type { Cabinet, CabinetMember, CabinetClient } from '@/types';
 
 interface CabinetInvoice {
@@ -119,6 +120,8 @@ async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | 
   for (let i = 0; i < maxRetries; i++) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
+      // Share token with the fetch cache system
+      setSessionToken(session.access_token);
       return {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,

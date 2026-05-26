@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader2, Search, Filter, FileText,
@@ -8,11 +8,12 @@ import {
   Trash2, Eye, Repeat, X, Building2, Crown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,12 +104,10 @@ function isExpiringSoon(endDate: string): boolean {
 // ---------------------------------------------------------------------------
 
 export default function CabinetMissionsPage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
 
-  // Data state
-  const [missions, setMissions] = useState<MissionLetter[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Data fetching via useCabinetData hook
+  const { data: missions, loading, error: fetchError, refresh } = useCabinetData<MissionLetter[]>('/api/cabinet/missions');
   const [refreshing, setRefreshing] = useState(false);
 
   // UI state
@@ -121,46 +120,19 @@ export default function CabinetMissionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
-  // Load data
-  useEffect(() => { if (profile) loadMissions(); }, [profile]);
-
-  const loadMissions = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
+  // Refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expirée'); return; }
-
-      // Fetch cabinet info + clients
-      const cabRes = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!cabRes.ok) throw new Error('Erreur de chargement du cabinet');
-      const cabData = await cabRes.json();
-      const cabinetId = cabData.cabinet?.id;
-      if (!cabinetId) { setLoading(false); return; }
-
-      // Fetch mission letters
-      const { data: missionData, error } = await supabase
-        .from('mission_letters')
-        .select('*')
-        .eq('cabinet_id', cabinetId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMissions((missionData || []) as MissionLetter[]);
-    } catch (err: any) {
-      console.error('[loadMissions]', err);
-      toast.error(err.message || 'Erreur de chargement');
+      await refresh();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  };
 
   // Derived data
   const filteredMissions = useMemo(() => {
-    let result = [...missions];
+    let result = [...(missions || [])];
 
     // Tab filter
     if (activeTab === 'signees') result = result.filter((m) => m.status === 'signee');
@@ -184,14 +156,17 @@ export default function CabinetMissionsPage() {
     return result;
   }, [missions, activeTab, filterType, search]);
 
-  const stats = useMemo(() => ({
-    total: missions.length,
-    active: missions.filter((m) => m.status === 'active').length,
-    signees: missions.filter((m) => m.status === 'signee').length,
-    aRenouveler: missions.filter((m) => m.status === 'a_renouveler' || isExpiringSoon(m.end_date)).length,
-    expirees: missions.filter((m) => m.status === 'expiree').length,
-    totalFees: missions.filter((m) => m.status === 'active' || m.status === 'signee').reduce((s, m) => s + (m.monthly_fees || 0), 0),
-  }), [missions]);
+  const stats = useMemo(() => {
+    const all = missions || [];
+    return {
+      total: all.length,
+      active: all.filter((m) => m.status === 'active').length,
+      signees: all.filter((m) => m.status === 'signee').length,
+      aRenouveler: all.filter((m) => m.status === 'a_renouveler' || isExpiringSoon(m.end_date)).length,
+      expirees: all.filter((m) => m.status === 'expiree').length,
+      totalFees: all.filter((m) => m.status === 'active' || m.status === 'signee').reduce((s, m) => s + (m.monthly_fees || 0), 0),
+    };
+  }, [missions]);
 
   // Form handlers
   const handleSave = async () => {
@@ -200,45 +175,33 @@ export default function CabinetMissionsPage() {
 
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expirée'); return; }
-
-      // Get cabinet id
-      const cabRes = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const cabData = await cabRes.json();
-      const cabinetId = cabData.cabinet?.id;
-      if (!cabinetId) { toast.error('Cabinet non trouvé'); return; }
-
       const payload = {
-        cabinet_id: cabinetId,
+        client_id: form.client_id || form.client_name.trim(),
         client_name: form.client_name.trim(),
         mission_type: form.mission_type,
         start_date: form.start_date,
         end_date: form.end_date,
         auto_renew: form.auto_renew,
-        monthly_fees: form.monthly_fees,
+        monthly_fee: form.monthly_fees,
         status: form.status,
         responsible: form.responsible.trim(),
         description: form.description?.trim() || null,
       };
 
       if (editingId) {
-        const { error } = await supabase.from('mission_letters').update(payload).eq('id', editingId);
-        if (error) throw error;
+        await cabinetMutation('/api/cabinet/missions', 'PATCH', { id: editingId, ...payload });
         toast.success('Mission mise à jour');
       } else {
-        const { error } = await supabase.from('mission_letters').insert(payload);
-        if (error) throw error;
+        await cabinetMutation('/api/cabinet/missions', 'POST', payload);
         toast.success('Mission créée');
       }
+
+      clearCabinetCache('/api/cabinet/missions');
+      await refresh();
 
       setShowForm(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
-      await loadMissions(true);
     } catch (err: any) {
       console.error('[handleSave]', err);
       toast.error(err.message || 'Erreur lors de la sauvegarde');
@@ -250,11 +213,10 @@ export default function CabinetMissionsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette mission ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { error } = await supabase.from('mission_letters').delete().eq('id', id);
-      if (error) throw error;
+      await cabinetMutation('/api/cabinet/missions', 'PATCH', { id, status: 'cancelled' });
+      clearCabinetCache('/api/cabinet/missions');
+      await refresh();
       toast.success('Mission supprimée');
-      await loadMissions(true);
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la suppression');
     }
@@ -312,12 +274,31 @@ export default function CabinetMissionsPage() {
     );
   }
 
+  // Error state
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">{fetchError}</p>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -332,7 +313,7 @@ export default function CabinetMissionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => loadMissions(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
@@ -798,6 +779,5 @@ export default function CabinetMissionsPage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

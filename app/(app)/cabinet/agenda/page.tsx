@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Loader2, Plus, X, ChevronLeft, ChevronRight,
@@ -8,11 +8,11 @@ import {
   Filter, CheckCircle2, AlertCircle, RefreshCw, Tag,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,10 +97,9 @@ function today(): Date {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetAgendaPage() {
-  const { profile, initialized } = useAuthStore();
   const sub = useSubscription();
-  const [loading, setLoading] = useState(true);
-  const [events, setEvents] = useState<AgendaEvent[]>([]);
+  const { data: rawEvents, loading, error: fetchError, refresh } = useCabinetData<AgendaEvent[]>('/api/cabinet/agenda');
+  const events = rawEvents ?? [];
 
   // Calendar state
   const currentDate = today();
@@ -117,34 +116,6 @@ export default function CabinetAgendaPage() {
   // Filters
   const [filterType, setFilterType] = useState<EventType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // ─── Data loading ────────────────────────────────────────────────────────
-
-  const loadEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/cabinet/agenda', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events || []);
-      }
-    } catch (error: any) {
-      console.error('[loadEvents]', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (initialized && profile) loadEvents();
-  }, [initialized, profile, loadEvents]);
 
   // ─── Calendar days ───────────────────────────────────────────────────────
 
@@ -231,31 +202,18 @@ export default function CabinetAgendaPage() {
     }
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
       const method = editingEvent ? 'PUT' : 'POST';
       const body = editingEvent
         ? { id: editingEvent.id, ...form, time: form.time || null }
         : { ...form, time: form.time || null };
 
-      const res = await fetch('/api/cabinet/agenda', {
-        method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || 'Erreur lors de l\'enregistrement');
-      }
+      await cabinetMutation('/api/cabinet/agenda', method, body);
 
       toast.success(editingEvent ? 'Evenement modifie' : 'Evenement cree');
       setShowModal(false);
       setEditingEvent(null);
       setForm({ ...EMPTY_FORM });
-      loadEvents();
+      refresh();
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
     } finally {
@@ -266,18 +224,9 @@ export default function CabinetAgendaPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet evenement ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(`/api/cabinet/agenda?id=${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (!res.ok) throw new Error('Erreur lors de la suppression');
+      await cabinetMutation(`/api/cabinet/agenda?id=${id}`, 'DELETE');
       toast.success('Evenement supprime');
-      loadEvents();
+      refresh();
     } catch {
       toast.error('Erreur lors de la suppression');
     }
@@ -285,18 +234,10 @@ export default function CabinetAgendaPage() {
 
   const handleToggleComplete = async (event: AgendaEvent) => {
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch('/api/cabinet/agenda', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id: event.id, completed: !event.completed }),
-      });
-
-      if (!res.ok) throw new Error('Erreur');
-      setEvents((prev) => prev.map((e) => e.id === event.id ? { ...e, completed: !e.completed } : e));
+      await cabinetMutation('/api/cabinet/agenda', 'PUT', { id: event.id, completed: !event.completed });
+      // Optimistic update: no need to wait for full refresh
+      clearCabinetCache('/api/cabinet/agenda');
+      refresh();
     } catch {
       toast.error('Erreur');
     }
@@ -317,29 +258,47 @@ export default function CabinetAgendaPage() {
     );
   }
 
+  // ─── Error state ─────────────────────────────────────────────────────────
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Erreur de chargement</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{fetchError}</p>
+        <button
+          onClick={() => refresh()}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm"
+        >
+          <RefreshCw size={14} />
+          Reessayer
+        </button>
+      </div>
+    );
+  }
+
   // ─── Subscription paywall ────────────────────────────────────────────────
 
   if (!sub.isBusiness && !sub.isTrialActive) {
     return (
-      <CabinetGuard>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-5">
-            <CalendarIcon size={32} className="text-violet-500" />
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Agenda Cabinet</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">Disponible avec le plan Business.</p>
-          <Link href="/paywall?plan=business" className="px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm">
-            Passer a Business
-          </Link>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-5">
+          <CalendarIcon size={32} className="text-violet-500" />
         </div>
-      </CabinetGuard>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Agenda Cabinet</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">Disponible avec le plan Business.</p>
+        <Link href="/paywall?plan=business" className="px-6 py-3 rounded-xl bg-primary text-white font-bold text-sm">
+          Passer a Business
+        </Link>
+      </div>
     );
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
@@ -832,6 +791,5 @@ export default function CabinetAgendaPage() {
       </AnimatePresence>
 
     </motion.div>
-    </CabinetGuard>
   );
 }

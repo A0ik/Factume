@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Loader2, Search, Filter, Scale,
@@ -7,14 +7,14 @@ import {
   ChevronDown, Calendar, User, MoreHorizontal, Pencil,
   Trash2, Building2, Crown, FileCheck, FilePlus2,
   ListChecks, BookOpen, AlertTriangle, Users, Euro,
-  Download, Sparkles,
+  Download, Sparkles, AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
-import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -175,14 +175,21 @@ function getActStatusConfig(status: ActStatus) {
 // ---------------------------------------------------------------------------
 
 export default function CabinetJuridiquePage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
 
-  // Data
-  const [acts, setActs] = useState<LegalAct[]>([]);
-  const [companies, setCompanies] = useState<CompanyCreation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Data hooks — fetch acts and creations from the /api/cabinet/legal endpoint
+  const { data: acts, loading: actsLoading, error: actsError, refresh: refreshActs } = useCabinetData<LegalAct[]>(
+    '/api/cabinet/legal',
+    { dataKey: 'acts' },
+  );
+
+  const { data: companies, loading: companiesLoading, error: companiesError, refresh: refreshCompanies } = useCabinetData<CompanyCreation[]>(
+    '/api/cabinet/legal',
+    { dataKey: 'creations', params: { tab: 'creations' } },
+  );
+
+  const loading = actsLoading || companiesLoading;
+  const fetchError = actsError || companiesError;
 
   // UI
   const [activeTab, setActiveTab] = useState<TabKey>('actes');
@@ -202,43 +209,16 @@ export default function CabinetJuridiquePage() {
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
-  // Load data
-  useEffect(() => { if (profile) loadData(); }, [profile]);
-
-  const loadData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expirée'); return; }
-
-      const cabRes = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!cabRes.ok) throw new Error('Erreur de chargement du cabinet');
-      const cabData = await cabRes.json();
-      const cabinetId = cabData.cabinet?.id;
-      if (!cabinetId) { setLoading(false); return; }
-
-      const [actsRes, companiesRes] = await Promise.all([
-        supabase.from('legal_acts').select('*').eq('cabinet_id', cabinetId).order('created_at', { ascending: false }),
-        supabase.from('company_creations').select('*').eq('cabinet_id', cabinetId).order('created_at', { ascending: false }),
-      ]);
-
-      setActs((actsRes.data || []) as LegalAct[]);
-      setCompanies((companiesRes.data || []) as CompanyCreation[]);
-    } catch (err: any) {
-      console.error('[loadData]', err);
-      toast.error(err.message || 'Erreur de chargement');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const refreshAll = async () => {
+    await Promise.all([refreshActs(), refreshCompanies()]);
+  };
 
   // Derived
+  const actsList = acts ?? [];
+  const companiesList = companies ?? [];
+
   const filteredActs = useMemo(() => {
-    let result = [...acts];
+    let result = [...actsList];
     if (filterType !== 'all') result = result.filter((a) => a.act_type === filterType);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -251,15 +231,15 @@ export default function CabinetJuridiquePage() {
       );
     }
     return result;
-  }, [acts, filterType, search]);
+  }, [actsList, filterType, search]);
 
   const actStats = useMemo(() => ({
-    total: acts.length,
-    enAttente: acts.filter((a) => a.status === 'en_attente').length,
-    enCours: acts.filter((a) => a.status === 'en_cours').length,
-    traite: acts.filter((a) => a.status === 'traite').length,
-    depose: acts.filter((a) => a.status === 'depose').length,
-  }), [acts]);
+    total: actsList.length,
+    enAttente: actsList.filter((a) => a.status === 'en_attente').length,
+    enCours: actsList.filter((a) => a.status === 'en_cours').length,
+    traite: actsList.filter((a) => a.status === 'traite').length,
+    depose: actsList.filter((a) => a.status === 'depose').length,
+  }), [actsList]);
 
   const checklistProgress = useMemo(() => {
     const total = CREATION_CHECKLIST.length;
@@ -274,19 +254,7 @@ export default function CabinetJuridiquePage() {
 
     setSavingAct(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expirée'); return; }
-
-      const cabRes = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const cabData = await cabRes.json();
-      const cabinetId = cabData.cabinet?.id;
-      if (!cabinetId) { toast.error('Cabinet non trouvé'); return; }
-
       const payload = {
-        cabinet_id: cabinetId,
         client_name: actForm.client_name.trim(),
         act_type: actForm.act_type,
         act_date: actForm.act_date,
@@ -296,19 +264,18 @@ export default function CabinetJuridiquePage() {
       };
 
       if (editingActId) {
-        const { error } = await supabase.from('legal_acts').update(payload).eq('id', editingActId);
-        if (error) throw error;
+        await cabinetMutation(`/api/cabinet/legal`, 'PATCH', { id: editingActId, ...payload });
         toast.success('Acte mis à jour');
       } else {
-        const { error } = await supabase.from('legal_acts').insert(payload);
-        if (error) throw error;
+        await cabinetMutation(`/api/cabinet/legal`, 'POST', payload);
         toast.success('Acte créé');
       }
 
+      clearCabinetCache('/api/cabinet/legal');
       setShowActForm(false);
       setEditingActId(null);
       setActForm(EMPTY_ACT);
-      await loadData(true);
+      await refreshActs();
     } catch (err: any) {
       console.error('[handleSaveAct]', err);
       toast.error(err.message || 'Erreur lors de la sauvegarde');
@@ -320,11 +287,10 @@ export default function CabinetJuridiquePage() {
   const handleDeleteAct = async (id: string) => {
     if (!confirm('Supprimer cet acte ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { error } = await supabase.from('legal_acts').delete().eq('id', id);
-      if (error) throw error;
+      await cabinetMutation(`/api/cabinet/legal?id=${id}`, 'DELETE');
+      clearCabinetCache('/api/cabinet/legal');
       toast.success('Acte supprimé');
-      await loadData(true);
+      await refreshActs();
     } catch (err: any) {
       toast.error(err.message || 'Erreur');
     }
@@ -351,23 +317,12 @@ export default function CabinetJuridiquePage() {
 
     setSavingCompany(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expirée'); return; }
-
-      const cabRes = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const cabData = await cabRes.json();
-      const cabinetId = cabData.cabinet?.id;
-      if (!cabinetId) { toast.error('Cabinet non trouvé'); return; }
-
       const payload = {
-        cabinet_id: cabinetId,
-        denomination: companyForm.denomination.trim(),
+        type: 'creation',
+        company_name: companyForm.denomination.trim(),
         legal_form: companyForm.legal_form,
         capital: companyForm.capital,
-        registered_office: companyForm.registered_office?.trim() || null,
+        head_office: companyForm.registered_office?.trim() || null,
         corporate_purpose: companyForm.corporate_purpose?.trim() || null,
         manager: companyForm.manager?.trim() || null,
         naf_code: companyForm.naf_code?.trim() || null,
@@ -376,19 +331,18 @@ export default function CabinetJuridiquePage() {
       };
 
       if (editingCompanyId) {
-        const { error } = await supabase.from('company_creations').update(payload).eq('id', editingCompanyId);
-        if (error) throw error;
+        await cabinetMutation(`/api/cabinet/legal`, 'PATCH', { id: editingCompanyId, table: 'creation', ...payload });
         toast.success('Société mise à jour');
       } else {
-        const { error } = await supabase.from('company_creations').insert({ ...payload, status: 'draft' });
-        if (error) throw error;
+        await cabinetMutation(`/api/cabinet/legal`, 'POST', { ...payload, status: 'draft' });
         toast.success('Société créée');
       }
 
+      clearCabinetCache('/api/cabinet/legal?tab=creations');
       setShowCompanyForm(false);
       setEditingCompanyId(null);
       setCompanyForm(EMPTY_COMPANY);
-      await loadData(true);
+      await refreshCompanies();
     } catch (err: any) {
       console.error('[handleSaveCompany]', err);
       toast.error(err.message || 'Erreur lors de la sauvegarde');
@@ -416,11 +370,10 @@ export default function CabinetJuridiquePage() {
   const handleDeleteCompany = async (id: string) => {
     if (!confirm('Supprimer cette société ?')) return;
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { error } = await supabase.from('company_creations').delete().eq('id', id);
-      if (error) throw error;
+      await cabinetMutation(`/api/cabinet/legal?id=${id}&table=creation`, 'DELETE');
+      clearCabinetCache('/api/cabinet/legal?tab=creations');
       toast.success('Société supprimée');
-      await loadData(true);
+      await refreshCompanies();
     } catch (err: any) {
       toast.error(err.message || 'Erreur');
     }
@@ -475,12 +428,30 @@ export default function CabinetJuridiquePage() {
     );
   }
 
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-5">{fetchError}</p>
+        <button
+          onClick={refreshAll}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
+        >
+          <RefreshCw size={15} />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
   return (
-    <CabinetGuard>
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
@@ -495,12 +466,11 @@ export default function CabinetJuridiquePage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => loadData(true)}
-            disabled={refreshing}
+            onClick={refreshAll}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={16} />
           </button>
           {activeTab === 'actes' && (
             <button
@@ -732,7 +702,7 @@ export default function CabinetJuridiquePage() {
             <FileText size={16} className="text-gray-400" />
             <h3 className="font-bold text-gray-900 dark:text-white text-sm">Statuts & Modifications</h3>
           </div>
-          {acts.filter((a) => a.act_type === 'modification_statuts').length === 0 ? (
+          {actsList.filter((a) => a.act_type === 'modification_statuts').length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <FileText size={28} className="text-gray-300 dark:text-gray-600" />
@@ -749,7 +719,7 @@ export default function CabinetJuridiquePage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-              {acts.filter((a) => a.act_type === 'modification_statuts').map((act) => {
+              {actsList.filter((a) => a.act_type === 'modification_statuts').map((act) => {
                 const statusConf = getActStatusConfig(act.status);
                 const StatusIcon = statusConf.icon;
                 return (
@@ -813,7 +783,7 @@ export default function CabinetJuridiquePage() {
       {activeTab === 'echeances' && (
         <div className="space-y-4">
           {/* Upcoming deadlines from acts */}
-          {acts.filter((a) => a.status === 'en_attente' || a.status === 'en_cours').length === 0 ? (
+          {actsList.filter((a) => a.status === 'en_attente' || a.status === 'en_cours').length === 0 ? (
             <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 text-center py-16 px-4">
               <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Calendar size={28} className="text-gray-300 dark:text-gray-600" />
@@ -828,7 +798,7 @@ export default function CabinetJuridiquePage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm">Échéances à venir</h3>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                {acts
+                {actsList
                   .filter((a) => a.status === 'en_attente' || a.status === 'en_cours')
                   .sort((a, b) => new Date(a.act_date).getTime() - new Date(b.act_date).getTime())
                   .map((act) => {
@@ -923,10 +893,10 @@ export default function CabinetJuridiquePage() {
                 <Building2 size={16} className="text-gray-400" />
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm">Sociétés en cours de création</h3>
               </div>
-              <span className="text-xs text-gray-400">{companies.length} société{companies.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-gray-400">{companiesList.length} société{companiesList.length !== 1 ? 's' : ''}</span>
             </div>
 
-            {companies.length === 0 ? (
+            {companiesList.length === 0 ? (
               <div className="text-center py-16 px-4">
                 <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
                   <Building2 size={28} className="text-gray-300 dark:text-gray-600" />
@@ -943,7 +913,7 @@ export default function CabinetJuridiquePage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                {companies.map((company) => {
+                {companiesList.map((company) => {
                   const formLabel = LEGAL_FORMS.find((f) => f.value === company.legal_form)?.label || company.legal_form;
                   return (
                     <div key={company.id} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
@@ -1316,6 +1286,5 @@ export default function CabinetJuridiquePage() {
         )}
       </AnimatePresence>
     </motion.div>
-    </CabinetGuard>
   );
 }

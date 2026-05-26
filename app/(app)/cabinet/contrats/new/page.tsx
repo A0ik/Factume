@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, Check, Loader2, Plus, X,
@@ -7,9 +7,9 @@ import {
   Users, Info, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -101,41 +101,23 @@ const STEPS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NewContractPage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
-  const { cabinet, fetchEmployees } = useCabinetStore();
 
   const [form, setForm] = useState<ContractForm>({ ...EMPTY_FORM });
-  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Load employees — use store (deduplicated)
-  const loadEmployees = useCallback(async () => {
-    setLoading(true);
-    try {
-      await fetchEmployees();
-      const storeEmps = useCabinetStore.getState().employees;
-      setEmployees(
-        (storeEmps || []).map((e: any) => ({
-          id: e.id,
-          name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
-          poste: e.job_title || '',
-          typeContrat: e.contract_type || 'CDI',
-        }))
-      );
-    } catch (error: any) {
-      toast.error('Erreur lors du chargement des salariés');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchEmployees]);
+  // Fetch employees via useCabinetData
+  const { data: rawEmployees, loading, error: employeesError } = useCabinetData<any[]>('/api/cabinet/employees');
 
-  useEffect(() => {
-    if (profile) loadEmployees();
-  }, [profile, loadEmployees]);
+  // Map employees to display options
+  const employees: EmployeeOption[] = (rawEmployees || []).map((e: any) => ({
+    id: e.id,
+    name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+    poste: e.job_title || '',
+    typeContrat: e.contract_type || 'CDI',
+  }));
 
   const handleFormChange = (field: keyof ContractForm, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -155,10 +137,6 @@ export default function NewContractPage() {
 
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
       const body: Record<string, any> = {
         employee_id: form.employee_id,
         type_contrat: form.type_contrat,
@@ -184,17 +162,9 @@ export default function NewContractPage() {
       body.teletravail = form.teletravail;
       if (form.notes) body.notes = form.notes;
 
-      const res = await fetch('/api/cabinet/contracts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(body),
-      });
+      await cabinetMutation('/api/cabinet/contracts', 'POST', body);
 
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || 'Erreur lors de la création');
-      }
-
+      clearCabinetCache('/api/cabinet/contracts');
       toast.success('Contrat créé avec succès');
       router.push('/cabinet/contrats');
     } catch (error: any) {

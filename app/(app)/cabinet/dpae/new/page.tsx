@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, Check, Loader2, X,
@@ -7,9 +7,10 @@ import {
   AlertCircle, CheckCircle2, Info, Shield,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -77,15 +78,16 @@ const STEPS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NewDPAEPage() {
-  const { profile } = useAuthStore();
   const sub = useSubscription();
   const router = useRouter();
   const { cabinet } = useCabinetStore();
 
-  const [loading, setLoading] = useState(true);
+  // Fetch employees via the new data hook
+  const { data: rawEmployees, loading: employeesLoading } = useCabinetData<EmployeeOption[]>('/api/cabinet/employees');
+  const employees = rawEmployees || [];
+
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
 
   const [form, setForm] = useState<DPAEForm>({
     siret: '',
@@ -115,46 +117,19 @@ export default function NewDPAEPage() {
 
   const [nirValidation, setNirValidation] = useState<{ valid: boolean; error?: string } | null>(null);
 
-  // Load employees and cabinet data
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const headers = { Authorization: `Bearer ${session.access_token}` };
-
-      const [empRes] = await Promise.all([
-        fetch('/api/cabinet/employees', { headers }),
-      ]);
-
-      if (empRes.ok) {
-        const { employees: apiEmps } = await empRes.json();
-        setEmployees(apiEmps || []);
-      }
-
-      // Pre-fill employer info from cabinet
-      if (cabinet) {
-        setForm((prev) => ({
-          ...prev,
-          siret: cabinet.siret || '',
-          raison_sociale: cabinet.name || '',
-          adresse_employeur: cabinet.address || '',
-          code_ape: '',
-          urssaf: cabinet.siret || '',
-        }));
-      }
-    } catch (error: any) {
-      toast.error('Erreur de chargement');
-    } finally {
-      setLoading(false);
+  // Pre-fill employer info from cabinet
+  useEffect(() => {
+    if (cabinet) {
+      setForm((prev) => ({
+        ...prev,
+        siret: cabinet.siret || '',
+        raison_sociale: cabinet.name || '',
+        adresse_employeur: cabinet.address || '',
+        code_ape: '',
+        urssaf: cabinet.siret || '',
+      }));
     }
   }, [cabinet]);
-
-  useEffect(() => {
-    if (profile) loadData();
-  }, [profile, loadData]);
 
   const handleFormChange = (field: keyof DPAEForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -219,46 +194,36 @@ export default function NewDPAEPage() {
 
     setSaving(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const body = {
+        employee_id: form.employee_id || undefined,
+        siret: form.siret,
+        raison_sociale: form.raison_sociale,
+        adresse_employeur: form.adresse_employeur,
+        code_ape: form.code_ape,
+        urssaf: form.urssaf,
+        nir: form.nir,
+        nom: form.nom,
+        prenom: form.prenom,
+        date_naissance: form.date_naissance,
+        lieu_naissance: form.lieu_naissance,
+        nationalite: form.nationalite,
+        sexe: form.sexe,
+        adresse_salarie: form.adresse_salarie,
+        type_contrat: form.type_contrat,
+        date_embauche: form.date_embauche,
+        poste: form.poste,
+        lieu_travail: form.lieu_travail,
+        salaire_brut: parseFloat(form.salaire_brut) || 0,
+        taux_horaire: parseFloat(form.taux_horaire) || 0,
+        heures_hebdo: parseInt(form.heures_hebdo) || 35,
+        periode_essai: parseInt(form.periode_essai) || undefined,
+        convention_collective: form.convention_collective,
+        status: 'en_preparation',
+      };
 
-      const res = await fetch('/api/cabinet/dpae', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          employee_id: form.employee_id || undefined,
-          siret: form.siret,
-          raison_sociale: form.raison_sociale,
-          adresse_employeur: form.adresse_employeur,
-          code_ape: form.code_ape,
-          urssaf: form.urssaf,
-          nir: form.nir,
-          nom: form.nom,
-          prenom: form.prenom,
-          date_naissance: form.date_naissance,
-          lieu_naissance: form.lieu_naissance,
-          nationalite: form.nationalite,
-          sexe: form.sexe,
-          adresse_salarie: form.adresse_salarie,
-          type_contrat: form.type_contrat,
-          date_embauche: form.date_embauche,
-          poste: form.poste,
-          lieu_travail: form.lieu_travail,
-          salaire_brut: parseFloat(form.salaire_brut) || 0,
-          taux_horaire: parseFloat(form.taux_horaire) || 0,
-          heures_hebdo: parseInt(form.heures_hebdo) || 35,
-          periode_essai: parseInt(form.periode_essai) || undefined,
-          convention_collective: form.convention_collective,
-          status: 'en_preparation',
-        }),
-      });
+      await cabinetMutation('/api/cabinet/dpae', 'POST', body);
 
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || 'Erreur lors de la création');
-      }
-
+      clearCabinetCache('/api/cabinet/dpae');
       toast.success('DPAE créée avec succès');
       router.push('/cabinet/dpae');
     } catch (error: any) {
@@ -276,7 +241,7 @@ export default function NewDPAEPage() {
     );
   }
 
-  if (loading) {
+  if (employeesLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />

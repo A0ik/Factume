@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, TrendingUp, AlertTriangle, Plus, Loader2, Shield,
@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetData } from '@/hooks/useCabinetData';
+import { clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, downloadCSV } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -77,38 +79,21 @@ function HealthDot({ health }: { health: string }) {
 export default function CabinetPage() {
   const { profile, initialized } = useAuthStore();
   const sub = useSubscription();
-  const [data, setData] = useState<CabinetData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error, refresh } = useCabinetData<CabinetData>(
+    initialized && profile ? '/api/cabinet/dashboard' : null,
+    { pauseUntilCabinetReady: false, noCache: false },
+  );
   const [creating, setCreating] = useState(false);
   const [cabinetName, setCabinetName] = useState('');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'revenue' | 'health'>('name');
 
-  useEffect(() => { if (initialized && profile) loadDashboard(); }, [initialized, profile]);
-
-  const loadDashboard = async (quiet = false) => {
-    if (!quiet) setLoading(true); else setRefreshing(true);
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Session expiree. Veuillez vous reconnecter.');
-        return;
-      }
-      const res = await fetch('/api/cabinet/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Erreur inconnue' }));
-        throw new Error(error.error || 'Erreur de chargement');
-      }
-      setData(await res.json());
-    } catch (error: any) {
-      console.error('[loadDashboard] Error:', error);
-      toast.error(error.message || 'Erreur de chargement du tableau de bord');
+      await refresh();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -122,7 +107,8 @@ export default function CabinetPage() {
       if (cabinet) {
         toast.success('Cabinet cree avec succes');
         setCabinetName('');
-        await loadDashboard();
+        clearCabinetCache();
+        await refresh();
       } else {
         toast.error('Erreur lors de la creation');
       }
@@ -201,6 +187,25 @@ export default function CabinetPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={28} className="text-red-500" />
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
+        <p className="text-sm text-gray-400 mb-5">{error}</p>
+        <button
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm"
+        >
+          <RefreshCw size={14} />
+          Reessayer
+        </button>
       </div>
     );
   }
@@ -289,7 +294,7 @@ export default function CabinetPage() {
             <Download size={16} />
           </button>
           <button
-            onClick={() => loadDashboard(true)}
+            onClick={handleRefresh}
             disabled={refreshing}
             className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
             title="Actualiser"
