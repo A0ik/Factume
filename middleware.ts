@@ -73,11 +73,11 @@ export async function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' blob:${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'nonce-${nonce}' blob: https://www.googletagmanager.com https://unpkg.com${isDev ? " 'unsafe-eval'" : ''}`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https://factu.me https://*.supabase.co https://lh3.googleusercontent.com`,
     `font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com`,
-    `connect-src 'self' blob: data: https://*.supabase.co https://supabase.co https://api.stripe.com https://maps.googleapis.com https://openrouter.ai https://*.ingest.sentry.io wss://*.supabase.co wss://supabase.co${isDev ? ' ws://localhost:*' : ''}`,
+    `connect-src 'self' blob: data: https://*.supabase.co https://supabase.co https://api.stripe.com https://maps.googleapis.com https://openrouter.ai https://*.ingest.sentry.io https://www.googletagmanager.com https://recherche-entreprises.api.gouv.fr wss://*.supabase.co wss://supabase.co${isDev ? ' ws://localhost:*' : ''}`,
     `frame-src 'self' blob: data: https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com`,
     `worker-src 'self' blob: data:`,
     `child-src 'self' blob: data:`,

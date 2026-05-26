@@ -17,6 +17,7 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
   const redirected = useRef(false);
   const fetched = useRef(false);
   const [fetchCompleted, setFetchCompleted] = useState(false);
+  const [fetchSucceeded, setFetchSucceeded] = useState(false);
 
   useEffect(() => {
     if (initialized && profile && !fetched.current) {
@@ -25,22 +26,35 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
       useCabinetStore.getState().fetchCabinet().then(() => {
         const { cabinet: freshCabinet } = useCabinetStore.getState();
         setFetchCompleted(true);
+        setFetchSucceeded(true);
         if (freshCabinet) {
           redirected.current = false;
         }
+      }).catch(() => {
+        // Fetch failed — don't redirect, let user retry
+        setFetchCompleted(true);
+        setFetchSucceeded(false);
       });
     }
   }, [initialized, profile]);
 
-  // Only redirect to cabinet creation after fetch has completed and no cabinet found
-  // Skip redirect if we're already on the cabinet dashboard page (it has its own creation UI)
+  // Only redirect to cabinet creation after fetch has completed successfully and no cabinet found
   useEffect(() => {
-    if (initialized && profile && fetchCompleted && !loading && !cabinet && !redirected.current && pathname !== '/cabinet') {
+    if (
+      initialized &&
+      profile &&
+      fetchCompleted &&
+      fetchSucceeded &&
+      !loading &&
+      !cabinet &&
+      !redirected.current &&
+      pathname !== '/cabinet'
+    ) {
       redirected.current = true;
-      toast.error('Creez d\'abord votre cabinet');
+      toast.error('Créez d\'abord votre cabinet');
       router.push('/cabinet');
     }
-  }, [initialized, profile, fetchCompleted, loading, cabinet, router, pathname]);
+  }, [initialized, profile, fetchCompleted, fetchSucceeded, loading, cabinet, router, pathname]);
 
   if (!profile || loading || !fetchCompleted) {
     return (
@@ -51,10 +65,8 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
   }
 
   if (!cabinet) {
-    // On the cabinet dashboard, the page itself shows the creation form
-    // On other cabinet pages, redirect to dashboard
     if (pathname !== '/cabinet') {
-      if (!redirected.current) {
+      if (fetchSucceeded && !redirected.current) {
         redirected.current = true;
         router.push('/cabinet');
       }

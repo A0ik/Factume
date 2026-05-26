@@ -199,7 +199,16 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
           } else {
             try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
           }
+        } else {
+          throw new Error(`Cabinet fetch failed: ${res.status}`);
         }
+      } catch (err) {
+        // On network error, try to restore from cache
+        const cached = typeof window !== 'undefined' ? localStorage.getItem(CABINET_DATA_KEY) : null;
+        if (cached && !get().cabinet) {
+          try { set({ cabinet: JSON.parse(cached) }); } catch {}
+        }
+        throw err;
       } finally {
         set({ loading: false });
         _fetchCabinetPromise = null;

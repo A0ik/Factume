@@ -168,7 +168,7 @@ function getContractTitle(type: string): string {
 function getLegalRef(type: string): string {
   switch (type) {
     case 'cdd': return 'Articles L.&nbsp;1242-1 et suivants du Code du travail';
-    case 'stage': return 'Articles L.&nbsp;124-1 et suivants du Code de l\'éducation';
+    case 'stage': return "Articles L.&nbsp;124-1 et suivants du Code de l'éducation";
     case 'apprentissage': return 'Articles L.&nbsp;6211-1 et suivants du Code du travail';
     case 'professionnalisation': return 'Articles L.&nbsp;6325-1 et suivants du Code du travail';
     case 'interim': return 'Articles L.&nbsp;1251-1 et suivants du Code du travail';
@@ -719,12 +719,7 @@ function generateArticles(data: ContractTemplateData): string {
     `);
   } else {
     const trialText = data.trialPeriodDays && !['stage', 'freelance'].includes(type)
-      ? ` Le présent contrat est subordonné au résultat concluant d'une période d'essai de
-         <strong>${esc(data.trialPeriodDays)}&nbsp;jours</strong>
-         (soit jusqu'au ${calcTrialEnd(data.contractStartDate, data.trialPeriodDays)})
-         ${data.probationClause ? ', renouvelable une fois avec l\'accord exprès des deux parties,' : ''}
-         durant laquelle chaque partie pourra rompre le contrat sans indemnité, sous réserve du délai de
-         prévenance légal.`
+      ? ` Le présent contrat est subordonné au résultat concluant d'une période d'essai de <strong>${esc(data.trialPeriodDays)}&nbsp;jours</strong> (soit jusqu'au ${calcTrialEnd(data.contractStartDate, data.trialPeriodDays)})${data.probationClause ? ", renouvelable une fois avec l'accord exprès des deux parties," : ''} durant laquelle chaque partie pourra rompre le contrat sans indemnité, sous réserve du délai de prévenance légal.`
       : '';
 
     A("Engagement et prise de fonctions", `
@@ -754,9 +749,7 @@ function generateArticles(data: ContractTemplateData): string {
       au <strong>${fmtDate(data.contractEndDate)}</strong>.</p>
       <p><strong>Motif de recours&nbsp;:</strong> ${esc(data.contractReason) || '___________'}
       ${data.replacedEmployeeName ? ` — en remplacement de <strong>${esc(data.replacedEmployeeName)}</strong>` : ''}.</p>
-      <p>À l'échéance du terme et sauf renouvellement ou transformation en CDI, une <strong>indemnité de fin
-      de contrat égale à 10&nbsp;% de la rémunération brute totale</strong> sera versée à ${fullName},
-      conformément à l'article L.&nbsp;1243-8 du Code du travail.</p>
+      <p>À l'échéance du terme et sauf renouvellement ou transformation en CDI, une <strong>indemnité de fin de contrat égale à 10&nbsp;% de la rémunération brute totale</strong> sera versée à ${fullName}, conformément à l'article L.&nbsp;1243-8 du Code du travail.</p>
     `);
   } else if (type === 'stage') {
     A("Durée et calendrier du stage", `
@@ -780,10 +773,8 @@ function generateArticles(data: ContractTemplateData): string {
     `);
   } else if (type === 'freelance') {
     A("Durée et exécution de la prestation", `
-      <p>La prestation débute le <strong>${fmtDate(data.contractStartDate)}</strong>
-      ${data.contractEndDate ? ` et prend fin le <strong>${fmtDate(data.contractEndDate)}</strong>` : ' et se poursuit jusqu\'à achèvement'}.</p>
-      <p>Le Prestataire est libre de s'organiser comme il l'entend pour réaliser la mission,
-      dans les délais convenus.</p>
+      <p>La prestation débute le <strong>${fmtDate(data.contractStartDate)}</strong>${data.contractEndDate ? ` et prend fin le <strong>${fmtDate(data.contractEndDate)}</strong>` : " et se poursuit jusqu'à achèvement"}.</p>
+      <p>Le Prestataire est libre de s'organiser comme il l'entend pour réaliser la mission, dans les délais convenus.</p>
     `);
   }
 
@@ -826,7 +817,7 @@ function generateArticles(data: ContractTemplateData): string {
   if (!['freelance'].includes(type)) {
     A("Durée du travail et organisation", `
       <p>La durée hebdomadaire de travail est fixée à <strong>${esc(data.workingHours) || '35'}&nbsp;heures</strong>,
-      réparties selon l'horaire suivant&nbsp;: <strong>${esc(data.workSchedule) || 'selon planning communiqué par l\'employeur'}</strong>.</p>
+      réparties selon l'horaire suivant&nbsp;: <strong>${esc(data.workSchedule) || "selon planning communiqué par l'employeur"}</strong>.</p>
       <p>Des heures supplémentaires ou complémentaires pourront être effectuées à la demande de la hiérarchie,
       dans le respect des dispositions légales et conventionnelles applicables
       (article L.&nbsp;3121-28 et suivants du Code du travail).</p>
@@ -870,7 +861,7 @@ function generateArticles(data: ContractTemplateData): string {
     const benefits: string[] = [];
     if (data.hasTransport) benefits.push(`Remboursement 50&nbsp;% abonnement transport en commun${data.transportAmount ? ` (${fmtMoney(data.transportAmount)})` : ''}`);
     if (data.hasMeal) benefits.push(`Tickets restaurant ou panier repas${data.mealAmount ? ` — ${fmtMoney(data.mealAmount)} / jour` : ''}`);
-    if (data.hasHealth) benefits.push('Mutuelle d\'entreprise (participation employeur)');
+    if (data.hasHealth) benefits.push("Mutuelle d'entreprise (participation employeur)");
     if (data.hasOther && data.otherBenefits) benefits.push(esc(data.otherBenefits));
 
     if (benefits.length > 0) {
@@ -887,9 +878,7 @@ function generateArticles(data: ContractTemplateData): string {
   // ── ARTICLE : Congés payés ───────────────────────────────
   if (['cdi', 'cdd', 'apprentissage', 'professionnalisation', 'portage'].includes(type)) {
     A("Congés payés", `
-      <p>Conformément aux articles L.&nbsp;3141-1 et suivants du Code du travail,
-      ${fullName} acquiert des droits à congés payés à raison de <strong>2,5&nbsp;jours ouvrables par mois
-      de travail effectif</strong>, soit 30&nbsp;jours ouvrables (5&nbsp;semaines) par an.</p>
+      <p>Conformément aux articles L.&nbsp;3141-1 et suivants du Code du travail, ${fullName} acquiert des droits à congés payés à raison de <strong>2,5&nbsp;jours ouvrables par mois de travail effectif</strong>, soit 30&nbsp;jours ouvrables (5&nbsp;semaines) par an.</p>
       <p>Les dates de congés sont fixées d'un commun accord entre les parties, en tenant compte
       des nécessités du service.</p>
     `);
@@ -925,7 +914,7 @@ function generateArticles(data: ContractTemplateData): string {
       <strong>${data.nonCompeteCompensation ? fmtMoney(data.nonCompeteCompensation) : '___________'} brut</strong>
       versée pendant la durée d'application de la clause, ${fullName} s'interdit,
       après la rupture du présent contrat, d'exercer toute activité concurrente
-      ${data.nonCompeteArea ? `dans la zone géographique suivante&nbsp;: <strong>${esc(data.nonCompeteArea)}</strong>` : 'dans le secteur d\'activité de l\'entreprise'},
+      ${data.nonCompeteArea ? `dans la zone géographique suivante&nbsp;: <strong>${esc(data.nonCompeteArea)}</strong>` : "dans le secteur d'activité de l'entreprise"},
       pendant une durée de <strong>${data.nonCompeteDuration ? esc(data.nonCompeteDuration) : '___________'}</strong>.</p>
       <p class="legal-note"><strong>CONDITION DE VALIDITÉ OBLIGATOIRE :</strong> Sans cette indemnité compensatrice, la clause de non-concurrence est <strong>NULLE</strong> et inapplicable (Cass. Soc. 10&nbsp;juill. 2002). L'indemnité doit être versée mensuellement et son non-paiement libère le salarié de son obligation de non-concurrence.</p>
       <p class="legal-note">Cette clause est conforme aux articles L1227-1 et suivants du Code du travail

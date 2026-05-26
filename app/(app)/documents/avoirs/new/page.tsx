@@ -88,8 +88,7 @@ export default function NewAvoirsPage() {
 
   const [notes, setNotes] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [issueDate, setIssueDate] = useState('');
-  useEffect(() => { if (!issueDate) setIssueDate(new Date().toISOString().split('T')[0]); }, []);
+  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [paymentDays, setPaymentDays] = useState<number>(30);
   const [paymentTermId, setPaymentTermId] = useState<string>('days30');
   const [showCalendar, setShowCalendar] = useState(false);
@@ -138,10 +137,11 @@ export default function NewAvoirsPage() {
   }, 0);
   const total = discountedSubtotal + recalculatedVat;
 
-  const dueDate = paymentDays === 0
+  const dueDate = (!issueDate || paymentDays === 0)
     ? ''
     : (() => {
         const d = new Date(issueDate);
+        if (isNaN(d.getTime())) return '';
         d.setDate(d.getDate() + paymentDays);
         return d.toISOString().split('T')[0];
       })();

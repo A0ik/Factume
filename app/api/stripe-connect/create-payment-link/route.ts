@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
       .update({
         stripe_payment_url: session.url,
         payment_link: session.url,
+        sumup_checkout_id: null,
       })
       .eq('id', invoiceId);
 

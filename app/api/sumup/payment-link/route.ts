@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // If checkout already exists, return existing URL
     if (invoice.sumup_checkout_id) {
-      const existingUrl = invoice.payment_link || `https://pay.sumup.com/b2c/${invoice.sumup_checkout_id}`;
+      const existingUrl = invoice.payment_link || `https://checkout.sumup.com/${invoice.sumup_checkout_id}`;
       return NextResponse.json({ url: existingUrl, checkoutId: invoice.sumup_checkout_id });
     }
 
@@ -144,12 +144,12 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const paymentUrl = checkout.hosted_checkout_url || `https://pay.sumup.com/b2c/${checkout.id}`;
+    const paymentUrl = checkout.hosted_checkout_url || `https://checkout.sumup.com/${checkout.id}`;
 
     // Save checkout to invoice
     await supabase
       .from('invoices')
-      .update({ sumup_checkout_id: checkout.id, payment_link: paymentUrl })
+      .update({ sumup_checkout_id: checkout.id, payment_link: paymentUrl, stripe_payment_url: null })
       .eq('id', invoiceId);
 
     return NextResponse.json({ url: paymentUrl, checkoutId: checkout.id });

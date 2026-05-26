@@ -482,7 +482,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // ── PAYMENT LINK ─────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const paymentUrl = invoice.stripe_payment_url || invoice.payment_link || '';
+  const paymentUrl = invoice.payment_link || invoice.stripe_payment_url || '';
   if (paymentUrl) {
     needPage();
     y -= 8;
