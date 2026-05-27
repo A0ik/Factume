@@ -78,6 +78,7 @@ function HealthDot({ health }: { health: string }) {
 
 export default function CabinetPage() {
   const { profile, initialized } = useAuthStore();
+  const cabinetFromStore = useCabinetStore(state => state.cabinet);
   const sub = useSubscription();
   const { data, loading, error, refresh } = useCabinetData<CabinetData>(
     initialized && profile ? '/api/cabinet/dashboard' : null,
@@ -183,7 +184,7 @@ export default function CabinetPage() {
     );
   }
 
-  if (loading) {
+  if (loading && !cabinetFromStore) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />
@@ -191,7 +192,7 @@ export default function CabinetPage() {
     );
   }
 
-  if (error) {
+  if (error && !cabinetFromStore) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
@@ -210,7 +211,10 @@ export default function CabinetPage() {
     );
   }
 
-  if (!data?.cabinet) {
+  // Check both the API response and the Zustand store before showing creation form
+  const hasCabinet = !!(data?.cabinet || cabinetFromStore);
+
+  if (!hasCabinet) {
     return (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
         <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-blue-500/20">
@@ -241,11 +245,13 @@ export default function CabinetPage() {
     );
   }
 
-  const netBalance = (data.stats?.totalRevenue || 0) - (data.stats?.totalExpenses || 0);
-  const primaryColor = data.cabinet?.primary_color || '#4f46e5';
-  const brandName = data.cabinet?.hide_factu_branding && data.cabinet?.white_label_name
-    ? data.cabinet.white_label_name
-    : data.cabinet?.white_label_name || 'Factu.me';
+  const cabinetData = data?.cabinet || (cabinetFromStore ? { id: cabinetFromStore.id, name: cabinetFromStore.name, siret: cabinetFromStore.siret, primary_color: undefined, logo_url: undefined, white_label_name: undefined, hide_factu_branding: undefined } : null);
+  const safeData = data || { cabinet: null, totalClients: 0, activeClients: 0, stats: { totalRevenue: 0, totalExpenses: 0, totalOverdue: 0 }, clientStats: [] as ClientStat[], alerts: [], upcomingDeadlines: [] };
+  const netBalance = (safeData.stats?.totalRevenue || 0) - (safeData.stats?.totalExpenses || 0);
+  const primaryColor = cabinetData?.primary_color || '#4f46e5';
+  const brandName = cabinetData?.hide_factu_branding && cabinetData?.white_label_name
+    ? cabinetData.white_label_name
+    : cabinetData?.white_label_name || 'Factu.me';
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -271,17 +277,17 @@ export default function CabinetPage() {
             className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0"
             style={{ backgroundColor: primaryColor, boxShadow: `0 10px 25px -5px ${primaryColor}40` }}
           >
-            {data.cabinet?.logo_url ? (
-              <img src={data.cabinet.logo_url} alt={brandName} className="w-8 h-8 rounded-lg object-contain" />
+            {cabinetData?.logo_url ? (
+              <img src={cabinetData?.logo_url} alt={brandName} className="w-8 h-8 rounded-lg object-contain" />
             ) : (
               <Building2 size={24} className="text-white" />
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">{data.cabinet.name}</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">{cabinetData?.name || 'Cabinet'}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {data.activeClients} client{data.activeClients !== 1 ? 's' : ''} actif{data.activeClients !== 1 ? 's' : ''}
-              {data.totalClients > data.activeClients && ` · ${data.totalClients - data.activeClients} en attente`}
+              {safeData.activeClients} client{safeData.activeClients !== 1 ? 's' : ''} actif{safeData.activeClients !== 1 ? 's' : ''}
+              {safeData.totalClients > safeData.activeClients && ` · ${safeData.totalClients - safeData.activeClients} en attente`}
             </p>
           </div>
         </div>
@@ -321,7 +327,7 @@ export default function CabinetPage() {
         {[
           {
             label: 'CA total des clients',
-            value: formatCurrency(data.stats?.totalRevenue || 0),
+            value: formatCurrency(safeData.stats?.totalRevenue || 0),
             icon: TrendingUp,
             color: 'from-emerald-500 to-teal-600',
             bg: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -329,7 +335,7 @@ export default function CabinetPage() {
           },
           {
             label: 'Depenses totales',
-            value: formatCurrency(data.stats?.totalExpenses || 0),
+            value: formatCurrency(safeData.stats?.totalExpenses || 0),
             icon: Euro,
             color: 'from-red-500 to-rose-600',
             bg: 'bg-red-50 dark:bg-red-900/20',
@@ -345,11 +351,11 @@ export default function CabinetPage() {
           },
           {
             label: 'Factures en retard',
-            value: String(data.stats?.totalOverdue || 0),
+            value: String(safeData.stats?.totalOverdue || 0),
             icon: AlertTriangle,
-            color: (data.stats?.totalOverdue || 0) > 0 ? 'from-amber-500 to-orange-500' : 'from-gray-400 to-gray-500',
-            bg: (data.stats?.totalOverdue || 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900/20',
-            text: (data.stats?.totalOverdue || 0) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400',
+            color: (safeData.stats?.totalOverdue || 0) > 0 ? 'from-amber-500 to-orange-500' : 'from-gray-400 to-gray-500',
+            bg: (safeData.stats?.totalOverdue || 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900/20',
+            text: (safeData.stats?.totalOverdue || 0) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400',
           },
         ].map(({ label, value, icon: Icon, color, bg, text }) => (
           <div key={label} className={cn('p-3 lg:p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
@@ -364,14 +370,14 @@ export default function CabinetPage() {
 
 
       {/* Alerts Panel */}
-      {data.alerts && data.alerts.length > 0 && (
+      {safeData.alerts && safeData.alerts.length > 0 && (
         <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-white/5">
             <AlertCircle size={15} className="text-amber-500" />
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Alertes ({data.alerts.length})</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Alertes ({safeData.alerts.length})</h3>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-            {data.alerts.map((alert) => (
+            {safeData.alerts.map((alert) => (
               <Link
                 key={alert.id}
                 href={alert.href || '#'}
@@ -403,14 +409,14 @@ export default function CabinetPage() {
       )}
 
       {/* Upcoming Fiscal Deadlines */}
-      {data.upcomingDeadlines && data.upcomingDeadlines.length > 0 && (
+      {safeData.upcomingDeadlines && safeData.upcomingDeadlines.length > 0 && (
         <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-white/5">
             <CalendarClock size={15} className="text-blue-500" />
             <h3 className="font-bold text-gray-900 dark:text-white text-sm">Prochaines echeances fiscales</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 sm:gap-3 p-3 lg:p-4">
-            {data.upcomingDeadlines.slice(0, 8).map((dl) => (
+            {safeData.upcomingDeadlines.slice(0, 8).map((dl) => (
               <div key={dl.id} className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl',
                 dl.daysUntil < 0 ? 'bg-red-50 dark:bg-red-900/10' :
@@ -467,7 +473,7 @@ export default function CabinetPage() {
       )}
 
       {/* Alert Banner */}
-      {(data.stats?.totalOverdue || 0) > 0 && (
+      {(safeData.stats?.totalOverdue || 0) > 0 && (
         <Link
           href="/cabinet/relances"
           className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/60 dark:border-amber-800/30 hover:shadow-md transition-all group"
@@ -477,7 +483,7 @@ export default function CabinetPage() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
-              {data.stats.totalOverdue} facture{data.stats.totalOverdue > 1 ? 's' : ''} en retard de paiement
+              {safeData.stats.totalOverdue} facture{safeData.stats.totalOverdue > 1 ? 's' : ''} en retard de paiement
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-400">Cliquez pour gerer les relances</p>
           </div>

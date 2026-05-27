@@ -61,6 +61,23 @@ export async function POST(req: NextRequest) {
 
     console.log(`[process-voice] Language detected: ${originalLanguage}${wasTranslated ? ' (translated)' : ''}`);
 
+    // Load user's past voice corrections to help the AI learn
+    let correctionHint = '';
+    try {
+      const { data: corrections } = await supabaseAuth
+        .from('voice_corrections')
+        .select('field, original_value, corrected_value')
+        .eq('user_id', user.id);
+      if (corrections && corrections.length > 0) {
+        const correctionLines = corrections
+          .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
+          .join(', ');
+        correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR (utilise ces corrections pour mieux interpréter):\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
+      }
+    } catch (e) {
+      // Non-critical, continue without corrections
+    }
+
     const sectorHint = sector ? `L'utilisateur travaille dans le secteur : ${sector}.` : '';
 
     // Type de document pour adapter le prompt
@@ -288,7 +305,7 @@ SITUATIONS PARTICULIÈRES À GÉRER :
 - L'utilisateur mélange français et arabe/darija → extrais les infos dans les deux langues, noms en français
 - L'utilisateur donne un montant TTC → convertis en HT et signale la conversion
 
-RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'expressions`;
+RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'expressions${correctionHint}`;
     }
 
     const completion = await groq.chat.completions.create({

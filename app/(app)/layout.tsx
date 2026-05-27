@@ -103,13 +103,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
-        <Sidebar />
-        <main className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
-          {/* Mobile top bar - Enhanced with logo */}
+        {!pathname.startsWith('/cabinet') && <Sidebar />}
+        <main className={cn(
+          "flex-1 flex flex-col min-w-0 pb-20 lg:pb-0",
+          pathname.startsWith('/cabinet') && "lg:pl-0"
+        )}>
+          {/* Mobile top bar - Enhanced with logo (hidden on cabinet pages which have their own) */}
+          {!pathname.startsWith('/cabinet') && (
           <div className="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-3 flex items-center justify-between shadow-sm">
             <button
               onClick={() => setDrawerOpen(true)}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-slate-800 dark:to-slate-700/80 hover:from-gray-200 hover:to-gray-300/80 dark:hover:from-slate-700 dark:hover:to-slate-600/80 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-105 active:scale-95 -ml-1"
+              className="p-2.5 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-slate-800 dark:to-slate-700/80 hover:from-gray-200 hover:to-gray-300/80 dark:hover:from-slate-700 dark:hover:to-slate-600/80 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-105 active:scale:95 -ml-1"
               aria-label="Menu navigation"
             >
               <Menu size={20} strokeWidth={2} />
@@ -119,6 +123,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="w-10" />
           </div>
+          )}
 
           <div className={cn(
             "flex-1 w-full py-5 lg:py-6",
@@ -137,8 +142,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
 
-        {/* Mobile slide-out drawer */}
-        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        {/* Mobile slide-out drawer (hidden on cabinet which has its own) */}
+        {!pathname.startsWith('/cabinet') && <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
       </div>
     </>
   );

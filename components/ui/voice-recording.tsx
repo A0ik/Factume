@@ -266,10 +266,47 @@ export function PulseVoiceRecorder({
     if (pendingResult.summary) {
       toast.success(pendingResult.summary);
     }
+
+    // Save corrections to backend for AI learning (non-blocking)
+    if (Object.keys(corrections).length > 0) {
+      saveCorrections(pendingResult.uncertain_fields || [], corrections);
+    }
+
     setPendingResult(null);
     setCorrections({});
     if (onClose) {
       setTimeout(() => onClose(), 300);
+    }
+  };
+
+  // Save voice corrections for future AI learning
+  const saveCorrections = async (
+    uncertainFields: VoiceUncertainField[],
+    userCorrections: Record<string, string>
+  ) => {
+    try {
+      const saves = Object.entries(userCorrections)
+        .filter(([, newValue]) => newValue && newValue.trim())
+        .map(([fieldPath, newValue]) => {
+          const uncertain = uncertainFields.find(uf => uf.field === fieldPath);
+          return {
+            field: fieldPath,
+            original_value: String(uncertain?.current_value ?? ''),
+            corrected_value: newValue,
+            context: mode,
+          };
+        })
+        .filter(s => s.original_value && s.corrected_value && s.original_value !== s.corrected_value);
+
+      for (const save of saves) {
+        fetch('/api/voice-corrections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(save),
+        }).catch(() => {});
+      }
+    } catch {
+      // Non-critical, silently fail
     }
   };
 

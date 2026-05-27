@@ -49,6 +49,23 @@ export async function POST(req: NextRequest) {
 
     console.log(`[process-voice-contract] Language detected: ${originalLanguage}${wasTranslated ? ' (translated)' : ''}`);
 
+    // Load user's past voice corrections
+    let correctionHint = '';
+    try {
+      const { data: corrections } = await supabaseAuth
+        .from('voice_corrections')
+        .select('field, original_value, corrected_value')
+        .eq('user_id', user.id);
+      if (corrections && corrections.length > 0) {
+        const correctionLines = corrections
+          .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
+          .join(', ');
+        correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR:\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
+      }
+    } catch (e) {
+      // Non-critical
+    }
+
     // System prompt based on contract type
     const systemPrompts: Record<string, string> = {
       cdd: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDD (Contrat à Durée Déterminée).
@@ -59,6 +76,7 @@ CONSIGNES SPÉCIALES:
 - Nationalité: écoute "Français", "Marocain", "Algérien", "Tunisien", etc.
 - Dates: convertis toutes les dates en format YYYY-MM-DD (ex: "15 janvier 2026" → "2026-01-15")
 - Pour les dates relatives ("dans 2 semaines", "le mois prochain"), calcule la date approximative
+- Prénoms/noms propres: sois TRÈS attentif à l'orthographe. Si tu n'es pas sûr, ajoute le champ dans uncertain_fields
 
 Format attendu (null si non mentionné) :
 {
@@ -84,8 +102,20 @@ Format attendu (null si non mentionné) :
   "companyName": "string ou null",
   "companyAddress": "string ou null",
   "companySiret": "string ou null",
-  "employerName": "string ou null"
+  "employerName": "string ou null",
+  "uncertain_fields": [
+    {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
+  ]
 }
+
+⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
+Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
+- Si le prénom/nom entendu pourrait s'écrire de plusieurs façons (ex: "Mamadou" vs "Mahamadou", "Dupon" vs "Dupont")
+- Si un montant est ambigu (ex: "deux cents" vs "sans")
+- Si un nombre clé est couvert par du bruit
+NE PAS signaler si tu es raisonnablement confiant.
+Si aucun doute réel → "uncertain_fields": []
 
 Exemple : "Je veux embaucher Marie Dupont, de nationalité française, née le 15 mars 1990, numéro de sécurité sociale 2 85 01 234 567 89, comme développeuse web à Paris. Le contrat commence le 1er février 2026 pour 6 mois à 3000 euros par mois."
 → {
@@ -99,7 +129,8 @@ Exemple : "Je veux embaucher Marie Dupont, de nationalité française, née le 1
   "contractStartDate": "2026-02-01",
   "contractEndDate": "2026-08-01",
   "salaryAmount": "3000",
-  "salaryFrequency": "monthly"
+  "salaryFrequency": "monthly",
+  "uncertain_fields": []
 }`,
 
       cdi: `Tu es un assistant expert en contrats de travail français, spécialisé dans les CDI (Contrat à Durée Indéterminée).
@@ -110,6 +141,7 @@ CONSIGNES SPÉCIALES:
 - Nationalité: écoute "Français", "Marocain", "Algérien", "Tunisien", etc.
 - Dates: convertis toutes les dates en format YYYY-MM-DD (ex: "15 janvier 2026" → "2026-01-15")
 - Pour les dates relatives ("dans 2 semaines", "le mois prochain"), calcule la date approximative
+- Prénoms/noms propres: sois TRÈS attentif à l'orthographe. Si tu n'es pas sûr, ajoute le champ dans uncertain_fields
 
 Format attendu (null si non mentionné) :
 {
@@ -133,8 +165,16 @@ Format attendu (null si non mentionné) :
   "workingHours": "string ou null",
   "companyName": "string ou null",
   "companySiret": "string ou null",
-  "employerName": "string ou null"
-}`,
+  "employerName": "string ou null",
+  "uncertain_fields": [
+    {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
+  ]
+}
+
+⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
+Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
+Si aucun doute réel → "uncertain_fields": []`,
 
       other: `Tu es un assistant expert en contrats de travail français.
 L'utilisateur dicte des informations pour un contrat (stage, freelance, etc.). Extrais et retourne UNIQUEMENT du JSON valide.
@@ -155,8 +195,16 @@ Format attendu (null si non mentionné) :
   "salaryFrequency": "monthly, hourly, weekly, ou flat_rate",
   "tutorName": "string ou null",
   "schoolName": "string ou null",
-  "speciality": "string ou null"
+  "speciality": "string ou null",
+  "uncertain_fields": [
+    {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
+  ]
 }
+
+⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
+Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
+Si aucun doute réel → "uncertain_fields": []
 
 Détection automatique de contractCategory :
 - "stage" → mots: stage, stagiaire, convention de stage
@@ -166,7 +214,7 @@ Détection automatique de contractCategory :
 - "professionalization" → mots: professionnalisation`
     };
 
-    const systemPrompt = systemPrompts[contract_type] || systemPrompts.other;
+    const systemPrompt = (systemPrompts[contract_type] || systemPrompts.other) + correctionHint;
 
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',

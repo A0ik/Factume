@@ -70,8 +70,17 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown, pas de commentaires):
   "supplier_iban": null,
   "supplier_bic": null,
   "supplier_bank_name": null,
-  "line_items": []
-}`;
+  "line_items": [],
+  "uncertain_fields": []
+}
+
+⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+Signale un champ UNIQUEMENT si l'information extraite est ambiguë, illisible ou incertaine.
+- Le nom du vendor est partiellement illisible ou pourrait s'écrire de plusieurs façons
+- Un montant est flou ou partiellement visible
+- La date est ambiguë
+Format: [{"field": "vendor", "current_value": "Dupont", "reason": "Nom partiellement illisible", "suggestion": "Dupond"}]
+Si tout est clair → "uncertain_fields": []`;
 
 // ─── Sanitize numbers ─────────────────────────────────────────────────────────
 
@@ -123,6 +132,7 @@ function sanitize(raw: Record<string, any>) {
     supplier_iban: raw.supplier_iban || null,
     supplier_bic: raw.supplier_bic || null,
     supplier_bank_name: raw.supplier_bank_name || null,
+    uncertain_fields: Array.isArray(raw.uncertain_fields) ? raw.uncertain_fields : [],
   };
 }
 

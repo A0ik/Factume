@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Upload, FileText, Mic, Send, Download, Eye, Loader2, Check, AlertCircle,
   User, Building2, FileCheck, X, Euro, Calendar, Shield, Sparkles, History,
-  Calculator, Crown
+  Calculator, Crown, HelpCircle, Edit3, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -98,6 +98,8 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
   const [payslipData, setPayslipData] = useState<any>(null);
   const [savedContractId, setSavedContractId] = useState<string | null>(contractId || null);
   const [customClauses, setCustomClauses] = useState<Array<{ title: string; content: string }>>([]);
+  const [pendingVoiceResult, setPendingVoiceResult] = useState<{ parsed: any; uncertain_fields: Array<{ field: string; current_value: any; reason: string; suggestion?: any }> } | null>(null);
+  const [voiceCorrections, setVoiceCorrections] = useState<Record<string, string>>({});
   const pendingIdRef = useRef<string | null>(null);
 
   const [formData, setFormData] = useState<ContractFormData>({
@@ -312,14 +314,92 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
       }
       const result = await res.json();
       if (result.parsed) {
-        setFormData(prev => ({ ...prev, ...mapAIParsed(result.parsed) }));
-        setStep('edit');
+        const uncertain = result.parsed.uncertain_fields;
+        if (uncertain && uncertain.length > 0) {
+          setPendingVoiceResult({ parsed: result.parsed, uncertain_fields: uncertain });
+          setVoiceCorrections({});
+        } else {
+          setFormData(prev => ({ ...prev, ...mapAIParsed(result.parsed) }));
+          setStep('edit');
+        }
       }
     } catch {
       setError('Erreur lors du traitement vocal');
     } finally {
       setProcessingVoice(false);
     }
+  };
+
+  const confirmVoiceAndApply = () => {
+    if (!pendingVoiceResult) return;
+    const corrected = { ...pendingVoiceResult.parsed };
+    for (const [field, newValue] of Object.entries(voiceCorrections)) {
+      if (!newValue) continue;
+      (corrected as any)[field] = newValue;
+    }
+    setFormData(prev => ({ ...prev, ...mapAIParsed(corrected) }));
+
+    // Save corrections for AI learning (non-blocking)
+    if (Object.keys(voiceCorrections).length > 0) {
+      const saves = Object.entries(voiceCorrections)
+        .filter(([, val]) => val && val.trim())
+        .map(([field, newValue]) => {
+          const uncertain = pendingVoiceResult.uncertain_fields.find(uf => uf.field === field);
+          return {
+            field,
+            original_value: String(uncertain?.current_value ?? ''),
+            corrected_value: newValue,
+            context: contractType,
+          };
+        })
+        .filter(s => s.original_value && s.corrected_value && s.original_value !== s.corrected_value);
+
+      for (const save of saves) {
+        fetch('/api/voice-corrections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(save),
+        }).catch(() => {});
+      }
+    }
+
+    setPendingVoiceResult(null);
+    setVoiceCorrections({});
+    setStep('edit');
+  };
+
+  const skipVoiceCorrections = () => {
+    if (!pendingVoiceResult) return;
+    setFormData(prev => ({ ...prev, ...mapAIParsed(pendingVoiceResult.parsed) }));
+    setPendingVoiceResult(null);
+    setVoiceCorrections({});
+    setStep('edit');
+  };
+
+  const contractFieldLabel = (field: string): string => {
+    const labels: Record<string, string> = {
+      'employeeFirstName': 'Prénom',
+      'employeeLastName': 'Nom',
+      'employeeEmail': 'Email',
+      'employeePhone': 'Téléphone',
+      'employeeAddress': 'Adresse',
+      'employeePostalCode': 'Code postal',
+      'employeeCity': 'Ville',
+      'employeeBirthDate': 'Date de naissance',
+      'employeeSocialSecurity': 'N° Sécurité sociale',
+      'employeeNationality': 'Nationalité',
+      'contractStartDate': 'Date de début',
+      'contractEndDate': 'Date de fin',
+      'trialPeriodDays': 'Période d\'essai (jours)',
+      'jobTitle': 'Intitulé du poste',
+      'workLocation': 'Lieu de travail',
+      'salaryAmount': 'Salaire',
+      'salaryFrequency': 'Fréquence',
+      'companyName': 'Nom de l\'entreprise',
+      'companySiret': 'SIRET',
+      'employerName': 'Nom de l\'employeur',
+    };
+    return labels[field] || field;
   };
 
   const handleTextSubmit = async () => {
@@ -730,6 +810,78 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
             </div>
             {error && <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center gap-2 text-sm text-red-600 dark:text-red-400"><AlertCircle className="w-4 h-4" />{error}</div>}
           </div>
+
+          {/* Confirmation popup for uncertain voice fields */}
+          <AnimatePresence>
+            {pendingVoiceResult && pendingVoiceResult.uncertain_fields.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              >
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/5 overflow-hidden shadow-lg">
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-amber-200 dark:border-amber-500/20 bg-amber-100/50 dark:bg-amber-500/10">
+                    <div className="w-9 h-9 rounded-xl bg-amber-200 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                      <HelpCircle size={18} className="text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Vérification requise</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5">
+                        L'IA n'est pas certaine de certaines valeurs. Vérifiez et corrigez si besoin.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
+                    {pendingVoiceResult.uncertain_fields.map((uf, idx) => (
+                      <div key={idx} className="rounded-xl bg-white dark:bg-slate-800/80 border border-amber-100 dark:border-amber-500/10 p-3">
+                        <div className="flex items-start gap-2 mb-2">
+                          <Edit3 size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{contractFieldLabel(uf.field)}</p>
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400/80 mt-0.5">{uf.reason}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">IA:</span>
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 line-through opacity-50">
+                            {String(uf.current_value ?? '—')}
+                          </span>
+                          <input
+                            type="text"
+                            placeholder={uf.suggestion != null ? String(uf.suggestion) : String(uf.current_value ?? '')}
+                            value={voiceCorrections[uf.field] ?? ''}
+                            onChange={(e) => setVoiceCorrections(prev => ({ ...prev, [uf.field]: e.target.value }))}
+                            className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 px-5 py-4 border-t border-amber-200 dark:border-amber-500/20">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={skipVoiceCorrections}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 transition-colors"
+                    >
+                      Garder tel quel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={confirmVoiceAndApply}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-md transition-all"
+                    >
+                      <CheckCircle size={16} />
+                      Confirmer
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Form Grid */}
           <div className="grid md:grid-cols-2 gap-6">

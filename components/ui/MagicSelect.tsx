@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Search, Check, Building2, Briefcase, FileText, Users, Calendar, Globe, Sparkles, Star } from 'lucide-react';
+import { ChevronDown, Search, Check, Building2, Briefcase, FileText, Users, Calendar, Globe, Sparkles, Star, GraduationCap } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
@@ -175,6 +175,30 @@ export const CONTRACT_OTHER_TYPES = [
     description: 'Travail effectué au domicile du salarié',
     icon: Building2,
     color: 'from-indigo-500 to-violet-500',
+    category: 'Autre'
+  },
+  {
+    value: 'stage',
+    label: 'Convention de stage',
+    description: 'Stage pratique en entreprise pour étudiants',
+    icon: GraduationCap,
+    color: 'from-green-500 to-emerald-500',
+    category: 'Formation'
+  },
+  {
+    value: 'freelance',
+    label: 'Contrat freelance / Prestataire',
+    description: 'Prestation de services indépendante',
+    icon: Briefcase,
+    color: 'from-sky-500 to-blue-500',
+    category: 'Autre'
+  },
+  {
+    value: 'other',
+    label: 'Autre type de contrat',
+    description: 'Tout autre type de contrat non listé',
+    icon: FileText,
+    color: 'from-gray-500 to-slate-500',
     category: 'Autre'
   }
 ];
