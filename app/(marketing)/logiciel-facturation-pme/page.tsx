@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Users, BarChart3, Shield, Building2, Lock, ArrowRight } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation PME – La Solution Complète pour Votre Entreprise',
@@ -260,6 +261,12 @@ export default function LogicielFacturationPMEPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel Facturation PME', url: 'https://factu.me/logiciel-facturation-pme' },
+        ]}
+      />
     </div>
   );
 }

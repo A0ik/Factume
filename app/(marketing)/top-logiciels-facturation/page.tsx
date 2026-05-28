@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Award, ListOrdered, Crown, Medal, Target, TrendingUp } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Top Logiciels de Facturation – Classement 2025 | Factu.me',
@@ -249,6 +250,12 @@ export default function TopLogicielsFacturationPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Top Logiciels de Facturation', url: 'https://factu.me/top-logiciels-facturation' },
+        ]}
+      />
     </div>
   );
 }

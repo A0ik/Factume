@@ -33,6 +33,7 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
   }, [initialized, profile]);
 
   // Redirect to cabinet creation only if fetch succeeded and no cabinet
+  // Also check localStorage cache before redirecting (prevents false redirect after creation)
   useEffect(() => {
     if (
       initialized &&
@@ -43,11 +44,18 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
       !redirected.current &&
       pathname !== '/cabinet'
     ) {
+      // Double-check: maybe the store was updated between renders
       const freshCabinet = useCabinetStore.getState().cabinet;
-      if (!freshCabinet) {
+      const cachedCabinet = typeof window !== 'undefined' ? localStorage.getItem('factume_cabinet_data') : null;
+      if (!freshCabinet && !cachedCabinet) {
         redirected.current = true;
         toast.error('Créez d\'abord votre cabinet');
         router.push('/cabinet');
+      } else if (cachedCabinet && !freshCabinet) {
+        // Restore from cache
+        try {
+          useCabinetStore.setState({ cabinet: JSON.parse(cachedCabinet) });
+        } catch {}
       }
     }
   }, [initialized, profile, fetchDone, loading, cabinet, router, pathname]);

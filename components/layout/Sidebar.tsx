@@ -411,7 +411,7 @@ export default function Sidebar() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{tierConfig.name}</p>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {sub.tier === 'free' ? '10 factures gratuites/mois' : tierConfig.subtext}
+                {sub.tier === 'free' ? '3 factures gratuites/mois' : tierConfig.subtext}
               </p>
             </div>
             {sub.tier !== 'business' && <ArrowUpRight size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />}

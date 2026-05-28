@@ -154,7 +154,7 @@ export default function DeveloppeurPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ 10 factures gratuites par mois • ✓ Multi-devise inclus
+              ✓ 3 factures gratuites par mois • ✓ Multi-devise inclus
             </p>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function DeveloppeurPage() {
             npm install factu-me
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            10 factures gratuites par mois • Sans engagement • Multi-devise
+            3 factures gratuites par mois • Sans engagement • Multi-devise
           </p>
         </div>
       </section>

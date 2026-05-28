@@ -154,7 +154,7 @@ export default function BTPPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Pas de carte bancaire requise • ✓ 10 factures gratuites par mois
+              ✓ Pas de carte bancaire requise • ✓ 3 factures gratuites par mois
             </p>
           </div>
         </div>
@@ -327,7 +327,7 @@ export default function BTPPage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-orange-200">
-            10 factures gratuites par mois • Sans engagement
+            3 factures gratuites par mois • Sans engagement
           </p>
         </div>
       </section>

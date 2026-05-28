@@ -7,10 +7,10 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
-  description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois. Factur-X 2026 prêt.',
+  description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois. Factur-X 2026 prêt.',
   openGraph: {
     title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
-    description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois.',
+    description: 'Logiciel de facturation pour freelances : créez vos factures en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois.',
     url: 'https://factu.me/facturation-freelances',
     siteName: 'Factu.me',
     images: [
@@ -154,7 +154,7 @@ export default function FreelancePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Pas de carte bancaire requise • ✓ 10 factures gratuites par mois
+              ✓ Pas de carte bancaire requise • ✓ 3 factures gratuites par mois
             </p>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function FreelancePage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-purple-200">
-            10 factures gratuites par mois • Sans engagement
+            3 factures gratuites par mois • Sans engagement
           </p>
         </div>
       </section>
@@ -280,7 +280,7 @@ export default function FreelancePage() {
           },
           {
             question: "Le plan gratuit est-il vraiment gratuit ?",
-            answer: "Oui, le plan gratuit de Factu.me permet de créer jusqu'à 10 factures par mois sans aucune carte bancaire, sans publicité et sans filigrane. Vous pouvez passer au plan Pro quand votre activité le nécessite.",
+            answer: "Oui, le plan gratuit de Factu.me permet de créer jusqu'à 3 factures par mois sans aucune carte bancaire, sans publicité et sans filigrane. Vous pouvez passer au plan Pro quand votre activité le nécessite.",
           },
         ]}
       />

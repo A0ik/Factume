@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Pencil, ImagePlus, Paintbrush, Eye, Save, MousePointerClick } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Éditeur de Facture en Ligne – Créez et Personnalisez',
@@ -228,6 +229,12 @@ export default function EditeurFacturePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Éditeur de Facture', url: 'https://factu.me/editeur-facture' },
+        ]}
+      />
     </div>
   );
 }

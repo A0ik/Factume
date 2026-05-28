@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Building, Euro, Shield, Clock, MapPin, HardHat, TrendingUp } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Construction – Gérez Vos Chantiers | Factu.me',
@@ -224,10 +225,16 @@ export default function ConstructionPage() {
             Essayer gratuitement
           </Link>
           <p className="mt-6 text-sm text-slate-400">
-            10 factures gratuites par mois • Sans engagement • Configuration en 2 minutes
+            3 factures gratuites par mois • Sans engagement • Configuration en 2 minutes
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Construction', url: 'https://factu.me/facturation-construction' },
+        ]}
+      />
     </div>
   );
 }

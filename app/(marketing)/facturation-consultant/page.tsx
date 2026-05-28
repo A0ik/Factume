@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Briefcase, Clock, TrendingUp, FileSpreadsheet, Plane, Milestone } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Consultant – Facturez Vos Prestations en un Clic',
@@ -151,7 +152,7 @@ export default function FacturationConsultantPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Gestion TJM & forfaits &bull; ✓ Notes de frais intégrées &bull; ✓ 10 factures gratuites/mois
+              ✓ Gestion TJM & forfaits &bull; ✓ Notes de frais intégrées &bull; ✓ 3 factures gratuites/mois
             </p>
           </div>
         </div>
@@ -256,10 +257,16 @@ export default function FacturationConsultantPage() {
             Démarrer gratuitement
           </Link>
           <p className="mt-6 text-sm text-violet-200">
-            10 factures gratuites par mois &bull; Sans engagement &bull; Aucune CB requise
+            3 factures gratuites par mois &bull; Sans engagement &bull; Aucune CB requise
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Consultant', url: 'https://factu.me/facturation-consultant' },
+        ]}
+      />
     </div>
   );
 }

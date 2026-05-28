@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Globe, Palette, Layers } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Freelance – Créez Vos Factures en 30 Secondes',
@@ -48,7 +49,7 @@ const benefits = [
   {
     icon: Euro,
     title: 'Gratuit pour démarrer',
-    description: '10 factures par mois sans payer un centime. Pas de carte bancaire, pas d\'essai limité dans le temps.',
+    description: '3 factures par mois sans payer un centime. Pas de carte bancaire, pas d\'essai limité dans le temps.',
   },
   {
     icon: Layers,
@@ -151,7 +152,7 @@ export default function FactureFreelancePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ 10 factures gratuites/mois • ✓ Multi-devises • ✓ Sans engagement
+              ✓ 3 factures gratuites/mois • ✓ Multi-devises • ✓ Sans engagement
             </p>
           </div>
         </div>
@@ -256,10 +257,16 @@ export default function FactureFreelancePage() {
             Ma première facture gratuite
           </Link>
           <p className="mt-6 text-sm text-purple-200">
-            10 factures gratuites par mois • Multi-devises • Sans engagement
+            3 factures gratuites par mois • Multi-devises • Sans engagement
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel Facture Freelance', url: 'https://factu.me/logiciel-facture-freelance' },
+        ]}
+      />
     </div>
   );
 }

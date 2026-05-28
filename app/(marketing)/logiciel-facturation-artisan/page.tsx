@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartphone, Mic, HardHat } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Artisan – Gérez Votre Activité Simplement',
@@ -260,6 +261,12 @@ export default function ArtisanPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel Facturation Artisan', url: 'https://factu.me/logiciel-facturation-artisan' },
+        ]}
+      />
     </div>
   );
 }

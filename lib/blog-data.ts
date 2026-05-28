@@ -381,7 +381,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Les logiciels de facturation proposent différents modèles tarifaires : gratuit avec fonctionnalites limitées, abonnement mensuel avec plus ou moins de fonctionnalites, ou freemium (gratuit jusqu\'à un certain nombre de factures). Le choix dépend de votre volume d\'activité et de vos besoins.',
           'Attention au prix cache : un logiciel gratuit peut devenir payant quand vous dépassez un quota de factures ou quand vous avez besoin d\'une fonctionnalite spécifique (relances, paiement en ligne, export comptable). Lisez attentivement les conditions avant de vous engager.',
-          'Factu.me propose un modèle transparent avec un essai gratuit de 4 jours, sans engagement et sans carte bancaire. Vous pouvez tester toutes les fonctionnalites avant de vous decider. L\'abonnement inclut les mises à jour réglementaires, le support et le stockage illimité de vos documents.',
+          'Factu.me propose un modèle transparent avec un essai gratuit de 7 jours, sans engagement (carte bancaire requise). Vous pouvez tester toutes les fonctionnalites avant de vous decider. L\'abonnement inclut les mises à jour réglementaires, le support et le stockage illimité de vos documents.',
         ],
       },
       {
@@ -443,7 +443,7 @@ export const blogPosts: BlogPost[] = [
         title: 'Conseil 10 : Choisissez le bon outil et formez-vous',
         paragraphs: [
           'Conseil 10 : investissez dans un logiciel de facturation adapte à votre activité freelance. Le bon outil vous fait gagner des heures chaque mois, réduit les erreurs, assure la conformité légale et vous donne une image professionnelle auprès de vos clients.',
-          'Factu.me est conçu par et pour des freelances français. Il combine simplicite d\'utilisation, conformité réglementaire et fonctionnalites avancées comme la facturation vocale IA, les liens de paiement, les relances automatiques et l\'export Factur-X. Testez-le gratuitement pendant 4 jours et jugez par vous-même.',
+          'Factu.me est conçu par et pour des freelances français. Il combine simplicite d\'utilisation, conformité réglementaire et fonctionnalites avancées comme la facturation vocale IA, les liens de paiement, les relances automatiques et l\'export Factur-X. Testez-le gratuitement pendant 7 jours et jugez par vous-même.',
           'En bonus : formez-vous régulièrement aux évolutions réglementaires. La facture électronique arrive en 2026, les seuils de TVA changent, les obligations évoluént. Un bon logiciel vous tient informé, mais une veille personnelle est toujours bénéfique. Le blog Factu.me est là pour vous accompagner dans cette démarche.',
         ],
       },

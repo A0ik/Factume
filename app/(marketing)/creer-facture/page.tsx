@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Rocket, Bot, FileDown, Mail, CreditCard, ListChecks } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Créer une Facture – En 30 Secondes avec l\'IA',
@@ -215,7 +216,7 @@ export default function CreerFacturePage() {
             Créez votre première facture maintenant
           </h2>
           <p className="text-xl text-green-100 mb-8">
-            30 secondes. C&apos;est tout ce qu&apos;il vous faut. Essai gratuit, sans carte bancaire.
+            30 secondes. C&apos;est tout ce qu&apos;il vous faut. Essai 7 jours gratuit.
           </p>
           <Link
             href="/register"
@@ -225,10 +226,16 @@ export default function CreerFacturePage() {
             Créer ma facture – c&apos;est gratuit
           </Link>
           <p className="mt-6 text-sm text-green-200">
-            10 factures gratuites par mois • IA auto-remplissage • Suivi de paiement
+            3 factures gratuites par mois • IA auto-remplissage • Suivi de paiement
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Créer une Facture', url: 'https://factu.me/creer-facture' },
+        ]}
+      />
     </div>
   );
 }

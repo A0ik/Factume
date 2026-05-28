@@ -101,8 +101,8 @@ const CATEGORIES = [
     bg: 'bg-rose-50',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Découverte (Gratuit) : 10 factures/mois, clients illimités, templates de base.\nPlan Solo (14,99€/mois) : Factures illimitées, dictée vocale IA, OCR, CRM, calendrier, relances.\nPlan Pro (29,99€/mois) : Tout Solo + contrats CDI/CDD, multi-devises, export FEC, Factur-X, rapprochement bancaire.\nPlan Business (59,99€/mois) : Tout Pro + multi-utilisateurs, mode cabinet, API, support prioritaire.\n\nEssai gratuit de 14 jours disponible sans carte bancaire.' },
-      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 14 jours sans engagement.' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Découverte (Gratuit) : 3 factures/mois, clients illimités, templates de base.\nPlan Solo (14,99€/mois) : Factures illimitées, dictée vocale IA, OCR, CRM, calendrier, relances.\nPlan Pro (29,99€/mois) : Tout Solo + contrats CDI/CDD, multi-devises, export FEC, Factur-X, rapprochement bancaire.\nPlan Business (59,99€/mois) : Tout Pro + multi-utilisateurs, mode cabinet, API, support prioritaire.\n\nEssai gratuit de 7 jours disponible (carte bancaire requise).' },
+      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 7 jours sans engagement.' },
       { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Découverte avec les limitations associées.' },
     ],
   },

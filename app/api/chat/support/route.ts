@@ -35,7 +35,7 @@ const SYSTEM_PROMPT = `Tu es l'assistant support de Factu.me, un logiciel de fac
 - Signature électronique des devis
 
 ## Tarifs
-- Discovery (Gratuit) : 10 factures/mois, clients illimités, templates de base
+- Discovery (Gratuit) : 3 factures/mois, clients illimités, templates de base
 - Solo (14,99€/mois) : Factures illimitées, OCR, voix, CRM, calendrier, relances
 - Pro (29,99€/mois) : Tout Solo + contrats, multi-devises, export FEC, Factur-X, rapprochement bancaire
 - Business (59,99€/mois) : Tout Pro + multi-utilisateurs, mode cabinet, 10 espaces de travail, API, support prioritaire

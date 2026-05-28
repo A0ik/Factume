@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Palette, Euro, Shield, Clock, PenTool, Layers, Sparkles } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Designer – Des Factures Aussi Belles Que Vos Créations | Factu.me',
@@ -151,7 +152,7 @@ export default function DesignerPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Pas de carte bancaire • ✓ 10 factures gratuites chaque mois
+              ✓ Pas de carte bancaire • ✓ 3 factures gratuites chaque mois
             </p>
           </div>
         </div>
@@ -259,10 +260,16 @@ export default function DesignerPage() {
             Créer mon compte gratuitement
           </Link>
           <p className="mt-6 text-sm text-pink-200">
-            10 factures gratuites par mois • Sans engagement • Templates élégants inclus
+            3 factures gratuites par mois • Sans engagement • Templates élégants inclus
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Designer', url: 'https://factu.me/facturation-designer' },
+        ]}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ export const runtime = 'edge';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const title = searchParams.get('title') || 'Factu.me - Logiciel de facturation gratuit';
-  const description = searchParams.get('description') || 'Créez des factures professionnelles en 30 secondes. Gratuit jusqu\'à 10 factures.';
+  const description = searchParams.get('description') || 'Créez des factures professionnelles en 30 secondes. Gratuit jusqu\'à 3 factures.';
   const theme = searchParams.get('theme') || 'blue';
 
   const colors = {

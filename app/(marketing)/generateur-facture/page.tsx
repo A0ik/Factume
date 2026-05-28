@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Sparkles, MessageSquareText, Calculator, Send, Clock, Brain } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Générateur de Facture – Créez Vos Factures Instantanément',
@@ -225,10 +226,16 @@ export default function GenerateurFacturePage() {
             Essayer le générateur IA
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            10 factures IA gratuites par mois • Sans engagement
+            3 factures IA gratuites par mois • Sans engagement
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Générateur de Facture', url: 'https://factu.me/generateur-facture' },
+        ]}
+      />
     </div>
   );
 }

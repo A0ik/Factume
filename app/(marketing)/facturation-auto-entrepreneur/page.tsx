@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartphone, Mic, BarChart3 } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { getOgImageUrl, pageThemes } from '@/lib/og-utils';
 import { getFAQsForPage } from '@/lib/faq-data';
 
@@ -306,7 +307,7 @@ export default function AutoEntrepreneurPage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            10 factures gratuites par mois • Sans engagement • Conforme URSSAF
+            3 factures gratuites par mois • Sans engagement • Conforme URSSAF
           </p>
         </div>
       </section>
@@ -339,6 +340,12 @@ export default function AutoEntrepreneurPage() {
           </div>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Auto-Entrepreneur', url: 'https://factu.me/facturation-auto-entrepreneur' },
+        ]}
+      />
     </div>
   );
 }

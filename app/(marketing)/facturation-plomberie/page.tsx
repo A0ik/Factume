@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Droplets, Euro, Shield, Clock, Phone, MessageSquare, Wrench } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Plomberie – Simple & Mobile | Factu.me',
@@ -136,7 +137,7 @@ export default function PlomberiePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ 10 factures gratuites par mois • ✓ Fonctionne sur mobile
+              ✓ 3 factures gratuites par mois • ✓ Fonctionne sur mobile
             </p>
           </div>
         </div>
@@ -224,10 +225,16 @@ export default function PlomberiePage() {
             Créer mon compte gratuit
           </Link>
           <p className="mt-6 text-sm text-blue-200">
-            10 factures gratuites par mois • Sans engagement • Mobile-friendly
+            3 factures gratuites par mois • Sans engagement • Mobile-friendly
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Plomberie', url: 'https://factu.me/facturation-plomberie' },
+        ]}
+      />
     </div>
   );
 }

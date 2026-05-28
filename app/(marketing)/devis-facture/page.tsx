@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Repeat, Send, FileCheck, Clock, Eye, ArrowRight } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Devis et Facture – Créez, Envoyez, Convertissez | Factu.me',
@@ -253,6 +254,12 @@ export default function DevisFacturePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Devis et Facture', url: 'https://factu.me/devis-facture' },
+        ]}
+      />
     </div>
   );
 }

@@ -204,10 +204,13 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
         const res = await fetch('/api/cabinet/clients', { headers });
         if (res.ok) {
           const { clients, cabinet } = await res.json();
-          set({ clients, cabinet });
-          if (cabinet) {
-            try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(cabinet)); } catch {}
-          } else {
+          // Keep existing cabinet if API returns null (race condition after creation)
+          const existingCabinet = get().cabinet;
+          const resolvedCabinet = cabinet || existingCabinet || null;
+          set({ clients, cabinet: resolvedCabinet });
+          if (resolvedCabinet) {
+            try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(resolvedCabinet)); } catch {}
+          } else if (!existingCabinet) {
             try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
           }
           if (clients) {

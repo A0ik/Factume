@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartphone, Mic, TrendingUp } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Auto-Entrepreneur – 100% Conforme & Gratuit',
@@ -33,7 +34,7 @@ const benefits = [
   {
     icon: Euro,
     title: 'Gratuit pour commencer',
-    description: 'Pas de frais cachés, pas d\'engagement. 10 factures gratuites chaque mois. Évoluez seulement quand votre activité grandit.',
+    description: 'Pas de frais cachés, pas d\'engagement. 3 factures gratuites chaque mois. Évoluez seulement quand votre activité grandit.',
   },
   {
     icon: Smartphone,
@@ -256,10 +257,16 @@ export default function FactureAutoEntrepreneurPage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            Conforme URSSAF • Sans TVA • 10 factures gratuites par mois
+            Conforme URSSAF • Sans TVA • 3 factures gratuites par mois
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel Facture Auto-Entrepreneur', url: 'https://factu.me/logiciel-facture-auto-entrepreneur' },
+        ]}
+      />
     </div>
   );
 }

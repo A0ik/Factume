@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Shield, FileCheck, Scale, AlertTriangle, Building2, Wifi, Cpu } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Électronique – Conforme à la Réforme 2026 | Factu.me',
@@ -271,6 +272,12 @@ export default function FacturationElectroniquePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Électronique', url: 'https://factu.me/facturation-electronique' },
+        ]}
+      />
     </div>
   );
 }

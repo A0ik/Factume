@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Mic, AudioWaveform, MessageSquare, Clock, Sparkles, Volume2, Brain } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Vocale – Créez Vos Factures par la Voix | Factu.me',
@@ -154,7 +155,7 @@ export default function FacturationVocalePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              &bull; Reconnaissance vocale en français &bull; 10 factures gratuites par mois
+              &bull; Reconnaissance vocale en français &bull; 3 factures gratuites par mois
             </p>
           </div>
         </div>
@@ -253,7 +254,7 @@ export default function FacturationVocalePage() {
             Votre voix, votre facture
           </h2>
           <p className="text-xl text-violet-100 mb-8">
-            Rejoignez les indépendants qui dictent leurs factures. Essai gratuit, sans carte bancaire.
+            Rejoignez les indépendants qui dictent leurs factures. Essai 7 jours gratuit.
           </p>
           <Link
             href="/register"
@@ -263,10 +264,16 @@ export default function FacturationVocalePage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-violet-200">
-            Reconnaissance vocale illimitée &bull; 10 factures gratuites/mois
+            Reconnaissance vocale illimitée &bull; 3 factures gratuites/mois
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Vocale', url: 'https://factu.me/facturation-vocale' },
+        ]}
+      />
     </div>
   );
 }

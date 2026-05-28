@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Ruler, Euro, Shield, Clock, Camera, MessageSquare, Wrench } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Menuiserie – Créez Vos Factures Rapidement | Factu.me',
@@ -151,7 +152,7 @@ export default function MenuiseriePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Pas de carte bancaire • ✓ 10 factures gratuites par mois
+              ✓ Pas de carte bancaire • ✓ 3 factures gratuites par mois
             </p>
           </div>
         </div>
@@ -259,10 +260,16 @@ export default function MenuiseriePage() {
             Créer mon compte gratuit
           </Link>
           <p className="mt-6 text-sm text-amber-100">
-            10 factures gratuites par mois • Sans engagement
+            3 factures gratuites par mois • Sans engagement
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Menuiserie', url: 'https://factu.me/facturation-menuiserie' },
+        ]}
+      />
     </div>
   );
 }

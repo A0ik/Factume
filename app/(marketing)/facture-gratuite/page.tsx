@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, FileText, Download, Mail, Shield, Star, ArrowRight } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facture Gratuite en Ligne – Créez vos Factures PDF Gratuitement',
@@ -115,7 +116,7 @@ export default function FactureGratuitePage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Gratuit jusqu\'à 10 factures/mois • ✓ Prêt en 30 secondes
+              ✓ Gratuit jusqu\'à 3 factures/mois • ✓ Prêt en 30 secondes
             </p>
           </div>
         </div>
@@ -228,10 +229,16 @@ export default function FactureGratuitePage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            10 factures gratuites par mois • Sans engagement • Annulation possible
+            3 factures gratuites par mois • Sans engagement • Annulation possible
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facture Gratuite', url: 'https://factu.me/facture-gratuite' },
+        ]}
+      />
     </div>
   );
 }

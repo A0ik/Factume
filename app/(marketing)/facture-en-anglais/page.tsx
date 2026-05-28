@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Globe, Languages, ArrowRightLeft, Banknote, MapPin, FileOutput } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facture en Anglais – Créez des Invoices pour Vos Clients Internationaux',
@@ -256,10 +257,16 @@ export default function FactureEnAnglaisPage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-sky-100">
-            10 factures gratuites par mois &bull; Multi-devises inclus &bull; Sans engagement
+            3 factures gratuites par mois &bull; Multi-devises inclus &bull; Sans engagement
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facture en Anglais', url: 'https://factu.me/facture-en-anglais' },
+        ]}
+      />
     </div>
   );
 }

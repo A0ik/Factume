@@ -43,9 +43,9 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
   const isActive = (href: string) => href === '/cabinet' ? pathname === '/cabinet' : pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <div className="flex flex-1 min-h-0 -mx-4 lg:-mx-8 -my-5 lg:-my-6">
+    <div className="flex flex-1 min-h-0">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 flex-shrink-0 border-r border-gray-200/70 dark:border-gray-700/40 bg-white/50 dark:bg-slate-900/50 overflow-y-auto">
+      <aside className="hidden lg:flex flex-col w-48 flex-shrink-0 border-r border-gray-200/70 dark:border-gray-700/40 bg-white/50 dark:bg-slate-900/50 overflow-y-auto">
         <div className="p-3 pt-4">
           <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 mb-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-xs">
             <ArrowLeft size={13} />

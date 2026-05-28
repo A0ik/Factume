@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, PenTool, Palette, Mail, BarChart3, Clock, Shield } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Devis en Ligne – Professionnel & Rapide | Factu.me',
@@ -229,6 +230,12 @@ export default function LogicielDevisPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel de Devis', url: 'https://factu.me/logiciel-devis' },
+        ]}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Mail, Scale, Send, ShieldCheck, Clock, AlertCircle } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Relance de Facture – Automatisez Vos Relances d\'Impayés | Factu.me',
@@ -255,6 +256,12 @@ export default function RelanceFacturePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Relance de Facture', url: 'https://factu.me/relance-facture' },
+        ]}
+      />
     </div>
   );
 }

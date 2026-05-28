@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Camera, BrainCircuit, Receipt, FolderOpen, Calculator, Sparkles, Download } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'OCR Facturation – Numérisez Vos Reçus avec l\'IA',
@@ -229,6 +230,12 @@ export default function OcrFacturationPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'OCR Facturation', url: 'https://factu.me/facturation-ocr' },
+        ]}
+      />
     </div>
   );
 }

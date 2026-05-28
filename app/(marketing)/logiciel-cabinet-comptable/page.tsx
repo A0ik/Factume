@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Building2, Users, BarChart3, FileText, Shield, Clock, CheckCircle2, TrendingUp, Bell, Calendar, Landmark, Briefcase } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel Cabinet Comptable – Gerez Tous Vos Clients | Factu.me',
@@ -212,6 +213,12 @@ export default function LogicielCabinetComptablePage() {
           </div>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel Cabinet Comptable', url: 'https://factu.me/logiciel-cabinet-comptable' },
+        ]}
+      />
     </main>
   );
 }

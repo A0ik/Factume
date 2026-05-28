@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Layout, Palette, Download, Eye, Type, Wand2 } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Modèle de Facture – Templates Professionnels Gratuit',
@@ -228,6 +229,12 @@ export default function ModeleFacturePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Modèle de Facture', url: 'https://factu.me/modele-facture' },
+        ]}
+      />
     </div>
   );
 }

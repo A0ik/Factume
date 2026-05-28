@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Shield, FileCheck, Network, Clock, Scale, ScanLine } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Factur-X 2026 – Logiciel Conforme à la Norme EN 16931',
@@ -228,6 +229,12 @@ export default function FacturXPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Factur-X', url: 'https://factu.me/facturation-factur-x' },
+        ]}
+      />
     </div>
   );
 }

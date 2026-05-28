@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Plug, Euro, Shield, Clock, Car, MessageSquare, ClipboardList } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Électricien – Votre Logiciel de Facturation Mobile | Factu.me',
@@ -151,7 +152,7 @@ export default function ElectricienPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Pas de carte bancaire • ✓ 10 factures gratuites chaque mois
+              ✓ Pas de carte bancaire • ✓ 3 factures gratuites chaque mois
             </p>
           </div>
         </div>
@@ -259,10 +260,16 @@ export default function ElectricienPage() {
             Démarrer gratuitement
           </Link>
           <p className="mt-6 text-sm text-yellow-100">
-            10 factures gratuites par mois • Sans engagement • 100% mobile
+            3 factures gratuites par mois • Sans engagement • 100% mobile
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facturation Electricien', url: 'https://factu.me/facturation-electricien' },
+        ]}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Trophy, BarChart3, Star, Sparkles, Users, ArrowRight } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Meilleur Logiciel de Facture 2025 – Comparatif & Avis | Factu.me',
@@ -63,7 +64,7 @@ const features = [
     items: [
       'Dictée vocale IA exclusive',
       'Factur-X 2026 prêt',
-      'Plan gratuit 10 factures/mois',
+      'Plan gratuit 3 factures/mois',
       'Multi-devises intégré',
     ],
   },
@@ -106,7 +107,7 @@ const testimonials = [
 ];
 
 const comparisonData = [
-  { feature: 'Plan gratuit', factume: '10 factures/mois', other: 'Limité ou absent' },
+  { feature: 'Plan gratuit', factume: '3 factures/mois', other: 'Limité ou absent' },
   { feature: 'Dictée vocale IA', factume: 'Oui', other: 'Non' },
   { feature: 'Factur-X 2026', factume: 'Oui', other: 'En développement' },
   { feature: 'Multi-devises', factume: 'Oui', other: 'Parfois' },
@@ -272,6 +273,12 @@ export default function MeilleurLogicielFacturePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Meilleur Logiciel de Facture', url: 'https://factu.me/meilleur-logiciel-facture' },
+        ]}
+      />
     </div>
   );
 }

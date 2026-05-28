@@ -206,6 +206,7 @@ const itemVariants = {
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative overflow-hidden">
+      <meta name="robots" content="noindex, follow" />
       {/* Particles background */}
       <ParticlesCanvas />
 

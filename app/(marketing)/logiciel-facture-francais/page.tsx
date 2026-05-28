@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Flag, Shield, Lock, MapPin, Building, Scale } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Français – 100% Made in France | Factu.me',
@@ -232,6 +233,12 @@ export default function LogicielFactureFrancaisPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel de Facture Français', url: 'https://factu.me/logiciel-facture-francais' },
+        ]}
+      />
     </div>
   );
 }

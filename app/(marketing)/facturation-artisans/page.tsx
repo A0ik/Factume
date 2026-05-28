@@ -7,10 +7,10 @@ import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
-  description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois. Factur-X 2026 prêt.',
+  description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois. Factur-X 2026 prêt.',
   openGraph: {
     title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
-    description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois.',
+    description: 'Logiciel de facturation pour artisans : créez vos factures et devis en 30 secondes grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois.',
     url: 'https://factu.me/facturation-artisans',
     siteName: 'Factu.me',
     images: [
@@ -120,7 +120,7 @@ export default function ArtisanPage() {
               Logiciel de Facturation pour <span className="text-blue-600">Artisans</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
-              Créez vos factures et devis en <strong>30 secondes</strong> grâce à la dictée vocale. Gratuit jusqu\'à 10 factures/mois.
+              Créez vos factures et devis en <strong>30 secondes</strong> grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -227,7 +227,7 @@ export default function ArtisanPage() {
             Commencer gratuitement
           </Link>
           <p className="mt-6 text-sm text-blue-200">
-            10 factures gratuites par mois • Sans engagement
+            3 factures gratuites par mois • Sans engagement
           </p>
         </div>
       </section>

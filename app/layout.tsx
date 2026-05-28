@@ -29,6 +29,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://factu.me'),
   alternates: {
     canonical: 'https://factu.me',
+    languages: {
+      'fr': 'https://factu.me',
+      'x-default': 'https://factu.me',
+    },
     types: {
       'application/rss+xml': 'https://factu.me/feed.xml',
     },
@@ -51,6 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
+    site: '@factume',
     title: 'Factu.me – Facturation & Contrats propulsés par l\'IA',
     description: 'Factu.me : facturation vocale IA, devis et contrats CDI/CDD. Signature eIDAS gratuite, Factur-X 2026.',
     images: ['/api/og?title=Factu.me&description=Facturation%20vocale%20IA&theme=blue'],
@@ -137,7 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             name: 'Plan Découverte',
             price: '0',
             priceCurrency: 'EUR',
-            description: 'Gratuit — jusqu\'à 10 factures par mois',
+            description: 'Gratuit — jusqu\'à 3 factures par mois',
           },
           {
             '@type': 'Offer',

@@ -6,11 +6,11 @@ import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
-  title: 'Logiciel de Facture Gratuit – Jusqu\'à 10 Factures par Mois | Factu.me',
-  description: 'Logiciel de facture gratuit sans carte bancaire. Créez jusqu\'à 10 factures par mois, devis, suivi clients. Passez au pro quand vous êtes prêt.',
+  title: 'Logiciel de Facture Gratuit – Jusqu\'à 3 Factures par Mois | Factu.me',
+  description: 'Logiciel de facture gratuit sans carte bancaire. Créez jusqu\'à 3 factures par mois, devis, suivi clients. Passez au pro quand vous êtes prêt.',
   openGraph: {
-    title: 'Logiciel de Facture Gratuit – Jusqu\'à 10 Factures par Mois',
-    description: 'Facturez gratuitement sans carte bancaire. 10 factures/mois, devis, suivi clients inclus.',
+    title: 'Logiciel de Facture Gratuit – Jusqu\'à 3 Factures par Mois',
+    description: 'Facturez gratuitement sans carte bancaire. 3 factures/mois, devis, suivi clients inclus.',
     url: 'https://factu.me/logiciel-facture-gratuit',
     siteName: 'Factu.me',
     images: [
@@ -31,7 +31,7 @@ const benefits = [
   {
     icon: Gift,
     title: 'Vraiment gratuit',
-    description: '10 factures par mois sans payer un centime. Aucune fonctionnalité cachée derrière un paywall.',
+    description: '3 factures par mois sans payer un centime. Aucune fonctionnalité cachée derrière un paywall.',
   },
   {
     icon: CreditCard,
@@ -64,7 +64,7 @@ const features = [
   {
     title: 'Ce qui est inclus gratuitement',
     items: [
-      '10 factures par mois sans limite de temps',
+      '3 factures par mois sans limite de temps',
       'Devis illimités avec conversion en facture',
       'Gestion de vos clients et historique',
       'Envoi par email directement depuis l\'app',
@@ -105,7 +105,7 @@ const testimonials = [
   {
     name: 'Karim B.',
     job: 'Photographe indépendant',
-    text: 'Le plan gratuit est largement suffisant pour commencer. J\'ai pris le Pro quand j\'ai dépassé 10 factures.',
+    text: 'Le plan gratuit est largement suffisant pour commencer. J\'ai pris le Pro quand j\'ai dépassé 3 factures.',
   },
   {
     name: 'Emma R.',
@@ -127,7 +127,7 @@ export default function LogicielFactureGratuitPage() {
               100% Gratuit – Sans carte bancaire
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Logiciel de Facture Gratuit – Jusqu&apos;à <span className="text-emerald-600">10 Factures par Mois</span>
+              Logiciel de Facture Gratuit – Jusqu&apos;à <span className="text-emerald-600">3 Factures par Mois</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Créez des factures professionnelles sans débourser un centime. <strong>Aucune carte bancaire requise</strong>, aucune mauvaise surprise.
@@ -237,7 +237,7 @@ export default function LogicielFactureGratuitPage() {
             Commencer gratuitement – 0€ pour toujours
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            Pas de carte bancaire • 10 factures/mois • Sans engagement
+            Pas de carte bancaire • 3 factures/mois • Sans engagement
           </p>
         </div>
       </section>
@@ -246,11 +246,11 @@ export default function LogicielFactureGratuitPage() {
         items={[
           {
             question: "Est-ce vraiment gratuit ?",
-            answer: "Oui, le plan gratuit de Factu.me vous permet de créer jusqu'à 10 factures par mois, sans limite de durée. Il n'y a aucune fonctionnalité cachée derrière un paywall, pas de publicité et pas de filigrane sur vos factures.",
+            answer: "Oui, le plan gratuit de Factu.me vous permet de créer jusqu'à 3 factures par mois, sans limite de durée. Il n'y a aucune fonctionnalité cachée derrière un paywall, pas de publicité et pas de filigrane sur vos factures.",
           },
           {
             question: "Combien de factures puis-je créer gratuitement ?",
-            answer: "Vous pouvez créer jusqu'à 10 factures par mois avec le plan gratuit. Ce nombre se réinitialise chaque mois. Les devis et les avoirs sont illimités, même en gratuit.",
+            answer: "Vous pouvez créer jusqu'à 3 factures par mois avec le plan gratuit. Ce nombre se réinitialise chaque mois. Les devis et les avoirs sont illimités, même en gratuit.",
           },
           {
             question: "Dois-je entrer ma carte bancaire ?",

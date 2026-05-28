@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Timer, MessageSquare, Calculator, Download, Send, Rocket } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Créer un Devis – En Moins de 2 Minutes | Factu.me',
@@ -140,7 +141,7 @@ export default function CreerDevisPage() {
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              Gratuit • Aucune carte requise • Devis illimités
+              Gratuit • Devis illimités
             </p>
           </div>
         </div>
@@ -229,10 +230,16 @@ export default function CreerDevisPage() {
             Créer mon devis gratuit
           </Link>
           <p className="mt-6 text-sm text-green-200">
-            Gratuit • Devis illimités • Sans carte bancaire
+            Gratuit • Devis illimités
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Créer un Devis', url: 'https://factu.me/creer-devis' },
+        ]}
+      />
     </div>
   );
 }

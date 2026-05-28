@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, MousePointer, MessageSquare, Shield, Clock, Smile, Layers } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facture Simple – Pas de Prise de Tête | Factu.me',
@@ -248,10 +249,16 @@ export default function LogicielFactureSimplePage() {
             Essayer gratuitement
           </Link>
           <p className="mt-6 text-sm text-sky-200">
-            Inscription en 2 minutes • Aucune carte bancaire • 10 factures gratuites/mois
+            Inscription en 2 minutes • Aucune carte bancaire • 3 factures gratuites/mois
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Logiciel de Facture Simple', url: 'https://factu.me/logiciel-facture-simple' },
+        ]}
+      />
     </div>
   );
 }

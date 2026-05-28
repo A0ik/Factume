@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, AlertTriangle, Clock, TrendingDown, Puzzle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, ScanText, Camera, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, X, Minus, Palette, Building2, Code2, Store, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, MailCheck, Calendar, Package, Truck, FileClock, Globe, Smartphone, Cloud, Shield, FileBadge, Scale, Eye, Wallet
+  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, Building2, Code2, Briefcase, HeartPulse, Share2, Twitter, Linkedin, Github, Calendar, Package, Truck, FileClock, Shield, FileBadge, Eye
 } from 'lucide-react';
 
 /* ─── Particles Canvas ─── */
@@ -188,7 +188,7 @@ export default function LandingPageClient() {
   ];
 
   const faqItems = [
-    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, commencez avec un essai 7 jours pour découvrir toutes les fonctionnalités. Sans carte bancaire requise, sans engagement.' },
+    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Découverte est 100% gratuit (3 factures/mois). Pour tester les plans payants, profitez de 7 jours d\'essai complet avec carte bancaire requise, sans engagement.' },
     { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données. Vous pouvez exporter ou supprimer vos données à tout moment.' },
     { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données à tout moment ou demander la suppression totale de votre compte.' },
     { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Vous pouvez dire "5 jours de dev à 600€" et elle créera la facture complète.' },
@@ -617,29 +617,6 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ═══════════ PROBLEM ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-5xl lg:max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-red-50 border border-red-100 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-red-600 mb-4"><AlertTriangle className="w-4 h-4 lg:w-5 lg:h-5" />Le problème</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight mb-4">Vous perdez des heures sur l&apos;administratif</h2>
-              <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-slate-500 max-w-2xl mx-auto">Jusqu&apos;à <span className="font-bold text-slate-800">5 heures par semaine</span> sur des tâches qui ne génèrent aucun revenu.</p>
-            </ScrollReveal>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            {[{ icon: Clock, value: '5h', unit: '/sem', label: 'Perdues sur l\'administratif' }, { icon: TrendingDown, value: '25%', unit: '', label: 'De factures impayées à temps' }, { icon: Puzzle, value: '5', unit: '', label: 'Outils différents nécessaires' }].map((item, i) => (
-              <ScrollReveal key={i} delay={i * 0.1}>
-                <Card3D><div className="bg-white rounded-2xl p-6 sm:p-8 lg:p-10 border border-slate-100 h-full hover:shadow-lg">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-4"><item.icon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-brand-500" /></div>
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-1 text-center">{item.value}<span className="text-brand-400">{item.unit}</span></div>
-                  <div className="text-sm lg:text-base text-slate-500 text-center">{item.label}</div>
-                </div></Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ═══════════ HOW IT WORKS ═══════════ */}
       <section className="py-16 sm:py-24 lg:py-32 bg-white">
@@ -665,38 +642,6 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ═══════════ BEFORE / AFTER (3D) ═══════════ */}
-      <section className="py-16 sm:py-24 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-14"><ScrollReveal><h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">Avant / Après Factu.me</h2></ScrollReveal></div>
-          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
-            <ScrollReveal direction="right" delay={0.05}>
-              <Card3D>
-                <div className="bg-white rounded-2xl p-6 sm:p-8 border border-red-100 h-full">
-                  <div className="flex items-center gap-2 mb-5"><div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center"><X className="w-4 h-4 text-red-500" /></div><span className="font-bold text-sm text-red-600">Avant</span></div>
-                  <ul className="space-y-3">
-                    {['45 minutes pour faire une facture', '3 outils différents minimum', 'Relances oubliées ou mal faites', 'Reçus perdus dans un tiroir', 'Mentions légales incorrectes', 'Export impôts = cauchemar'].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm text-slate-500"><Minus className="w-4 h-4 text-red-300 flex-shrink-0 mt-0.5" />{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </Card3D>
-            </ScrollReveal>
-            <ScrollReveal direction="left" delay={0.15}>
-              <Card3D>
-                <div className="bg-brand-500 rounded-2xl p-6 sm:p-8 border border-brand-400 h-full shadow-lg shadow-brand-500/20">
-                  <div className="flex items-center gap-2 mb-5"><div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center"><Check className="w-4 h-4 text-white" /></div><span className="font-bold text-sm text-white">Après Factu.me</span></div>
-                  <ul className="space-y-3">
-                    {['3 secondes grâce à l\'IA', 'Tout en un seul endroit', 'Relances automatiques', 'Reçus scannés et catégorisés', 'Mentions légales automatiques', 'Export impôts en un clic'].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-sm text-white/90"><Zap className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </Card3D>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
 
       {/* ═══════════ FEATURES ═══════════ */}
       <section id="features" className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-white">
@@ -825,103 +770,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ═══════════ CRM (3D pipeline cards) ═══════════ */}
-      <section className="py-16 sm:py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="space-y-5 sm:space-y-6">
-              <ScrollReveal direction="left">
-                <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-700"><Users className="w-4 h-4" />CRM intégré</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Vos clients,<br />toujours sous la main</h2>
-                <p className="text-base sm:text-lg text-slate-500 leading-relaxed">Fiches complètes, historique, et un pipeline visuel pour suivre vos opportunités.</p>
-                <div className="space-y-3">
-                  {['Auto-complétion des infos entreprise (SIRET)', 'Pipeline de vente en 6 étapes visuelles', 'Import de clients en masse depuis un fichier'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3"><div className="w-8 h-8 bg-brand-50 rounded-lg flex items-center justify-center flex-shrink-0"><Check className="w-4 h-4 text-brand-500" /></div><span className="text-sm text-slate-600">{item}</span></div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-            <ScrollReveal direction="right">
-              <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-sm">
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Pipeline de vente</div>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
-                  {[{ name: 'Prospect', bg: 'bg-brand-50', border: 'border-brand-100', text: 'text-brand-700', deals: [{ name: 'Dupont SAS', amount: '12 000€' }, { name: 'Martin SARL', amount: '8 500€' }] }, { name: 'Proposition', bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', deals: [{ name: 'Lemoine Co', amount: '25 000€' }] }, { name: 'Gagné', bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700', deals: [{ name: 'Garcia SI', amount: '15 000€' }] }].map((stage, i) => (
-                    <Card3D key={i}>
-                      <div className={`${stage.bg} rounded-xl p-2.5 sm:p-3 border ${stage.border}`}>
-                        <div className={`text-[10px] sm:text-xs font-semibold ${stage.text} mb-2`}>{stage.name}</div>
-                        {stage.deals.map((deal, j) => (
-                          <div key={j} className={`bg-white rounded-lg p-2 text-[10px] sm:text-xs border ${stage.border} mb-1.5 shadow-sm`}>
-                            <div className="font-medium text-slate-700">{deal.name}</div><div className="text-slate-400">{deal.amount}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </Card3D>
-                  ))}
-                </div>
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Fiche client</div>
-                <Card3D>
-                  <div className="bg-slate-50 rounded-xl p-3 sm:p-4 border border-slate-100">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-xs font-bold text-brand-700">DC</div>
-                      <div><div className="font-bold text-sm">Dupont Consulting SAS</div><div className="text-[11px] text-slate-400">8 av. Champs-Élysées, 75008</div></div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-white rounded-lg p-2 border border-slate-100"><div className="text-sm font-bold text-brand-600">12</div><div className="text-[10px] text-slate-400">Factures</div></div>
-                      <div className="bg-white rounded-lg p-2 border border-slate-100"><div className="text-sm font-bold text-brand-600">45 600€</div><div className="text-[10px] text-slate-400">CA total</div></div>
-                      <div className="bg-white rounded-lg p-2 border border-slate-100"><div className="text-sm font-bold text-green-600">0€</div><div className="text-[10px] text-slate-400">Impayé</div></div>
-                    </div>
-                  </div>
-                </Card3D>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════ OCR ═══════════ */}
-      <section className="py-16 sm:py-24 bg-brand-950 text-white relative overflow-hidden">
-        <div className="absolute bottom-0 right-0 w-[400px] sm:w-[500px] h-[400px] sm:h-[500px] bg-brand-500/8 rounded-full blur-[100px] animate-[blob_15s_ease-in-out_infinite]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="order-2 lg:order-1">
-              <ScrollReveal direction="left">
-                <div className="bg-brand-900/80 backdrop-blur rounded-2xl overflow-hidden border border-brand-800/50 p-5 sm:p-6">
-                  <div className="text-xs font-semibold text-brand-400 uppercase tracking-wider mb-4">Scan de reçu en cours</div>
-                  <div className="relative bg-white rounded-xl p-4 aspect-[3/4] sm:aspect-[4/3] flex items-center justify-center overflow-hidden">
-                    <div className="w-full space-y-2 relative z-10">
-                      <div className="h-2 w-16 bg-slate-300 rounded mx-auto" /><div className="h-1.5 w-24 bg-slate-200 rounded mx-auto" /><div className="h-px bg-slate-200 my-2" />
-                      <div className="space-y-1.5 px-2"><div className="h-1.5 w-full bg-slate-200 rounded" /><div className="h-1.5 w-3/4 bg-slate-200 rounded" /><div className="h-1.5 w-5/6 bg-slate-200 rounded" /></div>
-                      <div className="h-px bg-slate-200 my-2" />
-                      <div className="flex justify-between px-2"><div className="h-1.5 w-12 bg-slate-300 rounded" /><div className="h-1.5 w-16 bg-slate-300 rounded" /></div>
-                      <div className="flex justify-between px-2"><div className="h-1.5 w-10 bg-slate-300 rounded" /><div className="h-1.5 w-14 bg-slate-300 rounded" /></div>
-                      <div className="h-px bg-slate-300 my-2" />
-                      <div className="flex justify-between px-2"><div className="h-2 w-14 bg-slate-400 rounded" /><div className="h-2 w-20 bg-slate-400 rounded" /></div>
-                    </div>
-                    <div className="absolute left-2 right-2 h-0.5 bg-brand-500 shadow-lg shadow-brand-500/50 animate-[scanLine_2.5s_ease-in-out_infinite_alternate]" style={{ top: '10%' }} />
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {[{ label: 'Fournisseur', value: 'Boulangerie Dupont' }, { label: 'Montant', value: '24,80€' }, { label: 'TVA', value: '4,10€ (20%)' }, { label: 'Catégorie', value: 'Repas' }].map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs"><CheckCircle className="w-3.5 h-3.5 text-green-400" /><span className="text-brand-200">{item.label} : <strong>{item.value}</strong></span></div>
-                    ))}
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-            <div className="space-y-5 sm:space-y-7 order-1 lg:order-2">
-              <ScrollReveal direction="right">
-                <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-300"><ScanText className="w-4 h-4" />Scan intelligent</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Photographiez un reçu,<br />l&apos;IA fait le reste</h2>
-                <p className="text-base sm:text-lg text-brand-200/60 leading-relaxed">Prenez en photo vos factures fournisseurs, tickets de restaurant, reçus d&apos;essence. L&apos;IA extrait automatiquement le montant, la TVA, la date et le fournisseur.</p>
-                <div className="space-y-3">
-                  {[{ icon: Camera, title: 'Photo ou upload', desc: 'Prenez en photo ou importez un PDF' }, { icon: Sparkles, title: 'Extraction automatique', desc: 'Montant, TVA, date, fournisseur reconnus' }, { icon: Tag, title: 'Catégorisation intelligente', desc: 'Repas, transport, équipement, bureau...' }].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3"><div className="w-8 h-8 bg-brand-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"><item.icon className="w-4 h-4 text-brand-400" /></div><div><div className="font-bold text-sm mb-0.5">{item.title}</div><div className="text-xs text-brand-200/50">{item.desc}</div></div></div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ═══════════ CONTRATS DE TRAVAIL ═══════════ */}
       <section className="py-16 sm:py-24 bg-white">
@@ -999,101 +848,10 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ═══════════ TEMPLATES ═══════════ */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="space-y-5 sm:space-y-6">
-              <ScrollReveal direction="left">
-                <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-700"><Palette className="w-4 h-4" />Templates personnalisables</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Votre facture,<br />votre style</h2>
-                <p className="text-base sm:text-lg text-slate-500 leading-relaxed">Choisissez parmi 6 modèles professionnels, personnalisez avec votre logo et vos couleurs.</p>
-                <div className="space-y-3">
-                  {['Logo et couleurs personnalisées', '6 modèles professionnels', 'L\'IA applique votre template automatiquement'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3"><div className="w-8 h-8 bg-brand-50 rounded-lg flex items-center justify-center flex-shrink-0"><Check className="w-4 h-4 text-brand-500" /></div><span className="text-sm text-slate-600">{item}</span></div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-            <ScrollReveal direction="right">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {[{ from: 'from-slate-50', to: 'to-slate-100', bar: 'bg-slate-300', bar2: 'bg-slate-200' }, { from: 'from-brand-400', to: 'to-brand-600', bar: 'bg-white/60', bar2: 'bg-white/40', dark: true }, { from: 'from-brand-50', to: 'to-emerald-50', bar: 'bg-brand-300', bar2: 'bg-brand-200' }, { from: 'from-slate-800', to: 'to-slate-900', bar: 'bg-slate-500', bar2: 'bg-slate-600', dark: true }, { from: 'from-slate-700', to: 'to-blue-950', bar: 'bg-slate-400', bar2: 'bg-slate-500', dark: true }, { from: 'from-green-50', to: 'to-emerald-100', bar: 'bg-green-400', bar2: 'bg-green-300' }].map((t, i) => (
-                  <div key={i} className={`bg-gradient-to-br ${t.from} ${t.to} rounded-xl sm:rounded-2xl overflow-hidden aspect-[3/4]`}>
-                    <div className="p-2 sm:p-3 space-y-1.5 mt-4">
-                      <div className={`h-1.5 w-12 ${t.bar} rounded`} /><div className={`h-1 w-16 ${t.bar2} rounded`} />
-                      <div className={`h-4 mt-2 rounded ${t.dark ? 'bg-slate-700/50' : 'bg-white border'}`} />
-                      <div className={`h-4 rounded ${t.dark ? 'bg-slate-700/50' : 'bg-white border'}`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════ NEW: INTEGRATIONS ═══════════ */}
-      <section className="py-16 sm:py-24 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <ScrollReveal>
-            <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-700 mb-4"><Globe className="w-4 h-4" />Intégrations</div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">Connecté à vos outils</h2>
-            <p className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto mb-10 sm:mb-14">Factu.me s&apos;intègre nativement avec vos services préférés pour une expérience sans friction.</p>
-          </ScrollReveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-            {[
-              { icon: CreditCard, name: 'Stripe', desc: 'Paiement en ligne' },
-              { icon: Smartphone, name: 'SumUp', desc: 'Terminal mobile' },
-              { icon: Cloud, name: 'Google Drive', desc: 'Sauvegarde cloud' },
-              { icon: FileText, name: 'Compta', desc: 'Export FEC' },
-              { icon: MailCheck, name: 'Mail', desc: 'Envoi automatique' },
-              { icon: Calendar, name: 'Calendrier', desc: 'Rappels' },
-            ].map((item, i) => (
-              <ScrollReveal key={i} delay={i * 0.05}>
-                <Card3D>
-                  <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 h-full hover:shadow-lg text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-50 rounded-xl flex items-center justify-center mx-auto mb-3"><item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-brand-500" /></div>
-                    <div className="font-bold text-xs sm:text-sm">{item.name}</div>
-                    <div className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{item.desc}</div>
-                  </div>
-                </Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════ NEW: SECURITY ═══════════ */}
-      <section className="py-16 sm:py-24 bg-brand-950 text-white relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] h-[600px] sm:h-[800px] bg-brand-500/5 rounded-full blur-[120px]" />
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-          <ScrollReveal>
-            <div className="text-center mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-300 mb-4"><Shield className="w-4 h-4" />Sécurité & Conformité</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">Vos données sont entre bonnes mains</h2>
-              <p className="text-base sm:text-lg text-brand-200/60 max-w-2xl mx-auto">Hébergement en France, chiffrement de bout en bout, conformité RGPD.</p>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {[
-              { icon: Shield, title: 'Chiffrement AES-256', desc: 'Toutes vos données sont chiffrées en transit et au repos.' },
-              { icon: FileBadge, title: 'Hébergement France', desc: 'Serveurs localisés à Paris, soumis au droit français.' },
-              { icon: Scale, title: 'Conforme RGPD', desc: 'Export et suppression de vos données à tout moment.' },
-              { icon: Eye, title: 'Accès contrôlé', desc: 'Chaque utilisateur ne voit que ses propres données.' },
-            ].map((item, i) => (
-              <ScrollReveal key={i} delay={i * 0.05}>
-                <Card3D>
-                  <div className="bg-brand-900/60 backdrop-blur rounded-2xl p-5 sm:p-6 border border-brand-800/50 h-full hover:shadow-lg hover:shadow-brand-500/10">
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 bg-brand-500/10 rounded-xl flex items-center justify-center mb-4"><item.icon className="w-5 h-5 text-brand-400" /></div>
-                    <h3 className="font-bold text-sm sm:text-base mb-1">{item.title}</h3>
-                    <p className="text-xs sm:text-sm text-brand-200/50">{item.desc}</p>
-                  </div>
-                </Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
+
+
 
       {/* ═══════════ TESTIMONIALS ═══════════ */}
       <section className="py-16 sm:py-24 bg-white">
@@ -1121,144 +879,6 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      {/* ═════════ COMMENT ÇA MARCHE ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-slate-50 dark:bg-slate-900 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-500/5 rounded-full blur-3xl" />
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-12 sm:mb-16">
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-4 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-700 mb-4">
-                <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />Simple comme bonjour
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white mb-4">
-                Créez vos factures en <span className="gradient-text-light">3 étapes</span>
-              </h2>
-              <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                Pas de formation nécessaire. Intuitif dès la première utilisation.
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
-            {[
-              {
-                step: '01',
-                icon: <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
-                title: 'Dites-nous',
-                desc: 'Dictez ou décrivez votre facture en langage naturel. L\'IA génère tout automatiquement.'
-              },
-              {
-                step: '02',
-                icon: <Send className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
-                title: 'Envoyez en un clic',
-                desc: 'Partagez par email, lien sécurisé, ou envoyez directement depuis le tableau de bord.'
-              },
-              {
-                step: '03',
-                icon: <Wallet className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12" />,
-                title: 'Suivez tout',
-                desc: 'Tableau de bord complet avec graphiques, relances automatiques et export comptable.'
-              },
-            ].map((item, i) => (
-              <ScrollReveal key={i} delay={i * 0.1}>
-                <div className="relative bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-sm hover:shadow-lg transition-shadow duration-300">
-                  <div className="absolute -top-4 -left-4 w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-brand-500 rounded-full flex items-center justify-center text-white text-sm sm:text-base lg:text-lg font-black opacity-20">
-                    {item.step}
-                  </div>
-                  <div className="text-brand-500 mb-4 sm:mb-6">
-                    {item.icon}
-                  </div>
-                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-2 sm:mb-3">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {item.desc}
-                  </p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-
-          <ScrollReveal delay={0.3}>
-            <div className="text-center mt-12 sm:mt-16">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold px-6 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-2xl sm:rounded-3xl text-sm sm:text-base lg:text-lg transition-all shadow-xl hover:shadow-2xl active:scale-[0.97]">
-                <Zap className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
-                Commencer maintenant, c'est gratuit
-              </Link>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═════════ POURQUOI FACTU.ME ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-white dark:bg-slate-950">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white mb-4">
-                Pourquoi choisir <span className="gradient-text-light">Factu.me</span> ?
-              </h2>
-              <p className="text-base sm:text-lg lg:text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                La solution française complète pour votre facturation
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {[
-              {
-                icon: <Zap className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: 'Intelligence Artificielle',
-                desc: 'Dictée vocale et génération par IA. Créez vos factures en 10 secondes.'
-              },
-              {
-                icon: <Send className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: 'Relances automatiques',
-                desc: 'Envoyez des rappels automatiques à vos clients. Ne perdez plus d\'argent.'
-              },
-              {
-                icon: <ShieldCheck className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: '100% Conforme France',
-                desc: 'Export officiel FEC pour les impôts. Mentions légales automatiques.'
-              },
-              {
-                icon: <Cloud className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: '100% Cloud Français',
-                desc: 'Données hébergées en France. Conforme RGPD et sécurité bancaire.'
-              },
-              {
-                icon: <FileBadge className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: 'Templates professionnels',
-                desc: '6 modèles de factures PDF personnalisables avec votre logo et couleurs.'
-              },
-              {
-                icon: <Store className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: 'Multi-document',
-                desc: 'Factures, devis, avoirs, bons de commande et de livraison.'
-              },
-              {
-                icon: <Scale className="w-10 h-10 sm:w-12 sm:h-12" />,
-                title: 'Sans engagement',
-                desc: 'Gratuit pour toujours. Plan payant sans engagement, résiliable instantanément.'
-              },
-            ].map((item, i) => (
-              <ScrollReveal key={i} delay={i * 0.08}>
-                <div className="group bg-slate-50 dark:bg-slate-900 rounded-2xl p-5 sm:p-6 lg:p-8 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                  <div className="text-brand-500 mb-3 sm:mb-4 inline-flex">
-                    {item.icon}
-                  </div>
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {item.desc}
-                  </p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ═════════ PRICING ═══════════ */}
       <section id="tarifs" className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-slate-50">
@@ -1283,7 +903,7 @@ export default function LandingPageClient() {
                 className={`relative w-16 sm:w-20 h-10 rounded-full transition-all ${billingPeriod === 'yearly' ? 'bg-brand-500' : 'bg-slate-200'}`}
               >
                 <motion.div
-                  className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-md"
+                  className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-md"
                   animate={{ left: billingPeriod === 'yearly' ? 'calc(100% - 28px)' : '4px' }}
                   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
@@ -1391,76 +1011,8 @@ export default function LandingPageClient() {
                 <LogIn className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" />Se connecter
               </Link>
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-brand-200/30 mt-5 sm:mt-6 lg:mt-8">Sans carte bancaire · Sans engagement · Annulation en un clic</p>
+            <p className="text-xs sm:text-sm lg:text-base text-brand-200/30 mt-5 sm:mt-6 lg:mt-8">Sans engagement · Annulation en un clic</p>
           </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══════════ RESSOURCES EXTERNES ═══════════ */}
-      <section className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 dark:text-white mb-4">
-              Ressources et références
-            </h2>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Nous référençons les meilleures ressources pour vous accompagner dans votre activité professionnelle
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a
-              href="https://www.service-public.fr/professionnels-entreprises"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Service-Public.fr</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Informations officielles pour les entreprises</p>
-            </a>
-
-            <a
-              href="https://www.urssaf.fr/portail/home.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Scale className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Urssaf</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Déclarations et cotisations sociales</p>
-            </a>
-
-            <a
-              href="https://www.economie.gouv.fr/facturation/facturation-regles"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Régles de facturation</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Législation française sur la facturation</p>
-            </a>
-
-            <a
-              href="https://www.impots.gouv.fr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-primary dark:hover:border-primary hover:shadow-xl transition-all duration-300"
-            >
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Calculator className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Direction Générale des Impôts</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Fiscalité et déclarations fiscales</p>
-            </a>
-          </div>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Scale, ShieldCheck, Stamp, Receipt, FileCheck, PenTool } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facture sans TVA – Auto-Entrepreneurs & Micro-Entreprises | Factu.me',
@@ -267,6 +268,12 @@ export default function FactureSansTvaPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facture sans TVA', url: 'https://factu.me/facture-sans-tva' },
+        ]}
+      />
     </div>
   );
 }

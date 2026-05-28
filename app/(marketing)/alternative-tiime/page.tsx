@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, ArrowRight, Brain, Users, Handshake, FileSearch, Wallet } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Alternative Tiime – La Facturation Intelligente | Factu.me',
@@ -232,6 +233,12 @@ export default function AlternativeTiimePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Alternative Tiime', url: 'https://factu.me/alternative-tiime' },
+        ]}
+      />
     </div>
   );
 }

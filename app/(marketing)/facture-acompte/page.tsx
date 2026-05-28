@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Wallet, TrendingUp, FileSpreadsheet, Landmark, HandCoins, Clock } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Facture d\'Acompte – Gerez Vos Paiements Partiels | Factu.me',
@@ -271,6 +272,12 @@ export default function FactureAcomptePage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Facture d\'Acompte', url: 'https://factu.me/facture-acompte' },
+        ]}
+      />
     </div>
   );
 }

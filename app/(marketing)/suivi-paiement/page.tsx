@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Bell, AlertTriangle, DollarSign, TrendingUp, Clock, BarChart3 } from 'lucide-react';
+import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 
 export const metadata: Metadata = {
   title: 'Suivi de Paiement – Relancez Automatiquement vos Impayés | Factu.me',
@@ -254,6 +255,12 @@ export default function SuiviPaiementPage() {
           </p>
         </div>
       </section>
+      <BreadcrumbSchema
+        items={[
+          { name: 'Accueil', url: 'https://factu.me' },
+          { name: 'Suivi de Paiement', url: 'https://factu.me/suivi-paiement' },
+        ]}
+      />
     </div>
   );
 }

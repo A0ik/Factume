@@ -15,7 +15,7 @@ export const faqData: Record<string, FAQ[]> = {
     },
     {
       question: 'Combien coûte Factu.me pour un auto-entrepreneur ?',
-      answer: 'Le plan gratuit permet de créer 10 factures par mois, suffisant pour 80% des auto-entrepreneurs. Au-delà, les plans commencent à 14,99€/mois. Vous pouvez tester gratuitement 7 jours sans carte bancaire.',
+      answer: 'Le plan gratuit permet de créer 3 factures par mois, suffisant pour démarrer. Au-delà, les plans commencent à 14,99€/mois. Vous pouvez tester les plans payants pendant 7 jours avec carte bancaire requise.',
     },
     {
       question: 'Est-ce que je peux suivre mon chiffre d\'affaires auto-entrepreneur ?',
@@ -57,15 +57,15 @@ export const faqData: Record<string, FAQ[]> = {
   'logiciel-facture-gratuit': [
     {
       question: 'Est-ce vraiment gratuit ?',
-      answer: 'Le plan gratuit est 100% gratuit, sans carte bancaire, et vous permet de créer 10 factures par mois. Pas de limites de temps, pas de fonctionnalités cachées. C\'est gratuit pour toujours à ce niveau.',
+      answer: 'Le plan gratuit est 100% gratuit, sans carte bancaire, et vous permet de créer 3 factures par mois. Pas de limites de temps, pas de fonctionnalités cachées. C\'est gratuit pour toujours à ce niveau.',
     },
     {
       question: 'Quelles sont les limitations du plan gratuit ?',
-      answer: '10 factures par mois, un utilisateur, templates de base. Suffisant pour les auto-entrepreneurs et petites activités. Les plans payants débloquent des fonctionnalités avancées et des volumes illimités.',
+      answer: '3 factures par mois, un utilisateur, templates de base. Suffisant pour les auto-entrepreneurs et petites activités. Les plans payants débloquent des fonctionnalités avancées et des volumes illimités.',
     },
     {
       question: 'Y a-t-il un essai gratuit des plans payants ?',
-      answer: 'Oui, 7 jours d\'essai gratuit sur tous les plans sans carte bancaire. Testez toutes les fonctionnalités avant de vous engager.',
+      answer: 'Oui, 7 jours d\'essai gratuit sur tous les plans payants (carte bancaire requise). Testez toutes les fonctionnalités avant de vous engager.',
     },
   ],
   'facture-sans-tva': [
