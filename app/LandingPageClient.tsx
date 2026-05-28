@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, Building2, Code2, Briefcase, HeartPulse, Store, Share2, Twitter, Linkedin, Github, Calendar, Package, Truck, FileClock, Shield, FileBadge, Eye
+  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, Building2, Code2, Briefcase, HeartPulse, Store, Palette, Share2, Twitter, Linkedin, Github, Calendar, Package, Truck, FileClock, Shield, FileBadge, Eye
 } from 'lucide-react';
 
 /* ─── Particles Canvas ─── */
