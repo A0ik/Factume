@@ -3,9 +3,16 @@ import { createAdminClient } from '@/lib/supabase-server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getValidSumUpToken } from '@/lib/sumup/oauth';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting: 20 requests/minute per IP
+    const rlResult = rateLimit({ key: getClientIp(req), limit: 20, windowMs: 60000 });
+    if (!rlResult.success) {
+      return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
+    }
+
     const cookieStore = await cookies();
     const supabaseAuth = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,11 +39,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Get invoice
+    // Get invoice — verify ownership to prevent IDOR
     const { data: invoice, error: invError } = await supabase
       .from('invoices')
       .select('*, client:clients(*)')
       .eq('id', invoiceId)
+      .eq('user_id', user.id)
       .single();
 
     if (invError || !invoice) {

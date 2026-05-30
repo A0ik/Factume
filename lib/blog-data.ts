@@ -31,7 +31,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'En tant qu\'auto-entrepreneur, la facturation n\'est pas une simple formalité administrative : c\'est une obligation légale. Chaque prestation de service ou vente de marchandise doit faire l\'objet d\'une facture, même si votre client ne vous la réclame pas. Ne pas émettre de facture vous expose à des sanctions financières pouvant aller jusqu\'a 50% du montant de la transaction.',
           'Au-dela de l\'obligation légale, une facture professionnelle renforce votre crédibilité auprès de vos clients. Elle constitue un document comptable indispensable pour votre bilan annuel, le calcul de vos cotisations sociales et la justification de vos revenus auprès de l\'administration fiscale.',
-          'En 2025, avec la dématérialisation progressive de l\'économie, disposer d\'un système de facturation fiable et conforme est plus important que jamais. Les outils modernes comme Factu.me vous permettent de créer des factures professionnelles en quelques clics, tout en respectant les normes en vigueur.',
+          'En 2025, avec la dématérialisation progressive de l\'économie, disposer d\'un système de facturation fiable et conforme est plus important que jamais. Les outils modernes comme Factu.me vous permettent de créer des factures professionnelles en quelques clics, tout en respectant les normes en vigueur. Découvrez aussi nos [modèles de facture pour auto-entrepreneur](https://factu.me/comment-facturer/auto-entrepreneur).',
         ],
       },
       {
@@ -39,7 +39,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Une facture d\'auto-entrepreneur doit contenir un certain nombre de mentions obligatoires sous peine d\'amende. Vous devez indiquer : votre nom ou dénomination sociale, votre adresse, votre numéro SIRET, votre numéro RCS ou RM, la mention "Auto-entrepreneur" ainsi que "Entrepreneur individuel a responsabilité limitée" ou "EIRL" le cas échéant.',
           'Côté client, la facture doit mentionner le nom et l\'adresse du destinataire. Le numéro de facture doit être unique et séquentiel (sans trou dans la numérotation). La date de la facture, la désignation précisé des prestations ou produits, le prix unitaire hors taxes, la quantité et le montant total HT sont également obligatoires.',
-          'Si vous etes exonéré de TVA (seuil non dépassé), vous devez impérativement ajouter la mention "TVA non applicable, article 293 B du CGI". C\'est l\'une des oublis les plus fréquents chez les auto-entrepreneurs débutants. Oublier cette mention peut valoir refus de la facture par votre client professionnel.',
+          'Si vous etes exonéré de TVA (seuil non dépassé), vous devez impérativement ajouter la mention "TVA non applicable, article 293 B du CGI". C\'est l\'une des oublis les plus fréquents chez les auto-entrepreneurs débutants. Oublier cette mention peut valoir refus de la facture par votre client professionnel. Consultez notre [guide complet des mentions obligatoires](https://factu.me/modeles-facture).',
         ],
       },
       {
@@ -63,7 +63,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'La première erreur courante est l\'absence de facture. Meme pour un petit montant ou une prestation informelle, une facture est obligatoire. La deuxième erreur est l\'oubli des mentions légales, notamment la mention d\'exonération de TVA. Sans cette mention, votre client peut refuser la facture et retarder le paiement.',
           'Autre erreur fréquente : la numérotation incohérente. Si l\'administration fiscale detecte des numéros manquants ou dans le désordre, elle peut soupconner une fraude. De même, ne pas dater correctement la facture ou confondre date d\'émission et date d\'échéance peut poser problème.',
-          'Enfin, beaucoup d\'auto-entrepreneurs négligent la conservation des factures. Vous devez conserver une copie de chaque facture émise et reçue pendant 10 ans. Un logiciel de facturation en ligne comme Factu.me stocke automatiquement toutes vos factures de manière sécurisée et accessible à tout moment.',
+          'Enfin, beaucoup d\'auto-entrepreneurs négligent la conservation des factures. Vous devez conserver une copie de chaque facture émise et reçue pendant 10 ans. Un logiciel de facturation en ligne comme Factu.me stocke automatiquement toutes vos factures de manière sécurisée et accessible a tout moment. Pour aller plus loin, lisez notre [guide sur les mentions obligatoires](https://factu.me/modeles-facture).',
         ],
       },
       {
@@ -99,7 +99,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Le calendrier de déploiement à été revu. A partir du 1er septembre 2026, toutes les grandes entreprises (plus de 250 salaries ou plus de 50 millions d\'euros de chiffre d\'affaires) devront émettre et recevoir des factures électroniques. Les PME et micro-entreprises seront progressivement integrees dans le perimêtre.',
           'Pour les petites et moyennes entreprises (PME), l\'obligation d\'émission de factures électroniques est prevue pour le 1er septembre 2027. En revanche, l\'obligation de reception de factures électroniques s\'appliquérà des le 1er septembre 2026 pour toutes les entreprises, quelle que soit leur taille.',
-          'Meme si les auto-entrepreneurs et micro-entreprises beneficient d\'un calendrier plus souple, il est recommande de s\'y préparer des maintenant. Les plateformes de facturation comme Factu.me anticipent déjà ces changements en integrant les formats normatifs (Factur-X, UBL, CII).',
+          'Meme si les auto-entrepreneurs et micro-entreprises beneficient d\'un calendrier plus souple, il est recommande de s\'y préparer des maintenant. Les plateformes de facturation comme Factu.me anticipent déjà ces changements en integrant les formats normatifs (Factur-X, UBL, CII). En savoir plus sur la [facturation électronique](https://factu.me/facturation-electronique).',
         ],
       },
       {
@@ -123,7 +123,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Ne attendez pas la dernière minute pour vous mettre en conformité. Commencez par vérifier que votre logiciel de facturation actuel prevoit une mise à jour vers les formats électroniques. Si ce n\'est pas le cas, envisagez une migration vers une solution conforme comme Factu.me.',
           'Faites un audit de vos processus de facturation : comment emettez-vous vos factures actuelles ? Comment les transmettez-vous à vos clients ? Quels outils utilisez-vous pour le suivi et l\'archivage ? Cette analyse vous aidera a identifier les points a adapter.',
-          'Enfin, sensibilisez vos équipes et vos clients à cette évolution. La facture électronique est une opportunite de moderniser vos échanges et de réduire les délais de paiement. C\'est aussi un gage de professionnalisme qui renforce la confiance de vos partenaires commerciaux.',
+          'Enfin, sensibilisez vos équipes et vos clients à cette évolution. La facture électronique est une opportunite de moderniser vos échanges et de réduire les délais de paiement. C\'est aussi un gage de professionnalisme qui renforce la confiance de vos partenaires commerciaux. Découvrez comment [facturer selon votre statut](https://factu.me/comment-facturer).',
         ],
       },
     ],
@@ -142,7 +142,7 @@ export const blogPosts: BlogPost[] = [
         title: 'Pourquoi les mentions légales sont obligatoires',
         paragraphs: [
           'Le Code de commerce français impose un ensemble de mentions obligatoires sur chaque facture. Ces mentions servent a identifier les parties, garantir la traçabilité des transactions et faciliter les contrôles fiscaux. Une facture incomplète est considérée comme irrégulière et peut être sanctionnée d\'une amende de 15 euros par mention manquante, avec un minimum de 15% du montant de la facture.',
-          'Au-dela de l\'aspect punitif, les mentions légales protegent le fournisseur et le client. Elles constituent une preuve contractuelle en cas de litige et facilitent les échanges comptables entre entreprises. Pour les auto-entrepreneurs et freelances, une facture bien redigee est aussi un marqueur de professionnalisme.',
+          'Au-dela de l\'aspect punitif, les mentions légales protegent le fournisseur et le client. Elles constituent une preuve contractuelle en cas de litige et facilitent les échanges comptables entre entreprises. Pour les auto-entrepreneurs et freelances, une facture bien redigee est aussi un marqueur de professionnalisme. Consultez nos [modèles de facture par métier](https://factu.me/modeles-facture).',
         ],
       },
       {
@@ -172,7 +172,7 @@ export const blogPosts: BlogPost[] = [
         title: 'Cas spécifiques : TVA, auto-entrepreneurs et ventes à distance',
         paragraphs: [
           'Les auto-entrepreneurs en franchise de TVA doivent obligatoirement inscrire la mention "TVA non applicable, article 293 B du CGI" sur chaque facture. Cette mention informé le client qu\'aucune TVA n\'est facturée et que l\'auto-entrepreneur ne peut pas la deduire.',
-          'Pour les ventes à distance intra-communautaires, des mentions spécifiques s\'appliquént, notamment l\'indication du numéro de TVA du client et les références au régime applicable. Les factures en devises étrangérés doivent preciser le taux de conversion utilisé.',
+          'Pour les ventes à distance intra-communautaires, des mentions spécifiques s\'appliquént, notamment l\'indication du numéro de TVA du client et les références au régime applicable. Les factures en devises étrangérés doivent preciser le taux de conversion utilisé. Pour savoir comment facturer selon votre statut, consultez notre [guide par statut juridique](https://factu.me/comment-facturer).',
           'En cas d\'erreur sur une facture émise, ne la detruisez jamais. Em evez une facture d\'avoir (ou note de credit) pour annulér la facture initiale, puis emettez une nouvelle facture correcte. Cette procedure garantit la traçabilité exigée par l\'administration fiscale.',
         ],
       },
@@ -208,7 +208,7 @@ export const blogPosts: BlogPost[] = [
         title: 'Structure d\'une facture sans TVA',
         paragraphs: [
           'Votre facture sans TVA suit la même structure qu\'une facture classique, a quelques differences pres. L\'en-tête comporte vos informations (nom, adresse, SIRET, mention auto-entrepreneur). Le corps détaillé les prestations avec les prix unitaires et quantités. Les totaux sont affiches en HT uniquement.',
-          'Dans la section financière, vous n\'affichez pas de colonne TVA. Les montants sont directement en hors taxes et le total facture correspond au total HT. C\'est une simplification appreciable par rapport aux factures avec TVA.',
+          'Dans la section financière, vous n\'affichez pas de colonne TVA. Les montants sont directement en hors taxes et le total facture correspond au total HT. C\'est une simplification appreciable par rapport aux factures avec TVA. Créez votre [facture d\'auto-entrepreneur](https://factu.me/comment-facturer/auto-entrepreneur) avec les mentions pré-remplies.',
           'Le pied de facture contient les mentions légales (conditions de paiement, pénalités de retard, indemnite forfaitaire de recouvrement de 40 euros, et surtout la mention "TVA non applicable, article 293 B du CGI").',
         ],
       },
@@ -381,7 +381,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Les logiciels de facturation proposent différents modèles tarifaires : gratuit avec fonctionnalites limitées, abonnement mensuel avec plus ou moins de fonctionnalites, ou freemium (gratuit jusqu\'à un certain nombre de factures). Le choix dépend de votre volume d\'activité et de vos besoins.',
           'Attention au prix cache : un logiciel gratuit peut devenir payant quand vous dépassez un quota de factures ou quand vous avez besoin d\'une fonctionnalite spécifique (relances, paiement en ligne, export comptable). Lisez attentivement les conditions avant de vous engager.',
-          'Factu.me propose un modèle transparent avec un essai gratuit de 7 jours, sans engagement (carte bancaire requise). Vous pouvez tester toutes les fonctionnalites avant de vous decider. L\'abonnement inclut les mises à jour réglementaires, le support et le stockage illimité de vos documents.',
+          'Factu.me propose un modèle transparent avec un essai gratuit de 4 jours, sans engagement et sans carte bancaire. Vous pouvez tester toutes les fonctionnalites avant de vous decider. L\'abonnement inclut les mises à jour réglementaires, le support et le stockage illimité de vos documents.',
         ],
       },
       {
@@ -443,8 +443,8 @@ export const blogPosts: BlogPost[] = [
         title: 'Conseil 10 : Choisissez le bon outil et formez-vous',
         paragraphs: [
           'Conseil 10 : investissez dans un logiciel de facturation adapte à votre activité freelance. Le bon outil vous fait gagner des heures chaque mois, réduit les erreurs, assure la conformité légale et vous donne une image professionnelle auprès de vos clients.',
-          'Factu.me est conçu par et pour des freelances français. Il combine simplicite d\'utilisation, conformité réglementaire et fonctionnalites avancées comme la facturation vocale IA, les liens de paiement, les relances automatiques et l\'export Factur-X. Testez-le gratuitement pendant 7 jours et jugez par vous-même.',
-          'En bonus : formez-vous régulièrement aux évolutions réglementaires. La facture électronique arrive en 2026, les seuils de TVA changent, les obligations évoluént. Un bon logiciel vous tient informé, mais une veille personnelle est toujours bénéfique. Le blog Factu.me est là pour vous accompagner dans cette démarche.',
+          'Factu.me est conçu par et pour des freelances français. Il combine simplicite d\'utilisation, conformité réglementaire et fonctionnalites avancées comme la facturation vocale IA, les liens de paiement, les relances automatiques et l\'export Factur-X. Testez-le gratuitement pendant 4 jours et jugez par vous-même.',
+          'En bonus : formez-vous régulièrement aux évolutions réglementaires. La facture électronique arrive en 2026, les seuils de TVA changent, les obligations évoluént. Un bon logiciel vous tient informé, mais une veille personnelle est toujours bénéfique. Le blog Factu.me est là pour vous accompagner dans cette démarche. [Comparez les logiciels](https://factu.me/meilleur-logiciel-facture) ou découvrez notre [alternative à Henrri](https://factu.me/alternative-henrj) et [Tiime](https://factu.me/alternative-tiime). Voir nos [guides par statut juridique](https://factu.me/comment-facturer) et [modèles de facture par métier](https://factu.me/modeles-facture).',
         ],
       },
     ],
@@ -464,7 +464,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'La facturation dans le secteur du BTP (batiment et travaux publics) obéit a des règles particulières qui la distinguent de la facturation classique. Artisans plombiers, électriciens, macons, peintres ou couvreurs doivent respecter des obligations spécifiques liées a l\'autoliquidation de la TVA, aux situations de travaux et a la retenue de garantie.',
           'Si vous êtes artisan du batiment, chaque facture doit mentionner votre numéro SIRET, votre qualification (Qualibat, RGE, etc.), et les mentions légales spécifiques au BTP. La moindre erreur peut entraîner un refus de paiement du client ou des sanctions fiscales.',
-          'Heureusement, des outils comme Factu.me simplifient la facturation BTP en automatisant les mentions légales, en gérant l\'autoliquidation de TVA et en permettant de créer des factures directement sur chantier depuis votre smartphone.',
+          'Heureusement, des outils comme Factu.me simplifient la facturation BTP en automatisant les mentions légales, en gérant l\'autoliquidation de TVA et en permettant de créer des factures directement sur chantier depuis votre smartphone. Voir nos [modèles de facture pour artisans](https://factu.me/modeles-facture/plombier) et [guide facturation BTP](https://factu.me/facturation-btp).',
         ],
       },
       {

@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, ArrowRight, Mic, FileCheck, PenTool, Sparkles, RefreshCcw } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Alternative Henrri – Pourquoi Choisir Factu.me | Comparatif',
@@ -233,10 +235,35 @@ export default function AlternativeHenrriPage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Factu.me est-il gratuit ?",
+            answer: "Oui, Factu.me offre un plan gratuit jusqu'à 10 factures par mois, sans carte bancaire et sans publicité."
+          },
+          {
+            question: "Comment migrer de Henrri vers Factu.me ?",
+            answer: "Exportez vos données depuis Henrri en CSV, importez-les dans Factu.me. La migration prend environ 5 minutes."
+          },
+          {
+            question: "Factu.me est-il conforme à la facturation électronique 2026 ?",
+            answer: "Oui, Factu.me est prêt pour la réforme Factur-X 2026 avec les formats conformes à la norme EN 16931."
+          },
+        ]}
+      />
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
-          { name: 'Alternative Henrri', url: 'https://factu.me/alternative-henrri' },
+          { name: 'Alternative Henrri', url: 'https://factu.me/alternative-henrj' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/alternative-tiime', label: 'Alternative Tiime' },
+          { href: '/alternative-abby', label: 'Alternative Abby' },
+          { href: '/logiciel-facture-gratuit', label: 'Logiciel facture gratuit' },
+          { href: '/meilleur-logiciel-facture', label: 'Meilleur logiciel facture' },
         ]}
       />
     </div>

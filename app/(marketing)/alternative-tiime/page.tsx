@@ -1,7 +1,9 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, ArrowRight, Brain, Users, Handshake, FileSearch, Wallet } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Alternative Tiime – La Facturation Intelligente | Factu.me',
@@ -233,10 +235,34 @@ export default function AlternativeTiimePage() {
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Quelle différence entre Factu.me et Tiime ?",
+            answer: "Factu.me propose la dictée vocale IA, la signature électronique, le CRM et les contrats de travail. Tiime est plus orienté comptabilité."
+          },
+          {
+            question: "Factu.me est-il moins cher que Tiime ?",
+            answer: "Oui, le plan Pro Factu.me est à 29,99€/mois avec plus de fonctionnalités que Tiime. Le plan gratuit permet de tester sans engagement."
+          },
+          {
+            question: "Puis-je migrer de Tiime vers Factu.me ?",
+            answer: "Oui, la migration est simple et gratuite. Exportez vos données Tiime et importez-les dans Factu.me."
+          },
+        ]}
+      />
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
           { name: 'Alternative Tiime', url: 'https://factu.me/alternative-tiime' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/alternative-henrj', label: 'Alternative Henrri' },
+          { href: '/alternative-abby', label: 'Alternative Abby' },
+          { href: '/logiciel-facture-gratuit', label: 'Logiciel facture gratuit' },
         ]}
       />
     </div>

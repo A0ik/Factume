@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
-import crypto from 'crypto';
+import { verifyShareToken } from '@/lib/share-token';
 
 /**
- * GET /api/share/[invoiceId]?t=<hmac_token>
+ * GET /api/share/[invoiceId]?t=<token>
  *
- * Public share link for an invoice. Requires a valid HMAC token derived from
- * the invoice ID and a server-side secret. Without the token the request is
- * rejected — this prevents enumeration of invoice UUIDs.
+ * Public share link for an invoice. Requires a valid token with expiration check.
+ * Tokens are non-deterministic (random nonce) and expire after 30 days.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ invoiceId: string }> }) {
   const { invoiceId } = await params;
 
-  // --- HMAC token verification ---
+  // --- Token verification (with expiration) ---
   const token = req.nextUrl.searchParams.get('t');
   if (!token) return NextResponse.json({ error: 'Lien invalide' }, { status: 403 });
 
-  const expected = generateShareToken(invoiceId);
-  if (!crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected))) {
+  if (!verifyShareToken(invoiceId, token)) {
     return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 403 });
   }
 
@@ -40,10 +38,3 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ invo
 
   return NextResponse.json({ invoice, profile });
 }
-
-/**
- * Generate an HMAC-SHA256 token for a given invoice ID.
- * Tokens are deterministic — the same invoice always produces the same token.
- * Re-exported from lib for use in other modules.
- */
-import { generateShareToken } from '@/lib/share-token';

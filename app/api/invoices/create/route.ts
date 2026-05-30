@@ -36,6 +36,49 @@ export async function POST(req: Request) {
       notes, prefix, linked_invoice_id, idempotency_id
     } = body;
 
+    // Server-side validation of items and amounts
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: 'La facture doit contenir au moins une ligne.' }, { status: 400 });
+    }
+    if (items.length > 200) {
+      return NextResponse.json({ error: 'Maximum 200 lignes par facture.' }, { status: 400 });
+    }
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (typeof item.quantity !== 'number' || item.quantity <= 0 || item.quantity > 99999) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : quantité invalide.` }, { status: 400 });
+      }
+      if (typeof item.unit_price !== 'number' || item.unit_price < 0 || item.unit_price > 9999999) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : prix unitaire invalide.` }, { status: 400 });
+      }
+      if (typeof item.vat_rate !== 'number' || item.vat_rate < 0 || item.vat_rate > 100) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : taux TVA invalide.` }, { status: 400 });
+      }
+    }
+    if (typeof total !== 'number' || total < -99999999 || total > 99999999) {
+      return NextResponse.json({ error: 'Montant total invalide.' }, { status: 400 });
+    }
+    if (discount_percent !== null && discount_percent !== undefined && (discount_percent < 0 || discount_percent > 100)) {
+      return NextResponse.json({ error: 'Pourcentage de remise invalide.' }, { status: 400 });
+    }
+
+    // Recalculate totals server-side to verify client-sent values
+    const recalculatedSubtotal = items.reduce((s: number, i: any) => {
+      const lineNet = i.total ?? (i.quantity * i.unit_price);
+      return s + lineNet;
+    }, 0);
+    const recalculatedVat = items.reduce((s: number, i: any) => {
+      const lineNet = i.total ?? (i.quantity * i.unit_price);
+      const afterDisc = discount_percent ? lineNet * (1 - discount_percent / 100) : lineNet;
+      return s + afterDisc * (i.vat_rate / 100);
+    }, 0);
+    const recalculatedTotal = Math.round((recalculatedSubtotal - (discount_amount || 0) + recalculatedVat) * 100) / 100;
+    // Allow 1 cent tolerance for rounding differences
+    if (Math.abs(recalculatedTotal - total) > 0.02) {
+      console.warn('[API /invoices/create] Amount mismatch:', { clientTotal: total, serverTotal: recalculatedTotal });
+      return NextResponse.json({ error: 'Incohérence dans les montants. Veuillez recharger la page.' }, { status: 400 });
+    }
+
     console.log('[API /invoices/create] User:', user.id, 'Tier:', tier, 'Prefix:', prefix, 'Total:', total);
 
     const { data: invoiceId, error: rpcError } = await supabase

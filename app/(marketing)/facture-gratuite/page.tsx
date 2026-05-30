@@ -1,7 +1,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { CheckCircle2, FileText, Download, Mail, Shield, Star, ArrowRight } from 'lucide-react';
+import { CheckCircle2, FileText, Download, Mail, Shield, Star, ArrowRight, Zap } from 'lucide-react';
+import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
+import { VisualBreadcrumbs } from '@/components/seo/VisualBreadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Facture Gratuite en Ligne – Créez vos Factures PDF Gratuitement',
@@ -90,6 +93,16 @@ const comparison = [
 export default function FactureGratuitePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Breadcrumbs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <VisualBreadcrumbs
+          items={[
+            { label: 'Accueil', href: '/' },
+            { label: 'Facture gratuite', href: '/facture-gratuite' },
+          ]}
+        />
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-blue-50" />
@@ -107,16 +120,22 @@ export default function FactureGratuitePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/register"
+                href="/generateur-facture#generateur"
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
+                <Zap className="w-5 h-5 mr-2" />
+                Créer ma facture maintenant
+              </Link>
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
+              >
                 <FileText className="w-5 h-5 mr-2" />
-                Créer ma première facture
-                <ArrowRight className="w-5 h-5 ml-2" />
+                Créer un compte gratuit
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ Gratuit jusqu\'à 3 factures/mois • ✓ Prêt en 30 secondes
+              ✓ Gratuit jusqu\'à 10 factures/mois • ✓ Prêt en 30 secondes
             </p>
           </div>
         </div>
@@ -220,23 +239,49 @@ export default function FactureGratuitePage() {
             Créez votre première facture maintenant
           </h2>
           <p className="text-xl text-emerald-100 mb-8">
-            Rejoignez des milliers d\'utilisateurs satisfaits
+            Rejoignez des milliers d&apos;utilisateurs satisfaits
           </p>
           <Link
-            href="/register"
+            href="/generateur-facture#generateur"
             className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
-            Commencer gratuitement
+            <Zap className="w-5 h-5 mr-2" />
+            Créer ma facture gratuitement
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            3 factures gratuites par mois • Sans engagement • Annulation possible
+            Sans inscription • Sans limite • PDF professionnel
           </p>
         </div>
       </section>
+
+      <FAQSchema
+        items={[
+          {
+            question: "Comment faire une facture gratuitement ?",
+            answer: "Utilisez notre générateur de facture gratuit : remplissez vos informations, celles de votre client, ajoutez vos prestations et téléchargez le PDF. Aucune inscription requise."
+          },
+          {
+            question: "La facture gratuite est-elle conforme à la loi ?",
+            answer: "Oui, les factures générées avec Factu.me incluent toutes les mentions obligatoires : numéro unique, dates, TVA, informations vendeur et client, conditions de paiement."
+          },
+          {
+            question: "Combien de factures puis-je créer gratuitement ?",
+            answer: "Le générateur en ligne est sans limite d'utilisation. Avec un compte gratuit, vous bénéficiez en plus de 10 factures sauvegardées par mois avec suivi et relances."
+          },
+        ]}
+      />
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
-          { name: 'Facture Gratuite', url: 'https://factu.me/facture-gratuite' },
+          { name: 'Facture gratuite', url: 'https://factu.me/facture-gratuite' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/generateur-facture', label: 'Générateur de facture' },
+          { href: '/modeles-facture', label: 'Modèles de facture' },
+          { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' },
+          { href: '/comment-facturer', label: 'Comment facturer' },
         ]}
       />
     </div>

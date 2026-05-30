@@ -237,7 +237,7 @@
       "Bash(grep -A 30 \"CREATE TABLE.*cabinets\" supabase/migrations/033_cabinet_white_label.sql)",
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(node _temp_patch.js)",
-      "Bash(rtk gh *)"
+      "Bash(grep -E \"\\\\.ts$\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

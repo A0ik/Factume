@@ -1044,13 +1044,25 @@ export default function LandingPageClient() {
               <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Ressources</h4>
               <ul className="space-y-2">
                 <li><Link href="/demo" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Démo interactive</Link></li>
-                <li><a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">IA & Dictée vocale</a></li>
-                <li><a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Tarifs</a></li>
+                <li><Link href="/blog" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Blog facturation</Link></li>
+                <li><Link href="/modeles-facture" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Modèles de facture</Link></li>
+                <li><Link href="/mentions-obligatoires-facture" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Mentions obligatoires</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Légal</h4>
+              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Par statut</h4>
               <ul className="space-y-2">
+                <li><Link href="/comment-facturer/auto-entrepreneur" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Auto-entrepreneur</Link></li>
+                <li><Link href="/comment-facturer/sasu" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">SASU</Link></li>
+                <li><Link href="/comment-facturer/eurl" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">EURL</Link></li>
+                <li><Link href="/comment-facturer" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Tous les statuts</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Confiance</h4>
+              <ul className="space-y-2">
+                <li><Link href="/securite" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Sécurité</Link></li>
+                <li><Link href="/experts" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Équipe</Link></li>
                 <li><Link href="/legal/mentions-legales" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Mentions légales</Link></li>
                 <li><Link href="/legal/cgu" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">CGU</Link></li>
                 <li><Link href="/legal/confidentialite" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Confidentialité</Link></li>

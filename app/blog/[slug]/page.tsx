@@ -14,6 +14,7 @@ import {
 import { blogPosts, getBlogPost, getAllBlogSlugs, getRelatedPosts } from '@/lib/blog-data';
 import { BlogCard } from '@/components/BlogCard';
 import { ShareButtons } from './ShareButtons';
+import { ExpertBadge } from '@/components/seo/ExpertBadge';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -232,6 +233,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </section>
           ))}
         </article>
+
+        {/* Expert verification */}
+        <ExpertBadge
+          name={post.author}
+          title="Expert en facturation"
+          organization="Factu.me"
+        />
 
         {/* Share buttons */}
         <div className="mt-12 pt-8 border-t border-gray-200 dark:border-slate-700">

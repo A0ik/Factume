@@ -71,6 +71,7 @@ export default function NewFacturePage() {
   const [aiError, setAiError] = useState('');
 
   const pendingIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
 
   // Form state
   const [clientName, setClientName] = useState(paramClientName || '');
@@ -359,27 +360,35 @@ export default function NewFacturePage() {
   };
 
   const handleSave = async () => {
-    if (saving) {
+    // Use ref for synchronous guard — useState can let a second click through before re-render
+    if (savingRef.current) {
       console.log('[handleSave] Already saving, ignoring click');
       return;
     }
+    savingRef.current = true;
+    setSaving(true);
 
     if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation.');
+      savingRef.current = false;
+      setSaving(false);
       return;
     }
     if (!items.some((i) => i.quantity > 0 && i.unit_price > 0)) {
       setError('Ajoutez au moins une prestation avec un montant.');
+      savingRef.current = false;
+      setSaving(false);
       return;
     }
     if (!profile?.id) {
       setError('Profil introuvable. Veuillez vous reconnecter.');
+      savingRef.current = false;
+      setSaving(false);
       return;
     }
 
     if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
     const currentIdempotencyId = pendingIdRef.current;
-    setSaving(true);
     setError('');
 
     console.log('[handleSave] Starting invoice creation...', {
@@ -428,6 +437,7 @@ export default function NewFacturePage() {
         toast.error(e.message || 'Erreur lors de la création', { id: 'create-error' });
       }
     } finally {
+      savingRef.current = false;
       setSaving(false);
       pendingIdRef.current = null;
     }

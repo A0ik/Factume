@@ -6,28 +6,36 @@ import { generateId } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 
 interface DataState {
-  clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null;
+  clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null; error: string | null;
   fetchClients: () => Promise<void>; createClient: (data: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<Client>; bulkCreateClients: (items: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>[]) => Promise<Client[]>; updateClient: (id: string, data: Partial<Client>) => Promise<void>; deleteClient: (id: string) => Promise<void>;
   fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
   fetchRecurringInvoices: () => Promise<void>; createRecurringInvoice: (data: Omit<RecurringInvoice, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<RecurringInvoice>; updateRecurringInvoice: (id: string, data: Partial<RecurringInvoice>) => Promise<void>; deleteRecurringInvoice: (id: string) => Promise<void>;
   computeStats: () => void; clearData: () => void;
 }
 
+// Centimes-arithmetic helpers — avoid floating-point errors for money
+function cents(value: number): number { return Math.round(value * 100); }
+function fromCents(c: number): number { return c / 100; }
+function roundMoney(value: number): number { return Math.round(value * 100) / 100; }
+
+const IMMUTABLE_STATUSES: InvoiceStatus[] = ['sent', 'paid', 'overdue', 'accepted', 'refused', 'cancelled', 'refunded', 'rejected', 'delivered'];
+
 export const useDataStore = create<DataState>((set, get) => ({
-  clients: [], invoices: [], recurringInvoices: [], loading: false, stats: null,
-  clearData: () => set({ clients: [], invoices: [], recurringInvoices: [], stats: null }),
+  clients: [], invoices: [], recurringInvoices: [], loading: false, stats: null, error: null,
+  clearData: () => set({ clients: [], invoices: [], recurringInvoices: [], stats: null, error: null }),
 
   fetchClients: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     const timeout = new Promise<Client[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
       const data = await Promise.race([
         getSupabaseClient().from('clients').select('*').order('name'),
         timeout
       ]) as { data: Client[] };
-      set({ clients: data.data || [] });
+      set({ clients: data.data || [], error: null });
     } catch (error) {
       console.error('[fetchClients] Error:', error);
+      set({ error: 'Impossible de charger vos clients. Vérifiez votre connexion.' });
     } finally { set({ loading: false }); }
   },
   createClient: async (clientData) => {
@@ -62,16 +70,17 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   fetchInvoices: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     const timeout = new Promise<Invoice[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
     try {
       const data = await Promise.race([
         getSupabaseClient().from('invoices').select('*, client:clients(*)').order('created_at', { ascending: false }),
         timeout
       ]) as { data: Invoice[] };
-      set({ invoices: data.data || [] }); get().computeStats();
+      set({ invoices: data.data || [], error: null }); get().computeStats();
     } catch (error) {
       console.error('[fetchInvoices] Error:', error);
+      set({ error: 'Impossible de charger vos factures. Vérifiez votre connexion.' });
     } finally { set({ loading: false }); }
   },
   getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
@@ -82,25 +91,54 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
     const userId = profile.id;
 
-    const items = formData.items.map((item) => {
-      const lineTotal = item.quantity * item.unit_price;
-      const lineDisc = (item as any).discount_percent ? lineTotal * ((item as any).discount_percent / 100) : 0;
-      return { ...item, id: generateId(), total: lineTotal - lineDisc };
+    // Input validation — reject malicious/absurd values early
+    const MAX_ITEMS = 200;
+    if (!formData.items || formData.items.length === 0) throw new Error('La facture doit contenir au moins une ligne.');
+    if (formData.items.length > MAX_ITEMS) throw new Error(`Maximum ${MAX_ITEMS} lignes par facture.`);
+
+    const items = formData.items.map((item, idx) => {
+      // Validate each field
+      if (!item.description || item.description.trim().length === 0) throw new Error(`Ligne ${idx + 1} : description requise.`);
+      if (item.description.length > 500) throw new Error(`Ligne ${idx + 1} : description trop longue (max 500 caractères).`);
+      if (typeof item.quantity !== 'number' || item.quantity <= 0 || item.quantity > 99999) throw new Error(`Ligne ${idx + 1} : quantité invalide.`);
+      if (typeof item.unit_price !== 'number' || item.unit_price < 0 || item.unit_price > 9999999) throw new Error(`Ligne ${idx + 1} : prix unitaire invalide.`);
+      if (typeof item.vat_rate !== 'number' || item.vat_rate < 0 || item.vat_rate > 100) throw new Error(`Ligne ${idx + 1} : taux TVA invalide (0-100%).`);
+
+      // Calculate line total in cents to avoid float errors
+      const lineTotalCents = Math.round(cents(item.quantity) * cents(item.unit_price) / 100);
+      const lineDiscPct = (item as any).discount_percent || 0;
+      const lineDiscCents = lineDiscPct > 0 ? Math.round(lineTotalCents * cents(lineDiscPct) / 10000) : 0;
+      const lineNetCents = lineTotalCents - lineDiscCents;
+      return { ...item, id: generateId(), total: roundMoney(fromCents(lineNetCents)) };
     });
-    const subtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
-    const vatAmount = items.reduce((s, i) => s + i.total * (i.vat_rate / 100), 0);
+
+    // Subtotal after line discounts (in cents)
+    const subtotalAfterLineDiscountsCents = items.reduce((s, i) => s + cents(i.total), 0);
+    const discountPercent = formData.discount_percent || 0;
+    const discountAmountCents = discountPercent > 0 ? Math.round(subtotalAfterLineDiscountsCents * cents(discountPercent) / 10000) : 0;
+    const discountedSubtotalCents = subtotalAfterLineDiscountsCents - discountAmountCents;
+
+    // TVA recalculated on each line's net after global discount
+    const recalculatedVatCents = items.reduce((s, i) => {
+      const lineNetCents = cents(i.total);
+      const afterGlobalDiscCents = discountPercent > 0
+        ? Math.round(lineNetCents * (10000 - cents(discountPercent)) / 10000)
+        : lineNetCents;
+      const lineVatCents = Math.round(afterGlobalDiscCents * cents(i.vat_rate) / 10000);
+      return s + lineVatCents;
+    }, 0);
+
+    const finalTotalCents = discountedSubtotalCents + recalculatedVatCents;
+
     const docType = formData.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
-    // Remise globale appliquee sur le HT apres remises par ligne, puis TVA recalculee
-    const subtotalAfterLineDiscounts = items.reduce((s, i) => s + i.total, 0);
-    const discountAmount = formData.discount_percent ? subtotalAfterLineDiscounts * (formData.discount_percent / 100) : 0;
-    const discountedSubtotal = subtotalAfterLineDiscounts - discountAmount;
-    const recalculatedVat = items.reduce((s, i) => {
-      const afterGlobalDisc = i.total * (formData.discount_percent ? 1 - formData.discount_percent / 100 : 1);
-      return s + afterGlobalDisc * (i.vat_rate / 100);
-    }, 0);
     const finalIdempotencyId = idempotencyId || crypto.randomUUID();
-    const finalTotal = discountedSubtotal + recalculatedVat;
+
+    // Convert back from cents for storage
+    const discountedSubtotal = roundMoney(fromCents(discountedSubtotalCents));
+    const recalculatedVat = roundMoney(fromCents(recalculatedVatCents));
+    const discountAmount = roundMoney(fromCents(discountAmountCents));
+    const finalTotal = roundMoney(fromCents(finalTotalCents));
 
     // Approche 1: Server-side API (fiable, pas de problème Web Locks)
     console.log('[createInvoice] Using server-side API route...');
@@ -207,24 +245,42 @@ export const useDataStore = create<DataState>((set, get) => ({
   updateInvoice: async (id, updates) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
+
+    // Block modification if invoice is no longer a draft
+    const existing = get().invoices.find((inv) => inv.id === id);
+    if (existing && IMMUTABLE_STATUSES.includes(existing.status)) {
+      throw new Error('Impossible de modifier une facture déjà émise. Créez un avoir ou dupliquez-la.');
+    }
+
     let u: InvoiceUpdateData = { ...updates, updated_at: new Date().toISOString() } as InvoiceUpdateData;
     if (updates.items) {
+      // Validate items
+      if (updates.items.length > 200) throw new Error('Maximum 200 lignes par facture.');
       const items = updates.items.map((i) => {
-        const lineTotal = i.quantity * i.unit_price;
-        const lineDisc = (i as any).discount_percent ? lineTotal * ((i as any).discount_percent / 100) : 0;
-        return { ...i, total: lineTotal - lineDisc };
+        const lineTotalCents = Math.round(cents(i.quantity) * cents(i.unit_price) / 100);
+        const lineDiscPct = (i as any).discount_percent || 0;
+        const lineDiscCents = lineDiscPct > 0 ? Math.round(lineTotalCents * cents(lineDiscPct) / 10000) : 0;
+        return { ...i, total: roundMoney(fromCents(lineTotalCents - lineDiscCents)) };
       });
-      const subtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
-      const subtotalAfterLineDiscounts = items.reduce((s, i) => s + i.total, 0);
-      const existing = get().invoices.find((inv) => inv.id === id);
+      const subtotalAfterLineDiscountsCents = items.reduce((s, i) => s + cents(i.total), 0);
       const discPct = updates.discount_percent ?? existing?.discount_percent ?? 0;
-      const discAmt = discPct > 0 ? subtotalAfterLineDiscounts * (discPct / 100) : 0;
-      const discountedSubtotal = subtotalAfterLineDiscounts - discAmt;
-      const vat = items.reduce((s, i) => {
-        const afterGlobalDisc = i.total * (discPct > 0 ? 1 - discPct / 100 : 1);
-        return s + afterGlobalDisc * (i.vat_rate / 100);
+      const discAmtCents = discPct > 0 ? Math.round(subtotalAfterLineDiscountsCents * cents(discPct) / 10000) : 0;
+      const discountedSubtotalCents = subtotalAfterLineDiscountsCents - discAmtCents;
+      const vatCents = items.reduce((s, i) => {
+        const lineNetCents = cents(i.total);
+        const afterGlobalDiscCents = discPct > 0
+          ? Math.round(lineNetCents * (10000 - cents(discPct)) / 10000)
+          : lineNetCents;
+        return s + Math.round(afterGlobalDiscCents * cents(i.vat_rate) / 10000);
       }, 0);
-      u = { ...u, items, subtotal: discountedSubtotal, vat_amount: vat, discount_percent: discPct || null, discount_amount: discAmt || null, total: discountedSubtotal + vat };
+      u = {
+        ...u, items,
+        subtotal: roundMoney(fromCents(discountedSubtotalCents)),
+        vat_amount: roundMoney(fromCents(vatCents)),
+        discount_percent: discPct || null,
+        discount_amount: roundMoney(fromCents(discAmtCents)) || null,
+        total: roundMoney(fromCents(discountedSubtotalCents + vatCents)),
+      };
     }
     const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
     if (error) throw error;
@@ -363,6 +419,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     const overdue = actualInvoices.filter((i) =>
       i.status === 'sent' && i.due_date && new Date(i.due_date) < now
     );
+    // Include partially paid invoices in revenue tracking
+    const partial = actualInvoices.filter((i) => i.status === 'partial');
+    const partialRevenue = partial.reduce((s, i) => s + (i.amount_paid || 0), 0);
 
     // MRR basé sur la date de paiement (paid_at) et non la date de création
     const mrr = paid
@@ -375,7 +434,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         pendingCount: pending.length,
         paidCount: paid.length,
         overdueCount: overdue.length,
-        totalRevenue: paid.reduce((s, i) => s + i.total, 0),
+        totalRevenue: paid.reduce((s, i) => s + i.total, 0) + partialRevenue,
         pendingRevenue: pending.reduce((s, i) => s + i.total, 0),
       },
     });

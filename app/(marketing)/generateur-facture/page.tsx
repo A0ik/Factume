@@ -1,7 +1,11 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Sparkles, MessageSquareText, Calculator, Send, Clock, Brain } from 'lucide-react';
+import { GenerateurForm } from './GenerateurForm';
+import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
+import { VisualBreadcrumbs } from '@/components/seo/VisualBreadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Générateur de Facture – Créez Vos Factures Instantanément',
@@ -109,6 +113,16 @@ const testimonials = [
 export default function GenerateurFacturePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Breadcrumbs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <VisualBreadcrumbs
+          items={[
+            { label: 'Accueil', href: '/' },
+            { label: 'Générateur de facture', href: '/generateur-facture' },
+          ]}
+        />
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-green-50" />
@@ -226,14 +240,46 @@ export default function GenerateurFacturePage() {
             Essayer le générateur IA
           </Link>
           <p className="mt-6 text-sm text-emerald-200">
-            3 factures IA gratuites par mois • Sans engagement
+            10 factures IA gratuites par mois • Sans engagement
           </p>
         </div>
       </section>
+
+      {/* Free Generator Tool */}
+      <GenerateurForm />
+
+      <FAQSchema
+        items={[
+          {
+            question: "Comment créer une facture gratuitement avec Factu.me ?",
+            answer: "Remplissez le formulaire ci-dessus avec vos informations, celles de votre client, ajoutez vos prestations et cliquez sur 'Télécharger en PDF'. Aucune inscription n'est requise pour utiliser le générateur gratuit."
+          },
+          {
+            question: "La facture générée est-elle conforme à la loi française ?",
+            answer: "Oui, les factures générées incluent toutes les mentions obligatoires : numéro séquentiel, dates, informations du vendeur et du client, détail des prestations, TVA, et conditions de paiement."
+          },
+          {
+            question: "Puis-je personnaliser ma facture gratuite ?",
+            answer: "Le générateur gratuit vous permet de saisir toutes les informations nécessaires. Pour personnaliser le design, ajouter votre logo et accéder aux modèles professionnels, créez un compte gratuit sur Factu.me."
+          },
+          {
+            question: "Y a-t-il une limite de factures avec le générateur gratuit ?",
+            answer: "Le générateur gratuit ci-dessus est sans limite d'utilisation. Avec un compte Factu.me, vous bénéficiez en plus de la sauvegarde, du suivi et de l'envi par email — gratuitement jusqu'à 10 factures par mois."
+          },
+        ]}
+      />
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
-          { name: 'Générateur de Facture', url: 'https://factu.me/generateur-facture' },
+          { name: 'Générateur de facture', url: 'https://factu.me/generateur-facture' },
+        ]}
+      />
+      <RelatedPages
+        pages={[
+          { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },
+          { href: '/modeles-facture', label: 'Modèles de facture par métier' },
+          { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' },
+          { href: '/editeur-facture', label: 'Éditeur de facture' },
         ]}
       />
     </div>

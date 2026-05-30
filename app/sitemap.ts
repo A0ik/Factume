@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { getAllBlogSlugs } from '@/lib/blog-data';
+import { getAllProfessionSlugs, getAllStatutSlugs } from '@/lib/seo-data';
 
 const baseUrl = 'https://factu.me';
 const now = new Date();
@@ -44,6 +45,8 @@ const featurePages = [
   { url: `${baseUrl}/creer-devis`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
   { url: `${baseUrl}/suivi-paiement`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
   { url: `${baseUrl}/relance-facture`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/mentions-obligatoires-facture`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/generateur-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
 ];
 
 // Pages de comparaison (SEO)
@@ -55,6 +58,7 @@ const comparisonPages = [
   { url: `${baseUrl}/top-logiciels-facturation`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
   { url: `${baseUrl}/alternative-henrj`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
   { url: `${baseUrl}/alternative-tiime`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/alternative-abby`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
 ];
 
 // Pages légales
@@ -62,6 +66,18 @@ const legalPages = [
   { url: `${baseUrl}/legal/mentions-legales`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
   { url: `${baseUrl}/legal/confidentialite`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
   { url: `${baseUrl}/legal/cgu`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
+];
+
+// Pages E-E-A-T
+const trustPages = [
+  { url: `${baseUrl}/securite`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/experts`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
+];
+
+// Pages hub programmatiques
+const hubPages = [
+  { url: `${baseUrl}/modeles-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
+  { url: `${baseUrl}/comment-facturer`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
 ];
 
 // Pages principales
@@ -83,12 +99,32 @@ const blogPages = [
   })),
 ];
 
+// Pages programmatiques professions
+const professionPages = getAllProfessionSlugs().map((slug) => ({
+  url: `${baseUrl}/modeles-facture/${slug}`,
+  lastModified: now,
+  changeFrequency: 'monthly' as const,
+  priority: 0.8,
+}));
+
+// Pages programmatiques statuts
+const statutPages = getAllStatutSlugs().map((slug) => ({
+  url: `${baseUrl}/comment-facturer/${slug}`,
+  lastModified: now,
+  changeFrequency: 'monthly' as const,
+  priority: 0.8,
+}));
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...mainPages,
     ...segmentPages,
     ...featurePages,
     ...comparisonPages,
+    ...trustPages,
+    ...hubPages,
+    ...professionPages,
+    ...statutPages,
     ...legalPages,
     ...blogPages,
   ];

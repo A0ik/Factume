@@ -122,10 +122,10 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // Racine toujours publique
+  // Racine toujours publique (headers already set above)
   if (pathname === '/') return res;
 
-  // Chemins publics exacts ou par préfixe
+  // Chemins publics exacts ou par préfixe (headers already set above)
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return res;
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return res;
 
