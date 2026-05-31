@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { calculateInvoiceTotals } from '@/lib/money';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -136,15 +137,19 @@ export async function POST(request: NextRequest) {
         // Créer la facture à partir de la facture récurrente
         const invoiceNumber = await generateInvoiceNumber(supabase, recurring.user_id);
 
-        // Calculer le montant total
-        const totalHT = recurring.items.reduce((sum, item) =>
-          sum + (item.quantity * item.unit_price), 0
+        // FIX BUG-MONEY-01: Calculs monétaires en cents via money.ts
+        const totals = calculateInvoiceTotals(
+          recurring.items.map((item: any) => ({
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            vat_rate: item.vat_rate,
+            discount_percent: 0,
+          })),
+          0
         );
-        const totalTTC = recurring.items.reduce((sum, item) => {
-          const itemHT = item.quantity * item.unit_price;
-          const itemTTC = itemHT * (1 + item.vat_rate / 100);
-          return sum + itemTTC;
-        }, 0);
+        const totalHT = totals.subtotal;
+        const totalTTC = totals.total;
+        const totalVAT = totals.vatAmount;
 
         // Créer la facture
         const { data: invoice, error: invoiceError } = await supabase
@@ -159,7 +164,7 @@ export async function POST(request: NextRequest) {
             status: 'sent',
             subtotal_ht: totalHT,
             discount_amount: 0,
-            vat_amount: totalTTC - totalHT,
+            vat_amount: totalVAT,
             total_ttc: totalTTC,
             notes: `Facture générée automatiquement depuis le modèle récurrent ID: ${recurring.id}`,
             recurring_id: recurring.id,
@@ -382,10 +387,12 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // FIX VULN-04: Filtrer par user_id pour ne pas fuiter les données des autres utilisateurs
     const { data: recurringInvoices, error } = await supabase
       .from('recurring_invoices')
       .select('id, client_id, frequency, next_run_date, is_active')
       .eq('is_active', true)
+      .eq('user_id', user.id)
       .lte('next_run_date', new Date().toISOString());
 
     if (error) throw error;

@@ -276,7 +276,14 @@ export default function NewDevisPage() {
   };
 
   const updateItem = (id: string, field: string, value: string | number) => {
-    setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
+    setItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      if (field === 'quantity' || field === 'unit_price') {
+        const val = Math.max(0, typeof value === 'string' ? parseFloat(value) || 0 : value);
+        return { ...item, [field]: val };
+      }
+      return { ...item, [field]: value };
+    }));
   };
 
   const addItem = () => setItems((prev) => [
@@ -888,7 +895,7 @@ export default function NewDevisPage() {
                           min="0"
                           step="0.5"
                           value={item.quantity}
-                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItem(item.id, 'quantity', Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         <Input
                           type="number"
@@ -896,7 +903,7 @@ export default function NewDevisPage() {
                           min="0"
                           step="0.01"
                           value={item.unit_price}
-                          onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItem(item.id, 'unit_price', Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         <Select
                           label="TVA"

@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { Resend } from 'resend';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export async function POST(req: NextRequest) {
   try {
     const admin = createAdminClient();
@@ -115,7 +124,7 @@ export async function POST(req: NextRequest) {
             </div>
 
             <div style="margin:24px 0;">
-              ${emailMessage.replace(/\n/g, '<br>')}
+              ${escapeHtml(emailMessage).replace(/\n/g, '<br>')}
             </div>
 
             <div style="text-align:center;margin:32px 0;">
@@ -152,11 +161,17 @@ export async function POST(req: NextRequest) {
       metadata: { message_id: emailData?.id },
     });
 
-    // Mettre à jour le statut de la facture
-    await admin
-      .from('invoices')
-      .update({ status: 'overdue', updated_at: new Date().toISOString() })
-      .eq('id', invoiceId);
+    // Mettre à jour le statut via le RPC atomique (conforme PAF)
+    const { error: transitionError } = await admin.rpc('transition_invoice_status', {
+      p_invoice_id: invoiceId,
+      p_user_id: user.id,
+      p_new_status: 'overdue',
+      p_ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+      p_user_agent: req.headers.get('user-agent') || '',
+    });
+    if (transitionError) {
+      console.warn('[Reminders] Transition error:', transitionError.message);
+    }
 
     return NextResponse.json({
       success: true,

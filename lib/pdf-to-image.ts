@@ -79,7 +79,6 @@ export async function convertPdfToImages(
     format?: 'png' | 'jpeg';
   } = {}
 ): Promise<PDFConversionResult> {
-  const startTime = Date.now();
   const { maxPages = MAX_PAGES, format = IMAGE_FORMAT } = options;
 
   try {
@@ -123,8 +122,6 @@ export async function convertPdfToImages(
         error: `PDF trop volumineux (${totalPages} pages, max: ${maxPages})`,
       };
     }
-
-    console.log(`[PDF to Image] Converting PDF with ${totalPages} pages to ${format} images...`);
 
     // Use pdftoimg-js for conversion
     let pdftoimg: any;
@@ -182,16 +179,11 @@ export async function convertPdfToImages(
           width,
           height,
         });
-
-        console.log(`[PDF to Image] Page ${pageNum}/${totalPages} converted to ${format}`);
       } catch (pageError) {
         console.error(`[PDF to Image] Failed to convert page ${pageNum}:`, pageError);
         // Continue with other pages
       }
     }
-
-    const processingTimeMs = Date.now() - startTime;
-    console.log(`[PDF to Image] Converted ${pages.length}/${totalPages} pages in ${processingTimeMs}ms`);
 
     return {
       totalPages,

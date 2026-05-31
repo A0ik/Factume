@@ -20,9 +20,10 @@ export async function GET(
 
     const admin = createAdminClient();
 
+    // BUG-20 fix: Don't expose signer_email and ip_address in public endpoint
     const { data: signature, error } = await admin
       .from('eidas_signatures')
-      .select('signature_id, document_id, document_type, signer_name, signer_email, timestamp, document_hash, ip_address')
+      .select('signature_id, document_id, document_type, signer_name, timestamp, document_hash')
       .eq('signature_id', signatureId)
       .single();
 
@@ -58,7 +59,6 @@ export async function GET(
         documentId: signature.document_id,
         documentType: signature.document_type,
         signerName: signature.signer_name,
-        signerEmail: signature.signer_email,
         timestamp: signature.timestamp,
         eidasLevel: 'advanced (AdES)',
         valid: integrityValid,

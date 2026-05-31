@@ -12,6 +12,7 @@
 
 import { PDFDocument, PDFDict, PDFName, PDFString, PDFArray, PDFHexString, PDFStream } from 'pdf-lib';
 import { Invoice, Profile } from '@/types';
+import { multiplyCents, discountCents, vatCents, fromCents, roundMoney } from '@/lib/money';
 
 // ── Types Factur-X ─────────────────────────────────────────────────────────────
 
@@ -155,7 +156,9 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unit_price) || 0;
     const vatRate = Number(item.vat_rate) || 0;
-    const lineTotal = quantity * unitPrice;
+    // FIX BUG-MONEY-03: Calcul en cents pour éviter les erreurs flottantes
+    const lineTotalCents = multiplyCents(quantity, unitPrice);
+    const lineTotal = roundMoney(fromCents(lineTotalCents));
 
     if (quantity <= 0) {
       throw new Error(`Quantité invalide pour la ligne ${idx + 1}: ${quantity}`);
@@ -194,22 +197,25 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
       </ram:IncludedSupplyChainTradeLineItem>`;
   }).join('');
 
-  // Calcul des totaux de TVA par taux (après remise globale)
+  // FIX BUG-MONEY-03: Calculs TVA en cents
   const discountPct = Number(invoice.discount_percent) || 0;
-  const vatByRate = new Map<number, { taxable: number; tax: number }>();
+  const vatByRate = new Map<number, { taxableCents: number; taxCents: number }>();
   invoice.items.forEach(item => {
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unit_price) || 0;
     const vatRate = Number(item.vat_rate) || 0;
 
-    const lineTotal = item.total ?? quantity * unitPrice;
-    const afterDiscount = lineTotal * (1 - discountPct / 100);
-    const tax = afterDiscount * (vatRate / 100);
+    const lineTotalCents = item.total !== undefined
+      ? Math.round(Number(item.total) * 100)
+      : multiplyCents(quantity, unitPrice);
+    const lineDiscCents = discountCents(lineTotalCents, discountPct);
+    const afterDiscountCents = lineTotalCents - lineDiscCents;
+    const taxCents = vatCents(afterDiscountCents, vatRate);
 
-    const current = vatByRate.get(vatRate) || { taxable: 0, tax: 0 };
+    const current = vatByRate.get(vatRate) || { taxableCents: 0, taxCents: 0 };
     vatByRate.set(vatRate, {
-      taxable: current.taxable + afterDiscount,
-      tax: current.tax + tax
+      taxableCents: current.taxableCents + afterDiscountCents,
+      taxCents: current.taxCents + taxCents
     });
   });
 
@@ -218,9 +224,9 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
     const exemptionReason = getVatExemptionReason(rate, profile.legal_status);
     return `
         <ram:ApplicableTradeTax>
-          <ram:CalculatedAmount>${formatCurrencyFacturX(amounts.tax)}</ram:CalculatedAmount>
+          <ram:CalculatedAmount>${formatCurrencyFacturX(roundMoney(fromCents(amounts.taxCents)))}</ram:CalculatedAmount>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:BasisAmount>${formatCurrencyFacturX(amounts.taxable)}</ram:BasisAmount>
+          <ram:BasisAmount>${formatCurrencyFacturX(roundMoney(fromCents(amounts.taxableCents)))}</ram:BasisAmount>
           <ram:CategoryCode>${catCode}</ram:CategoryCode>
           ${exemptionReason ? `<ram:ExemptionReason>${escapeXml(exemptionReason)}</ram:ExemptionReason>` : ''}
           <ram:RateApplicablePercent>${rate}</ram:RateApplicablePercent>
@@ -435,20 +441,25 @@ export async function createFacturXPdf(
  */
 function createFacturXXmp(invoiceNumber: string): string {
   const now = new Date().toISOString();
+  // FIX GAP-11: Métadonnées XMP améliorées pour conformité PDF/A-3 + Factur-X
   return `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="FacturmeWeb">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   <rdf:Description rdf:about=""
     xmlns:xmp="http://ns.adobe.com/xap/1.0/"
     xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
-    xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
+    xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
     xmlns:fx="http://factur-x.net/1.0/"
    xmp:CreatorTool="FacturmeWeb"
    xmp:CreateDate="${now}"
+   xmp:ModifyDate="${now}"
    pdf:Producer="FacturmeWeb"
+   pdfaid:part="3"
+   pdfaid:conformance="B"
    fx:ConformanceLevel="EN 16931"
    fx:DocumentFileName="factur-x.xml"
-   fx:DocumentType="INVOICE">
+   fx:DocumentType="INVOICE"
+   fx:Version="1.0">
   </rdf:Description>
  </rdf:RDF>
 </x:xmpmeta>

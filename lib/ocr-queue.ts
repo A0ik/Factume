@@ -104,7 +104,6 @@ export class OCRQueueManager {
       throw new Error(`Failed to add OCR job: ${error.message}`);
     }
 
-    console.log(`[OCR Queue] Job added: ${data.id} for user ${job.userId}`);
     return data.id;
   }
 
@@ -147,7 +146,6 @@ export class OCRQueueManager {
     }
 
     const jobIds = (data || []).map(r => r.id);
-    console.log(`[OCR Queue] ${jobIds.length} jobs added to queue (batch)`);
     return jobIds;
   }
 
@@ -250,7 +248,6 @@ export class OCRQueueManager {
 
       // Check if it's a PDF
       const isPDF = isPDFBuffer(buffer);
-      console.log(`[OCR Queue] Processing ${job.fileName} (${isPDF ? 'PDF' : 'Image'})...`);
 
       let expenses: Record<string, unknown>[] = [];
       let method: 'tesseract' | 'openrouter' | 'hybrid' = 'tesseract';
@@ -263,7 +260,6 @@ export class OCRQueueManager {
 
         if (totalPages > 1) {
           // Multi-page PDF: Use OpenRouter directly (can handle multipage PDFs with multiple invoices)
-          console.log(`[OCR Queue] Multi-page PDF detected (${totalPages} pages), using OpenRouter for intelligent extraction...`);
 
           const multipageResult = await this.processMultiPagePDF(
             buffer,
@@ -278,10 +274,8 @@ export class OCRQueueManager {
           confidence = multipageResult.confidence;
           method = 'openrouter';
 
-          console.log(`[OCR Queue] Multi-page PDF processing complete: ${expenses.length} invoice(s) extracted, confidence: ${confidence.toFixed(2)}, cost: $${costUsd.toFixed(4)}`);
         } else {
           // Single-page PDF: Convert to image and try Tesseract first
-          console.log(`[OCR Queue] Single-page PDF detected, converting to image for Tesseract...`);
           const conversionResult = await convertPdfToImages(buffer, { maxPages: 1 });
 
           if (!conversionResult.success || conversionResult.pages.length === 0) {
@@ -314,7 +308,6 @@ export class OCRQueueManager {
 
       // Step 3: Save expenses to database
       if (expenses.length > 0) {
-        console.log(`[OCR Queue] Saving ${expenses.length} expense(s) to database...`);
 
         const { data: savedExpenses, error: insertError } = await this.supabase
           .from('expenses')
@@ -438,10 +431,6 @@ export class OCRQueueManager {
       }
     };
 
-    // Step 1: Try Tesseract (FREE)
-    const pageLabel = pageNumber ? `Page ${pageNumber}` : 'Image';
-    console.log(`[OCR Queue] Processing ${pageLabel} with Tesseract...`);
-
     const tesseractResult = await raceWithTimeout(
       extractWithTesseract(buffer, mimeType)
     );
@@ -453,7 +442,6 @@ export class OCRQueueManager {
 
     // Step 2: Check if Tesseract is reliable enough
     if (isTesseractResultReliable(tesseractResult)) {
-      console.log(`[OCR Queue] ${pageLabel} Tesseract result reliable (${confidence}), using it`);
       expense = tesseractResultToExpense(tesseractResult, {
         userId,
         receiptUrl,
@@ -468,7 +456,6 @@ export class OCRQueueManager {
 
       method = 'tesseract';
     } else {
-      console.log(`[OCR Queue] ${pageLabel} Tesseract confidence low (${confidence}), falling back to OpenRouter`);
       method = 'openrouter';
 
       // Fallback to OpenRouter
@@ -628,8 +615,6 @@ export class OCRQueueManager {
   }> {
     const base64 = buffer.toString('base64');
 
-    console.log(`[OCR Queue] Sending ${totalPages}-page PDF to OpenRouter for multi-invoice extraction...`);
-
     const completion = await this.openrouter.chat.completions.create({
       model: 'google/gemini-2.5-flash',
       messages: [
@@ -661,8 +646,6 @@ export class OCRQueueManager {
     // Parse response - should contain an array of invoices
     const invoicesArray = Array.isArray(parsed.invoices) ? parsed.invoices :
                           (Array.isArray(parsed) ? parsed : [parsed]);
-
-    console.log(`[OCR Queue] Extracted ${invoicesArray.length} invoice(s) from ${totalPages}-page PDF`);
 
     // Convert each invoice to an expense record
     const expenses: Record<string, unknown>[] = [];
@@ -756,8 +739,6 @@ export class OCRQueueManager {
       return [];
     }
 
-    console.log(`[OCR Queue] Processing ${jobs.length} jobs...`);
-
     // Process jobs with concurrency limit
     const results: OCRJobResult[] = [];
     const queue: Array<{ job: OCRQueueJob; index: number }> = jobs.map((job, index) => ({ job, index }));
@@ -793,7 +774,6 @@ export class OCRQueueManager {
 
     await Promise.all(workers);
 
-    console.log(`[OCR Queue] Batch complete: ${results.length} results`);
     return results;
   }
 
@@ -871,12 +851,10 @@ export class OCRQueueManager {
     }
 
     if (job.status !== 'failed') {
-      console.log(`[OCR Queue] Job ${jobId} is not in failed status`);
       return false;
     }
 
     if ((job.retry_count || 0) >= (job.max_retries || 3)) {
-      console.log(`[OCR Queue] Job ${jobId} has reached max retries`);
       return false;
     }
 

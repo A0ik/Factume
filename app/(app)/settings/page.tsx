@@ -11,24 +11,17 @@ import { CURRENCIES, LEGAL_STATUSES, SECTORS, ACCENT_COLORS } from '@/lib/utils'
 import Modal from '@/components/ui/Modal';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 
-import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Webhook, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette, Users, HelpCircle } from 'lucide-react';
+import { Camera, Crown, LogOut, Trash2, Download, AlertTriangle, ShieldAlert, Zap, CreditCard, XCircle, ArrowUpRight, PenTool, X, Link2, CheckCircle2, Unlink, Globe, Plus, Sparkles, Eye, Upload, Lock, Smartphone, RefreshCw, Keyboard, Palette, Users, HelpCircle, Building2, FileText, Receipt, Landmark, CreditCard as CreditCardIcon, PenLine, Settings2, Bell, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
 import Link from 'next/link';
 
+const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
 const CURRENCY_OPTS = CURRENCIES.map((c) => ({ value: c.code, label: `${c.symbol} ${c.label}` }));
 const LANG_OPTS = [{ value: 'fr', label: '🇫🇷 Français' }, { value: 'en', label: '🇬🇧 English' }];
-const TEMPLATE_OPTS = [
-  { value: '1', label: 'Minimaliste' },
-  { value: '2', label: 'Classique' },
-  { value: '3', label: 'Moderne' },
-  { value: '4', label: 'Élégant' },
-  { value: '5', label: 'Corporate' },
-  { value: '6', label: 'Nature' },
-];
-
 const WEBHOOK_EVENTS = [
   { value: 'invoice.created', label: 'Facture créée' },
   { value: 'invoice.sent', label: 'Facture envoyée' },
@@ -45,6 +38,27 @@ interface WebhookEndpoint {
   created_at: string;
 }
 
+type TabKey = 'company' | 'billing' | 'template' | 'bank' | 'stripe' | 'sumup' | 'signature' | 'preferences' | 'webhooks' | 'account';
+
+interface TabDef {
+  key: TabKey;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const TABS: TabDef[] = [
+  { key: 'company', label: 'Entreprise', icon: <Building2 size={16} /> },
+  { key: 'billing', label: 'Facturation', icon: <FileText size={16} /> },
+  { key: 'template', label: 'Modèle', icon: <Receipt size={16} /> },
+  { key: 'bank', label: 'Banque', icon: <Landmark size={16} /> },
+  { key: 'stripe', label: 'Stripe', icon: <CreditCardIcon size={16} /> },
+  { key: 'sumup', label: 'SumUp', icon: <Smartphone size={16} /> },
+  { key: 'signature', label: 'Signature', icon: <PenLine size={16} /> },
+  { key: 'preferences', label: 'Préférences', icon: <Settings2 size={16} /> },
+  { key: 'webhooks', label: 'Webhooks', icon: <Bell size={16} /> },
+  { key: 'account', label: 'Compte', icon: <Shield size={16} /> },
+];
+
 export default function SettingsPage() {
   const router = useRouter();
   const { profile, updateProfile, signOut, fetchProfile } = useAuthStore();
@@ -60,11 +74,11 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [accentOpen, setAccentOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [stripeConnectLoading, setStripeConnectLoading] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<'connected' | 'error' | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>('company');
 
   // SumUp state
   const [sumupMerchantCode, setSumupMerchantCode] = useState('');
@@ -126,7 +140,6 @@ export default function SettingsPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [shortcutsUpdateKey, setShortcutsUpdateKey] = useState(0);
 
-  // Force la mise à jour du composant quand l'état des raccourcis change
   const forceUpdate = () => setShortcutsUpdateKey(prev => prev + 1);
 
   const buildPreviewHtml = (html: string): string => {
@@ -267,7 +280,6 @@ export default function SettingsPage() {
     }
   }, []);
 
-  // Fetch webhooks on mount
   useEffect(() => {
     if (!profile?.id) return;
     const fetchWebhooks = async () => {
@@ -314,7 +326,6 @@ export default function SettingsPage() {
     finally { setStripeConnectLoading(false); }
   };
 
-  // Check SumUp connection on mount
   useEffect(() => {
     fetch('/api/sumup/connect')
       .then((r) => r.json())
@@ -332,7 +343,6 @@ export default function SettingsPage() {
 
   const handleConnectSumUp = () => {
     setSumupLoading(true);
-    // Redirect to SumUp OAuth flow
     window.location.href = '/api/sumup/oauth';
   };
 
@@ -359,7 +369,6 @@ export default function SettingsPage() {
     try {
       await updateProfile({ ...form, template_id: parseInt(form.template_id) } as any);
       if (form.language !== profile?.language) await changeLanguage(form.language);
-      // Refresh profile to get the latest state
       await fetchProfile(profile?.id ?? '');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -370,50 +379,36 @@ export default function SettingsPage() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('L\'image ne doit pas dépasser 2 Mo.');
       return;
     }
-
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Veuillez sélectionner une image valide (JPG, PNG, etc.).');
       return;
     }
-
     setUploading(true);
     setError('');
     try {
       const { data: { session } } = await getSupabaseClient().auth.getSession();
       const user = session?.user;
       if (!user) throw new Error('Non authentifié');
-
       const ext = file.name.split('.').pop();
       const fileName = `${user.id}.${ext}`;
       const filePath = `${user.id}/${fileName}`;
-
-      // Upload to the 'logos' bucket (correct bucket)
       const { error: uploadError } = await getSupabaseClient()
         .storage
         .from('logos')
         .upload(filePath, file, { upsert: true, contentType: file.type });
-
       if (uploadError) {
         console.error('[Logo Upload] Upload error:', uploadError);
         throw uploadError;
       }
-
-      // Get public URL
       const { data: { publicUrl } } = getSupabaseClient()
         .storage
         .from('logos')
         .getPublicUrl(filePath);
-
-      // Update profile with new logo URL
       await updateProfile({ logo_url: publicUrl } as any);
-
       toast.success('Logo mis à jour avec succès !');
     } catch (e: any) {
       console.error('[Logo Upload] Error:', e);
@@ -421,7 +416,6 @@ export default function SettingsPage() {
       toast.error(e.message || 'Erreur lors du téléchargement du logo');
     } finally {
       setUploading(false);
-      // Reset file input
       if (e.target) e.target.value = '';
     }
   };
@@ -443,50 +437,36 @@ export default function SettingsPage() {
   const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('L\'image ne doit pas dépasser 2 Mo.');
       return;
     }
-
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Veuillez sélectionner une image valide (JPG, PNG, etc.).');
       return;
     }
-
     setUploadingSig(true);
     setError('');
     try {
       const { data: { session } } = await getSupabaseClient().auth.getSession();
       const user = session?.user;
       if (!user) throw new Error('Non authentifié');
-
       const ext = file.name.split('.').pop();
       const fileName = `signature.${ext}`;
       const filePath = `${user.id}/${fileName}`;
-
-      // Upload to the 'logos' bucket with correct path format for RLS
       const { error: uploadError } = await getSupabaseClient()
         .storage
         .from('logos')
         .upload(filePath, file, { upsert: true, contentType: file.type });
-
       if (uploadError) {
         console.error('[Signature Upload] Upload error:', uploadError);
         throw uploadError;
       }
-
-      // Get public URL
       const { data: { publicUrl } } = getSupabaseClient()
         .storage
         .from('logos')
         .getPublicUrl(filePath);
-
-      // Update profile with new signature URL
       await updateProfile({ signature_url: publicUrl } as any);
-
       toast.success('Signature mise à jour avec succès !');
     } catch (e: any) {
       console.error('[Signature Upload] Error:', e);
@@ -494,7 +474,6 @@ export default function SettingsPage() {
       toast.error(e.message || 'Erreur lors du téléchargement de la signature');
     } finally {
       setUploadingSig(false);
-      // Reset file input
       if (e.target) e.target.value = '';
     }
   };
@@ -534,7 +513,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Webhook handlers
   const handleToggleWebhookEvent = (eventValue: string) => {
     setWebhookForm((prev) => ({
       ...prev,
@@ -584,714 +562,837 @@ export default function SettingsPage() {
     finally { setDeletingWebhookId(null); }
   };
 
-  const SECTIONS = [
-    {
-      title: 'Entreprise',
-      fields: (
-        <div className="space-y-3">
-          {/* Logo */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
-                {profile?.logo_url ? (
-                  <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl font-black text-gray-300">{(form.company_name || 'F').charAt(0)}</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <Button variant="secondary" size="sm" icon={<Camera size={14} />} onClick={() => fileRef.current?.click()} loading={uploading}>
-                {profile?.logo_url ? 'Changer' : 'Ajouter un logo'}
-              </Button>
-              <p className="text-xs text-gray-400 mt-1">PNG, JPG · max 2MB</p>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </div>
-          </div>
-          <CompanySearch
-            label="Nom de l'entreprise"
-            value={form.company_name}
-            onChange={(v) => set('company_name', v)}
-            onSelect={(company) => {
-              set('company_name', company.name);
-              if (company.siret) set('siret', company.siret);
-              if (company.address) set('address', company.address);
-              if (company.postal_code) set('postal_code', company.postal_code);
-              if (company.city) set('city', company.city);
-              if (company.vat_number) set('vat_number', company.vat_number);
-            }}
-            placeholder="Rechercher votre entreprise..."
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Prénom" value={form.first_name} onChange={(e) => set('first_name', e.target.value)} />
-            <Input label="Nom" value={form.last_name} onChange={(e) => set('last_name', e.target.value)} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-            <Input label="Téléphone" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
-          </div>
-          <Input label="Adresse" value={form.address} onChange={(e) => set('address', e.target.value)} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label="CP" value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} />
-            <Input label="Ville" value={form.city} onChange={(e) => set('city', e.target.value)} className="sm:col-span-2" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Select label="Statut juridique" value={form.legal_status} onChange={(e) => set('legal_status', e.target.value)} options={[{ value: '', label: 'Choisir...' }, ...LEGAL_STATUSES.map((s) => ({ value: s.value, label: s.label }))]} />
-            <Select label="Secteur" value={form.sector} onChange={(e) => set('sector', e.target.value)} options={[{ value: '', label: 'Choisir...' }, ...SECTORS.map((s) => ({ value: s, label: s }))]} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="SIRET" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
-            <Input label="N° TVA" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Facturation',
-      fields: (
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Préfixe numéro" value={form.invoice_prefix} onChange={(e) => set('invoice_prefix', e.target.value)} placeholder="FACT" />
-            <Select label="Devise" value={form.currency} onChange={(e) => set('currency', e.target.value)} options={CURRENCY_OPTS} />
-          </div>
-          <Textarea label="Conditions de paiement" value={form.payment_terms} onChange={(e) => set('payment_terms', e.target.value)} rows={2} placeholder="Payable sous 30 jours par virement..." />
-          <Textarea label="Mentions légales" value={form.legal_mention} onChange={(e) => set('legal_mention', e.target.value)} rows={2} placeholder="Numéro RCS, capital social..." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="RCS" value={form.rcs_number} onChange={(e) => set('rcs_number', e.target.value)} placeholder="RCS Paris 123 456 789" />
-            <div>
-              <Input label="RM" value={form.rm_number} onChange={(e) => set('rm_number', e.target.value)} placeholder="RM 1234567" />
-              <p className="text-[10px] text-gray-400 mt-0.5">Uniquement pour les artisans</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Capital social" value={form.capital_social} onChange={(e) => set('capital_social', e.target.value)} placeholder="10 000" />
-            <Input label="NAF/APE" value={form.naf_code} onChange={(e) => set('naf_code', e.target.value)} placeholder="6202A" />
-          </div>
-          <Select label="Regime fiscal" value={form.regime_fiscal} onChange={(e) => set('regime_fiscal', e.target.value)} options={[
-            { value: 'reel', label: 'Reel normal' },
-            { value: 'reel_simplifie', label: 'Reel simplifie' },
-            { value: 'micro', label: 'Micro-entreprise' },
-            { value: 'micro_bic', label: 'Micro BIC' },
-            { value: 'micro_bnc', label: 'Micro BNC' },
-            { value: 'autoliquidation', label: 'Autoliquidation' },
-          ]} />
-          <div>
-            <Textarea label="Conditions Generales de Vente" value={form.cgv_text} onChange={(e) => set('cgv_text', e.target.value)} rows={4} placeholder="Saisissez vos CGV ici..." />
-            <p className="text-[10px] text-gray-400 mt-0.5">Ces conditions seront ajoutees automatiquement a vos factures et devis</p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Modèle de facture',
-      fields: (
-        <div className="space-y-4">
-          {profile?.custom_template_html && (
-            <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-xl px-3 py-2.5">
-              <Sparkles size={15} className="text-purple-600 flex-shrink-0" />
-              <p className="text-sm font-semibold text-purple-700">Template personnalisé actif</p>
-              <button onClick={handleResetCustomTemplate} className="ml-auto text-xs text-purple-500 hover:text-purple-700 font-semibold">Réinitialiser</button>
-            </div>
-          )}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { id: '1', name: 'Minimaliste', desc: 'Épuré et moderne',     headerBg: 'bg-primary', headerH: 'h-1', bodyBg: 'bg-white' },
-              { id: '2', name: 'Classique',   desc: 'Sobre et formel',       headerBg: 'bg-gray-900', headerH: 'h-5', bodyBg: 'bg-white' },
-              { id: '3', name: 'Moderne',     desc: 'Dynamique et coloré',   headerBg: 'bg-primary',  headerH: 'h-5', bodyBg: 'bg-white' },
-              { id: '4', name: 'Élégant',     desc: 'Chaleureux et raffiné', headerBg: 'bg-amber-200', headerH: 'h-1', bodyBg: 'bg-amber-50' },
-              { id: '5', name: 'Corporate',   desc: 'Structuré et pro',      headerBg: 'bg-slate-800', headerH: 'h-5', bodyBg: 'bg-white' },
-              { id: '6', name: 'Nature',      desc: 'Frais et organique',    headerBg: 'bg-green-700', headerH: 'h-5', bodyBg: 'bg-green-50' },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => { if (!profile?.custom_template_html) set('template_id', t.id); }}
-                className={`relative p-3 rounded-xl border-2 text-center transition-all ${
-                  profile?.custom_template_html ? 'opacity-40 cursor-not-allowed' :
-                  form.template_id === t.id ? 'border-primary shadow-md bg-primary/5' : 'border-gray-200 hover:border-gray-300 bg-white'
-                }`}
-              >
-                {/* Mini invoice preview */}
-                <div className={`w-full h-16 rounded-lg ${t.bodyBg} mb-2 overflow-hidden border border-gray-100 flex flex-col`}>
-                  <div className={`${t.headerBg} ${t.headerH} w-full`} />
-                  <div className="flex-1 p-1.5 space-y-1">
-                    <div className="bg-gray-200 h-1.5 rounded-full w-2/3" />
-                    <div className="bg-gray-100 h-1 rounded-full w-full" />
-                    <div className="bg-gray-100 h-1 rounded-full w-4/5" />
-                    <div className="bg-gray-200 h-1 rounded-full w-1/2" />
-                  </div>
-                </div>
-                <p className="text-xs font-bold text-gray-900">{t.name}</p>
-                <p className="text-[10px] text-gray-400">{t.desc}</p>
-                {form.template_id === t.id && !profile?.custom_template_html && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center">
-                    <CheckCircle2 size={10} />
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
+  // ── Section Renderers ──────────────────────────────────────────────────────
 
-          {/* AI Template Upload - Pro only */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={14} className={sub.canUseCustomTemplate ? 'text-purple-500' : 'text-gray-300'} />
-              <h4 className="text-sm font-bold text-gray-900">Importer un template avec l'IA</h4>
-              {!sub.canUseCustomTemplate && (
-                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">PRO</span>
-              )}
-            </div>
-            <p className="text-xs text-gray-400 mb-3">Uploadez une facture et l'IA créera un template basé sur son style.</p>
-
-            {sub.canUseCustomTemplate ? (
-              <div className="space-y-3">
-                <div
-                  onClick={() => templateFileRef.current?.click()}
-                  className="relative rounded-xl border-2 border-dashed p-4 text-center transition-all cursor-pointer border-gray-200 hover:border-primary/40 hover:bg-gray-50"
-                >
-                  <input ref={templateFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleAnalyzeTemplate} />
-                  {analyzingTemplate ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-xs font-semibold text-gray-600">L'IA analyse votre facture...</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload size={20} className="text-gray-400" />
-                      <p className="text-xs font-semibold text-gray-600">Glissez ou <span className="text-primary">parcourez</span></p>
-                      <p className="text-[10px] text-gray-400">PNG, JPG, PDF</p>
-                    </div>
-                  )}
-                </div>
-
-                {analyzedTemplateHtml && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
-                      <CheckCircle2 size={14} className="text-green-600" />
-                      <div>
-                        <p className="text-xs font-bold text-green-700">Template généré</p>
-                        <p className="text-[10px] text-green-600">{analyzedStyleDesc}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowTemplatePreview(true)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:border-primary hover:text-primary transition-colors"
-                      >
-                        <Eye size={13} /> Aperçu
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveCustomTemplate}
-                        disabled={savingTemplate}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-colors disabled:opacity-50"
-                      >
-                        {savingTemplate ? (
-                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={13} />
-                        )}
-                        Sauvegarder comme mon template
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {templateError && (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                    <AlertTriangle size={13} className="text-red-500" />
-                    <p className="text-xs text-red-600">{templateError}</p>
-                  </div>
-                )}
-              </div>
+  const renderCompanySection = () => (
+    <div className="space-y-4">
+      {/* Logo */}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 overflow-hidden flex items-center justify-center">
+            {profile?.logo_url ? (
+              <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-center">
-                <p className="text-xs text-gray-400">Disponible avec le plan Pro</p>
-                <button onClick={() => router.push('/paywall')} className="mt-2 text-xs text-primary font-bold hover:underline">Voir les offres →</button>
-              </div>
+              <span className="text-2xl font-black text-slate-500">{(form.company_name || 'F').charAt(0)}</span>
             )}
           </div>
         </div>
-      ),
-    },
-    {
-      title: 'Coordonnées bancaires',
-      fields: (
-        <div className="space-y-3">
-          <Input label="Banque" value={form.bank_name} onChange={(e) => set('bank_name', e.target.value)} placeholder="BNP Paribas" />
-          <Input label="IBAN" value={form.iban} onChange={(e) => set('iban', e.target.value)} placeholder="FR76 1234 5678 9012 3456 7890 123" />
-          <Input label="BIC/SWIFT" value={form.bic} onChange={(e) => set('bic', e.target.value)} placeholder="BNPAFRPP" />
+        <div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Camera size={14} />
+            )}
+            {profile?.logo_url ? 'Changer' : 'Ajouter un logo'}
+          </button>
+          <p className="text-xs text-slate-500 mt-1">PNG, JPG · max 2MB</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
         </div>
-      ),
-    },
-    {
-      title: 'Paiement en ligne (Stripe)',
-      fields: (
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Connectez votre compte Stripe professionnel pour accepter des paiements en ligne directement sur vos factures. Les fonds arrivent directement sur votre compte Stripe.
-          </p>
+      </div>
+      <CompanySearch
+        label="Nom de l'entreprise"
+        value={form.company_name}
+        onChange={(v) => set('company_name', v)}
+        onSelect={(company) => {
+          set('company_name', company.name);
+          if (company.siret) set('siret', company.siret);
+          if (company.address) set('address', company.address);
+          if (company.postal_code) set('postal_code', company.postal_code);
+          if (company.city) set('city', company.city);
+          if (company.vat_number) set('vat_number', company.vat_number);
+        }}
+        placeholder="Rechercher votre entreprise..."
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Prénom" value={form.first_name} onChange={(e) => set('first_name', e.target.value)} />
+        <Input label="Nom" value={form.last_name} onChange={(e) => set('last_name', e.target.value)} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+        <Input label="Téléphone" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+      </div>
+      <Input label="Adresse" value={form.address} onChange={(e) => set('address', e.target.value)} />
+      <div className="grid grid-cols-3 gap-3">
+        <Input label="CP" value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} />
+        <Input label="Ville" value={form.city} onChange={(e) => set('city', e.target.value)} className="col-span-2" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Select label="Statut juridique" value={form.legal_status} onChange={(e) => set('legal_status', e.target.value)} options={[{ value: '', label: 'Choisir...' }, ...LEGAL_STATUSES.map((s) => ({ value: s.value, label: s.label }))]} />
+        <Select label="Secteur" value={form.sector} onChange={(e) => set('sector', e.target.value)} options={[{ value: '', label: 'Choisir...' }, ...SECTORS.map((s) => ({ value: s, label: s }))]} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="SIRET" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
+        <Input label="N° TVA" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
+      </div>
+    </div>
+  );
 
-          {stripeStatus === 'connected' && (
-            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
-              <CheckCircle2 size={15} className="text-green-600 flex-shrink-0" />
-              <p className="text-sm font-semibold text-green-700">Stripe connecté avec succès !</p>
-            </div>
-          )}
-          {stripeStatus === 'error' && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-              <XCircle size={15} className="text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-600">Erreur lors de la connexion. Réessayez.</p>
-            </div>
-          )}
-
-          {profile?.stripe_connect_account_id ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3.5 bg-green-50 rounded-xl border border-green-100">
-                <div className="w-9 h-9 rounded-lg bg-white border border-green-200 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 size={16} className="text-green-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-green-800">Compte Stripe connecté</p>
-                  <p className="text-xs text-green-600 font-mono truncate">{profile.stripe_connect_account_id}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                <Link2 size={14} className="text-blue-500 flex-shrink-0" />
-                <p className="text-xs text-blue-700">
-                  Un bouton <strong>Payer en ligne</strong> apparaît sur vos factures. Les paiements arrivent directement sur votre compte Stripe.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleDisconnectStripe}
-                disabled={stripeConnectLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-              >
-                <Unlink size={14} />
-                Déconnecter Stripe
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                {[
-                  { label: 'Paiement par carte', desc: 'Visa, Mastercard, Amex' },
-                  { label: 'Virement direct', desc: 'Les fonds vont sur votre Stripe' },
-                  { label: 'Mise à jour auto', desc: 'Facture passée en "Payée"' },
-                ].map((f) => (
-                  <div key={f.label} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-xs font-bold text-gray-700">{f.label}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={handleConnectStripe}
-                disabled={stripeConnectLoading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#635BFF] text-white text-sm font-bold hover:bg-[#4F46E5] transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {stripeConnectLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Link2 size={15} />
-                )}
-                Connecter avec Stripe
-              </button>
-            </div>
-          )}
+  const renderBillingSection = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Préfixe numéro" value={form.invoice_prefix} onChange={(e) => set('invoice_prefix', e.target.value)} placeholder="FACT" />
+        <Select label="Devise" value={form.currency} onChange={(e) => set('currency', e.target.value)} options={CURRENCY_OPTS} />
+      </div>
+      <Textarea label="Conditions de paiement" value={form.payment_terms} onChange={(e) => set('payment_terms', e.target.value)} rows={2} placeholder="Payable sous 30 jours par virement..." />
+      <Textarea label="Mentions légales" value={form.legal_mention} onChange={(e) => set('legal_mention', e.target.value)} rows={2} placeholder="Numéro RCS, capital social..." />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="RCS" value={form.rcs_number} onChange={(e) => set('rcs_number', e.target.value)} placeholder="RCS Paris 123 456 789" />
+        <div>
+          <Input label="RM" value={form.rm_number} onChange={(e) => set('rm_number', e.target.value)} placeholder="RM 1234567" />
+          <p className="text-[10px] text-slate-500 mt-0.5">Uniquement pour les artisans</p>
         </div>
-      ),
-    },
-    {
-      title: 'Paiement en ligne (SumUp)',
-      fields: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Acceptez des paiements en ligne directement sur vos factures avec SumUp.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowSumupTutorial(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-            >
-              <HelpCircle size={12} />
-              Comment ça marche ?
-            </button>
-          </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Capital social" value={form.capital_social} onChange={(e) => set('capital_social', e.target.value)} placeholder="10 000" />
+        <Input label="NAF/APE" value={form.naf_code} onChange={(e) => set('naf_code', e.target.value)} placeholder="6202A" />
+      </div>
+      <Select label="Régime fiscal" value={form.regime_fiscal} onChange={(e) => set('regime_fiscal', e.target.value)} options={[
+        { value: 'reel', label: 'Réel normal' },
+        { value: 'reel_simplifie', label: 'Réel simplifié' },
+        { value: 'micro', label: 'Micro-entreprise' },
+        { value: 'micro_bic', label: 'Micro BIC' },
+        { value: 'micro_bnc', label: 'Micro BNC' },
+        { value: 'autoliquidation', label: 'Autoliquidation' },
+      ]} />
+      <div>
+        <Textarea label="Conditions Générales de Vente" value={form.cgv_text} onChange={(e) => set('cgv_text', e.target.value)} rows={4} placeholder="Saisissez vos CGV ici..." />
+        <p className="text-[10px] text-slate-500 mt-0.5">Ces conditions seront ajoutées automatiquement à vos factures et devis</p>
+      </div>
+    </div>
+  );
 
-          {sumupConnected ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3.5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800/40">
-                <div className="w-9 h-9 rounded-lg bg-white dark:bg-green-900/40 border border-green-200 dark:border-green-700 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 size={16} className="text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-green-800 dark:text-green-300">Compte SumUp connecté</p>
-                    <span className="px-1.5 py-0.5 rounded-full bg-green-200 dark:bg-green-800 text-[9px] font-bold text-green-700 dark:text-green-300 uppercase">Actif</span>
-                  </div>
-                  <p className="text-xs text-green-600 dark:text-green-400 font-mono truncate">{sumupMerchantCode}</p>
-                  {sumupTokenExpiresAt && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-[10px] text-green-500 dark:text-green-500">
-                        Token expire: {new Date(sumupTokenExpiresAt).toLocaleDateString('fr-FR')}
-                      </p>
-                      {new Date(sumupTokenExpiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
-                        <button
-                          type="button"
-                          onClick={handleConnectSumUp}
-                          className="text-[10px] font-semibold text-amber-600 hover:text-amber-700 underline"
-                        >
-                          Reconnecter
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+  const renderTemplateSection = () => (
+    <div className="space-y-4">
+      {profile?.custom_template_html && (
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+          <Sparkles size={15} className="text-emerald-400 flex-shrink-0" />
+          <p className="text-sm font-semibold text-emerald-300">Template personnalisé actif</p>
+          <button onClick={handleResetCustomTemplate} className="ml-auto text-xs text-emerald-400/70 hover:text-emerald-300 font-semibold transition-colors">Réinitialiser</button>
+        </div>
+      )}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[
+          { id: '1', name: 'Minimaliste', desc: 'Épuré', headerColor: '#1D9E75', headerH: 'h-1' },
+          { id: '2', name: 'Classique', desc: 'Sobre', headerColor: '#1e293b', headerH: 'h-5' },
+          { id: '3', name: 'Moderne', desc: 'Coloré', headerColor: '#1D9E75', headerH: 'h-5' },
+          { id: '4', name: 'Élégant', desc: 'Chaleureux', headerColor: '#fbbf24', headerH: 'h-1' },
+          { id: '5', name: 'Corporate', desc: 'Pro', headerColor: '#475569', headerH: 'h-5' },
+          { id: '6', name: 'Nature', desc: 'Organique', headerColor: '#15803d', headerH: 'h-5' },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => { if (!profile?.custom_template_html) set('template_id', t.id); }}
+            className={`relative p-3 rounded-xl border text-center transition-all duration-300 ${
+              profile?.custom_template_html ? 'opacity-40 cursor-not-allowed border-white/5 bg-slate-800/20'
+              : form.template_id === t.id
+                ? 'border-emerald-500/50 bg-emerald-500/10'
+                : 'border-white/5 bg-slate-800/20 hover:border-white/10'
+            }`}
+            style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+          >
+            <div className="w-full h-14 rounded-lg bg-slate-700/30 mb-2 overflow-hidden flex flex-col border border-white/5">
+              <div style={{ backgroundColor: t.headerColor }} className={`${t.headerH} w-full`} />
+              <div className="flex-1 p-1.5 space-y-1">
+                <div className="bg-slate-600/40 h-1.5 rounded-full w-2/3" />
+                <div className="bg-slate-600/20 h-1 rounded-full w-full" />
+                <div className="bg-slate-600/20 h-1 rounded-full w-4/5" />
               </div>
-
-              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/40">
-                <Link2 size={14} className="text-blue-500 flex-shrink-0" />
-                <p className="text-xs text-blue-700 dark:text-blue-400">
-                  Un bouton <strong>Payer avec SumUp</strong> apparaît sur vos factures. Les paiements arrivent directement sur votre compte SumUp.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDisconnectSumUp}
-                disabled={sumupLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/40 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-              >
-                <Unlink size={14} />
-                Déconnecter SumUp
-              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Status badge - disconnected */}
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Non connecté</span>
+            <p className="text-xs font-bold text-white">{t.name}</p>
+            <p className="text-[10px] text-slate-500">{t.desc}</p>
+            {form.template_id === t.id && !profile?.custom_template_html && (
+              <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                <CheckCircle2 size={10} />
               </div>
+            )}
+          </button>
+        ))}
+      </div>
 
-              {/* Feature highlights */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {[
-                  { label: 'Carte', desc: 'Visa, Mastercard', icon: CreditCard },
-                  { label: 'Terminal', desc: 'En personne', icon: Smartphone },
-                  { label: 'Auto', desc: 'Statut mis à jour', icon: RefreshCw },
-                ].map((f) => (
-                  <div key={f.label} className="p-2.5 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-gray-700/40">
-                    <f.icon size={16} className="text-gray-400 mx-auto mb-1" />
-                    <p className="text-[10px] font-semibold text-gray-700 dark:text-gray-300">{f.label}</p>
-                    <p className="text-[9px] text-gray-400">{f.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* OAuth connect button */}
-              <button
-                type="button"
-                onClick={handleConnectSumUp}
-                disabled={sumupLoading}
-                className="w-full relative overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-[#1D9E75] via-[#188A66] to-[#166958] transition-all duration-300 rounded-xl group-hover:scale-[1.02]" />
-                <div className="relative flex items-center justify-center gap-2 py-3 px-4">
-                  {sumupLoading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Lock size={18} className="text-white" />
-                      <span className="text-white font-semibold">Connecter avec SumUp</span>
-                    </>
-                  )}
-                </div>
-              </button>
-
-              <p className="text-[10px] text-gray-400 text-center">
-                Vous serez redirigé vers SumUp pour autoriser l'accès à votre compte en toute sécurité.
-              </p>
-            </div>
+      {/* AI Template Upload */}
+      <div className="pt-4 border-t border-white/5">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={14} className={sub.canUseCustomTemplate ? 'text-emerald-400' : 'text-slate-600'} />
+          <h4 className="text-sm font-bold text-white">Importer un template avec l'IA</h4>
+          {!sub.canUseCustomTemplate && (
+            <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">PRO</span>
           )}
         </div>
-      ),
-    },
-    {
-      title: 'Signature électronique',
-      fields: (
-        <div className="space-y-4">
+        <p className="text-xs text-slate-500 mb-3">Uploadez une facture et l'IA créera un template basé sur son style.</p>
+
+        {sub.canUseCustomTemplate ? (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
-
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center flex-shrink-0">
-                  <PenTool size={18} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">À quoi sert la signature électronique ?</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Votre signature manuscrite sera <strong>ajoutée automatiquement en bas de tous vos documents PDF</strong> (factures, devis, avoirs) que vous générez. Cela donne un aspect professionnel et authentique à vos documents, comme s'ils étaient signés à la main.
-                  </p>
-                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                    <strong className="text-blue-600 dark:text-blue-400">Note :</strong> Cette signature est différente de la signature client par email (disponible avec Pro). Ici, c'est VOTRE signature qui apparaît sur vos documents.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="w-48 h-24 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {profile?.signature_url ? (
-                <img src={profile.signature_url} alt="Signature" className="max-w-full max-h-full object-contain p-2" />
-              ) : (
-                <div className="text-center">
-                  <PenTool size={20} className="text-gray-300 mx-auto mb-1" />
-                  <p className="text-xs text-gray-400">Aucune signature</p>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Button variant="secondary" size="sm" icon={<Camera size={14} />} onClick={() => sigFileRef.current?.click()} loading={uploadingSig}>
-                {profile?.signature_url ? 'Changer la signature' : 'Importer une signature'}
-              </Button>
-              {profile?.signature_url && (
-                <button type="button" onClick={handleRemoveSignature} className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors">
-                  <X size={12} />
-                  Supprimer la signature
-                </button>
-              )}
-              <p className="text-xs text-gray-400">PNG transparent recommandé · max 1MB</p>
-              <input ref={sigFileRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
-            </div>
-          </div>
-          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-xs text-blue-700">
-              <strong>Conseil :</strong> Signez sur une feuille blanche, prenez une photo, puis utilisez un outil en ligne pour supprimer le fond et exporter en PNG transparent.
-            </p>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Préférences',
-      fields: (
-        <div className="space-y-3">
-          <Select label="Langue" value={form.language} onChange={(e) => set('language', e.target.value)} options={LANG_OPTS} />
-
-          {/* Raccourcis clavier */}
-          <div className="flex items-center justify-between py-3 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <Keyboard size={18} className="text-gray-500 dark:text-gray-400" />
-              <div>
-                <label className="text-sm font-semibold text-gray-900 dark:text-white block">Raccourcis clavier</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
-                    ? 'Désactivés — Utilisez le bouton ? pour réactiver'
-                    : 'Activés — Appuyez sur ? pour voir la liste'}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const { areShortcutsDisabled, setShortcutsDisabled } = require('@/hooks/useKeyboardShortcuts');
-                const newState = !areShortcutsDisabled();
-                setShortcutsDisabled(newState);
-                toast.success(newState ? 'Raccourcis clavier désactivés' : 'Raccourcis clavier activés');
-                forceUpdate();
-              }}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
-                  ? 'bg-primary shadow-lg shadow-primary/30'
-                  : 'bg-gray-300 dark:bg-gray-600'
-              }`}
+            <div
+              onClick={() => templateFileRef.current?.click()}
+              className="rounded-xl border-2 border-dashed border-white/10 p-4 text-center transition-all cursor-pointer hover:border-emerald-500/30 hover:bg-emerald-500/5"
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition shadow-sm ${
-                  !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
-                    ? 'translate-x-6'
-                    : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 block mb-2">Couleur accent</label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setAccentOpen(true)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-              >
-                <div
-                  className="w-6 h-6 rounded-full border border-gray-200 dark:border-slate-600"
-                  style={{ backgroundColor: form.accent_color }}
-                />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{form.accent_color}</span>
-                <Palette size={14} className="text-gray-400" />
-              </button>
-              <span className="text-xs text-gray-400 dark:text-gray-500">Cliquez pour personnaliser</span>
+              <input ref={templateFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleAnalyzeTemplate} />
+              {analyzingTemplate ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs font-semibold text-slate-400">L'IA analyse votre facture...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload size={20} className="text-slate-500" />
+                  <p className="text-xs font-semibold text-slate-400">Glissez ou <span className="text-emerald-400">parcourez</span></p>
+                  <p className="text-[10px] text-slate-600">PNG, JPG, PDF</p>
+                </div>
+              )}
             </div>
 
-            {/* Accent Color Dialog */}
-            <Dialog open={accentOpen} onOpenChange={setAccentOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Palette className="h-5 w-5" />
-                    Choisir la couleur accent
-                  </DialogTitle>
-                  <DialogDescription>
-                    Personnalisez la couleur principale de votre espace de travail
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogBody>
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="mb-2 block text-sm font-medium">Couleurs prédéfinies</Label>
-                      <div className="grid grid-cols-8 gap-2">
-                        {ACCENT_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            className={`h-10 w-10 rounded-full border-2 transition-all cursor-pointer ${
-                              form.accent_color === c
-                                ? 'border-foreground dark:border-white scale-110'
-                                : 'hover:scale-105 border-transparent'
-                            }`}
-                            style={{ backgroundColor: c }}
-                            onClick={() => { set('accent_color', c); setAccentOpen(false); }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="mb-2 block text-sm font-medium">Couleur personnalisée</Label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={form.accent_color}
-                          onChange={(e) => set('accent_color', e.target.value)}
-                          className="h-10 w-10 cursor-pointer rounded-md border p-0"
-                        />
-                        <input
-                          type="text"
-                          value={form.accent_color}
-                          onChange={(e) => {
-                            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                              set('accent_color', e.target.value);
-                            }
-                          }}
-                          placeholder="#000000"
-                          className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                    <div
-                      className="rounded-lg border border-gray-200 dark:border-slate-700 p-4"
-                      style={{ backgroundColor: form.accent_color + '20' }}
-                    >
-                      <p className="text-sm font-medium" style={{ color: form.accent_color }}>
-                        Aperçu : voici comment votre couleur accent apparaîtra dans l'application.
-                      </p>
-                    </div>
+            {analyzedTemplateHtml && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+                  <CheckCircle2 size={14} className="text-emerald-400" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-300">Template généré</p>
+                    <p className="text-[10px] text-emerald-400/70">{analyzedStyleDesc}</p>
                   </div>
-                </DialogBody>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline" onClick={() => setAccentOpen(false)}>Fermer</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      ),
-    },
-  ];
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplatePreview(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-xs font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors"
+                  >
+                    <Eye size={13} /> Aperçu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomTemplate}
+                    disabled={savingTemplate}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                  >
+                    {savingTemplate ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={13} />
+                    )}
+                    Sauvegarder
+                  </button>
+                </div>
+              </div>
+            )}
 
-  return (
-    <>
-      <h1 className="sr-only">Paramètres - Factu.me</h1>
-      <main aria-label="Paramètres du compte">
-        <div className="space-y-4 max-w-2xl">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-gray-900">Paramètres</h2>
-            {!sub.isFree && (
-              <div className="flex items-center gap-1.5 bg-primary-light px-3 py-1.5 rounded-full">
-                <Crown size={14} className="text-primary" />
-                <span className="text-xs font-bold text-primary capitalize">{sub.tier}</span>
+            {templateError && (
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                <AlertTriangle size={13} className="text-red-400" />
+                <p className="text-xs text-red-400">{templateError}</p>
               </div>
             )}
           </div>
-
-          {/* Subscription banner */}
-          {sub.isFree && (
-            <button onClick={() => router.push('/paywall')} className="w-full bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-4 flex items-center gap-3 hover:opacity-95 transition-opacity text-left">
-              <Crown size={22} className="text-yellow-300 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-white">Passer à Solo ou Pro</p>
-            <p className="text-sm text-primary-light/80">Factures illimitées, dictée vocale, templates...</p>
+        ) : (
+          <div className="p-3 bg-slate-800/30 rounded-xl border border-white/5 text-center">
+            <p className="text-xs text-slate-500">Disponible avec le plan Pro</p>
+            <button onClick={() => router.push('/paywall')} className="mt-2 text-xs text-emerald-400 font-bold hover:text-emerald-300 transition-colors">Voir les offres →</button>
           </div>
-        </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderBankSection = () => (
+    <div className="space-y-4">
+      <Input label="Banque" value={form.bank_name} onChange={(e) => set('bank_name', e.target.value)} placeholder="BNP Paribas" />
+      <Input label="IBAN" value={form.iban} onChange={(e) => set('iban', e.target.value)} placeholder="FR76 1234 5678 9012 3456 7890 123" />
+      <Input label="BIC/SWIFT" value={form.bic} onChange={(e) => set('bic', e.target.value)} placeholder="BNPAFRPP" />
+    </div>
+  );
+
+  const renderStripeSection = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-400">
+        Connectez votre compte Stripe professionnel pour accepter des paiements en ligne directement sur vos factures.
+      </p>
+
+      {stripeStatus === 'connected' && (
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2.5">
+          <CheckCircle2 size={15} className="text-emerald-400 flex-shrink-0" />
+          <p className="text-sm font-semibold text-emerald-300">Stripe connecté avec succès !</p>
+        </div>
+      )}
+      {stripeStatus === 'error' && (
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+          <XCircle size={15} className="text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-400">Erreur lors de la connexion. Réessayez.</p>
+        </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-4">
-        {SECTIONS.map(({ title, fields }) => (
-          <div key={title} className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4">
-            <h3 className="font-bold text-gray-900 mb-4">{title}</h3>
-            {fields}
+      {profile?.stripe_connect_account_id ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={16} className="text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-emerald-300">Compte Stripe connecté</p>
+              <p className="text-xs text-emerald-400/60 font-mono truncate">{profile.stripe_connect_account_id}</p>
+            </div>
           </div>
-        ))}
-
-        {error && <p className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{error}</p>}
-        <Button type="submit" className="w-full" size="lg" loading={saving}>
-          {saved ? 'Enregistré !' : 'Enregistrer les modifications'}
-        </Button>
-      </form>
-
-      {/* Team management - Business only */}
-      {sub.isBusiness && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                <Users size={16} className="text-purple-600 dark:text-purple-400" />
+          <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+            <Link2 size={14} className="text-blue-400 flex-shrink-0" />
+            <p className="text-xs text-blue-300">
+              Un bouton <strong>Payer en ligne</strong> apparaît sur vos factures. Les paiements arrivent directement sur votre compte Stripe.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDisconnectStripe}
+            disabled={stripeConnectLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+          >
+            <Unlink size={14} />
+            Déconnecter Stripe
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+            {[
+              { label: 'Paiement par carte', desc: 'Visa, Mastercard, Amex' },
+              { label: 'Virement direct', desc: 'Les fonds vont sur votre Stripe' },
+              { label: 'Mise à jour auto', desc: 'Facture passée en "Payée"' },
+            ].map((f) => (
+              <div key={f.label} className="p-3 bg-slate-800/30 rounded-xl border border-white/5">
+                <p className="text-xs font-bold text-slate-300">{f.label}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{f.desc}</p>
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 dark:text-white">Équipe</h3>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Invitez des collaborateurs et attribuez des rôles</p>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={handleConnectStripe}
+            disabled={stripeConnectLoading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#635BFF] text-white text-sm font-bold hover:bg-[#4F46E5] transition-colors disabled:opacity-50"
+          >
+            {stripeConnectLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Link2 size={15} />
+            )}
+            Connecter avec Stripe
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSumUpSection = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          Acceptez des paiements en ligne directement sur vos factures avec SumUp.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowSumupTutorial(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-slate-300 hover:bg-white/5 transition-colors"
+        >
+          <HelpCircle size={12} />
+          Aide
+        </button>
+      </div>
+
+      {sumupConnected ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={16} className="text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-emerald-300">Compte SumUp connecté</p>
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400 uppercase">Actif</span>
+              </div>
+              <p className="text-xs text-emerald-400/60 font-mono truncate">{sumupMerchantCode}</p>
+              {sumupTokenExpiresAt && (
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-[10px] text-slate-500">
+                    Token expire : {new Date(sumupTokenExpiresAt).toLocaleDateString('fr-FR')}
+                  </p>
+                  {new Date(sumupTokenExpiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
+                    <button
+                      type="button"
+                      onClick={handleConnectSumUp}
+                      className="text-[10px] font-semibold text-amber-400 hover:text-amber-300 underline transition-colors"
+                    >
+                      Reconnecter
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+            <Link2 size={14} className="text-blue-400 flex-shrink-0" />
+            <p className="text-xs text-blue-300">
+              Un bouton <strong>Payer avec SumUp</strong> apparaît sur vos factures.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDisconnectSumUp}
+            disabled={sumupLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+          >
+            <Unlink size={14} />
+            Déconnecter SumUp
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-[10px] font-bold text-red-400 uppercase">Non connecté</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: 'Carte', desc: 'Visa, Mastercard', icon: CreditCard },
+              { label: 'Terminal', desc: 'En personne', icon: Smartphone },
+              { label: 'Auto', desc: 'Statut mis à jour', icon: RefreshCw },
+            ].map((f) => (
+              <div key={f.label} className="p-2.5 bg-slate-800/30 rounded-lg border border-white/5">
+                <f.icon size={16} className="text-slate-500 mx-auto mb-1" />
+                <p className="text-[10px] font-semibold text-slate-300">{f.label}</p>
+                <p className="text-[9px] text-slate-500">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={handleConnectSumUp}
+            disabled={sumupLoading}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-400 transition-colors disabled:opacity-50"
+          >
+            {sumupLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Lock size={18} />
+                <span>Connecter avec SumUp</span>
+              </>
+            )}
+          </button>
+          <p className="text-[10px] text-slate-500 text-center">
+            Vous serez redirigé vers SumUp pour autoriser l'accès à votre compte en toute sécurité.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSignatureSection = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-400">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
+
+      <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/15">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <PenTool size={18} className="text-blue-400" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-white mb-1">À quoi sert la signature électronique ?</h4>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Votre signature manuscrite sera <strong className="text-slate-300">ajoutée automatiquement en bas de tous vos documents PDF</strong>. Cela donne un aspect professionnel et authentique à vos documents.
+            </p>
+            <div className="mt-2 text-xs text-slate-500">
+              <strong className="text-blue-400">Note :</strong> Cette signature est différente de la signature client par email (disponible avec Pro). Ici, c'est VOTRE signature.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-start gap-4">
+        <div className="w-full sm:w-48 h-24 rounded-xl border-2 border-dashed border-white/10 bg-slate-800/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {profile?.signature_url ? (
+            <img src={profile.signature_url} alt="Signature" className="max-w-full max-h-full object-contain p-2" />
+          ) : (
+            <div className="text-center">
+              <PenTool size={20} className="text-slate-600 mx-auto mb-1" />
+              <p className="text-xs text-slate-500">Aucune signature</p>
+            </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => sigFileRef.current?.click()}
+            disabled={uploadingSig}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+          >
+            {uploadingSig ? (
+              <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Camera size={14} />
+            )}
+            {profile?.signature_url ? 'Changer la signature' : 'Importer une signature'}
+          </button>
+          {profile?.signature_url && (
+            <button type="button" onClick={handleRemoveSignature} className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors">
+              <X size={12} />
+              Supprimer la signature
+            </button>
+          )}
+          <p className="text-xs text-slate-500">PNG transparent recommandé · max 1MB</p>
+          <input ref={sigFileRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
+        </div>
+      </div>
+      <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/15">
+        <p className="text-xs text-blue-300">
+          <strong>Conseil :</strong> Signez sur une feuille blanche, prenez une photo, puis utilisez un outil en ligne pour supprimer le fond et exporter en PNG transparent.
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderPreferencesSection = () => (
+    <div className="space-y-4">
+      <Select label="Langue" value={form.language} onChange={(e) => set('language', e.target.value)} options={LANG_OPTS} />
+
+      {/* Keyboard shortcuts */}
+      <div className="flex items-center justify-between py-3 px-4 bg-slate-800/30 rounded-xl border border-white/5">
+        <div className="flex items-center gap-3">
+          <Keyboard size={18} className="text-slate-400" />
+          <div>
+            <label className="text-sm font-semibold text-white block">Raccourcis clavier</label>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+                ? 'Désactivés — Utilisez le bouton ? pour réactiver'
+                : 'Activés — Appuyez sur ? pour voir la liste'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const { areShortcutsDisabled, setShortcutsDisabled } = require('@/hooks/useKeyboardShortcuts');
+            const newState = !areShortcutsDisabled();
+            setShortcutsDisabled(newState);
+            toast.success(newState ? 'Raccourcis clavier désactivés' : 'Raccourcis clavier activés');
+            forceUpdate();
+          }}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
+            !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+              ? 'bg-emerald-500'
+              : 'bg-slate-700'
+          }`}
+          style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
+              !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+                ? 'translate-x-6'
+                : 'translate-x-1'
+            }`}
+            style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+          />
+        </button>
+      </div>
+
+      {/* Accent color */}
+      <div>
+        <label className="text-sm font-semibold text-slate-300 block mb-2">Couleur accent</label>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setAccentOpen(true)}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/10 bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <div
+              className="w-6 h-6 rounded-full border border-white/10"
+              style={{ backgroundColor: form.accent_color }}
+            />
+            <span className="text-sm font-medium text-slate-300">{form.accent_color}</span>
+            <Palette size={14} className="text-slate-500" />
+          </button>
+          <span className="text-xs text-slate-500">Cliquez pour personnaliser</span>
+        </div>
+
+        <Dialog open={accentOpen} onOpenChange={setAccentOpen}>
+          <DialogContent className="sm:max-w-md bg-slate-900 border border-white/10">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Palette className="h-5 w-5" />
+                Choisir la couleur accent
+              </DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Personnalisez la couleur principale de votre espace de travail
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block text-sm font-medium text-slate-300">Couleurs prédéfinies</Label>
+                  <div className="grid grid-cols-8 gap-2">
+                    {ACCENT_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`h-10 w-10 rounded-full border-2 transition-all cursor-pointer ${
+                          form.accent_color === c
+                            ? 'border-white scale-110'
+                            : 'hover:scale-105 border-transparent'
+                        }`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => { set('accent_color', c); setAccentOpen(false); }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2 block text-sm font-medium text-slate-300">Couleur personnalisée</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={form.accent_color}
+                      onChange={(e) => set('accent_color', e.target.value)}
+                      className="h-10 w-10 cursor-pointer rounded-md border border-white/10 bg-transparent p-0"
+                    />
+                    <input
+                      type="text"
+                      value={form.accent_color}
+                      onChange={(e) => {
+                        if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                          set('accent_color', e.target.value);
+                        }
+                      }}
+                      placeholder="#000000"
+                      className="flex-1 px-3 py-2 text-sm border border-white/10 bg-slate-800/50 text-white rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50"
+                    />
+                  </div>
+                </div>
+                <div
+                  className="rounded-xl border border-white/10 p-4"
+                  style={{ backgroundColor: form.accent_color + '20' }}
+                >
+                  <p className="text-sm font-medium" style={{ color: form.accent_color }}>
+                    Aperçu : voici comment votre couleur accent apparaîtra dans l'application.
+                  </p>
+                </div>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" onClick={() => setAccentOpen(false)}>Fermer</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+
+  const renderWebhooksSection = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">
+          Recevez des notifications HTTP POST quand une facture est créée, envoyée ou payée.
+        </p>
+        <button
+          onClick={() => { setWebhookForm({ url: '', events: [] }); setShowWebhookModal(true); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-400 transition-colors"
+        >
+          <Plus size={13} />
+          Ajouter
+        </button>
+      </div>
+
+      {webhooks.length === 0 ? (
+        <div className="text-center py-8 rounded-xl border border-dashed border-white/10">
+          <Globe size={22} className="text-slate-600 mx-auto mb-2" />
+          <p className="text-sm text-slate-400">Aucun webhook configuré</p>
+          <p className="text-xs text-slate-600 mt-1">Ajoutez une URL pour recevoir des notifications</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {webhooks.map((wh) => (
+            <div key={wh.id} className="flex items-start gap-3 p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-sm font-semibold text-white truncate">{wh.url}</p>
+                  <span className={`flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    wh.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'
+                  }`}>
+                    {wh.active ? 'Actif' : 'Inactif'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {wh.events.map((ev) => (
+                    <span key={ev} className="text-[10px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded-md font-medium">
+                      {ev}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button
+                  onClick={() => handleToggleWebhookActive(wh)}
+                  className="text-xs text-slate-500 hover:text-emerald-400 transition-colors font-medium"
+                  title={wh.active ? 'Désactiver' : 'Activer'}
+                >
+                  {wh.active ? 'Désactiver' : 'Activer'}
+                </button>
+                <button
+                  onClick={() => handleDeleteWebhook(wh.id)}
+                  disabled={deletingWebhookId === wh.id}
+                  className="text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
-            <Link
-              href="/settings/team"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-all flex-shrink-0"
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAccountSection = () => (
+    <div className="space-y-4">
+      {/* Subscription info */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-bold text-white">Mon abonnement</h4>
+        </div>
+        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+          sub.tier === 'business' ? 'bg-purple-500/20 text-purple-400' :
+          sub.tier === 'pro' ? 'bg-amber-500/20 text-amber-400' :
+          sub.tier === 'solo' ? 'bg-emerald-500/20 text-emerald-400' :
+          'bg-slate-700 text-slate-400'
+        }`}>
+          {sub.tier === 'business' ? <Sparkles size={11} /> : sub.tier === 'pro' ? <Crown size={11} /> : sub.tier === 'solo' ? <Zap size={11} /> : null}
+          {sub.tier === 'free' ? 'Gratuit' : sub.tier === 'solo' ? 'Solo' : sub.tier === 'pro' ? 'Pro' : 'Business'}
+        </div>
+      </div>
+
+      {/* Subscription upgrade for free users */}
+      {sub.isFree && (
+        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+          <p className="text-sm font-semibold text-emerald-300 mb-1">Passez à Solo ou Pro</p>
+          <p className="text-xs text-slate-400 mb-3">Factures illimitées, dictée vocale IA, templates premium et bien plus.</p>
+          <button onClick={() => router.push('/paywall')} className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors">
+            <Zap size={14} />
+            Voir les offres
+            <ArrowUpRight size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Active subscription management */}
+      {!sub.isFree && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                <CreditCard size={16} className="text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Abonnement actif</p>
+                <p className="text-xs text-slate-500">Gérez votre facturation et vos méthodes de paiement</p>
+              </div>
+            </div>
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors disabled:opacity-50"
             >
-              <ArrowUpRight size={14} />
+              {portalLoading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /> : <ArrowUpRight size={14} />}
               Gérer
-            </Link>
+            </button>
           </div>
+
+          <div className="flex items-start justify-between gap-4 p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-red-500/15 flex items-center justify-center">
+                <XCircle size={16} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-300">Résilier l&apos;abonnement</p>
+                <p className="text-xs text-slate-500">Accédez au portail Stripe pour résilier</p>
+              </div>
+            </div>
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+            >
+              Résilier
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl border border-blue-500/15">
+            <ArrowUpRight size={14} className="text-blue-400 flex-shrink-0" />
+            <p className="text-xs text-blue-300">
+              Pour changer de plan, <button onClick={() => router.push('/paywall')} className="font-semibold underline underline-offset-2">consultez les offres</button> ou gérez directement depuis le portail Stripe.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Team management - Business */}
+      {sub.isBusiness && (
+        <div className="flex items-center justify-between p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Users size={16} className="text-purple-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-white">Équipe</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/20">BUSINESS</span>
+              </div>
+              <p className="text-xs text-slate-500">Invitez des collaborateurs et attribuez des rôles</p>
+            </div>
+          </div>
+          <Link
+            href="/settings/team"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors flex-shrink-0"
+          >
+            <ArrowUpRight size={14} />
+            Gérer
+          </Link>
+        </div>
+      )}
+
+      {/* Referral */}
+      {sub.isFree && (
+        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/15">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap size={16} className="text-emerald-400" />
+            <h4 className="text-sm font-bold text-white">Parrainage</h4>
+          </div>
+          <p className="text-xs text-slate-400 mb-3">
+            Parrainez un ami et gagnez 1 mois gratuit pour chaque inscription !
+          </p>
+          <button
+            onClick={() => router.push('/settings/referral')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-400 transition-colors"
+          >
+            <Zap size={14} />
+            Mon lien de parrainage
+          </button>
         </div>
       )}
 
       {/* Accounting export */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-bold text-gray-900">Export comptabilité</h3>
-        <p className="text-sm text-gray-500">Exportez vos écritures comptables au format FEC (Fichier des Écritures Comptables) pour votre expert-comptable.</p>
+      <div className="pt-4 border-t border-white/5">
+        <h4 className="text-sm font-bold text-white mb-2">Export comptabilité</h4>
+        <p className="text-xs text-slate-400 mb-3">Exportez vos écritures comptables au format FEC pour votre expert-comptable.</p>
         <div className="flex gap-2 flex-wrap">
           {[new Date().getFullYear(), new Date().getFullYear() - 1].map((year) => (
             <a
               key={year}
               href={`/api/export/fec?year=${year}`}
-              className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-semibold hover:border-primary hover:text-primary transition-colors"
+              className="flex items-center gap-2 border border-white/10 text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold hover:border-white/20 hover:text-white transition-colors"
             >
               <Download size={14} />
               FEC {year}
@@ -1300,210 +1401,22 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Subscription management */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-gray-900">Mon abonnement</h3>
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-            sub.tier === 'business' ? 'bg-purple-50 text-purple-600' :
-            sub.tier === 'pro' ? 'bg-amber-50 text-amber-600' :
-            sub.tier === 'solo' ? 'bg-primary/10 text-primary' :
-            'bg-gray-100 text-gray-500'
-          }`}>
-            {sub.tier === 'business' ? <Sparkles size={11} /> : sub.tier === 'pro' ? <Crown size={11} /> : sub.tier === 'solo' ? <Zap size={11} /> : null}
-            {sub.tier === 'free' ? 'Plan Gratuit' : sub.tier === 'solo' ? 'Plan Solo' : sub.tier === 'pro' ? 'Plan Pro' : 'Plan Business'}
-          </div>
-        </div>
-
-        {sub.isFree ? (
-          <div className="p-4 bg-gradient-to-r from-primary/8 to-primary/4 rounded-xl border border-primary/15">
-            <p className="text-sm font-semibold text-gray-800 mb-1">Passez à Solo ou Pro</p>
-            <p className="text-xs text-gray-500 mb-3">Factures illimitées, dictée vocale IA, templates premium et bien plus.</p>
-            <button onClick={() => router.push('/paywall')} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-all">
-              <Zap size={14} />
-              Voir les offres
-              <ArrowUpRight size={13} />
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <CreditCard size={16} className="text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Abonnement actif</p>
-                  <p className="text-xs text-gray-400">Gérez votre facturation et vos méthodes de paiement</p>
-                </div>
-              </div>
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary transition-all flex-shrink-0 disabled:opacity-50"
-              >
-                {portalLoading ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <ArrowUpRight size={14} />}
-                Gérer
-              </button>
-            </div>
-
-            <div className="flex items-start justify-between gap-4 p-3.5 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-                  <XCircle size={16} className="text-red-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Résilier l&apos;abonnement</p>
-                  <p className="text-xs text-gray-400">Accédez au portail Stripe pour résilier</p>
-                </div>
-              </div>
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0 disabled:opacity-50"
-              >
-                Résilier
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
-              <ArrowUpRight size={14} className="text-blue-500 flex-shrink-0" />
-              <p className="text-xs text-blue-700">
-                Pour changer de plan, <button onClick={() => router.push('/paywall')} className="font-semibold underline underline-offset-2">consultez les offres</button> ou gérez directement depuis le portail Stripe.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Team management (Business only) */}
-      {sub.isBusiness && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-purple-500" />
-              <h3 className="font-bold text-gray-900">Équipe</h3>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200">BUSINESS</span>
-          </div>
-          <p className="text-sm text-gray-500">
-            Invitez des collaborateurs, comptables ou associés à accéder à votre espace.
-          </p>
-          <button
-            onClick={() => router.push('/settings/team')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 text-sm font-semibold hover:bg-purple-100 transition-colors border border-purple-200"
-          >
-            <Sparkles size={14} />
-            Gérer mon équipe
-            <ArrowUpRight size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Referral program */}
-      {sub.isFree && (
-        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl border border-primary/20 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Zap size={16} className="text-primary" />
-            <h3 className="font-bold text-gray-900">Parrainage</h3>
-          </div>
-          <p className="text-sm text-gray-500">
-            Parrainez un ami et gagnez 1 mois gratuit pour chaque inscription !
-          </p>
-          <button
-            onClick={() => router.push('/settings/referral')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors"
-          >
-            <Zap size={14} />
-            Mon lien de parrainage
-          </button>
-        </div>
-      )}
-
-      {/* Webhooks */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Globe size={16} className="text-gray-400" />
-            <h3 className="font-bold text-gray-900">Webhooks sortants</h3>
-          </div>
-          <button
-            onClick={() => { setWebhookForm({ url: '', events: [] }); setShowWebhookModal(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark transition-colors"
-          >
-            <Plus size={13} />
-            Ajouter
-          </button>
-        </div>
-        <p className="text-sm text-gray-500">
-          Recevez des notifications HTTP POST sur votre URL quand une facture est créée, envoyée ou payée.
-        </p>
-
-        {webhooks.length === 0 ? (
-          <div className="text-center py-5 rounded-xl border border-dashed border-gray-200">
-            <Globe size={22} className="text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">Aucun webhook configuré</p>
-            <p className="text-xs text-gray-300 mt-1">Ajoutez une URL pour recevoir des notifications</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {webhooks.map((wh) => (
-              <div key={wh.id} className="flex items-start gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-100 group">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{wh.url}</p>
-                    <span className={`flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${wh.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {wh.active ? 'Actif' : 'Inactif'}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {wh.events.map((ev) => (
-                      <span key={ev} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-medium">
-                        {ev}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    onClick={() => handleToggleWebhookActive(wh)}
-                    className="text-xs text-gray-500 hover:text-primary transition-colors font-medium"
-                    title={wh.active ? 'Désactiver' : 'Activer'}
-                  >
-                    {wh.active ? 'Désactiver' : 'Activer'}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteWebhook(wh.id)}
-                    disabled={deletingWebhookId === wh.id}
-                    className="text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Account actions */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-        <h3 className="font-bold text-gray-900">Gestion du compte</h3>
-
+      <div className="pt-4 border-t border-white/5 space-y-4">
         {/* Logout */}
-        <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Se déconnecter</p>
-            <p className="text-xs text-gray-400 mt-0.5">Vous serez redirigé vers la page de connexion</p>
+            <p className="text-sm font-semibold text-slate-300">Se déconnecter</p>
+            <p className="text-xs text-slate-500">Vous serez redirigé vers la page de connexion</p>
           </div>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 transition-all flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-400 hover:border-white/20 hover:text-white transition-colors disabled:opacity-50"
           >
             {loggingOut ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
                 <span>Déconnexion...</span>
               </>
             ) : (
@@ -1516,17 +1429,15 @@ export default function SettingsPage() {
         </div>
 
         {/* RGPD Export */}
-        <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Exporter mes données (RGPD)</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Téléchargez une archive ZIP contenant toutes vos données personnelles.
-            </p>
+            <p className="text-sm font-semibold text-slate-300">Exporter mes données (RGPD)</p>
+            <p className="text-xs text-slate-500">Téléchargez une archive ZIP de vos données personnelles.</p>
           </div>
           <a
             href="/api/export/rgpd"
             download
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 text-sm font-semibold text-primary hover:bg-primary/5 hover:border-primary/50 transition-all flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/20 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/10 transition-colors flex-shrink-0"
           >
             <Download size={14} />
             Exporter
@@ -1534,179 +1445,350 @@ export default function SettingsPage() {
         </div>
 
         {/* Delete account */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-red-700">Supprimer le compte</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Supprime définitivement votre compte, vos factures et vos clients. Irréversible.
-            </p>
+            <p className="text-sm font-semibold text-red-400">Supprimer le compte</p>
+            <p className="text-xs text-slate-500">Supprime définitivement votre compte, vos factures et vos clients. Irréversible.</p>
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
           >
             <Trash2 size={14} />
             Supprimer
           </button>
         </div>
       </div>
-
-      {/* Webhook modal */}
-      <Modal
-        open={showWebhookModal}
-        onClose={() => setShowWebhookModal(false)}
-        title="Ajouter un webhook"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-1.5">URL de destination</label>
-            <input
-              type="url"
-              value={webhookForm.url}
-              onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
-              placeholder="https://votre-serveur.com/webhook"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-2">Événements à écouter</label>
-            <div className="space-y-2">
-              {WEBHOOK_EVENTS.map((ev) => (
-                <label key={ev.value} className="flex items-center gap-2.5 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={webhookForm.events.includes(ev.value)}
-                    onChange={() => handleToggleWebhookEvent(ev.value)}
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{ev.label}</span>
-                  <span className="text-[11px] text-gray-400 font-mono">{ev.value}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-            <p className="text-xs text-amber-700">
-              Votre URL recevra un POST avec <code className="font-mono bg-amber-100 px-1 rounded">{"{ event, data, timestamp }"}</code>. Assurez-vous qu&apos;elle est accessible publiquement.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowWebhookModal(false)}>
-              Annuler
-            </Button>
-            <Button
-              className="flex-1"
-              loading={savingWebhook}
-              disabled={!webhookForm.url.trim() || webhookForm.events.length === 0}
-              onClick={handleSaveWebhook}
-            >
-              Enregistrer
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Template preview modal */}
-      <Modal
-        open={showTemplatePreview}
-        onClose={() => setShowTemplatePreview(false)}
-        title="Aperçu du template"
-        size="xl"
-      >
-        {analyzedTemplateHtml && (
-          <div className="space-y-3">
-            <div className="bg-gray-100 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
-              <iframe
-                srcDoc={buildPreviewHtml(analyzedTemplateHtml)}
-                className="w-full border-0"
-                style={{ height: '600px', minWidth: '600px', transform: 'scale(0.6)', transformOrigin: 'top left', width: '166.6%' }}
-                title="Template preview"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setShowTemplatePreview(false)}>
-                Fermer
-              </Button>
-              <Button
-                className="flex-1"
-                loading={savingTemplate}
-                onClick={async () => { await handleSaveCustomTemplate(); setShowTemplatePreview(false); }}
-              >
-                Sauvegarder ce template
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Delete account confirmation modal */}
-      <Modal
-        open={showDeleteModal}
-        onClose={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
-        title="Supprimer le compte"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
-            <ShieldAlert size={20} className="text-red-500 flex-shrink-0" />
-            <p className="text-sm text-red-700 font-medium">
-              Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées définitivement.
-            </p>
-          </div>
-
-          <ul className="text-sm text-gray-600 space-y-1 pl-4">
-            <li className="list-disc">Toutes vos factures et devis</li>
-            <li className="list-disc">Tous vos clients</li>
-            <li className="list-disc">Vos factures récurrentes</li>
-            <li className="list-disc">Votre profil et paramètres</li>
-          </ul>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-700 block mb-2">
-              Tapez <span className="font-black text-red-600">SUPPRIMER</span> pour confirmer
-            </label>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="SUPPRIMER"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
-            >
-              Annuler
-            </Button>
-            <button
-              onClick={handleDeleteAccount}
-              disabled={deleteConfirmText !== 'SUPPRIMER' || deleting}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {deleting ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
-              Supprimer définitivement
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* SumUp Tutorial Modal */}
-      <SumUpTutorialModal
-        isOpen={showSumupTutorial}
-        onClose={() => setShowSumupTutorial(false)}
-      />
     </div>
-  </main>
-  </>
+  );
+
+  // ── Section Map ────────────────────────────────────────────────────────────
+
+  const sectionRenderers: Record<TabKey, () => React.ReactNode> = {
+    company: renderCompanySection,
+    billing: renderBillingSection,
+    template: renderTemplateSection,
+    bank: renderBankSection,
+    stripe: renderStripeSection,
+    sumup: renderSumUpSection,
+    signature: renderSignatureSection,
+    preferences: renderPreferencesSection,
+    webhooks: renderWebhooksSection,
+    account: renderAccountSection,
+  };
+
+  const sectionLabels: Record<TabKey, string> = {
+    company: 'Entreprise',
+    billing: 'Facturation',
+    template: 'Modèle de facture',
+    bank: 'Coordonnées bancaires',
+    stripe: 'Paiement en ligne (Stripe)',
+    sumup: 'Paiement en ligne (SumUp)',
+    signature: 'Signature électronique',
+    preferences: 'Préférences',
+    webhooks: 'Webhooks sortants',
+    account: 'Gestion du compte',
+  };
+
+  return (
+    <>
+      <h1 className="sr-only">Paramètres - Factu.me</h1>
+      <main aria-label="Paramètres du compte">
+        <div className="min-h-screen">
+          {/* Page header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold tracking-tight text-white">Paramètres</h2>
+            {!sub.isFree && (
+              <div className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-full">
+                <Crown size={14} className="text-emerald-400" />
+                <span className="text-xs font-bold text-emerald-400 capitalize">{sub.tier}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Subscription banner for free users */}
+          {sub.isFree && (
+            <button
+              onClick={() => router.push('/paywall')}
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-2xl p-4 flex items-center gap-3 hover:from-emerald-500 hover:to-emerald-400 transition-all text-left mb-6"
+              style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+            >
+              <Crown size={22} className="text-amber-300 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-white">Passer à Solo ou Pro</p>
+                <p className="text-sm text-emerald-100/80">Factures illimitées, dictée vocale, templates...</p>
+              </div>
+            </button>
+          )}
+
+          {/* Desktop: sidebar + content layout */}
+          <div className="lg:flex lg:gap-6">
+            {/* Desktop sidebar */}
+            <nav className="hidden lg:block w-56 flex-shrink-0">
+              <div className="sticky top-6 space-y-1">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      activeTab === tab.key
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                    }`}
+                    style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </nav>
+
+            {/* Mobile: horizontal scrollable tab bar */}
+            <div className="lg:hidden mb-4 -mx-4 px-4 overflow-x-auto scrollbar-hide">
+              <div className="flex gap-2 pb-2" style={{ minWidth: 'max-content' }}>
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
+                      activeTab === tab.key
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-slate-800/30 text-slate-400 border border-white/5 hover:text-slate-300'
+                    }`}
+                    style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Content area */}
+            <div className="flex-1 min-w-0">
+              <form onSubmit={handleSave} className="space-y-4">
+                {/* Active section card */}
+                <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+                    {sectionLabels[activeTab]}
+                  </h3>
+                  {sectionRenderers[activeTab]?.()}
+                </div>
+
+                {/* Save button (for form sections) */}
+                {['company', 'billing', 'template', 'bank', 'preferences'].includes(activeTab) && (
+                  <>
+                    {error && (
+                      <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+                        <AlertTriangle size={14} />
+                        {error}
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full py-3 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition-all duration-300 disabled:opacity-50"
+                      style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
+                    >
+                      {saving ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Enregistrement...
+                        </span>
+                      ) : saved ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <CheckCircle2 size={16} />
+                          Enregistré !
+                        </span>
+                      ) : (
+                        'Enregistrer les modifications'
+                      )}
+                    </button>
+                  </>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* Webhook modal */}
+          <Modal
+            open={showWebhookModal}
+            onClose={() => setShowWebhookModal(false)}
+            title="Ajouter un webhook"
+            size="sm"
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-slate-300 block mb-1.5">URL de destination</label>
+                <input
+                  type="url"
+                  value={webhookForm.url}
+                  onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
+                  placeholder="https://votre-serveur.com/webhook"
+                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-slate-300 block mb-2">Événements à écouter</label>
+                <div className="space-y-2">
+                  {WEBHOOK_EVENTS.map((ev) => (
+                    <label key={ev.value} className="flex items-center gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={webhookForm.events.includes(ev.value)}
+                        onChange={() => handleToggleWebhookEvent(ev.value)}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/30"
+                      />
+                      <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{ev.label}</span>
+                      <span className="text-[11px] text-slate-500 font-mono">{ev.value}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/15">
+                <p className="text-xs text-amber-300">
+                  Votre URL recevra un POST avec <code className="font-mono bg-amber-500/15 px-1 rounded">{"{ event, data, timestamp }"}</code>. Assurez-vous qu&apos;elle est accessible publiquement.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWebhookModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                  disabled={!webhookForm.url.trim() || webhookForm.events.length === 0 || savingWebhook}
+                  onClick={handleSaveWebhook}
+                >
+                  {savingWebhook ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  ) : (
+                    'Enregistrer'
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Template preview modal */}
+          <Modal
+            open={showTemplatePreview}
+            onClose={() => setShowTemplatePreview(false)}
+            title="Aperçu du template"
+            size="xl"
+          >
+            {analyzedTemplateHtml && (
+              <div className="space-y-3">
+                <div className="bg-slate-800/50 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
+                  <iframe
+                    srcDoc={buildPreviewHtml(analyzedTemplateHtml)}
+                    className="w-full border-0"
+                    style={{ height: '600px', minWidth: '600px', transform: 'scale(0.6)', transformOrigin: 'top left', width: '166.6%' }}
+                    title="Template preview"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplatePreview(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                  >
+                    Fermer
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                    disabled={savingTemplate}
+                    onClick={async () => { await handleSaveCustomTemplate(); setShowTemplatePreview(false); }}
+                  >
+                    {savingTemplate ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                    ) : (
+                      'Sauvegarder ce template'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </Modal>
+
+          {/* Delete account confirmation modal */}
+          <Modal
+            open={showDeleteModal}
+            onClose={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+            title="Supprimer le compte"
+            size="sm"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-xl border border-red-500/15">
+                <ShieldAlert size={20} className="text-red-400 flex-shrink-0" />
+                <p className="text-sm text-red-300 font-medium">
+                  Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées définitivement.
+                </p>
+              </div>
+
+              <ul className="text-sm text-slate-400 space-y-1 pl-4">
+                <li className="list-disc">Toutes vos factures et devis</li>
+                <li className="list-disc">Tous vos clients</li>
+                <li className="list-disc">Vos factures récurrentes</li>
+                <li className="list-disc">Votre profil et paramètres</li>
+              </ul>
+
+              <div>
+                <label className="text-sm font-semibold text-slate-300 block mb-2">
+                  Tapez <span className="font-black text-red-400">SUPPRIMER</span> pour confirmer
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="SUPPRIMER"
+                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                  className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'SUPPRIMER' || deleting}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {deleting ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
+                  Supprimer définitivement
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* SumUp Tutorial Modal */}
+          <SumUpTutorialModal
+            isOpen={showSumupTutorial}
+            onClose={() => setShowSumupTutorial(false)}
+          />
+        </div>
+      </main>
+
+      {/* Hide scrollbar for mobile tab bar */}
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+    </>
   );
 }

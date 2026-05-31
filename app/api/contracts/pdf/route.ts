@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Erreur génération PDF contrat:', error);
     return NextResponse.json(
-      { error: 'Erreur interne du serveur', details: error instanceof Error ? error.message : 'Erreur inconnue' },
+      { error: 'Erreur lors de la génération du PDF' },
       { status: 500 }
     );
   }

@@ -1,13 +1,16 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, FileText, Zap, ArrowRight, Shield, Calculator, Scale } from 'lucide-react';
+import { CheckCircle2, FileText, Zap, ArrowRight, Shield, Calculator, Scale, AlertTriangle } from 'lucide-react';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
 import { HowToSchema } from '@/components/seo/HowToSchema';
 import { VisualBreadcrumbs } from '@/components/seo/VisualBreadcrumbs';
 import { getProfession, getAllProfessionSlugs, professions } from '@/lib/seo-data';
+
+export const revalidate = 86400;
+export const dynamicParams = false;
 
 interface Props {
   params: Promise<{ profession: string }>;
@@ -62,12 +65,16 @@ export default async function ProfessionPage({ params }: Props) {
         : `Le taux de TVA applicable est de ${data.tva.taux}%. Vous devez collecter et reverser la TVA sur toutes vos factures.`,
     },
     {
-      question: `Le logiciel de facturation Factu.me est-il adapté aux ${data.nomLower}s ?`,
-      answer: `Oui, Factu.me est parfaitement adapté aux ${data.nomLower}s. Création de factures en 30 secondes, mentions légales pré-remplies, calcul automatique de la TVA à ${data.tva.taux}%, export PDF professionnel et envoi par email. Gratuit jusqu'à 10 factures par mois.`,
+      question: `Factu.me gère-t-il les spécificités de facturation des ${data.nomLower}s ?`,
+      answer: `Oui, Factu.me intègre les spécificités de facturation des ${data.nomLower}s : TVA à ${data.tva.taux}% ${data.tva.franchise ? 'ou mention de franchise' : ''}, ${data.obligations[0]?.toLowerCase() || 'obligations légales'}, mentions légales pré-remplies, export PDF professionnel. Gratuit jusqu'à 10 factures par mois.`,
     },
     {
-      question: `Comment numéroter mes factures de ${data.nomLower} ?`,
-      answer: 'La numérotation doit être séquentielle sans trou. Par exemple : FA-2026-001, FA-2026-002, etc. Factu.me gère la numérotation automatiquement pour vous.',
+      question: data.tva.franchise
+        ? `Que se passe-t-il si je dépasse les seuils de micro-entreprise en tant que ${data.nomLower} ?`
+        : `Quelle est la différence entre le réel simplifié et le réel normal pour un(e) ${data.nomLower} ?`,
+      answer: data.tva.franchise
+        ? `Si vous dépassez les seuils de la micro-entreprise, vous basculez automatiquement vers le régime réel. Vous devrez alors collecter et reverser la TVA à ${data.tva.taux}%, tenir une comptabilité complète et établir une liasse fiscale. Anticipez ce passage avec Factu.me qui gère les deux régimes.`
+        : `Le réel simplifié limite les obligations déclaratives (liasse fiscale allégée) mais ne permet pas de déduire toutes les charges. Le réel normal est plus contraignant mais offre une déduction au réel de toutes vos charges professionnelles de ${data.nomLower}.`,
     },
     {
       question: data.tva.franchise
@@ -105,8 +112,7 @@ export default async function ProfessionPage({ params }: Props) {
               Facture pour <span className="text-purple-600">{data.nom}</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
-              Modèle de facture conforme pour {data.nomLower}. TVA {data.tva.taux}%, mentions légales pré-remplies.
-              Créez votre facture en <strong>30 secondes</strong>.
+              {data.texteIntro}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -251,8 +257,30 @@ export default async function ProfessionPage({ params }: Props) {
         </div>
       </section>
 
-      {/* TVA & Régime */}
+      {/* Conseils de facturation */}
       <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
+            Conseils de facturation pour {data.nomLower}
+          </h2>
+          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            {data.description}
+          </p>
+          <div className="space-y-6">
+            {data.conseilsFacturation.map((conseil, i) => (
+              <div key={i} className="flex gap-4 p-6 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-600 font-bold text-sm">{i + 1}</span>
+                </div>
+                <p className="text-gray-700 leading-relaxed">{conseil}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TVA & Régime */}
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
             TVA et régime fiscal pour {data.nomLower}
@@ -301,15 +329,32 @@ export default async function ProfessionPage({ params }: Props) {
         </div>
       </section>
 
+      {/* Erreurs à éviter */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
+            Erreurs de facturation à éviter pour les {data.nomLower}s
+          </h2>
+          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            Ces erreurs courantes peuvent entraîner des sanctions fiscales ou des litiges avec vos clients.
+          </p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {data.erreursCourantes.map((erreur, i) => (
+              <div key={i} className="flex gap-3 p-5 bg-gradient-to-br from-red-50 to-white rounded-2xl border border-red-100">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-gray-700 leading-relaxed">{erreur}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Obligations spécifiques */}
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
             Obligations spécifiques aux {data.nomLower}s
           </h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            {data.description}
-          </p>
           <div className="max-w-3xl mx-auto">
             <div className="space-y-4">
               {data.obligations.map((obligation, i) => (
@@ -394,6 +439,25 @@ export default async function ProfessionPage({ params }: Props) {
           { name: `Choisissez le modèle ${data.nom}`, text: `Sélectionnez le modèle de facture adapté aux ${data.nomLower}s avec les mentions légales pré-remplies.` },
           { name: 'Remplissez et envoyez', text: 'Ajoutez vos lignes de prestation, le montant et envoyez directement par email.' },
         ]}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": `Factu.me — Facturation pour ${data.nom}`,
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "EUR"
+            },
+            "description": `Logiciel de facturation conforme pour ${data.nomLower}. TVA ${data.tva.taux}%, mentions légales pré-remplies. Gratuit jusqu'à 10 factures/mois.`,
+            "featureList": data.conseilsFacturation.slice(0, 3).join(' ; '),
+          })
+        }}
       />
       <RelatedPages
         pages={[

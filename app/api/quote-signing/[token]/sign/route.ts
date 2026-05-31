@@ -5,6 +5,15 @@ import { Resend } from 'resend';
 import React from 'react';
 import { PdfDocument } from '@/components/pdf-document';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 // Helper pour logger les événements de signature
 async function logQuoteSignatureEvent(
   admin: any,
@@ -35,6 +44,7 @@ export async function POST(
   try {
     const { token } = await params;
     const { signatureDataUrl, signerName } = await req.json();
+    let pdfGenerated = false;
 
     if (!token) {
       return NextResponse.json({ error: 'Token manquant' }, { status: 400 });
@@ -42,6 +52,15 @@ export async function POST(
 
     if (!signatureDataUrl || !signerName) {
       return NextResponse.json({ error: 'Données de signature manquantes' }, { status: 400 });
+    }
+
+    // Validate signerName: max length and strip HTML tags to prevent XSS
+    const sanitizedSignerName = typeof signerName === 'string'
+      ? signerName.replace(/<[^>]*>/g, '').trim().substring(0, 100)
+      : '';
+
+    if (!sanitizedSignerName) {
+      return NextResponse.json({ error: 'Nom du signataire invalide' }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -89,7 +108,7 @@ export async function POST(
       tokenRecord.quote_id,
       'quote_signed',
       tokenRecord.id,
-      { signerName, signatureSize: signatureDataUrl.length },
+      { signerName: sanitizedSignerName, signatureSize: signatureDataUrl.length },
       req
     );
 
@@ -98,19 +117,38 @@ export async function POST(
       .from('quote_signing_tokens')
       .update({
         signed_at: new Date().toISOString(),
-        signer_name: signerName,
+        signer_name: sanitizedSignerName,
         signature_data_url: signatureDataUrl,
       })
       .eq('id', tokenRecord.id);
 
-    // Mettre à jour le statut du devis
+    // Mettre à jour le statut du devis + snapshot immuable (BUG-17)
+    // First fetch current quote data for the snapshot
+    const { data: currentQuote } = await admin
+      .from('invoices')
+      .select('*')
+      .eq('id', tokenRecord.quote_id)
+      .single();
+
     await admin
       .from('invoices')
       .update({
-        status: 'accepted', // Le devis est accepté une fois signé
+        status: 'accepted',
         signed_at: new Date().toISOString(),
-        signed_by: signerName,
+        signed_by: sanitizedSignerName,
         client_signature_url: signatureDataUrl,
+        signed_snapshot: currentQuote ? JSON.stringify({
+          items: currentQuote.items,
+          subtotal: currentQuote.subtotal,
+          vat_amount: currentQuote.vat_amount,
+          total: currentQuote.total,
+          discount_percent: currentQuote.discount_percent,
+          discount_amount: currentQuote.discount_amount,
+          number: currentQuote.number,
+          client_id: currentQuote.client_id,
+          signed_at: new Date().toISOString(),
+          signed_by: sanitizedSignerName,
+        }) : null,
       })
       .eq('id', tokenRecord.quote_id);
 
@@ -155,9 +193,10 @@ export async function POST(
             const element = React.createElement(PdfDocument, { invoice: updatedQuote, profile: userProfile });
             const pdfBytes = await renderToBuffer(element as any);
             attachment = [{
-              filename: `Devis_signe_${updatedQuote.number}_${signerName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+              filename: `Devis_signe_${updatedQuote.number}_${sanitizedSignerName.replace(/[^a-z0-9]/gi, '_')}.pdf`,
               content: Buffer.from(pdfBytes),
             }];
+            pdfGenerated = true;
           } catch (pdfErr) {
             console.error('Erreur génération PDF signé:', pdfErr);
           }
@@ -175,7 +214,7 @@ export async function POST(
                   <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Devis n° ${updatedQuote.number}</p>
                 </div>
                 <div style="background:#fff;padding:32px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
-                  <p style="font-size:16px;margin:0 0 16px;">Bonjour <strong>${userProfile?.company_name || userEmail}</strong>,</p>
+                  <p style="font-size:16px;margin:0 0 16px;">Bonjour <strong>${escapeHtml(userProfile?.company_name || userEmail)}</strong>,</p>
 
                   <p style="font-size:15px;margin:0 0 24px;color:#374151;">
                     Nous avons le plaisir de vous informer que votre devis a été signé par le client.
@@ -195,8 +234,8 @@ export async function POST(
                     </div>
 
                     <div style="text-align:left;">
-                      <p style="font-size:13px;color:#6b7280;margin:0 0 6px;"><strong>Client :</strong> ${updatedQuote.client?.name || 'N/A'}</p>
-                      <p style="font-size:13px;color:#6b7280;margin:0 0 6px;"><strong>Signé par :</strong> ${signerName}</p>
+                      <p style="font-size:13px;color:#6b7280;margin:0 0 6px;"><strong>Client :</strong> ${escapeHtml(updatedQuote.client?.name || 'N/A')}</p>
+                      <p style="font-size:13px;color:#6b7280;margin:0 0 6px;"><strong>Signé par :</strong> ${escapeHtml(sanitizedSignerName)}</p>
                       <p style="font-size:13px;color:#6b7280;margin:0;"><strong>Date de signature :</strong> ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
@@ -225,7 +264,7 @@ export async function POST(
               await resend.emails.send({
                 from: `${senderName} <${senderEmail}>`,
                 to: [userEmail],
-                subject: `✅ Devis signé — ${updatedQuote.number} par ${signerName}`,
+                subject: `✅ Devis signé — ${updatedQuote.number} par ${sanitizedSignerName}`,
                 html: htmlContent,
                 attachments: attachment.length > 0 ? attachment : undefined,
               });
@@ -252,7 +291,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Devis signé avec succès'
+      message: 'Devis signé avec succès',
+      warning: !pdfGenerated
+        ? 'Le PDF signé n\'a pas pu être généré. Il sera disponible dans votre espace.'
+        : undefined,
     });
   } catch (error: unknown) {
     const err = error as Error;

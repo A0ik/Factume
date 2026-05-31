@@ -32,10 +32,11 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-  const { userId, title, body, url } = await req.json();
+  const { title, body, url } = await req.json();
 
-  // Target user defaults to current session user
-  const targetUserId = userId || user.id;
+  // Always target the authenticated user (prevent IDOR)
+  // Only allow service_role/admin to target other users
+  const targetUserId = user.id;
 
   const supabase = createAdminClient();
   const { data: profile } = await supabase

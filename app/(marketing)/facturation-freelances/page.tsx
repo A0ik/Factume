@@ -290,11 +290,43 @@ export default function FreelancePage() {
           { name: 'Facturation Freelances', url: 'https://factu.me/facturation-freelances' },
         ]}
       />
+      {/* Modèles par métier — Maillage Segment→Hub */}
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
+            Modèles de facture par métier freelance
+          </h2>
+          <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-4 max-w-5xl mx-auto">
+            {[
+              { slug: 'developpeur', nom: 'Développeur' },
+              { slug: 'designer', nom: 'Designer' },
+              { slug: 'consultant', nom: 'Consultant' },
+              { slug: 'coach', nom: 'Coach' },
+              { slug: 'photographe', nom: 'Photographe' },
+              { slug: 'redacteur', nom: 'Rédacteur' },
+              { slug: 'traducteur', nom: 'Traducteur' },
+              { slug: 'graphiste', nom: 'Graphiste' },
+            ].map(metier => (
+              <Link key={metier.slug} href={`/modeles-facture/${metier.slug}`}
+                className="group p-4 bg-white rounded-xl border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all text-center">
+                <span className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">Facture {metier.nom}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/modeles-facture" className="text-purple-600 font-medium hover:underline">
+              Voir tous les modèles de facture →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <RelatedPages
         pages={[
-          { href: '/facturation-auto-entrepreneur', label: 'Facturation Auto-entrepreneur' },
-          { href: '/facturation-developpeur', label: 'Facturation Developpeur' },
-          { href: '/logiciel-facture-gratuit', label: 'Logiciel Facture Gratuit' },
+          { href: '/modeles-facture', label: 'Tous les modèles de facture' },
+          { href: '/comment-facturer', label: 'Guides par statut juridique' },
+          { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },
+          { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' },
         ]}
       />
     </div>

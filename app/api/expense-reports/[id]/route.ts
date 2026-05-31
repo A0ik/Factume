@@ -131,11 +131,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
-    // Perform update
+    // Perform update (include user_id filter as defense-in-depth)
     const { data: report, error } = await supabase
       .from('expense_reports')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
 
@@ -190,11 +191,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    // Delete report (items will cascade delete)
+    // Delete report (items will cascade delete) — include user_id filter as defense-in-depth
     const { error } = await supabase
       .from('expense_reports')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
 
     if (error) {
       console.error('[Expense Report] Delete error:', error);

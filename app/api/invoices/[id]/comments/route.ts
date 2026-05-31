@@ -21,6 +21,17 @@ export async function GET(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    // Vérifier que la facture appartient à l'utilisateur
+    const { data: invoice } = await admin
+      .from('invoices')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (!invoice || invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
     // Récupérer les commentaires avec les infos utilisateur
     const { data: comments, error } = await admin
       .from('invoice_comments')
@@ -67,11 +78,28 @@ export async function POST(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    // Vérifier que la facture appartient à l'utilisateur
+    const { data: invoice } = await admin
+      .from('invoices')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (!invoice || invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
     const { content } = await req.json();
 
     if (!content || !content.trim()) {
       return NextResponse.json({ error: 'Contenu manquant' }, { status: 400 });
     }
+
+    // BUG-12 fix: maxLength + HTML sanitization
+    if (content.length > 2000) {
+      return NextResponse.json({ error: 'Commentaire trop long (max 2000 caractères).' }, { status: 400 });
+    }
+    const sanitizedContent = content.trim().replace(/<[^>]*>/g, '');
 
     // Créer le commentaire
     const { data: comment, error } = await admin
@@ -79,7 +107,7 @@ export async function POST(
       .insert({
         invoice_id: id,
         user_id: user.id,
-        content: content.trim(),
+        content: sanitizedContent,
       })
       .select(`
         *,

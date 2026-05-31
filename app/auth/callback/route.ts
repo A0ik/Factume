@@ -65,10 +65,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Rediriger vers le dashboard ou une page de bienvenue
-    // Vérifier si c'est un premier connexion pour rediriger vers l'onboarding
-    const redirectUrl = new URL('/dashboard', req.url);
+    // Rediriger vers le dashboard ou l'onboarding selon le profil
+    let redirectPath = '/dashboard';
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_done')
+        .eq('id', data.user.id)
+        .single();
+      if (!profile?.onboarding_done) {
+        redirectPath = '/onboarding/language';
+      }
+    }
 
+    const redirectUrl = new URL(redirectPath, req.url);
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error('[auth-callback] Unexpected error:', error);

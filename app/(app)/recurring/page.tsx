@@ -175,7 +175,6 @@ export default function RecurringInvoicesPage() {
       // Si la table n'existe pas
       if (error) {
         if (error.code === '42P01' || status === 404 || error.message.includes('does not exist')) {
-          console.log('Recurring invoices table does not exist yet');
           setRecurringInvoices([]);
           return;
         }
@@ -220,7 +219,6 @@ export default function RecurringInvoicesPage() {
       // Si la table n'existe pas
       if (error) {
         if (error.code === '42P01' || status === 404 || error.message.includes('does not exist')) {
-          console.log('Clients table does not exist yet');
           setClients([]);
           return;
         }

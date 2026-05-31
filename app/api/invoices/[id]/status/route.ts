@@ -4,6 +4,52 @@ import { InvoiceStatusSchema, validateRequest } from '@/lib/validation';
 import { z } from 'zod';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
+// FIX BUG-TRANS-01/02/03: Transitions complètes conformes Code de commerce
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ['sent', 'cancelled', 'pending'],
+  pending: ['sent', 'cancelled', 'expired'],
+  sent: ['paid', 'cancelled', 'overdue', 'refused'],
+  overdue: ['paid', 'cancelled'],
+  paid: ['refunded', 'partial'],
+  partial: ['paid', 'refunded'],
+  cancelled: [],
+  accepted: [],
+  refused: ['cancelled'],
+  refunded: [],
+  expired: ['draft'],
+  delivered: ['paid', 'cancelled'],
+  rejected: [],
+};
+
+// FIX GAP-2/5: Piste d'audit fiable — log chaque transition
+async function logAuditTrail(
+  admin: ReturnType<typeof createAdminClient>,
+  params: {
+    invoiceId: string;
+    userId: string;
+    action: string;
+    fromStatus: string;
+    toStatus: string;
+    ipAddress: string;
+    userAgent: string;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  await admin.from('invoice_audit_trail').insert({
+    invoice_id: params.invoiceId,
+    user_id: params.userId,
+    action: `status_change:${params.fromStatus}->${params.toStatus}`,
+    from_status: params.fromStatus,
+    to_status: params.toStatus,
+    ip_address: params.ipAddress,
+    user_agent: params.userAgent,
+    metadata: params.metadata || {},
+    created_at: new Date().toISOString(),
+  }).then(({ error }) => {
+    if (error) console.error('[AUDIT TRAIL] Erreur log:', error.message);
+  });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -63,43 +109,49 @@ export async function PATCH(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Récupérer la facture pour vérifier les droits
-    const { data: invoice, error: fetchError } = await admin
+    // FIX BUG-TRANS-04: Utiliser le RPC pour atomicité (SELECT FOR UPDATE + UPDATE atomique)
+    const { data: transitionResult, error: rpcError } = await admin.rpc('transition_invoice_status', {
+      p_invoice_id: id,
+      p_user_id: user.id,
+      p_new_status: validatedData.status,
+      p_ip_address: getClientIp(req),
+      p_user_agent: req.headers.get('user-agent') || '',
+    });
+
+    if (rpcError) {
+      // L'erreur RPC contient le message de validation de transition
+      if (rpcError.message.includes('Transition')) {
+        return NextResponse.json({ error: rpcError.message }, { status: 400 });
+      }
+      if (rpcError.message.includes('introuvable')) {
+        return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+      }
+      if (rpcError.message.includes('autorisé')) {
+        return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
+      }
+      return NextResponse.json({ error: rpcError.message }, { status: 500 });
+    }
+
+    // FIX GAP-2/5: Log d'audit pour la Piste d'Audit Fiable
+    await logAuditTrail(admin, {
+      invoiceId: id,
+      userId: user.id,
+      action: 'status_change',
+      fromStatus: transitionResult?.from_status || '',
+      toStatus: validatedData.status,
+      ipAddress: getClientIp(req),
+      userAgent: req.headers.get('user-agent') || '',
+    });
+
+    // Récupérer la facture mise à jour
+    const { data: updatedInvoice, error: fetchError } = await admin
       .from('invoices')
-      .select('user_id')
+      .select('*')
       .eq('id', id)
       .single();
 
-    if (fetchError || !invoice) {
-      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
-    }
-
-    if (invoice.user_id !== user.id) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
-    }
-
-    // Préparer les données de mise à jour
-    const updateData: any = {
-      status: validatedData.status,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (validatedData.status === 'paid') {
-      updateData.paid_at = new Date().toISOString();
-    } else if (validatedData.status === 'sent') {
-      updateData.sent_at = new Date().toISOString();
-    }
-
-    // Mettre à jour la facture
-    const { data: updatedInvoice, error: updateError } = await admin
-      .from('invoices')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
 
     return NextResponse.json(updatedInvoice);

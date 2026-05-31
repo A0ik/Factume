@@ -26,6 +26,8 @@ import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton
 import { isFacturXEligible } from '@/lib/facturx';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const ease: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
 function getDocListPath(type: string): string {
   const map: Record<string, string> = {
     invoice: '/documents/factures',
@@ -38,29 +40,29 @@ function getDocListPath(type: string): string {
   return map[type] ?? '/documents/factures';
 }
 
-const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: string; icon: any }> = {
-  draft:     { label: 'Brouillon',   color: 'text-gray-500',    bg: 'bg-gray-100',    icon: FileText },
-  sent:      { label: 'Envoyée',     color: 'text-blue-600',    bg: 'bg-blue-50',     icon: Send },
-  paid:      { label: 'Payée',       color: 'text-emerald-600', bg: 'bg-emerald-50',  icon: CheckCircle },
-  overdue:   { label: 'En retard',   color: 'text-red-600',     bg: 'bg-red-50',      icon: AlertTriangle },
-  accepted:  { label: 'Accepté',     color: 'text-teal-600',    bg: 'bg-teal-50',     icon: Check },
-  refused:   { label: 'Refusé',      color: 'text-orange-600',  bg: 'bg-orange-50',   icon: X },
-  cancelled: { label: 'Annulé',      color: 'text-red-600',     bg: 'bg-red-50',      icon: X },
-  refunded:  { label: 'Remboursé',   color: 'text-orange-600',  bg: 'bg-orange-50',   icon: X },
-  rejected:  { label: 'Rejeté',      color: 'text-red-600',     bg: 'bg-red-50',      icon: X },
-  expired:   { label: 'Expiré',      color: 'text-gray-500',    bg: 'bg-gray-100',    icon: AlertTriangle },
-  pending:   { label: 'En attente',  color: 'text-yellow-600',  bg: 'bg-yellow-50',   icon: AlertTriangle },
-  partial:   { label: 'Partiel',     color: 'text-blue-600',    bg: 'bg-blue-50',     icon: CheckCircle },
-  delivered: { label: 'Livré',       color: 'text-emerald-600', bg: 'bg-emerald-50',  icon: CheckCircle },
+const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: string; dotColor: string; icon: any }> = {
+  draft:     { label: 'Brouillon',   color: 'text-slate-400',    bg: 'bg-slate-800/50',     dotColor: 'bg-slate-500',    icon: FileText },
+  sent:      { label: 'Envoyée',     color: 'text-blue-400',     bg: 'bg-blue-500/10',      dotColor: 'bg-blue-400',     icon: Send },
+  paid:      { label: 'Payée',       color: 'text-emerald-400',  bg: 'bg-emerald-500/10',   dotColor: 'bg-emerald-400',  icon: CheckCircle },
+  overdue:   { label: 'En retard',   color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: AlertTriangle },
+  accepted:  { label: 'Accepté',     color: 'text-teal-400',     bg: 'bg-teal-500/10',      dotColor: 'bg-teal-400',     icon: Check },
+  refused:   { label: 'Refusé',      color: 'text-orange-400',   bg: 'bg-orange-500/10',    dotColor: 'bg-orange-400',   icon: X },
+  cancelled: { label: 'Annulé',      color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: X },
+  refunded:  { label: 'Remboursé',   color: 'text-orange-400',   bg: 'bg-orange-500/10',    dotColor: 'bg-orange-400',   icon: X },
+  rejected:  { label: 'Rejeté',      color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: X },
+  expired:   { label: 'Expiré',      color: 'text-slate-400',    bg: 'bg-slate-800/50',     dotColor: 'bg-slate-500',    icon: AlertTriangle },
+  pending:   { label: 'En attente',  color: 'text-yellow-400',   bg: 'bg-yellow-500/10',    dotColor: 'bg-yellow-400',   icon: AlertTriangle },
+  partial:   { label: 'Partiel',     color: 'text-blue-400',     bg: 'bg-blue-500/10',      dotColor: 'bg-blue-400',     icon: CheckCircle },
+  delivered: { label: 'Livré',       color: 'text-emerald-400',  bg: 'bg-emerald-500/10',   dotColor: 'bg-emerald-400',  icon: CheckCircle },
 };
 
 const DOC_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  invoice:        { label: 'Facture',           icon: Receipt,      color: 'text-primary' },
-  quote:          { label: 'Devis',             icon: FileText,     color: 'text-blue-600' },
-  purchase_order: { label: 'Bon de commande',   icon: ShoppingCart, color: 'text-amber-600' },
-  delivery_note:  { label: 'Bon de livraison',  icon: Truck,        color: 'text-cyan-600' },
-  credit_note:    { label: 'Avoir',             icon: RefreshCw,    color: 'text-purple-600' },
-  deposit:        { label: "Facture d'acompte", icon: Banknote,     color: 'text-emerald-600' },
+  invoice:        { label: 'Facture',           icon: Receipt,      color: 'text-emerald-400' },
+  quote:          { label: 'Devis',             icon: FileText,     color: 'text-blue-400' },
+  purchase_order: { label: 'Bon de commande',   icon: ShoppingCart, color: 'text-amber-400' },
+  delivery_note:  { label: 'Bon de livraison',  icon: Truck,        color: 'text-cyan-400' },
+  credit_note:    { label: 'Avoir',             icon: RefreshCw,    color: 'text-purple-400' },
+  deposit:        { label: "Facture d'acompte", icon: Banknote,     color: 'text-emerald-400' },
 };
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -71,7 +73,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const { invoices, updateInvoiceStatus, deleteInvoice, duplicateInvoice } = useDataStore();
   const { isFree, isPro, isBusiness, isTrialActive, tier } = useSubscription();
 
-  // Vérifier si l'utilisateur a accès à Factur-X (Pro ou Business)
   const canUseFacturX = isPro || isBusiness || isTrialActive;
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -92,13 +93,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [showFacturXDetails, setShowFacturXDetails] = useState(false);
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
 
-  // Use realtime updates for invoice
   const { invoice: realtimeInvoice } = useInvoiceRealtime(invoice ? invoice.id : undefined);
 
-  // Update local invoice when realtime updates come in
   useEffect(() => {
     if (realtimeInvoice) {
-      // Check if status changed to paid
       if (previousStatus && previousStatus !== 'paid' && realtimeInvoice.status === 'paid') {
         toast.success('Paiement reçu ! La facture a été marquée comme payée.', {
           duration: 5000,
@@ -108,7 +106,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       setPreviousStatus(realtimeInvoice.status);
       setInvoice(realtimeInvoice);
     } else {
-      // Fallback to store data for initial load
       const found = invoices.find((inv) => inv.id === id);
       if (found) {
         setInvoice(found);
@@ -117,7 +114,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [realtimeInvoice, invoices, id]);
 
-  // Handle ?paid=true redirect from Stripe
   useEffect(() => {
     if (searchParams.get('paid') === 'true' && invoice && invoice.status !== 'paid') {
       updateInvoiceStatus(id, 'paid').then(() => {
@@ -131,8 +127,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <Loader2 size={32} className="animate-spin text-primary mx-auto mb-3" />
-          <p className="text-sm text-gray-400">Chargement de la facture...</p>
+          <Loader2 size={32} className="animate-spin text-emerald-500 mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Chargement de la facture...</p>
         </div>
       </div>
     );
@@ -147,7 +143,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
-  // Calculer les warnings Factur-X pour cette facture
   const facturXEligibility = profile ? isFacturXEligible(invoice, profile) : { eligible: false, reason: 'Profil utilisateur manquant', warnings: [] };
   const facturXWarnings = facturXEligibility.warnings || [];
 
@@ -174,7 +169,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) throw new Error(data.error);
       if (invoice.status === 'draft') await updateInvoiceStatus(id, 'sent');
       toast.success(`Facture envoyée à ${email} !`);
-      // Ne fermons pas la modale ici - laisser EmailPreviewModal gérer la fermeture avec l'état de succès
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'envoi.");
       throw e;
@@ -209,7 +203,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         toast.success('Demande de signature envoyée ! Le client recevra un email avec le lien de signature.');
       }
 
-      // Marquer le devis comme envoyé
       if (invoice.status === 'draft') {
         await updateInvoiceStatus(id, 'sent');
       }
@@ -229,14 +222,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const res = await fetch('/api/stripe-connect/create-payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoiceId: invoice.id,
-        }),
+        body: JSON.stringify({ invoiceId: invoice.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Rafraîchir les données de la facture pour mettre à jour stripe_payment_link_url (nécessaire pour le QR code)
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
@@ -244,7 +234,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setInvoice(updatedInvoice);
       }
 
-      // Afficher la modal de succès au lieu d'ouvrir l'onglet
       setPaymentSuccessUrl(data.paymentLinkUrl);
       setShowPaymentSuccessModal(true);
       setShowPaymentModal(false);
@@ -266,7 +255,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Rafraîchir les données de la facture pour mettre à jour payment_link (nécessaire pour le QR code)
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
@@ -274,7 +262,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         setInvoice(updatedInvoice);
       }
 
-      // Afficher la modal de succès au lieu d'ouvrir l'onglet
       setPaymentSuccessUrl(data.url);
       setShowPaymentSuccessModal(true);
       setShowPaymentModal(false);
@@ -288,7 +275,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  // Handler pour la sélection du provider via la modale
   const handleSelectPaymentProvider = async (provider: 'stripe' | 'sumup') => {
     if (provider === 'stripe') {
       await handleCreatePaymentLink();
@@ -346,176 +332,235 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const handleSendClick = () => {
+    if (invoice.document_type === 'quote') {
+      setShowQuoteActionModal(true);
+    } else {
+      setIsReminder(false);
+      setShowEmailModal(true);
+    }
+  };
+
   const discountAmount = invoice.discount_amount || 0;
 
   return (
-    <div className="max-w-4xl space-y-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(getDocListPath(invoice.document_type))}
-            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
+    <div className="max-w-5xl mx-auto pb-32 lg:pb-0">
+
+      {/* ========== HEADER ========== */}
+      <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-md border-b border-white/5">
+        <div className="px-4 py-3 lg:px-6 lg:py-4">
+          {/* Back + menu row */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push(getDocListPath(invoice.document_type))}
+                className="p-2 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft size={18} />
+              </button>
+              {/* Desktop: show number inline */}
+              <div className="hidden lg:flex items-center gap-2">
+                <DocIcon size={16} className={docCfg.color} />
+                <h1 className="text-lg font-bold text-white">{invoice.number}</h1>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
-              <DocIcon size={16} className={docCfg.color} />
-              <h1 className="text-xl font-black text-gray-900">{invoice.number}</h1>
-              <span className={cn('inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full', status.bg, status.color)}>
-                <StatusIcon size={11} />
+              {/* Factur-X (desktop) */}
+              {invoice.document_type === 'invoice' && canUseFacturX && (
+                <div className="hidden lg:block">
+                  <FacturXButton
+                    invoiceId={invoice.id}
+                    invoiceNumber={invoice.number}
+                    variant="secondary"
+                    warnings={facturXWarnings}
+                  />
+                </div>
+              )}
+
+              {/* Edit (desktop) */}
+              {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
+                <button
+                  onClick={() => router.push(`/invoices/${id}/edit`)}
+                  className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors"
+                >
+                  <Edit2 size={15} />
+                  Modifier
+                </button>
+              )}
+
+              {/* More menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                >
+                  <MoreVertical size={16} />
+                </button>
+                <AnimatePresence>
+                  {showMenu && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                        transition={{ duration: 0.15, ease }}
+                        className="absolute right-0 top-full mt-2 bg-slate-900 border border-white/10 rounded-2xl z-40 w-56 overflow-hidden"
+                      >
+                        {invoice.status !== 'paid' && (
+                          <button
+                            onClick={() => { setShowMenu(false); handleMarkPaid(); }}
+                            disabled={statusLoading}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <CheckCircle size={16} />
+                            Marquer comme payée
+                          </button>
+                        )}
+                        {invoice.status === 'draft' && (
+                          <button
+                            onClick={() => { setShowMenu(false); handleMarkSent(); }}
+                            disabled={statusLoading}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors"
+                          >
+                            <Send size={16} />
+                            Marquer comme envoyée
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setShowMenu(false); handleDuplicate(); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+                        >
+                          <Copy size={16} />
+                          Dupliquer
+                        </button>
+                        <div className="h-px bg-white/5 mx-4" />
+                        {invoice.document_type === 'invoice' && canUseFacturX && (
+                          <FacturXButton
+                            invoiceId={invoice.id}
+                            invoiceNumber={invoice.number}
+                            variant="compact"
+                            warnings={facturXWarnings}
+                          />
+                        )}
+                        <div className="h-px bg-white/5 mx-4" />
+                        <button
+                          onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                          Supprimer
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile: Client name + status — Magic Move target */}
+          <motion.div
+            layoutId={`invoice-card-${invoice.id}`}
+            transition={{ type: 'spring', damping: 25, stiffness: 200, mass: 0.8 }}
+            className="lg:hidden mt-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-bold text-white truncate">{clientName}</h1>
+                <p className="text-sm text-slate-500 font-mono mt-0.5">{invoice.number}</p>
+              </div>
+              <span className={cn(
+                'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0',
+                status.bg, status.color
+              )}>
+                <span className={cn('w-1.5 h-1.5 rounded-full', status.dotColor)} />
                 {status.label}
               </span>
             </div>
-            <p className="text-sm text-gray-400 mt-0.5">{docCfg.label} · {clientName}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Factur-X - Uniquement pour les factures, pas devis/avoirs */}
-          {invoice.document_type === 'invoice' && canUseFacturX && (
-            <FacturXButton
-              invoiceId={invoice.id}
-              invoiceNumber={invoice.number}
-              variant="secondary"
-              warnings={facturXWarnings}
-            />
-          )}
-
-          {/* Edit - only if not signed quote */}
-          {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
-            <button
-              onClick={() => router.push(`/invoices/${id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all shadow-sm"
-            >
-              <Edit2 size={15} />
-              Modifier
-            </button>
-          )}
-
-          {/* More actions */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-            >
-              <MoreVertical size={16} />
-            </button>
-            {showMenu && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-40 w-56 overflow-hidden">
-                  {invoice.status !== 'paid' && (
-                    <button
-                      onClick={() => { setShowMenu(false); handleMarkPaid(); }}
-                      disabled={statusLoading}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors"
-                    >
-                      <CheckCircle size={16} />
-                      Marquer comme payée
-                    </button>
-                  )}
-                  {invoice.status === 'draft' && (
-                    <button
-                      onClick={() => { setShowMenu(false); handleMarkSent(); }}
-                      disabled={statusLoading}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-blue-700 hover:bg-blue-50 transition-colors"
-                    >
-                      <Send size={16} />
-                      Marquer comme envoyée
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setShowMenu(false); handleDuplicate(); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Copy size={16} />
-                    Dupliquer
-                  </button>
-                  <div className="h-px bg-gray-100 mx-4" />
-                  {/* Factur-X dans le menu - toujours visible pour les factures si abonnement OK */}
-                  {invoice.document_type === 'invoice' && canUseFacturX && (
-                    <FacturXButton
-                      invoiceId={invoice.id}
-                      invoiceNumber={invoice.number}
-                      variant="compact"
-                      warnings={facturXWarnings}
-                    />
-                  )}
-                  <div className="h-px bg-gray-100 mx-4" />
-                  <button
-                    onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                    Supprimer
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Paid banner */}
-      {invoice.status === 'paid' && (
-        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
-          <CheckCircle size={20} className="text-emerald-600 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-emerald-800">Facture payée {invoice.paid_at ? `le ${fmtDate(invoice.paid_at)}` : ''}</p>
-            <p className="text-xs text-emerald-600">Le paiement a bien été reçu et enregistré.</p>
-          </div>
-        </div>
-      )}
+      {/* ========== STATUS BANNERS ========== */}
+      <div className="px-4 lg:px-6 mt-4 space-y-3">
+        <AnimatePresence mode="wait">
+          {invoice.status === 'paid' && (
+            <motion.div
+              key="paid"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease }}
+              className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3"
+            >
+              <CheckCircle size={20} className="text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-400">Facture payée {invoice.paid_at ? `le ${fmtDate(invoice.paid_at)}` : ''}</p>
+                <p className="text-xs text-emerald-500/70">Le paiement a bien été reçu et enregistré.</p>
+              </div>
+            </motion.div>
+          )}
 
-      {/* Overdue banner */}
-      {invoice.status === 'overdue' && (
-        <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-3">
-            <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-red-800">Facture en retard</p>
-              <p className="text-xs text-red-600">Échéance dépassée le {fmtDate(invoice.due_date)}.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => { setIsReminder(true); setShowEmailModal(true); }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors flex-shrink-0"
-          >
-            <Mail size={13} />
-            Relancer
-          </button>
-        </div>
-      )}
+          {invoice.status === 'overdue' && (
+            <motion.div
+              key="overdue"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease }}
+              className="flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-red-400">Facture en retard</p>
+                  <p className="text-xs text-red-400/70">Échéance dépassée le {fmtDate(invoice.due_date)}.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setIsReminder(true); setShowEmailModal(true); }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold hover:bg-red-400 transition-colors flex-shrink-0"
+              >
+                <Mail size={13} />
+                Relancer
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main content */}
+      {/* ========== MAIN LAYOUT ========== */}
+      <div className="px-4 lg:px-6 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+
+        {/* LEFT / MAIN COLUMN */}
         <div className="lg:col-span-2 space-y-4">
+
           {/* Invoice header card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+          <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/5 bg-slate-800/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <DocIcon size={15} className={docCfg.color} />
-                <span className="text-sm font-bold text-gray-700">{docCfg.label}</span>
+                <span className="text-sm font-semibold text-slate-300">{docCfg.label}</span>
               </div>
-              <span className="text-sm font-black text-gray-900">{invoice.number}</span>
+              <span className="text-sm font-bold text-white">{invoice.number}</span>
             </div>
             <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-5">
               <div>
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Client</p>
-                <p className="text-sm font-bold text-gray-900">{clientName}</p>
-                {clientEmail && <p className="text-xs text-gray-400 mt-0.5">{clientEmail}</p>}
-                {invoice.client?.address && <p className="text-xs text-gray-400 mt-0.5">{invoice.client.address}</p>}
+                <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Client</p>
+                <p className="text-sm font-semibold text-white">{clientName}</p>
+                {clientEmail && <p className="text-xs text-slate-500 mt-0.5">{clientEmail}</p>}
+                {invoice.client?.address && <p className="text-xs text-slate-500 mt-0.5">{invoice.client.address}</p>}
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Date d'émission</p>
-                <p className="text-sm font-bold text-gray-900">{fmtDate(invoice.issue_date)}</p>
+                <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Date d'émission</p>
+                <p className="text-sm font-semibold text-white">{fmtDate(invoice.issue_date)}</p>
               </div>
               {invoice.due_date && (
                 <div>
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Échéance</p>
-                  <p className={cn('text-sm font-bold', invoice.status === 'overdue' ? 'text-red-600' : 'text-gray-900')}>
+                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Échéance</p>
+                  <p className={cn('text-sm font-semibold', invoice.status === 'overdue' ? 'text-red-400' : 'text-white')}>
                     {fmtDate(invoice.due_date)}
                   </p>
                 </div>
@@ -523,30 +568,56 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* Items table */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-50 bg-gray-50/50">
-              <h3 className="text-sm font-bold text-gray-700">Prestations</h3>
+          {/* Line items - MOBILE (vertical card list) */}
+          <div className="lg:hidden space-y-2">
+            <div className="px-1 mb-2">
+              <h3 className="text-sm font-semibold text-slate-300">Prestations</h3>
+            </div>
+            {invoice.items.map((item, i) => (
+              <motion.div
+                key={item.id || i}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease, delay: i * 0.04 }}
+                className="bg-slate-800/30 border border-white/5 rounded-xl p-4"
+              >
+                <p className="text-sm text-white leading-snug">{item.description || '—'}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-slate-500">
+                    {item.quantity} x {formatCurrency(item.unit_price)} &middot; TVA {item.vat_rate}%
+                  </span>
+                  <span className="text-sm font-semibold text-white tabular-nums">
+                    {formatCurrency(item.quantity * item.unit_price)}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Line items - DESKTOP (table) */}
+          <div className="hidden lg:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/5 bg-slate-800/30">
+              <h3 className="text-sm font-semibold text-slate-300">Prestations</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-50">
-                    <th className="text-left text-xs font-bold text-gray-400 uppercase tracking-wide px-5 py-2.5">Description</th>
-                    <th className="text-center text-xs font-bold text-gray-400 uppercase tracking-wide px-3 py-2.5 w-16">Qté</th>
-                    <th className="text-right text-xs font-bold text-gray-400 uppercase tracking-wide px-3 py-2.5 w-28">Prix HT</th>
-                    <th className="text-right text-xs font-bold text-gray-400 uppercase tracking-wide px-3 py-2.5 w-16">TVA</th>
-                    <th className="text-right text-xs font-bold text-gray-400 uppercase tracking-wide px-5 py-2.5 w-28">Total HT</th>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-2.5">Description</th>
+                    <th className="text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2.5 w-16">Qté</th>
+                    <th className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2.5 w-28">Prix HT</th>
+                    <th className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2.5 w-16">TVA</th>
+                    <th className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-2.5 w-28">Total HT</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-white/5">
                   {invoice.items.map((item, i) => (
-                    <tr key={item.id || i} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-3.5 text-sm text-gray-900">{item.description || '—'}</td>
-                      <td className="px-3 py-3.5 text-sm text-gray-600 text-center">{item.quantity}</td>
-                      <td className="px-3 py-3.5 text-sm text-gray-700 text-right tabular-nums">{formatCurrency(item.unit_price)}</td>
-                      <td className="px-3 py-3.5 text-xs text-gray-400 text-right">{item.vat_rate}%</td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-900 text-right tabular-nums">
+                    <tr key={item.id || i} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-5 py-3.5 text-sm text-white">{item.description || '—'}</td>
+                      <td className="px-3 py-3.5 text-sm text-slate-400 text-center">{item.quantity}</td>
+                      <td className="px-3 py-3.5 text-sm text-slate-300 text-right tabular-nums">{formatCurrency(item.unit_price)}</td>
+                      <td className="px-3 py-3.5 text-xs text-slate-500 text-right">{item.vat_rate}%</td>
+                      <td className="px-5 py-3.5 text-sm font-semibold text-white text-right tabular-nums">
                         {formatCurrency(item.quantity * item.unit_price)}
                       </td>
                     </tr>
@@ -554,28 +625,57 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 </tbody>
               </table>
             </div>
+          </div>
 
-            {/* Totals */}
-            <div className="border-t border-gray-100 px-5 py-4">
-              <div className="ml-auto max-w-xs space-y-2">
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Sous-total HT</span>
-                  <span className="font-semibold text-gray-900 tabular-nums">{formatCurrency(invoice.subtotal)}</span>
+          {/* Totals - MOBILE */}
+          <div className="lg:hidden bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>Sous-total HT</span>
+                <span className="font-semibold text-slate-200 tabular-nums">{formatCurrency(invoice.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>TVA</span>
+                <span className="font-semibold text-slate-200 tabular-nums">{formatCurrency(invoice.vat_amount)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-emerald-400">
+                  <span>Remise ({invoice.discount_percent}%)</span>
+                  <span className="font-semibold tabular-nums">-{formatCurrency(discountAmount)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>TVA</span>
-                  <span className="font-semibold text-gray-900 tabular-nums">{formatCurrency(invoice.vat_amount)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-sm text-emerald-600">
-                    <span>Remise ({invoice.discount_percent}%)</span>
-                    <span className="font-semibold tabular-nums">−{formatCurrency(discountAmount)}</span>
+              )}
+              <div className="h-px bg-white/10 my-1" />
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-200">Total TTC</span>
+                <span className="text-2xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Totals - DESKTOP (inside table card) */}
+          <div className="hidden lg:block">
+            <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+              <div className="border-t border-white/5 px-5 py-4">
+                <div className="ml-auto max-w-xs space-y-2">
+                  <div className="flex justify-between text-sm text-slate-400">
+                    <span>Sous-total HT</span>
+                    <span className="font-semibold text-slate-200 tabular-nums">{formatCurrency(invoice.subtotal)}</span>
                   </div>
-                )}
-                <div className="h-px bg-gray-200" />
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-900">Total TTC</span>
-                  <span className="text-2xl font-black text-gray-900 tabular-nums">{formatCurrency(invoice.total)}</span>
+                  <div className="flex justify-between text-sm text-slate-400">
+                    <span>TVA</span>
+                    <span className="font-semibold text-slate-200 tabular-nums">{formatCurrency(invoice.vat_amount)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-sm text-emerald-400">
+                      <span>Remise ({invoice.discount_percent}%)</span>
+                      <span className="font-semibold tabular-nums">-{formatCurrency(discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="h-px bg-white/10" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-200">Total TTC</span>
+                    <span className="text-2xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -583,67 +683,60 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Notes */}
           {invoice.notes && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-sm font-bold text-gray-700 mb-2">Notes</h3>
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{invoice.notes}</p>
+            <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-slate-300 mb-2">Notes</h3>
+              <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{invoice.notes}</p>
             </div>
           )}
         </div>
 
-        {/* Right panel */}
-        <div className="space-y-4">
+        {/* RIGHT / SIDEBAR (desktop only) */}
+        <div className="hidden lg:block space-y-4">
           {/* Total card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-bold mb-1">Montant total</p>
-            <p className="text-4xl font-black text-gray-900 tabular-nums">{formatCurrency(invoice.total)}</p>
-            <div className={cn('inline-flex items-center gap-1.5 mt-3 text-xs font-bold px-3 py-1.5 rounded-full', status.bg, status.color)}>
-              <StatusIcon size={12} />
+          <div className="bg-slate-900 border border-white/5 rounded-2xl p-5 text-center">
+            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Montant total</p>
+            <p className="text-4xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</p>
+            <div className={cn('inline-flex items-center gap-1.5 mt-3 text-xs font-semibold px-3 py-1.5 rounded-full', status.bg, status.color)}>
+              <span className={cn('w-1.5 h-1.5 rounded-full', status.dotColor)} />
               {status.label}
             </div>
           </div>
 
           {/* Quick actions */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-2">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Actions rapides</h3>
+          <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 space-y-2">
+            <h3 className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-3">Actions rapides</h3>
 
             <button
               onClick={() => setShowPdfPreview(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-semibold transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
             >
-              <Eye size={16} />
+              <Eye size={16} className="text-purple-400" />
               Prévisualiser le PDF
             </button>
 
             <button
-              onClick={() => {
-                if (invoice.document_type === 'quote') {
-                  setShowQuoteActionModal(true);
-                } else {
-                  setIsReminder(false);
-                  setShowEmailModal(true);
-                }
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold transition-colors"
+              onClick={handleSendClick}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
             >
-              <Mail size={16} />
+              <Mail size={16} className="text-blue-400" />
               Envoyer par e-mail
             </button>
 
             {invoice.document_type === 'invoice' && invoice.status !== 'paid' && (
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-50 to-orange-50 hover:from-emerald-100 hover:to-orange-100 text-gray-700 text-sm font-semibold transition-colors border border-gray-200"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
               >
-                <CreditCard size={16} />
+                <CreditCard size={16} className="text-emerald-400" />
                 Créer un lien de paiement
               </button>
             )}
 
             <button
               onClick={handleDownloadPdf}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-semibold transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
             >
-              <Download size={16} />
+              <Download size={16} className="text-slate-400" />
               Télécharger en PDF
             </button>
 
@@ -651,7 +744,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleMarkPaid}
                 disabled={statusLoading}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {statusLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Marquer comme payée
@@ -661,7 +754,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
               <button
                 onClick={() => router.push(`/invoices/${id}/edit`)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-primary/20 text-primary hover:bg-primary-light text-sm font-semibold transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 text-sm font-semibold transition-colors"
               >
                 <Edit2 size={16} />
                 Modifier la facture
@@ -669,37 +762,37 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          {/* Factur-X Info - Menu déroulant animé */}
+          {/* Factur-X section */}
           {invoice.document_type === 'invoice' && (
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 overflow-hidden">
+            <div className="rounded-2xl border border-white/5 bg-slate-900 overflow-hidden">
               <button
                 onClick={() => setShowFacturXDetails(!showFacturXDetails)}
-                className="w-full flex items-center justify-between gap-3 p-4 hover:from-indigo-100/50 hover:to-purple-100/50 transition-all text-left"
+                className="w-full flex items-center justify-between gap-3 p-4 hover:bg-white/[0.02] transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-indigo-100">
-                    <FileText size={16} className="text-indigo-600" />
+                  <div className="p-2 rounded-xl bg-slate-800/50 border border-white/5">
+                    <FileText size={16} className="text-blue-400" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-indigo-700">Factur-X</h3>
+                      <h3 className="text-sm font-semibold text-white">Factur-X</h3>
                       {canUseFacturX && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                           Actif
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600">
-                      Format conforme à la <span className="font-semibold text-indigo-600">réforme 2026+</span>
+                    <p className="text-xs text-slate-500">
+                      Format conforme à la <span className="text-slate-400">réforme 2026+</span>
                     </p>
                   </div>
                 </div>
                 <motion.div
                   animate={{ rotate: showFacturXDetails ? 90 : 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.2, ease }}
                   className="flex-shrink-0"
                 >
-                  <ChevronRight size={18} className="text-indigo-600" />
+                  <ChevronRight size={18} className="text-slate-500" />
                 </motion.div>
               </button>
 
@@ -709,13 +802,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, ease }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 pt-2 border-t border-indigo-200/50 space-y-3">
-                      <p className="text-xs text-gray-600 leading-relaxed">
+                    <div className="px-4 pb-4 pt-2 border-t border-white/5 space-y-3">
+                      <p className="text-xs text-slate-400 leading-relaxed">
                         Format de facture électronique conforme aux obligations légales françaises.
-                        Intégre les données XML structurées directement dans le PDF.
+                        Intègre les données XML structurées directement dans le PDF.
                       </p>
 
                       {canUseFacturX ? (
@@ -731,7 +824,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                       ) : (
                         <button
                           onClick={() => router.push('/paywall')}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:opacity-90 transition-opacity"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-400 transition-colors"
                         >
                           Débloquer Factur-X
                         </button>
@@ -741,7 +834,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                         href="https://fnfe-mpe.org/factur-x/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10px] text-indigo-600 hover:underline block text-center"
+                        className="text-[10px] text-slate-500 hover:text-slate-300 block text-center transition-colors"
                       >
                         Qu'est-ce que Factur-X ? →
                       </a>
@@ -753,31 +846,31 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           )}
 
           {/* Metadata */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Informations</h3>
+          <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 space-y-3">
+            <h3 className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Informations</h3>
             <div className="space-y-2.5 text-sm">
-              <div className="flex items-center gap-2 text-gray-500">
-                <Hash size={14} className="text-gray-300" />
+              <div className="flex items-center gap-2 text-slate-400">
+                <Hash size={14} className="text-slate-600" />
                 <span className="text-xs">Numéro :</span>
-                <span className="font-semibold text-gray-900 ml-auto">{invoice.number}</span>
+                <span className="font-semibold text-slate-200 ml-auto">{invoice.number}</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Calendar size={14} className="text-gray-300" />
+              <div className="flex items-center gap-2 text-slate-400">
+                <Calendar size={14} className="text-slate-600" />
                 <span className="text-xs">Créée le :</span>
-                <span className="font-semibold text-gray-900 ml-auto">{fmtDate(invoice.created_at)}</span>
+                <span className="font-semibold text-slate-200 ml-auto">{fmtDate(invoice.created_at)}</span>
               </div>
               {invoice.sent_at && (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Send size={14} className="text-gray-300" />
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Send size={14} className="text-slate-600" />
                   <span className="text-xs">Envoyée le :</span>
-                  <span className="font-semibold text-gray-900 ml-auto">{fmtDate(invoice.sent_at)}</span>
+                  <span className="font-semibold text-slate-200 ml-auto">{fmtDate(invoice.sent_at)}</span>
                 </div>
               )}
               {invoice.client?.siret && (
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Building2 size={14} className="text-gray-300" />
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Building2 size={14} className="text-slate-600" />
                   <span className="text-xs">SIRET :</span>
-                  <span className="font-semibold text-gray-900 ml-auto">{invoice.client.siret}</span>
+                  <span className="font-semibold text-slate-200 ml-auto">{invoice.client.siret}</span>
                 </div>
               )}
             </div>
@@ -785,7 +878,40 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* Email modal with preview */}
+      {/* ========== FLOATING ACTION BAR (MOBILE) ========== */}
+      <div className="fixed bottom-[72px] left-0 right-0 z-40 lg:hidden">
+        <div className="bg-slate-950/95 backdrop-blur-md border-t border-white/5 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSendClick}
+              className="flex-1 flex items-center justify-center gap-2 min-h-[48px] bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors"
+            >
+              <Send size={16} />
+              Envoyer
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              className="flex items-center justify-center min-h-[48px] px-4 bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 rounded-xl font-semibold text-sm transition-colors"
+            >
+              <Download size={16} />
+              PDF
+            </button>
+            {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
+              <button
+                onClick={() => router.push(`/invoices/${id}/edit`)}
+                className="flex items-center justify-center min-h-[48px] px-4 bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 rounded-xl font-semibold text-sm transition-colors"
+              >
+                <Edit2 size={16} />
+                Modifier
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ========== MODALS ========== */}
+
+      {/* Email modal */}
       {profile && (
         <EmailPreviewModal
           invoice={invoice}
@@ -798,7 +924,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         />
       )}
 
-      {/* Quote action modal - choix entre envoi email et signature */}
+      {/* Quote action modal */}
       {invoice && profile && (
         <QuoteActionModal
           invoice={invoice}
@@ -845,35 +971,49 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       )}
 
       {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <Trash2 size={22} className="text-red-500" />
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end lg:items-center justify-center p-0 lg:p-4"
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.25, ease }}
+              className="bg-slate-900 border-t lg:border border-white/10 rounded-t-3xl lg:rounded-2xl w-full lg:max-w-sm p-6 space-y-4 lg:shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Trash2 size={22} className="text-red-400" />
+                </div>
+                <h2 className="text-lg font-bold text-white">Supprimer la facture ?</h2>
+                <p className="text-sm text-slate-400 mt-1">Cette action est irréversible. La facture <strong className="text-slate-200">{invoice.number}</strong> sera définitivement supprimée.</p>
               </div>
-              <h2 className="text-lg font-black text-gray-900">Supprimer la facture ?</h2>
-              <p className="text-sm text-gray-500 mt-1">Cette action est irréversible. La facture <strong>{invoice.number}</strong> sera définitivement supprimée.</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all disabled:opacity-50"
-              >
-                {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-300 text-sm font-semibold hover:bg-slate-700/50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  Supprimer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

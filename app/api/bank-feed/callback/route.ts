@@ -16,7 +16,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/banking/connect?error=no_code', req.url));
     }
 
+    if (!state) {
+      return NextResponse.redirect(new URL('/banking/connect?error=missing_state', req.url));
+    }
+
     const admin = createAdminClient();
+
+    // Validate the state parameter against stored OAuth states to prevent user_id injection
+    const { data: stateRecord, error: stateError } = await admin
+      .from('oauth_states')
+      .select('user_id, expires_at')
+      .eq('state', state)
+      .single();
+
+    if (stateError || !stateRecord) {
+      return NextResponse.redirect(new URL('/banking/connect?error=invalid_state', req.url));
+    }
+
+    // Check if the state token has expired
+    if (new Date(stateRecord.expires_at) < new Date()) {
+      // Clean up expired state
+      await admin.from('oauth_states').delete().eq('state', state);
+      return NextResponse.redirect(new URL('/banking/connect?error=expired_state', req.url));
+    }
+
+    // Use the validated user_id from the stored state, not from the callback parameter
+    const validatedUserId = stateRecord.user_id;
+
+    // Clean up the used state token (one-time use)
+    await admin.from('oauth_states').delete().eq('state', state);
 
     const clientId = process.env.BRIDGE_CLIENT_ID;
     const clientSecret = process.env.BRIDGE_CLIENT_SECRET;
@@ -58,7 +86,7 @@ export async function GET(req: NextRequest) {
       const bankName = firstAccount.bank?.name || 'Banque connectée';
 
       await admin.from('bank_connections').insert({
-        user_id: state || 'unknown',
+        user_id: validatedUserId,
         provider: 'bridge',
         connection_id: firstAccount.connection_id?.toString(),
         access_token: accessToken,

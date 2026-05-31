@@ -215,7 +215,6 @@ async function processAttachment(
     const date = raw.date as string | undefined;
     const dup = await isDuplicate(admin, userId, vendor ?? null, amount ?? null, date ?? null);
     if (dup) {
-      console.log(`[resend-inbound] Duplicate detected: vendor=${vendor} amount=${amount} date=${date}`);
       return { success: false, filename, error: 'Duplicate expense', vendor, amount };
     }
 
@@ -353,8 +352,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  console.log(`[resend-inbound] Processing email from ${fromEmail}`);
-
   const admin = createAdminClient();
 
   const { data: profile } = await admin
@@ -364,7 +361,6 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!profile) {
-    console.log(`[resend-inbound] No profile found for ${fromEmail}, ignoring`);
     return NextResponse.json({ received: true });
   }
 
@@ -372,7 +368,6 @@ export async function POST(req: NextRequest) {
   const isTrial = profile.is_trial_active === true;
 
   if (!isBusiness && !isTrial) {
-    console.log(`[resend-inbound] User ${fromEmail} is not on Business/trial plan`);
     return NextResponse.json({ received: true });
   }
 
@@ -418,10 +413,6 @@ export async function POST(req: NextRequest) {
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
   const duplicateCount = results.filter((r) => r.error === 'Duplicate expense').length;
-
-  console.log(
-    `[resend-inbound] Done for ${fromEmail}: ${successCount} processed, ${duplicateCount} duplicates, ${failCount} failed`,
-  );
 
   if (successCount > 0 || duplicateCount > 0) {
     try {

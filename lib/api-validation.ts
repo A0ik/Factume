@@ -210,6 +210,30 @@ export function sanitizeString(input: string): string {
 }
 
 /**
+ * Sanitize an unknown input value into a safe string.
+ * Strips HTML tags, enforces max length, and trims whitespace.
+ */
+export function sanitizeStringInput(input: unknown, maxLength: number = 1000): string {
+  if (typeof input !== 'string') return '';
+  return input
+    .slice(0, maxLength)
+    .replace(/<[^>]*>/g, '')  // strip HTML tags
+    .trim();
+}
+
+/**
+ * Escape HTML entities in a string for safe insertion into HTML context.
+ */
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
  * Common validation schemas
  */
 export const commonSchemas = {

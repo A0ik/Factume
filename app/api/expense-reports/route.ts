@@ -98,6 +98,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // BUG-14 fix: maxLength validation
+    if (name.length > 200) {
+      return NextResponse.json({ error: 'Nom trop long (max 200 caractères).' }, { status: 400 });
+    }
+    if (description && description.length > 2000) {
+      return NextResponse.json({ error: 'Description trop longue (max 2000 caractères).' }, { status: 400 });
+    }
+
+    // BUG-13 fix: Duplicate check (idempotency)
+    const { data: existing } = await supabase
+      .from('expense_reports')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('name', name)
+      .eq('period_start', period_start)
+      .eq('period_end', period_end)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ error: 'Un rapport identique existe déjà.' }, { status: 409 });
+    }
+
     // Validate dates
     const startDate = new Date(period_start);
     const endDate = new Date(period_end);
@@ -134,6 +155,22 @@ export async function POST(req: NextRequest) {
 
     // Add expenses to report if provided
     if (expense_ids && expense_ids.length > 0) {
+      // Verify ALL expense_ids belong to the authenticated user (prevent IDOR)
+      const { data: ownedExpenses } = await supabase
+        .from('expenses')
+        .select('id')
+        .in('id', expense_ids)
+        .eq('user_id', user.id);
+
+      if (!ownedExpenses || ownedExpenses.length !== expense_ids.length) {
+        // Clean up the created report since the operation is invalid
+        await supabase.from('expense_reports').delete().eq('id', report.id);
+        return NextResponse.json(
+          { error: 'Certains frais ne vous appartiennent pas' },
+          { status: 403 }
+        );
+      }
+
       const items = expense_ids.map(expense_id => ({
         expense_report_id: report.id,
         expense_id,

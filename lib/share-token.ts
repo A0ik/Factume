@@ -8,8 +8,16 @@ import crypto from 'crypto';
 
 const TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+function getShareSecret(): string {
+  const secret = process.env.SHARE_TOKEN_SECRET;
+  if (!secret) {
+    throw new Error('SHARE_TOKEN_SECRET environment variable is required');
+  }
+  return secret;
+}
+
 export function generateShareToken(invoiceId: string): string {
-  const secret = process.env.SHARE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const secret = getShareSecret();
   // Include a random nonce so tokens are non-deterministic
   const nonce = crypto.randomBytes(8).toString('hex');
   const payload = `${invoiceId}:${nonce}`;
@@ -34,7 +42,7 @@ export function verifyShareToken(invoiceId: string, token: string): boolean {
   }
 
   // Verify HMAC
-  const secret = process.env.SHARE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const secret = getShareSecret();
   const payload = `${invoiceId}:${nonce}`;
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 24);
 

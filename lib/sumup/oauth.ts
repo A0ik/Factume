@@ -97,7 +97,6 @@ async function refreshAccessToken(userId: string, refreshToken: string): Promise
       console.error('[sumup-oauth] Failed to store refreshed token:', updateError);
     }
 
-    console.log('[sumup-oauth] Successfully refreshed token for user:', userId);
     return tokenData.access_token;
   } catch (error) {
     console.error('[sumup-oauth] Error refreshing token:', error);

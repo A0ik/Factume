@@ -54,12 +54,11 @@ export class LiaService {
       baseURL: 'https://openrouter.ai/api/v1',
       apiKey: config.apiKey || process.env.OPENROUTER_API_KEY || '',
       defaultHeaders: {
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
         'X-Title': 'FACTU.ME',
       },
     });
 
-    console.log('[LIA] Service initialisé avec modèle:', this.model);
   }
 
   /**

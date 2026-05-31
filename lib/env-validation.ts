@@ -88,7 +88,6 @@ function validate() {
     console.warn('\nThese are optional but may limit functionality.\n');
   }
 
-  console.log('✅ All required environment variables are validated.');
 }
 
 export function validateEnv() {

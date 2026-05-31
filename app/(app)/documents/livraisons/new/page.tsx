@@ -343,7 +343,6 @@ export default function NewLivraisonPage() {
   const handleSave = async () => {
     // Use ref for synchronous guard — useState can let a second click through before re-render
     if (savingRef.current) {
-      console.log('[handleSave] Already saving, ignoring click');
       return;
     }
     savingRef.current = true;

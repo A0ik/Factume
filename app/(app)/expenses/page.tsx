@@ -10,9 +10,9 @@ import {
   Receipt, Plus, Search, Edit2, Trash2, TrendingDown,
   X, Check, Calendar, Upload, FileImage, ExternalLink,
   ShoppingCart, Car, Coffee, Home, Laptop, Briefcase, MoreHorizontal,
-  ArrowDownUp, Filter, Sparkles, Wand2, ChevronDown, Clock,
-  MapPin, Gauge, Train, Plane, Users, FileText, Download,
-  Info, AlertCircle, Calculator, Building2,
+  ArrowDownUp, Filter, Sparkles, ChevronDown, Clock,
+  MapPin, Gauge, Users, FileText, Download,
+  Info, Calculator,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MultiInvoiceUpload } from '@/components/ui/MultiInvoiceUpload';
@@ -30,7 +30,6 @@ interface Expense {
   payment_method: string;
   status: 'pending' | 'validated' | 'rejected';
   created_at: string;
-  // Nouveaux champs légaux français
   location_city?: string;
   location_country?: string;
   trip_type?: 'professional' | 'training' | 'client_meeting' | 'other';
@@ -44,24 +43,23 @@ interface Expense {
 }
 
 const CATEGORIES = [
-  { value: 'transport', label: 'Transport', icon: Car, color: 'from-blue-500 to-blue-600', bg: 'bg-blue-50', text: 'text-blue-600' },
-  { value: 'meals', label: 'Repas', icon: Coffee, color: 'from-amber-500 to-amber-600', bg: 'bg-amber-50', text: 'text-amber-600' },
-  { value: 'accommodation', label: 'Hébergement', icon: Home, color: 'from-green-500 to-green-600', bg: 'bg-green-50', text: 'text-green-600' },
-  { value: 'equipment', label: 'Matériel', icon: Laptop, color: 'from-purple-500 to-purple-600', bg: 'bg-purple-50', text: 'text-purple-600' },
-  { value: 'office', label: 'Bureau', icon: Briefcase, color: 'from-cyan-500 to-cyan-600', bg: 'bg-cyan-50', text: 'text-cyan-600' },
-  { value: 'shopping', label: 'Achats', icon: ShoppingCart, color: 'from-pink-500 to-pink-600', bg: 'bg-pink-50', text: 'text-pink-600' },
-  { value: 'mileage', label: 'IK', icon: Gauge, color: 'from-red-500 to-red-600', bg: 'bg-red-50', text: 'text-red-600' },
-  { value: 'other', label: 'Autre', icon: MoreHorizontal, color: 'from-gray-500 to-gray-600', bg: 'bg-gray-50', text: 'text-gray-600' },
+  { value: 'transport', label: 'Transport', icon: Car, dot: 'bg-blue-400' },
+  { value: 'meals', label: 'Repas', icon: Coffee, dot: 'bg-amber-400' },
+  { value: 'accommodation', label: 'Hebergement', icon: Home, dot: 'bg-green-400' },
+  { value: 'equipment', label: 'Materiel', icon: Laptop, dot: 'bg-purple-400' },
+  { value: 'office', label: 'Bureau', icon: Briefcase, dot: 'bg-cyan-400' },
+  { value: 'shopping', label: 'Achats', icon: ShoppingCart, dot: 'bg-pink-400' },
+  { value: 'mileage', label: 'IK', icon: Gauge, dot: 'bg-red-400' },
+  { value: 'other', label: 'Autre', icon: MoreHorizontal, dot: 'bg-slate-400' },
 ];
 
 const PAYMENT_METHODS = [
-  { value: 'card', label: 'Carte bancaire', icon: 'credit-card' },
-  { value: 'cash', label: 'Espèces', icon: 'banknote' },
-  { value: 'transfer', label: 'Virement', icon: 'arrow-right-left' },
-  { value: 'check', label: 'Chèque', icon: 'file-text' },
+  { value: 'card', label: 'Carte bancaire' },
+  { value: 'cash', label: 'Especes' },
+  { value: 'transfer', label: 'Virement' },
+  { value: 'check', label: 'Cheque' },
 ];
 
-// Barème kilométrique 2024 (URSSAF)
 const MILEAGE_RATES_2024 = {
   3: { d: 0.529, cv5_7: 0.595, cv8_10: 0.629, cv11_12: 0.657, cv13: 0.688 },
   4: { d: 0.529, cv5_7: 0.595, cv8_10: 0.629, cv11_12: 0.657, cv13: 0.688 },
@@ -88,38 +86,19 @@ const MILEAGE_RATES_2024 = {
   25: { d: 0.529, cv5_7: 0.595, cv8_10: 0.629, cv11_12: 0.657, cv13: 0.688 },
 };
 
-// Plafonds repas 2024
 const MEAL_ALLOWANCE_2024 = {
-  full_day: 20.20, // Plafond d'exonération journée complète
-  half_day: 9.80,  // Plafond d'exonération demi-journée
+  full_day: 20.20,
+  half_day: 9.80,
 };
 
-const STATUS_STYLES: Record<string, { label: string; class: string; icon: any }> = {
-  pending: { label: 'En attente', class: 'bg-amber-50/80 text-amber-600 border-amber-200/50', icon: Clock },
-  validated: { label: 'Validée', class: 'bg-green-50/80 text-green-600 border-green-200/50', icon: Check },
-  rejected: { label: 'Rejetée', class: 'bg-red-50/80 text-red-600 border-red-200/50', icon: X },
-  reviewed: { label: 'Revue', class: 'bg-blue-50/80 text-blue-600 border-blue-200/50', icon: Check },
+const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
+  pending: { label: 'En attente', dot: 'bg-amber-400' },
+  validated: { label: 'Validee', dot: 'bg-emerald-400' },
+  rejected: { label: 'Rejetee', dot: 'bg-red-400' },
+  reviewed: { label: 'Revue', dot: 'bg-blue-400' },
 };
 
-const EMPTY_FORM: {
-  vendor: string;
-  amount: string;
-  vat_amount: string;
-  category: string;
-  date: string;
-  description: string;
-  payment_method: string;
-  location_city: string;
-  location_country: string;
-  trip_type: 'professional' | 'training' | 'client_meeting' | 'other';
-  distance_km: string;
-  vehicle_cv: string;
-  meal_type: 'full_day' | 'half_day';
-  client_id: string;
-  project_code: string;
-  is_deductible: boolean;
-  tax_free_amount: string;
-} = {
+const EMPTY_FORM = {
   vendor: '',
   amount: '',
   vat_amount: '',
@@ -127,13 +106,12 @@ const EMPTY_FORM: {
   date: new Date().toISOString().slice(0, 10),
   description: '',
   payment_method: 'card',
-  // Nouveaux champs
   location_city: '',
   location_country: 'France',
-  trip_type: 'professional',
+  trip_type: 'professional' as 'professional' | 'training' | 'client_meeting' | 'other',
   distance_km: '',
   vehicle_cv: '',
-  meal_type: 'full_day',
+  meal_type: 'full_day' as 'full_day' | 'half_day',
   client_id: '',
   project_code: '',
   is_deductible: true,
@@ -142,25 +120,24 @@ const EMPTY_FORM: {
 
 const getCat = (v: string) => CATEGORIES.find((c) => c.value === v) || CATEGORIES[CATEGORIES.length - 1];
 
-// Calcul indemnités kilométriques
+const ease: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
 function calculateMileage(distance: number, cv: number): number {
   if (distance <= 0 || cv <= 0) return 0;
-
   const d = Math.floor(distance);
   let rate = 0;
-
   if (d <= 5000) {
-    if (cv <= 3) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.d || 0.529;
-    else if (cv <= 7) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv5_7 || 0.595;
-    else if (cv <= 10) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv8_10 || 0.629;
-    else if (cv <= 12) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv11_12 || 0.657;
-    else rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv13 || 0.688;
+    if (cv <= 3) rate = 0.529;
+    else if (cv <= 7) rate = 0.595;
+    else if (cv <= 10) rate = 0.629;
+    else if (cv <= 12) rate = 0.657;
+    else rate = 0.688;
   } else if (d <= 20000) {
-    if (cv <= 3) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.d || 0.529;
-    else if (cv <= 7) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv5_7 || 0.595;
-    else if (cv <= 10) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv8_10 || 0.629;
-    else if (cv <= 12) rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv11_12 || 0.657;
-    else rate = MILEAGE_RATES_2024[3 as keyof typeof MILEAGE_RATES_2024]?.cv13 || 0.688;
+    if (cv <= 3) rate = 0.529;
+    else if (cv <= 7) rate = 0.595;
+    else if (cv <= 10) rate = 0.629;
+    else if (cv <= 12) rate = 0.657;
+    else rate = 0.688;
   } else {
     if (cv <= 3) rate = 0.389;
     else if (cv <= 7) rate = 0.448;
@@ -168,11 +145,9 @@ function calculateMileage(distance: number, cv: number): number {
     else if (cv <= 12) rate = 0.521;
     else rate = 0.548;
   }
-
   return Math.round(d * rate * 100) / 100;
 }
 
-// Calcul plafond repas
 function calculateMealAllowance(amount: number, type: 'full_day' | 'half_day'): { tax_free: number; taxable: number } {
   const allowance = type === 'full_day' ? MEAL_ALLOWANCE_2024.full_day : MEAL_ALLOWANCE_2024.half_day;
   const tax_free = Math.min(amount, allowance);
@@ -180,8 +155,90 @@ function calculateMealAllowance(amount: number, type: 'full_day' | 'half_day'): 
   return { tax_free, taxable };
 }
 
-// Card Component - clean layout with bottom actions
-function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
+// ─── Mobile Expense Card ───────────────────────────────────────────
+function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate }: {
+  expense: Expense;
+  index: number;
+  onEdit: (e: Expense) => void;
+  onDelete: (id: string) => void;
+  onValidate: (id: string, status: 'validated' | 'rejected') => void;
+}) {
+  const cat = getCat(expense.category);
+  const Icon = cat.icon;
+  const statusCfg = STATUS_CONFIG[expense.status] || STATUS_CONFIG['pending'];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: index * 0.05, ease }}
+      className="bg-slate-800/50 border border-white/5 rounded-2xl p-5"
+    >
+      {/* Top: category icon + vendor + amount */}
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg bg-slate-700/60 flex items-center justify-center flex-shrink-0">
+          <Icon size={16} className="text-slate-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-white truncate">{expense.vendor}</p>
+            <p className="text-sm font-bold text-white flex-shrink-0">{formatCurrency(expense.amount)}</p>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', statusCfg.dot)} />
+            <span className="text-xs text-slate-400">{statusCfg.label}</span>
+            <span className="text-xs text-slate-500">·</span>
+            <span className="text-xs text-slate-500">
+              {new Date(expense.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div className="flex items-center gap-2 flex-wrap mt-3">
+        <span className={cn('w-2 h-2 rounded-full', cat.dot)} />
+        <span className="text-xs text-slate-500">{cat.label}</span>
+        {expense.location_city && (
+          <span className="text-xs text-slate-500">· {expense.location_city}</span>
+        )}
+        {expense.category === 'mileage' && expense.distance_km && (
+          <span className="text-xs text-slate-500">· {expense.distance_km} km</span>
+        )}
+        {expense.tax_free_amount && expense.tax_free_amount > 0 && (
+          <span className="text-xs text-emerald-500">· {formatCurrency(expense.tax_free_amount)} exonere</span>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-white/5">
+        {expense.receipt_url && (
+          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+            <FileImage size={14} />
+          </a>
+        )}
+        {expense.status === 'pending' && (
+          <button onClick={() => onValidate(expense.id, 'validated')}
+            className="p-2 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors">
+            <Check size={14} />
+          </button>
+        )}
+        <button onClick={() => onEdit(expense)}
+          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+          <Edit2 size={14} />
+        </button>
+        <button onClick={() => onDelete(expense.id)}
+          className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Desktop Table Row ─────────────────────────────────────────────
+function DesktopTableRow({ expense, onEdit, onDelete, onValidate }: {
   expense: Expense;
   onEdit: (e: Expense) => void;
   onDelete: (id: string) => void;
@@ -189,179 +246,61 @@ function Expense3DCard({ expense, onEdit, onDelete, onValidate }: {
 }) {
   const cat = getCat(expense.category);
   const Icon = cat.icon;
-  const statusStyle = STATUS_STYLES[expense.status] || STATUS_STYLES['pending'];
-  const StatusIcon = statusStyle.icon;
+  const statusCfg = STATUS_CONFIG[expense.status] || STATUS_CONFIG['pending'];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-gray-200/60 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
-    >
-      <div className="p-5">
-        {/* Top row: icon + vendor + status */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className={cn('w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md flex-shrink-0', cat.color)}>
-            <Icon size={20} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-base font-bold text-gray-900 dark:text-white truncate">{expense.vendor}</p>
-              <span className={cn('flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border flex-shrink-0', statusStyle.class)}>
-                <StatusIcon size={10} />
-                {statusStyle.label}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{expense.description || cat.label}</p>
-          </div>
+    <tr className="group hover:bg-white/[0.02] transition-colors">
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className={cn('w-2 h-2 rounded-full flex-shrink-0', cat.dot)} />
+          <span className="text-sm text-slate-300">{expense.vendor}</span>
         </div>
-
-        {/* Amount + details row */}
-        <div className="flex items-baseline gap-3 mb-2">
-          <p className="text-2xl font-black text-gray-900 dark:text-white">{formatCurrency(expense.amount)}</p>
-          {expense.vat_amount > 0 && (
-            <span className="text-xs text-gray-400 dark:text-gray-500">TVA {formatCurrency(expense.vat_amount)}</span>
-          )}
+      </td>
+      <td className="px-5 py-4">
+        <span className="text-sm font-semibold text-white">{formatCurrency(expense.amount)}</span>
+      </td>
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Icon size={14} className="text-slate-500" />
+          <span className="text-sm text-slate-400">{cat.label}</span>
         </div>
-
-        {/* Tags row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <Calendar size={12} />
-            {new Date(expense.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-          </div>
-          {(expense.location_city || expense.location_country) && (
-            <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-              <MapPin size={10} />
-              <span>{expense.location_city}{expense.location_city && expense.location_country && ', '}{expense.location_country}</span>
-            </div>
-          )}
-          {expense.category === 'mileage' && expense.distance_km && (
-            <span className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md">
-              <Gauge size={10} />
-              {expense.distance_km} km
-            </span>
-          )}
-          {expense.tax_free_amount && expense.tax_free_amount > 0 && (
-            <span className="flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-md">
-              <Check size={10} />
-              {formatCurrency(expense.tax_free_amount)} exonéré
-            </span>
-          )}
-          {expense.client_id && (
-            <span className="text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-md">Client</span>
-          )}
-          {expense.project_code && (
-            <span className="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-md">{expense.project_code}</span>
-          )}
+      </td>
+      <td className="px-5 py-4">
+        <span className="text-sm text-slate-500">
+          {new Date(expense.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </span>
+      </td>
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-1.5">
+          <span className={cn('w-1.5 h-1.5 rounded-full', statusCfg.dot)} />
+          <span className="text-xs text-slate-400">{statusCfg.label}</span>
         </div>
-      </div>
-
-      {/* Bottom actions bar - always visible */}
-      <div className="flex items-center justify-between px-5 py-2.5 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
-        <div className="flex items-center gap-1">
+      </td>
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {expense.receipt_url && (
-            <a
-              href={expense.receipt_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
-              aria-label={`Voir le justificatif pour ${expense.vendor}`}
-            >
-              <FileImage size={14} />
+            <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+              className="p-1.5 rounded-md text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+              <FileImage size={13} />
             </a>
           )}
           {expense.status === 'pending' && (
-            <button onClick={() => onValidate(expense.id, 'validated')} className="p-1.5 rounded-lg text-gray-400 hover:text-green-500 hover:bg-green-50 transition-all" title="Valider">
-              <Check size={14} />
+            <button onClick={() => onValidate(expense.id, 'validated')}
+              className="p-1.5 rounded-md text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors">
+              <Check size={13} />
             </button>
           )}
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            data-action="edit-expense"
-            onClick={() => onEdit(expense)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-all"
-            aria-label={`Modifier la dépense: ${expense.vendor}`}
-          >
-            <Edit2 size={14} />
+          <button onClick={() => onEdit(expense)}
+            className="p-1.5 rounded-md text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+            <Edit2 size={13} />
           </button>
-          <button
-            data-action="delete-expense"
-            onClick={() => onDelete(expense.id)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
-            aria-label={`Supprimer la dépense: ${expense.vendor}`}
-          >
-            <Trash2 size={14} />
+          <button onClick={() => onDelete(expense.id)}
+            className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+            <Trash2 size={13} />
           </button>
         </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// Custom Dropdown Component
-function CustomDropdown({ label, value, onChange, options, icon: Icon }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  icon?: any;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">{label}</label>
-      <motion.button
-        type="button"
-        onClick={() => setOpen(!open)}
-        whileTap={{ scale: 0.98 }}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 text-left hover:border-primary/50 transition-all"
-      >
-        <div className="flex items-center gap-3">
-          {Icon && <Icon size={16} className="text-gray-400" />}
-          <span className="text-sm font-medium text-gray-900 dark:text-white">{(options || []).find(o => o.value === value)?.label || label}</span>
-        </div>
-        <ChevronDown size={16} className={cn('text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
-      </motion.button>
-
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-10"
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="absolute z-20 w-full mt-2 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden max-h-60 overflow-y-auto"
-            >
-              {(options || []).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => { onChange(option.value); setOpen(false); }}
-                  className={cn('w-full px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-gray-50 dark:hover:bg-slate-700',
-                    value === option.value ? 'bg-primary/10 text-primary' : 'text-gray-700 dark:text-gray-300'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -387,74 +326,38 @@ export default function ExpensesPage() {
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Définir fetchExpenses AVANT les useEffect
   const fetchExpenses = async () => {
     setLoading(true);
     try {
       const supabase = getSupabaseClient();
-      if (!supabase) {
-        setExpenses([]);
-        setLoading(false);
-        return;
-      }
-
-      // Check if expenses table exists first
-      const { error: checkError } = await supabase
-        .from('expenses')
-        .select('id')
-        .limit(1);
-
+      if (!supabase) { setExpenses([]); setLoading(false); return; }
+      const { error: checkError } = await supabase.from('expenses').select('id').limit(1);
       if (checkError && checkError.code === '42P01') {
-        // Table doesn't exist
-        console.warn('expenses table not available for this user');
-        setExpenses([]);
-        setLoading(false);
-        return;
+        setExpenses([]); setLoading(false); return;
       }
-
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching expenses:', error);
-        setExpenses([]);
-      } else {
-        setExpenses(data || []);
-      }
-    } catch (e) {
-      console.error('Error fetching expenses:', e);
-      setExpenses([]);
-    } finally {
-      setLoading(false);
-    }
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+      if (error) { setExpenses([]); } else { setExpenses(data || []); }
+    } catch { setExpenses([]); } finally { setLoading(false); }
   };
 
   useEffect(() => {
     if (user) {
       fetchExpenses();
-      // Charger les clients si pas encore chargés
-      if (!clients || clients.length === 0) {
-        fetchClients();
-      }
+      if (!clients || clients.length === 0) fetchClients();
     }
   }, [user]);
 
-  // Calcul automatique IK
   useEffect(() => {
     if (form.category === 'mileage' && form.distance_km && form.vehicle_cv) {
       const distance = parseFloat(form.distance_km);
       const cv = parseInt(form.vehicle_cv);
       if (distance > 0 && cv > 0) {
-        const amount = calculateMileage(distance, cv);
-        set('amount', String(amount));
-        set('vat_amount', '0'); // Les IK sont sans TVA
+        set('amount', String(calculateMileage(distance, cv)));
+        set('vat_amount', '0');
       }
     }
   }, [form.distance_km, form.vehicle_cv, form.category]);
 
-  // Calcul automatique plafond repas
   useEffect(() => {
     if (form.category === 'meals' && form.amount) {
       const amount = parseFloat(form.amount);
@@ -466,10 +369,7 @@ export default function ExpensesPage() {
   }, [form.amount, form.meal_type, form.category]);
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
-    setReceiptUrl(null);
-    setEditingId(null);
-    setShowModal(true);
+    setForm(EMPTY_FORM); setReceiptUrl(null); setEditingId(null); setShowModal(true);
   };
 
   const openEdit = (e: Expense) => {
@@ -506,21 +406,14 @@ export default function ExpensesPage() {
       await getSupabaseClient().storage.from('assets').upload(path, file, { upsert: true });
       const { data } = getSupabaseClient().storage.from('assets').getPublicUrl(path);
       setReceiptUrl(data.publicUrl);
-      if (file.type.startsWith('image/')) {
-        handleOCR(file);
-      }
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setUploadingReceipt(false);
-    }
+      if (file.type.startsWith('image/')) handleOCR(file);
+    } catch (e: any) { toast.error(e.message); } finally { setUploadingReceipt(false); }
   };
 
   const handleOCR = async (file: File) => {
     setOcrLoading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
+      const fd = new FormData(); fd.append('file', file);
       const res = await fetch('/api/ai/ocr-receipt', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -531,8 +424,7 @@ export default function ExpensesPage() {
       if (extracted?.date) set('date', extracted.date);
       if (extracted?.description) set('description', extracted.description);
       if (extracted?.category) set('category', extracted.category);
-    } catch { }
-    finally { setOcrLoading(false); }
+    } catch { } finally { setOcrLoading(false); }
   };
 
   const handleCategorizeAI = async () => {
@@ -547,8 +439,7 @@ export default function ExpensesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       if (data.category) set('category', data.category);
-    } catch { }
-    finally { setCategorizingAI(false); }
+    } catch { } finally { setCategorizingAI(false); }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -562,7 +453,6 @@ export default function ExpensesPage() {
         const result = calculateMealAllowance(amount, form.meal_type);
         taxFreeAmount = result.tax_free;
       }
-
       const payload = {
         vendor: form.vendor,
         amount: parseFloat(form.amount) || 0,
@@ -574,7 +464,6 @@ export default function ExpensesPage() {
         receipt_url: receiptUrl,
         status: 'pending' as const,
         user_id: user.id,
-        // Nouveaux champs
         location_city: form.location_city || null,
         location_country: form.location_country || 'France',
         trip_type: form.trip_type || 'professional',
@@ -589,29 +478,18 @@ export default function ExpensesPage() {
 
       if (editingId) {
         const { data, error } = await getSupabaseClient()
-          .from('expenses')
-          .update({ ...payload, updated_at: new Date().toISOString() })
-          .eq('id', editingId)
-          .select()
-          .single();
+          .from('expenses').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editingId).select().single();
         if (error) throw error;
         setExpenses((es) => es.map((ex) => (ex.id === editingId ? data : ex)));
       } else {
         const { data, error } = await getSupabaseClient()
-          .from('expenses')
-          .insert(payload)
-          .select()
-          .single();
+          .from('expenses').insert(payload).select().single();
         if (error) throw error;
         setExpenses((es) => [data, ...es]);
       }
       setShowModal(false);
-      toast.success(editingId ? 'Dépense mise à jour' : 'Dépense ajoutée');
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSaving(false);
-    }
+      toast.success(editingId ? 'Depense mise a jour' : 'Depense ajoutee');
+    } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -619,7 +497,7 @@ export default function ExpensesPage() {
       action: {
         label: 'Supprimer',
         onClick: async () => {
-          try { await getSupabaseClient().from('expenses').delete().eq('id', id); setExpenses((es) => es.filter((e) => e.id !== id)); toast.success('Dépense supprimée'); }
+          try { await getSupabaseClient().from('expenses').delete().eq('id', id); setExpenses((es) => es.filter((e) => e.id !== id)); toast.success('Depense supprimee'); }
           catch (e: any) { toast.error(e.message); }
         },
       },
@@ -628,39 +506,24 @@ export default function ExpensesPage() {
 
   const handleValidate = async (id: string, status: 'validated' | 'rejected') => {
     const { data, error } = await getSupabaseClient()
-      .from('expenses')
-      .update({ status })
-      .eq('id', id)
-      .select()
-      .single();
+      .from('expenses').update({ status }).eq('id', id).select().single();
     if (!error) setExpenses((es) => es.map((e) => (e.id === id ? data : e)));
   };
 
-  // Export comptable amélioré
   const handleExportAccounting = async (format: 'csv' | 'fec' | 'pdf') => {
     const validated = expenses.filter(e => e.status === 'validated');
-    if (validated.length === 0) {
-      toast.error('Aucune dépense validée à exporter');
-      return;
-    }
+    if (validated.length === 0) { toast.error('Aucune depense validee a exporter'); return; }
 
     if (format === 'csv') {
-      const headers = ['Date', 'Fournisseur', 'Description', 'Catégorie', 'Montant TTC', 'TVA', 'Montant HT', 'Pays', 'Ville', 'Client', 'Projet', 'Déductible'];
+      const headers = ['Date', 'Fournisseur', 'Description', 'Categorie', 'Montant TTC', 'TVA', 'Montant HT', 'Pays', 'Ville', 'Client', 'Projet', 'Deductible'];
       const rows = validated.map(e => [
-        e.date,
-        e.vendor,
-        e.description || '',
-        getCat(e.category).label,
-        e.amount.toFixed(2),
-        (e.vat_amount || 0).toFixed(2),
+        e.date, e.vendor, e.description || '', getCat(e.category).label,
+        e.amount.toFixed(2), (e.vat_amount || 0).toFixed(2),
         ((e.amount || 0) - (e.vat_amount || 0)).toFixed(2),
-        e.location_country || '',
-        e.location_city || '',
-        e.client_id || '',
-        e.project_code || '',
+        e.location_country || '', e.location_city || '',
+        e.client_id || '', e.project_code || '',
         e.is_deductible ? 'Oui' : 'Non',
       ]);
-
       const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -669,16 +532,14 @@ export default function ExpensesPage() {
       a.download = `export_comptable_depenses_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export CSV comptable réussi');
+      toast.success('Export CSV comptable reussi');
     }
 
     if (format === 'fec') {
-      // Format FEC (Fichier des Écritures Comptables) - Simplifié
       const fecContent = validated.map((e, idx) => {
         const date = e.date.replace(/-/g, '');
         return `${date.padEnd(8, '0')}000000   ${e.category.padEnd(4, '0')}   625000        DEPENSE         ${(e.amount / 100).toFixed(2).padStart(15, ' ')}          ${e.vendor.padEnd(30, ' ')}       ${e.description?.padEnd(30, ' ')}         ${idx + 1}`;
       }).join('\n');
-
       const blob = new Blob([fecContent], { type: 'text/plain;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -686,15 +547,12 @@ export default function ExpensesPage() {
       a.download = `FEC_Depenses_${new Date().toISOString().split('T')[0]}.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export FEC réussi');
+      toast.success('Export FEC reussi');
     }
 
-    if (format === 'pdf') {
-      toast.info('Export PDF en cours de développement...');
-    }
+    if (format === 'pdf') { toast.info('Export PDF en cours de developpement...'); }
   };
 
-  // Memoize filtered expenses - O(n) operation
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return expenses.filter((e) => {
@@ -705,12 +563,9 @@ export default function ExpensesPage() {
     });
   }, [expenses, search, filterCat, filterStatus]);
 
-  // Memoize stats calculations - O(n) operations
   const stats = useMemo(() => {
     const currentMonthPrefix = new Date().toISOString().slice(0, 7);
-    const totalMonth = expenses
-      .filter((e) => e.date.startsWith(currentMonthPrefix))
-      .reduce((s, e) => s + e.amount, 0);
+    const totalMonth = expenses.filter((e) => e.date.startsWith(currentMonthPrefix)).reduce((s, e) => s + e.amount, 0);
     const totalAll = expenses.reduce((s, e) => s + e.amount, 0);
     const totalVat = expenses.reduce((s, e) => s + (e.vat_amount || 0), 0);
     const totalMileage = expenses.filter(e => e.category === 'mileage').reduce((s, e) => s + (e.amount || 0), 0);
@@ -721,138 +576,119 @@ export default function ExpensesPage() {
   const { totalMonth, totalAll, totalVat, totalMileage, pending } = stats;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">
-      {/* Header */}
+    <div className="p-4 md:p-6 lg:p-8">
+      {/* ─── Header ────────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
+        transition={{ duration: 0.4, ease }}
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8"
       >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Notes de Frais</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">100% Légal FR • Indemnités Kilométriques • Plafonds Repas</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={openCreate}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
-            >
-              <Plus size={16} />
-              Nouvelle dépense
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowMultiInvoiceModal(true)}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-purple-500/30 hover:shadow-xl transition-all"
-            >
-              <Sparkles size={16} />
-              <span className="hidden sm:inline">Multi-factures</span>
-            </motion.button>
-            <Link href="/expenses/analytics" className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-700 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg shadow-violet-500/20 hover:shadow-xl transition-all">
-              <TrendingDown size={16} />
-              <span className="hidden sm:inline">Analytics</span>
-            </Link>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowExportModal(true)}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white px-4 py-2.5 rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl transition-all"
-            >
-              <Download size={16} />
-              <span className="hidden sm:inline">Export</span>
-            </motion.button>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Notes de Frais</h1>
+          <p className="text-slate-500 mt-1 text-sm">Legal FR · IK · Plafonds repas</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={openCreate}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+            <Plus size={16} />
+            <span className="hidden sm:inline">Nouvelle depense</span>
+            <span className="sm:hidden">Ajouter</span>
+          </button>
+          <button onClick={() => setShowMultiInvoiceModal(true)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-sm font-medium border border-white/5 transition-colors">
+            <Sparkles size={16} />
+            <span className="hidden sm:inline">Multi-factures</span>
+          </button>
+          <Link href="/expenses/analytics"
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-sm font-medium border border-white/5 transition-colors">
+            <TrendingDown size={16} />
+            <span className="hidden sm:inline">Analytics</span>
+          </Link>
+          <button onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-sm font-medium border border-white/5 transition-colors">
+            <Download size={16} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        {[
-          { label: 'Ce mois', value: formatCurrency(totalMonth), sub: 'dépensé', icon: TrendingDown, color: 'from-red-500 to-rose-500' },
-          { label: 'Total cumulé', value: formatCurrency(totalAll), sub: 'toutes périodes', icon: Receipt, color: 'from-blue-500 to-indigo-500' },
-          { label: 'TVA déductible', value: formatCurrency(totalVat), sub: 'récupérable', icon: ArrowDownUp, color: 'from-green-500 to-emerald-500' },
-          { label: 'Indemnités IK', value: formatCurrency(totalMileage), sub: 'remboursées', icon: Gauge, color: 'from-amber-500 to-orange-500' },
-          { label: 'En attente', value: String(pending), sub: 'à valider', icon: Filter, color: 'from-purple-500 to-violet-500' },
-        ].map(({ label, value, sub, icon: Icon, color }, i) => (
-          <motion.div
-            key={label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            whileHover={{ y: -4 }}
-            className="relative group"
-          >
-            <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
-              <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', color)} />
-              <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5" />
-              <div className="relative">
-                <div className={cn('w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-3 shadow-lg', color)}>
-                  <Icon size={22} className="text-white" />
-                </div>
-                <p className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">{value}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-white/70 transition-colors">{sub}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white/70 transition-colors">{label}</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Filters */}
+      {/* ─── Stats Pills ───────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 mb-8"
+        transition={{ duration: 0.4, delay: 0.1, ease }}
+        className="flex flex-wrap gap-3 mb-6"
       >
-        <div className="flex flex-row gap-3 items-center">
+        {[
+          { label: 'Ce mois', value: formatCurrency(totalMonth), dot: 'bg-rose-400' },
+          { label: 'Total', value: formatCurrency(totalAll), dot: 'bg-blue-400' },
+          { label: 'TVA', value: formatCurrency(totalVat), dot: 'bg-emerald-400' },
+          { label: 'IK', value: formatCurrency(totalMileage), dot: 'bg-amber-400' },
+          { label: 'En attente', value: String(pending), dot: 'bg-purple-400' },
+        ].map(({ label, value, dot }) => (
+          <div key={label} className="flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-lg px-3 py-1.5">
+            <span className={cn('w-2 h-2 rounded-full flex-shrink-0', dot)} />
+            <span className="text-xs text-slate-400">{label}</span>
+            <span className="text-xs font-semibold text-white">{value}</span>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* ─── Filters ───────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease }}
+        className="space-y-3 mb-6"
+      >
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un fournisseur, ville..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-white/5 rounded-xl text-white placeholder-slate-500 text-sm focus:border-emerald-500/50 focus:outline-none transition-colors"
             />
           </div>
           <div className="flex gap-1.5 flex-shrink-0">
             {['', 'pending', 'validated'].map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilterStatus(s)}
-                className={cn('px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border', filterStatus === s
-                  ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary shadow-md shadow-primary/20'
-                  : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                )}
-              >
-                {s === '' ? 'Tout' : s === 'pending' ? 'En attente' : 'Validées'}
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={cn(
+                  'px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border',
+                  filterStatus === s
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-slate-800/50 text-slate-400 border-white/5 hover:border-white/10'
+                )}>
+                {s === '' ? 'Tout' : s === 'pending' ? 'En attente' : 'Validees'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Category Pills - horizontal scroll */}
-        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
-          <button onClick={() => setFilterCat('')} className={cn('px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border flex-shrink-0', filterCat === ''
-            ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary'
-            : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'
-          )}>
+        {/* Category pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button onClick={() => setFilterCat('')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border flex-shrink-0',
+              filterCat === ''
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-slate-800/50 text-slate-400 border-white/5 hover:border-white/10'
+            )}>
             Toutes
           </button>
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             return (
-              <button key={cat.value} onClick={() => setFilterCat(cat.value === filterCat ? '' : cat.value)} className={cn('px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 flex-shrink-0', filterCat === cat.value
-                ? 'bg-gradient-to-r from-primary to-primary-dark text-white border-primary'
-                : 'bg-white/50 dark:bg-slate-700/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'
-              )}>
-                <Icon size={11} />
+              <button key={cat.value} onClick={() => setFilterCat(cat.value === filterCat ? '' : cat.value)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border flex-shrink-0',
+                  filterCat === cat.value
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-slate-800/50 text-slate-400 border-white/5 hover:border-white/10'
+                )}>
+                <span className={cn('w-2 h-2 rounded-full', cat.dot)} />
                 {cat.label}
               </button>
             );
@@ -860,108 +696,124 @@ export default function ExpensesPage() {
         </div>
       </motion.div>
 
-      {/* Expenses Grid */}
+      {/* ─── Content ───────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
+        /* Empty State */
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-12 text-center"
+          transition={{ duration: 0.4, ease }}
+          className="flex flex-col items-center justify-center py-24"
         >
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto mb-6">
-            <Receipt size={40} className="text-primary/60" />
+          <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-6">
+            <Receipt size={28} className="text-slate-500" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aucune dépense trouvée</h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">Notes de frais 100% légales françaises avec IK et plafonds repas</p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-primary/30"
-          >
-            <Plus size={18} /> Ajouter une dépense
-          </motion.button>
+          <h3 className="text-lg font-semibold text-white mb-2">Aucune depense trouvee</h3>
+          <p className="text-slate-400 text-sm mb-6 text-center">Notes de frais legales francaises avec IK et plafonds repas</p>
+          <button onClick={openCreate}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <Plus size={16} /> Ajouter une depense
+          </button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {filtered.map((expense) => (
-            <Expense3DCard
-              key={expense.id}
-              expense={expense}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              onValidate={handleValidate}
-            />
-          ))}
-        </div>
+        <>
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((expense, i) => (
+              <MobileExpenseCard
+                key={expense.id}
+                expense={expense}
+                index={i}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                onValidate={handleValidate}
+              />
+            ))}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fournisseur</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Montant</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Categorie</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Statut</th>
+                  <th className="px-5 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filtered.map((expense) => (
+                  <DesktopTableRow
+                    key={expense.id}
+                    expense={expense}
+                    onEdit={openEdit}
+                    onDelete={handleDelete}
+                    onValidate={handleValidate}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {/* Modal Création/Édition améliorée */}
+      {/* ─── Modal Creation/Edition ────────────────────────────── */}
       <AnimatePresence>
         {showModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60"
             onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-white/50 dark:border-white/10 max-h-[90vh] flex flex-col"
+              initial={{ opacity: 0, y: 40, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.98 }}
+              transition={{ duration: 0.3, ease }}
+              className="bg-slate-900 w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl border border-white/5 md:border-white/5 max-h-[92vh] flex flex-col overflow-hidden"
             >
-              <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+              {/* Modal header */}
+              <div className="px-5 pt-5 pb-4 border-b border-white/5 flex items-center justify-between flex-shrink-0">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Modifier la dépense' : 'Nouvelle dépense'}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">100% conforme à la législation française</p>
+                  <h2 className="text-lg font-semibold text-white">{editingId ? 'Modifier la depense' : 'Nouvelle depense'}</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Conforme legislation francaise</p>
                 </div>
-                <motion.button
-                  whileHover={{ rotate: 90, scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowModal(false)}
-                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors"
-                >
-                  <X size={20} />
-                </motion.button>
+                <button onClick={() => setShowModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                  <X size={18} />
+                </button>
               </div>
 
-              <form onSubmit={handleSave} className="p-6 space-y-5 overflow-y-auto flex-1">
+              <form onSubmit={handleSave} className="p-5 space-y-5 overflow-y-auto flex-1">
                 {/* Category Selection */}
                 <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-3">Catégorie</label>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-2.5">Categorie</label>
                   <div className="grid grid-cols-4 gap-2">
                     {CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
                       return (
-                        <motion.button
-                          key={cat.value}
-                          type="button"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => set('category', cat.value)}
-                          className={cn('relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 text-xs font-bold transition-all overflow-hidden', form.category === cat.value
-                            ? 'border-primary bg-gradient-to-br from-primary/10 to-primary/5'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 bg-white/50 dark:bg-slate-700/50'
-                          )}
-                        >
-                          {form.category === cat.value && (
-                            <motion.div
-                              layoutId="activeCategory"
-                              className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5"
-                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            />
-                          )}
-                          <div className={cn('relative w-8 h-8 rounded-xl bg-gradient-to-br flex items-center justify-center', cat.color)}>
-                            <Icon size={16} className="text-white" />
+                        <button key={cat.value} type="button" onClick={() => set('category', cat.value)}
+                          className={cn(
+                            'flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-xs font-medium transition-colors',
+                            form.category === cat.value
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                              : 'border-white/5 bg-slate-800/50 text-slate-400 hover:border-white/10 hover:text-slate-300'
+                          )}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn('w-2 h-2 rounded-full', cat.dot)} />
+                            <Icon size={14} />
                           </div>
-                          <span className="relative">{cat.label}</span>
-                        </motion.button>
+                          <span>{cat.label}</span>
+                        </button>
                       );
                     })}
                   </div>
@@ -969,116 +821,91 @@ export default function ExpensesPage() {
 
                 {/* OCR Loading */}
                 {ocrLoading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4"
-                  >
-                    <div className="w-5 h-5 border-3 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm font-medium text-purple-700 dark:text-purple-300">L'IA analyse votre justificatif...</p>
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
+                    <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-purple-300">L'IA analyse votre justificatif...</p>
                   </motion.div>
                 )}
 
-                {/* Section Indemnités Kilométriques */}
+                {/* Mileage Section */}
                 {form.category === 'mileage' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 space-y-4"
-                  >
-                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                      <Gauge size={18} />
-                      <p className="text-sm font-bold">Indemnités Kilométriques (Barème URSSAF 2024)</p>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-slate-800/50 border border-white/5 rounded-xl p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Gauge size={16} />
+                      <p className="text-sm font-medium">Indemnites Kilometriques (Bareme URSSAF 2024)</p>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Distance (km)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={form.distance_km}
-                          onChange={(e) => set('distance_km', e.target.value)}
-                          placeholder="Ex: 150"
-                          className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                        />
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Distance (km)</label>
+                        <input type="number" min="0" step="1" value={form.distance_km}
+                          onChange={(e) => set('distance_km', e.target.value)} placeholder="Ex: 150"
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Puissance fiscale (CV)</label>
-                        <select
-                          value={form.vehicle_cv}
-                          onChange={(e) => set('vehicle_cv', e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                        >
-                          <option value="">Sélectionner...</option>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Puissance (CV)</label>
+                        <select value={form.vehicle_cv} onChange={(e) => set('vehicle_cv', e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors">
+                          <option value="">Selectionner...</option>
                           {Array.from({ length: 13 }, (_, i) => i + 1).map(cv => (
                             <option key={cv} value={cv}>{cv} CV</option>
                           ))}
                         </select>
                       </div>
                     </div>
-
                     {form.distance_km && form.vehicle_cv && (
-                      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-3">
-                        <Calculator size={16} className="text-primary" />
-                        <p className="text-sm">
-                          <span className="font-bold">{formatCurrency(parseFloat(form.amount) || 0)}</span> =
-                          {form.distance_km} km × {(parseFloat(form.amount) / (parseFloat(form.distance_km) || 1)).toFixed(3)}€/km
+                      <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-3">
+                        <Calculator size={14} className="text-emerald-400" />
+                        <p className="text-sm text-slate-300">
+                          <span className="font-semibold text-white">{formatCurrency(parseFloat(form.amount) || 0)}</span>
+                          {' = '}{form.distance_km} km x {(parseFloat(form.amount) / (parseFloat(form.distance_km) || 1)).toFixed(3)} EUR/km
                         </p>
                       </div>
                     )}
                   </motion.div>
                 )}
 
-                {/* Section Repas avec plafond */}
+                {/* Meals Section */}
                 {form.category === 'meals' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 space-y-4"
-                  >
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                      <Coffee size={18} />
-                      <p className="text-sm font-bold">Frais de Repas (Plafond exonération 2024)</p>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-slate-800/50 border border-white/5 rounded-xl p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <Coffee size={16} />
+                      <p className="text-sm font-medium">Frais de Repas (Plafond exoneration 2024)</p>
                     </div>
-
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Type de repas</label>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Type de repas</label>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { value: 'full_day', label: 'Journée complète', allowance: MEAL_ALLOWANCE_2024.full_day },
-                          { value: 'half_day', label: 'Demi-journée', allowance: MEAL_ALLOWANCE_2024.half_day },
+                          { value: 'full_day', label: 'Journee complete', allowance: MEAL_ALLOWANCE_2024.full_day },
+                          { value: 'half_day', label: 'Demi-journee', allowance: MEAL_ALLOWANCE_2024.half_day },
                         ].map((type) => (
-                          <button
-                            key={type.value}
-                            type="button"
-                            onClick={() => set('meal_type', type.value)}
-                            className={cn('p-3 rounded-xl border-2 text-sm font-bold transition-all text-left', form.meal_type === type.value
-                              ? 'border-amber-500 bg-amber-100 dark:bg-amber-900/30'
-                              : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-slate-700/50'
-                            )}
-                          >
-                            <p className="font-bold">{type.label}</p>
-                            <p className="text-xs text-gray-500">Exonéré jusqu'à {formatCurrency(type.allowance * 100)}</p>
+                          <button key={type.value} type="button" onClick={() => set('meal_type', type.value)}
+                            className={cn('p-3 rounded-xl border text-sm font-medium text-left transition-colors',
+                              form.meal_type === type.value
+                                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                                : 'border-white/5 bg-slate-800 text-slate-400 hover:border-white/10'
+                            )}>
+                            <p className="font-medium">{type.label}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">Exonere jusqu'a {formatCurrency(type.allowance * 100)}</p>
                           </button>
                         ))}
                       </div>
                     </div>
-
                     {form.amount && (
-                      <div className="bg-white dark:bg-slate-800 rounded-xl p-3 space-y-2">
+                      <div className="bg-slate-800 rounded-lg p-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Montant total</span>
-                          <span className="text-sm font-bold">{formatCurrency(parseFloat(form.amount))}</span>
+                          <span className="text-sm text-slate-400">Montant total</span>
+                          <span className="text-sm font-medium text-white">{formatCurrency(parseFloat(form.amount))}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Part exonérée</span>
-                          <span className="text-sm font-bold text-green-600">{formatCurrency(form.tax_free_amount ? parseFloat(form.tax_free_amount) : 0)}</span>
+                          <span className="text-sm text-slate-400">Part exoneree</span>
+                          <span className="text-sm font-medium text-emerald-400">{formatCurrency(form.tax_free_amount ? parseFloat(form.tax_free_amount) : 0)}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Part imposable</span>
-                          <span className="text-sm font-bold text-red-600">{formatCurrency(parseFloat(form.amount) - (form.tax_free_amount ? parseFloat(form.tax_free_amount) : 0))}</span>
+                          <span className="text-sm text-slate-400">Part imposable</span>
+                          <span className="text-sm font-medium text-red-400">{formatCurrency(parseFloat(form.amount) - (form.tax_free_amount ? parseFloat(form.tax_free_amount) : 0))}</span>
                         </div>
                       </div>
                     )}
@@ -1087,117 +914,84 @@ export default function ExpensesPage() {
 
                 {/* Vendor + AI Categorize */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Fournisseur *</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Fournisseur *</label>
                     {(form.vendor || form.description) && form.category !== 'mileage' && (
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={handleCategorizeAI}
-                        disabled={categorizingAI}
-                        className="flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 transition-colors disabled:opacity-50 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-900/20"
-                      >
-                        {categorizingAI ? <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={12} />}
-                        Catégoriser par IA
-                      </motion.button>
+                      <button type="button" onClick={handleCategorizeAI} disabled={categorizingAI}
+                        className="flex items-center gap-1.5 text-xs font-medium text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                        {categorizingAI ? <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" /> : <Sparkles size={11} />}
+                        Catégoriser
+                      </button>
                     )}
                   </div>
-                  <input
-                    required={form.category !== 'mileage'}
-                    disabled={form.category === 'mileage'}
-                    value={form.vendor}
-                    onChange={(e) => set('vendor', e.target.value)}
-                    placeholder={form.category === 'mileage' ? 'Indemnités kilométriques' : 'Ex : SNCF, Amazon, Leroy Merlin...'}
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
-                  />
+                  <input required={form.category !== 'mileage'} disabled={form.category === 'mileage'}
+                    value={form.vendor} onChange={(e) => set('vendor', e.target.value)}
+                    placeholder={form.category === 'mileage' ? 'Indemnites kilometriques' : 'Ex : SNCF, Amazon, Leroy Merlin...'}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white placeholder-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed" />
                 </div>
 
-                {/* Amount + VAT (pas pour IK) */}
+                {/* Amount + VAT */}
                 {form.category !== 'mileage' && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Montant TTC *</label>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Montant TTC *</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">€</span>
-                        <input
-                          required
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={form.amount}
-                          onChange={(e) => set('amount', e.target.value)}
-                          placeholder="0.00"
-                          className="w-full pl-8 pr-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                        />
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">EUR</span>
+                        <input required type="number" min="0" step="0.01" value={form.amount}
+                          onChange={(e) => set('amount', e.target.value)} placeholder="0.00"
+                          className="w-full pl-11 pr-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">TVA récupérable</label>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">TVA recuperable</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">€</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={form.vat_amount}
-                          onChange={(e) => set('vat_amount', e.target.value)}
-                          placeholder="0.00"
-                          className="w-full pl-8 pr-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                        />
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">EUR</span>
+                        <input type="number" min="0" step="0.01" value={form.vat_amount}
+                          onChange={(e) => set('vat_amount', e.target.value)} placeholder="0.00"
+                          className="w-full pl-11 pr-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Lieu (NOUVEAU - obligatoire légalement) */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Location */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Ville *</label>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Ville *</label>
                     <div className="relative">
-                      <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        required
-                        value={form.location_city}
-                        onChange={(e) => set('location_city', e.target.value)}
+                      <MapPin size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input required value={form.location_city} onChange={(e) => set('location_city', e.target.value)}
                         placeholder="Ex: Paris, Lyon..."
-                        className="w-full pl-10 pr-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                      />
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white placeholder-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Pays</label>
-                    <input
-                      value={form.location_country}
-                      onChange={(e) => set('location_country', e.target.value)}
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Pays</label>
+                    <input value={form.location_country} onChange={(e) => set('location_country', e.target.value)}
                       placeholder="Ex: France"
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                    />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white placeholder-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                   </div>
                 </div>
 
-                {/* Type de déplacement (si frais voyage) */}
+                {/* Trip Type */}
                 {['transport', 'accommodation', 'meals', 'mileage'].includes(form.category) && (
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Type de déplacement</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Type de deplacement</label>
+                    <div className="grid grid-cols-2 gap-2">
                       {[
-                        { value: 'professional', label: 'Déplacement professionnel', icon: Briefcase },
+                        { value: 'professional', label: 'Professionnel', icon: Briefcase },
                         { value: 'training', label: 'Formation', icon: FileText },
-                        { value: 'client_meeting', label: 'Réunion client', icon: Users },
+                        { value: 'client_meeting', label: 'Reunion client', icon: Users },
                         { value: 'other', label: 'Autre', icon: MoreHorizontal },
                       ].map((type) => {
                         const Icon = type.icon;
                         return (
-                          <button
-                            key={type.value}
-                            type="button"
-                            onClick={() => set('trip_type', type.value)}
-                            className={cn('flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-bold transition-all', form.trip_type === type.value
-                              ? 'border-primary bg-primary/10'
-                              : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-slate-700/50'
-                            )}
-                          >
+                          <button key={type.value} type="button" onClick={() => set('trip_type', type.value)}
+                            className={cn('flex items-center gap-2 p-2.5 rounded-xl border text-sm font-medium transition-colors',
+                              form.trip_type === type.value
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                                : 'border-white/5 bg-slate-800/50 text-slate-400 hover:border-white/10'
+                            )}>
                             <Icon size={14} />
                             {type.label}
                           </button>
@@ -1208,232 +1002,176 @@ export default function ExpensesPage() {
                 )}
 
                 {/* Date + Payment */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Date *</label>
-                    <input
-                      required
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => set('date', e.target.value)}
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                    />
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Date *</label>
+                    <input required type="date" value={form.date} onChange={(e) => set('date', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                   </div>
-                  <CustomDropdown
-                    label="Moyen de paiement"
-                    value={form.payment_method}
-                    onChange={(v) => set('payment_method', v)}
-                    options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
-                  />
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Paiement</label>
+                    <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors">
+                      {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                  </div>
                 </div>
 
-                {/* Rattachement Client/Projet (NOUVEAU) */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Client / Project */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Client</label>
-                    <select
-                      value={form.client_id}
-                      onChange={(e) => set('client_id', e.target.value)}
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                    >
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Client</label>
+                    <select value={form.client_id} onChange={(e) => set('client_id', e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white text-sm focus:border-emerald-500/50 focus:outline-none transition-colors">
                       <option value="">Sans client</option>
-                      {clients?.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {clients?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Code projet</label>
-                    <input
-                      value={form.project_code}
-                      onChange={(e) => set('project_code', e.target.value)}
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Code projet</label>
+                    <input value={form.project_code} onChange={(e) => set('project_code', e.target.value)}
                       placeholder="Ex: PROJ-2024-001"
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm transition-all"
-                    />
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white placeholder-slate-600 text-sm focus:border-emerald-500/50 focus:outline-none transition-colors" />
                   </div>
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Description</label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => set('description', e.target.value)}
-                    placeholder="Objet de la dépense..."
-                    rows={2}
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm resize-none transition-all"
-                  />
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Description</label>
+                  <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
+                    placeholder="Objet de la depense..." rows={2}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-white/5 text-white placeholder-slate-600 text-sm resize-none focus:border-emerald-500/50 focus:outline-none transition-colors" />
                 </div>
 
-                {/* Déductibilité fiscale */}
-                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
-                  <input
-                    type="checkbox"
-                    id="is_deductible"
-                    checked={form.is_deductible}
+                {/* Deductibility */}
+                <div className="flex items-center gap-3 bg-slate-800/50 border border-white/5 rounded-xl p-3.5">
+                  <input type="checkbox" id="is_deductible" checked={form.is_deductible}
                     onChange={(e) => set('is_deductible', e.target.checked)}
-                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
+                    className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0" />
                   <div className="flex-1">
-                    <label htmlFor="is_deductible" className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
-                      Dépense déductible fiscalement
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Cochez si cette dépense est professionnelle et déductible</p>
+                    <label htmlFor="is_deductible" className="text-sm font-medium text-white cursor-pointer">Depense deductible fiscalement</label>
+                    <p className="text-xs text-slate-500">Cochez si cette depense est professionnelle et deductible</p>
                   </div>
-                  <Info size={16} className="text-blue-500" />
+                  <Info size={14} className="text-slate-500" />
                 </div>
 
                 {/* Receipt Upload */}
                 {form.category !== 'mileage' && (
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">Justificatif</label>
-                    <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }} />
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-1.5">Justificatif</label>
+                    <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }} />
                     {receiptUrl ? (
-                      <div className="flex items-center gap-3 p-4 bg-green-50/80 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800">
-                        <FileImage size={18} className="text-green-500 flex-shrink-0" />
-                        <span className="text-sm font-medium text-green-700 dark:text-green-400 flex-1 truncate">Justificatif ajouté</span>
-                        <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700">
-                          <ExternalLink size={16} />
+                      <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <FileImage size={16} className="text-emerald-400 flex-shrink-0" />
+                        <span className="text-sm text-emerald-300 flex-1 truncate">Justificatif ajoute</span>
+                        <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">
+                          <ExternalLink size={14} />
                         </a>
-                        <motion.button
-                          whileHover={{ scale: 1.1, rotate: 90 }}
-                          whileTap={{ scale: 0.9 }}
-                          type="button"
-                          onClick={() => setReceiptUrl(null)}
-                          className="text-green-400 hover:text-red-500 transition-colors"
-                        >
-                          <X size={16} />
-                        </motion.button>
+                        <button type="button" onClick={() => setReceiptUrl(null)}
+                          className="text-emerald-400/60 hover:text-red-400 transition-colors">
+                          <X size={14} />
+                        </button>
                       </div>
                     ) : (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        disabled={uploadingReceipt}
-                        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-                      >
-                        {uploadingReceipt ? <div className="w-5 h-5 border-3 border-primary border-t-transparent rounded-full animate-spin" /> : <Upload size={18} />}
+                      <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingReceipt}
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed border-white/10 text-sm text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 hover:bg-emerald-500/5 transition-colors">
+                        {uploadingReceipt ? <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> : <Upload size={16} />}
                         {uploadingReceipt ? 'Upload en cours...' : 'Ajouter un justificatif (PDF, image)'}
-                      </motion.button>
+                      </button>
                     )}
                   </div>
                 )}
               </form>
 
-              <div className="px-6 pb-6 flex gap-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                >
+              {/* Modal footer */}
+              <div className="px-5 py-4 flex gap-3 border-t border-white/5 flex-shrink-0">
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
                   Annuler
-                </motion.button>
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all disabled:opacity-60"
-                >
-                  {saving ? <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={18} />}
-                  {editingId ? 'Enregistrer' : 'Ajouter la dépense'}
-                </motion.button>
+                </button>
+                <button type="submit" disabled={saving}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                  {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
+                  {editingId ? 'Enregistrer' : 'Ajouter la depense'}
+                </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Modal Export Comptable */}
+      {/* ─── Modal Export ──────────────────────────────────────── */}
       <AnimatePresence>
         {showExportModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60"
             onClick={(e) => { if (e.target === e.currentTarget) setShowExportModal(false); }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md p-6 border border-white/50 dark:border-white/10"
+              initial={{ opacity: 0, y: 40, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.98 }}
+              transition={{ duration: 0.3, ease }}
+              className="bg-slate-900 w-full md:max-w-md md:rounded-2xl rounded-t-2xl border border-white/5 p-5"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Export Comptable</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Format conforme pour votre comptable</p>
+                  <h2 className="text-lg font-semibold text-white">Export Comptable</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Format conforme pour votre comptable</p>
                 </div>
-                <motion.button
-                  whileHover={{ rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowExportModal(false)}
-                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400"
-                >
-                  <X size={20} />
-                </motion.button>
+                <button onClick={() => setShowExportModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="space-y-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { handleExportAccounting('csv'); setShowExportModal(false); }}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                    <FileText size={24} className="text-white" />
+              <div className="space-y-2">
+                <button onClick={() => { handleExportAccounting('csv'); setShowExportModal(false); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-white/5 hover:border-white/10 hover:bg-white/[0.02] transition-colors text-left">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <FileText size={18} className="text-emerald-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-gray-900 dark:text-white">Export CSV Excel</p>
-                    <p className="text-sm text-gray-500">Pour Excel, comptabilité générale</p>
+                    <p className="font-medium text-white text-sm">Export CSV Excel</p>
+                    <p className="text-xs text-slate-500">Pour Excel, comptabilite generale</p>
                   </div>
-                  <Download size={20} className="text-gray-400" />
-                </motion.button>
+                  <Download size={16} className="text-slate-500" />
+                </button>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { handleExportAccounting('fec'); setShowExportModal(false); }}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:bg-primary/5 transition-all text-left"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <FileText size={24} className="text-white" />
+                <button onClick={() => { handleExportAccounting('fec'); setShowExportModal(false); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-white/5 hover:border-white/10 hover:bg-white/[0.02] transition-colors text-left">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <FileText size={18} className="text-blue-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-gray-900 dark:text-white">Fichier FEC</p>
-                    <p className="text-sm text-gray-500">Format Fichier des Écritures Comptables</p>
+                    <p className="font-medium text-white text-sm">Fichier FEC</p>
+                    <p className="text-xs text-slate-500">Format Fichier des Ecritures Comptables</p>
                   </div>
-                  <Download size={20} className="text-gray-400" />
-                </motion.button>
+                  <Download size={16} className="text-slate-500" />
+                </button>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { handleExportAccounting('pdf'); setShowExportModal(false); }}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:bg-primary/5 transition-all text-left opacity-60 cursor-not-allowed"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0">
-                    <FileText size={24} className="text-white" />
+                <button disabled
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-white/5 opacity-40 cursor-not-allowed text-left">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                    <FileText size={18} className="text-red-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-gray-900 dark:text-white">Export PDF</p>
-                    <p className="text-sm text-gray-500">Prochainement</p>
+                    <p className="font-medium text-white text-sm">Export PDF</p>
+                    <p className="text-xs text-slate-500">Prochainement</p>
                   </div>
-                  <Download size={20} className="text-gray-400" />
-                </motion.button>
+                  <Download size={16} className="text-slate-500" />
+                </button>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-start gap-3">
-                <Info size={18} className="text-blue-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-bold text-blue-700 dark:text-blue-300 mb-1">Conforme législation française</p>
-                  <p className="text-blue-600/80 dark:text-blue-400/80">Tous les exports incluent les champs légaux: TVA, lieu, client, projet, déductibilité</p>
+              <div className="mt-4 p-3 bg-slate-800/50 border border-white/5 rounded-xl flex items-start gap-2.5">
+                <Info size={14} className="text-slate-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-medium text-slate-300 mb-0.5">Conforme legislation francaise</p>
+                  <p className="text-slate-500">Tous les exports incluent les champs legaux: TVA, lieu, client, projet, deductibilite</p>
                 </div>
               </div>
             </motion.div>
@@ -1441,49 +1179,43 @@ export default function ExpensesPage() {
         )}
       </AnimatePresence>
 
-      {/* Modal Multi-Factures */}
+      {/* ─── Modal Multi-Factures ──────────────────────────────── */}
       <AnimatePresence>
         {showMultiInvoiceModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60"
             onClick={(e) => { if (e.target === e.currentTarget) setShowMultiInvoiceModal(false); }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-4xl p-6 border border-white/50 dark:border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
+              initial={{ opacity: 0, y: 40, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.98 }}
+              transition={{ duration: 0.3, ease }}
+              className="bg-slate-900 w-full md:max-w-4xl md:rounded-2xl rounded-t-2xl border border-white/5 p-5 max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
+                  <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
                     Upload Multi-Factures
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    L'IA détecte automatiquement chaque facture dans votre PDF
-                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">L'IA detecte automatiquement chaque facture dans votre PDF</p>
                 </div>
-                <motion.button
-                  whileHover={{ rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowMultiInvoiceModal(false)}
-                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400"
-                >
-                  <X size={20} />
-                </motion.button>
+                <button onClick={() => setShowMultiInvoiceModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                  <X size={18} />
+                </button>
               </div>
 
               <div className="flex-1 overflow-y-auto">
                 <MultiInvoiceUpload
                   onExtracted={(expenses) => {
-                    // Add extracted expenses to the list
                     setExpenses(prev => [...expenses, ...prev]);
                     setShowMultiInvoiceModal(false);
-                    toast.success(`${expenses.length} facture(s) extraite(s) avec succès`);
+                    toast.success(`${expenses.length} facture(s) extraite(s) avec succes`);
                   }}
                 />
               </div>

@@ -3,9 +3,15 @@ interface CardProps {
   className?: string;
 }
 
+/**
+ * Card — dark-compatible
+ *
+ * Light mode: bg-white, shadow-sm, border-gray-100
+ * Dark mode: bg-slate-900, border-white/5 (pas de shadow en dark)
+ */
 export default function Card({ children, className = '' }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${className}`}>
+    <div className={`bg-white dark:bg-slate-900 rounded-xl shadow-sm dark:shadow-none border border-gray-100 dark:border-white/5 ${className}`}>
       {children}
     </div>
   );
@@ -20,5 +26,5 @@ Card.Header = function CardHeader({ children, className = '' }: CardProps) {
 };
 
 Card.Title = function CardTitle({ children, className = '' }: CardProps) {
-  return <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>{children}</h3>;
+  return <h3 className={`text-lg font-semibold text-gray-900 dark:text-white ${className}`}>{children}</h3>;
 };

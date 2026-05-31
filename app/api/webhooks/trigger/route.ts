@@ -73,7 +73,5 @@ export async function POST(req: NextRequest) {
   const succeeded = results.filter((r) => r.status === 'fulfilled').length;
   const failed = results.filter((r) => r.status === 'rejected').length;
 
-  console.log(`[webhook/trigger] event=${event} sent=${succeeded} failed=${failed}`);
-
   return NextResponse.json({ sent: succeeded, failed, total: matchingEndpoints.length });
 }

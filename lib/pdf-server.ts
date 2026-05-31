@@ -13,6 +13,10 @@ async function fetchAndEmbedImage(pdfDoc: PDFDocument, url: string): Promise<PDF
     clearTimeout(tid);
     if (!res.ok) return null;
     const buf = await res.arrayBuffer();
+    if (buf.byteLength > 2 * 1024 * 1024) {
+      console.warn('[PDF] Logo too large, skipping:', buf.byteLength);
+      return null;
+    }
     const bytes = new Uint8Array(buf);
     const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
     if (isPng) return await pdfDoc.embedPng(bytes);
@@ -39,9 +43,13 @@ function mixRgb(c: RGB, alpha: number, bg: RGB = rgb(1, 1, 1)): RGB {
 function safe(str: unknown): string {
   return String(str ?? '')
     .replace(/\u2013/g, '-').replace(/\u2014/g, '--')
-    .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
-    .replace(/\u2026/g, '...').replace(/\u20AC/g, 'EUR')
-    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+    .replace(/[\u2018\u2019]/g, "'").replace(/[""]/g, '"')
+    .replace(/\u2026/g, '...')
+    .replace(/\u20AC/g, '\x80')            // Euro glyph in WinAnsiEncoding
+    .replace(/\u0153/g, 'oe').replace(/\u0152/g, 'OE')  // ligatures
+    .replace(/\u00AB/g, '<<').replace(/\u00BB/g, '>>')   // guillemets
+    .replace(/\u2022/g, '-').replace(/\u2024/g, '.')     // bullet
+    .replace(/[^\x20-\x7E\x80-\xFF]/g, '?');   // replace unknown with ? instead of deleting
 }
 
 // ── Drawing primitives ────────────────────────────────────────────────────────

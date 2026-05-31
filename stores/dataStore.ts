@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 interface DataState {
   clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null; error: string | null;
   fetchClients: () => Promise<void>; createClient: (data: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<Client>; bulkCreateClients: (items: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>[]) => Promise<Client[]>; updateClient: (id: string, data: Partial<Client>) => Promise<void>; deleteClient: (id: string) => Promise<void>;
-  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile) => Promise<Invoice>; getNextInvoiceNumber: (prefix: string, count: number) => string;
+  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile) => Promise<Invoice>;
   fetchRecurringInvoices: () => Promise<void>; createRecurringInvoice: (data: Omit<RecurringInvoice, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<RecurringInvoice>; updateRecurringInvoice: (id: string, data: Partial<RecurringInvoice>) => Promise<void>; deleteRecurringInvoice: (id: string) => Promise<void>;
   computeStats: () => void; clearData: () => void;
 }
@@ -83,9 +83,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       set({ error: 'Impossible de charger vos factures. Vérifiez votre connexion.' });
     } finally { set({ loading: false }); }
   },
-  getNextInvoiceNumber: (prefix, n) => `${prefix}-${new Date().getFullYear()}-${String(n).padStart(3, '0')}`,
   createInvoice: async (formData, profile, idempotencyId?: string) => {
-    console.log('[createInvoice] START', { hasProfile: !!profile, profileId: profile?.id, idempotencyId });
     if (!profile?.id) {
       throw new Error('Profil utilisateur introuvable. Veuillez recharger la page.');
     }
@@ -100,7 +98,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       // Validate each field
       if (!item.description || item.description.trim().length === 0) throw new Error(`Ligne ${idx + 1} : description requise.`);
       if (item.description.length > 500) throw new Error(`Ligne ${idx + 1} : description trop longue (max 500 caractères).`);
-      if (typeof item.quantity !== 'number' || item.quantity <= 0 || item.quantity > 99999) throw new Error(`Ligne ${idx + 1} : quantité invalide.`);
+      if (typeof item.quantity !== 'number' || item.quantity <= 0 || item.quantity > 99999 || !Number.isFinite(item.quantity) || item.quantity < 0.01) throw new Error(`Ligne ${idx + 1} : quantité invalide (min 0.01, max 99999).`);
       if (typeof item.unit_price !== 'number' || item.unit_price < 0 || item.unit_price > 9999999) throw new Error(`Ligne ${idx + 1} : prix unitaire invalide.`);
       if (typeof item.vat_rate !== 'number' || item.vat_rate < 0 || item.vat_rate > 100) throw new Error(`Ligne ${idx + 1} : taux TVA invalide (0-100%).`);
 
@@ -141,7 +139,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     const finalTotal = roundMoney(fromCents(finalTotalCents));
 
     // Approche 1: Server-side API (fiable, pas de problème Web Locks)
-    console.log('[createInvoice] Using server-side API route...');
     try {
       const response = await fetch('/api/invoices/create', {
         method: 'POST',
@@ -165,8 +162,13 @@ export const useDataStore = create<DataState>((set, get) => ({
         }),
       });
 
+      // Handle rate limiting gracefully
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        throw new Error(`Trop de requêtes. Veuillez patienter ${retryAfter || 'quelques'} secondes puis réessayer.`);
+      }
+
       const result = await response.json();
-      console.log('[createInvoice] Server API response:', { status: response.status, hasInvoice: !!result.invoice, error: result.error });
 
       if (!response.ok || result.error) {
         throw new Error(result.error || `Erreur serveur (${response.status})`);
@@ -183,7 +185,6 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       set((s) => ({ invoices: [data, ...s.invoices] }));
       get().computeStats();
-      console.log('[createInvoice] SUCCESS via server API', data.id);
       return data;
     } catch (serverError: any) {
       console.warn('[createInvoice] Server API failed:', serverError?.message, '— trying direct RPC...');
@@ -234,7 +235,6 @@ export const useDataStore = create<DataState>((set, get) => ({
 
         set((s) => ({ invoices: [data, ...s.invoices] }));
         get().computeStats();
-        console.log('[createInvoice] SUCCESS via direct RPC', data.id);
         return data;
       } catch (rpcError: any) {
         console.error('[createInvoice] Both methods failed. Server:', serverError?.message, 'RPC:', rpcError?.message);
@@ -289,17 +289,35 @@ export const useDataStore = create<DataState>((set, get) => ({
   updateInvoiceStatus: async (id, status) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
-    const u: Partial<Invoice> & { updated_at: string; paid_at?: string; sent_at?: string } = { status, updated_at: new Date().toISOString() };
-    if (status === 'paid') u.paid_at = new Date().toISOString();
-    if (status === 'sent') u.sent_at = new Date().toISOString();
-    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
-    if (error) throw error;
+
+    // Route through server API to enforce VALID_TRANSITIONS (BUG-03 fix)
+    const response = await fetch(`/api/invoices/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({ error: 'Erreur serveur' }));
+      throw new Error(result.error || `Erreur (${response.status})`);
+    }
+
+    const data = await response.json();
     set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) })); get().computeStats();
   },
   deleteInvoice: async (id) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user;
     if (!user) throw new Error('Non authentifié');
+
+    // Block deletion of invoices that have been issued
+    const invoice = get().invoices.find(inv => inv.id === id);
+    if (invoice && ['sent', 'paid', 'overdue'].includes(invoice.status)) {
+      throw new Error('Impossible de supprimer une facture déjà émise. Créez un avoir.');
+    }
 
     // Récupérer le profil pour vérifier le plan
     const { data: profile } = await getSupabaseClient().from('profiles').select('subscription_tier, is_trial_active, monthly_invoice_count, invoice_month').eq('id', user.id).single();
@@ -319,14 +337,14 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (error) throw error;
     set((s) => ({ invoices: s.invoices.filter((inv) => inv.id !== id) })); get().computeStats();
   },
-  duplicateInvoice: async (id, profile) => {
+  duplicateInvoice: async (id, profile, targetDocType?: string) => {
     const original = get().invoices.find((inv) => inv.id === id);
     if (!original) throw new Error('Facture introuvable');
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
     const today = new Date().toISOString().split('T')[0];
     const due = new Date(); due.setDate(due.getDate() + 30);
-    const docType = original.document_type || 'invoice';
+    const docType = targetDocType || original.document_type || 'invoice';
     const prefix = docType === 'quote' ? 'DEVIS' : docType === 'credit_note' ? 'AVOIR' : docType === 'purchase_order' ? 'BC' : docType === 'delivery_note' ? 'BL' : (profile.invoice_prefix || 'FACT');
 
     // CRITIQUE: Utiliser la fonction atomique pour garantir l'unicité du numéro

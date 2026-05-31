@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 export function useInvoiceRealtime(invoiceId: string | undefined) {
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!invoiceId) {
@@ -21,14 +22,21 @@ export function useInvoiceRealtime(invoiceId: string | undefined) {
 
     // Initial fetch
     const fetchInvoice = async () => {
-      const { data } = await supabase
-        .from('invoices')
-        .select('*, client:clients(*)')
-        .eq('id', invoiceId)
-        .single();
+      try {
+        setError(null);
+        const { data } = await supabase
+          .from('invoices')
+          .select('*, client:clients(*)')
+          .eq('id', invoiceId)
+          .single();
 
-      setInvoice(data);
-      setLoading(false);
+        setInvoice(data);
+      } catch (err) {
+        setError('Erreur de chargement');
+        console.error('Failed to fetch invoice:', err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchInvoice();
@@ -46,15 +54,10 @@ export function useInvoiceRealtime(invoiceId: string | undefined) {
             filter: `id=eq.${invoiceId}`,
           },
           (payload) => {
-            console.log('[useInvoiceRealtime] Invoice updated:', payload.new);
             setInvoice(payload.new);
           }
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('[useInvoiceRealtime] Connected to realtime updates');
-          }
-        });
+        .subscribe();
     };
 
     setupRealtime();
@@ -66,5 +69,5 @@ export function useInvoiceRealtime(invoiceId: string | undefined) {
     };
   }, [invoiceId]);
 
-  return { invoice, loading };
+  return { invoice, loading, error };
 }

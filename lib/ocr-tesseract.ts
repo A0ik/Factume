@@ -192,26 +192,19 @@ export async function extractWithTesseract(
       throw new Error(`Unsupported MIME type: ${mimeType}. Tesseract requires images.`);
     }
 
-    console.log(`[Tesseract] Starting OCR with language: ${language}`);
-
     // Perform OCR
     const { data } = await Tesseract.recognize(
       imageBuffer,
       language,
       {
         logger: (m: { status?: string; progress?: number }) => {
-          if (m.status === 'recognizing text') {
-            // Optional: log progress
-            // console.log(`[Tesseract] Progress: ${Math.round((m.progress || 0) * 100)}%`);
-          }
+          // Progress logging removed for production
         },
       }
     );
 
     const processingTimeMs = Date.now() - startTime;
     const confidence = (data.confidence || 0) / 100; // Tesseract returns 0-100
-
-    console.log(`[Tesseract] OCR completed in ${processingTimeMs}ms with confidence: ${confidence}`);
 
     // Extract basic data from recognized text
     const basicData = extractBasicData(data.text);

@@ -1,13 +1,16 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Zap, ArrowRight, FileText, Shield, Scale } from 'lucide-react';
+import { CheckCircle2, XCircle, Zap, ArrowRight, FileText, Shield, Scale, ArrowRightCircle } from 'lucide-react';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
 import { HowToSchema } from '@/components/seo/HowToSchema';
 import { VisualBreadcrumbs } from '@/components/seo/VisualBreadcrumbs';
-import { getStatut, getAllStatutSlugs, statuts } from '@/lib/seo-data';
+import { getStatut, getAllStatutSlugs, statuts, professions } from '@/lib/seo-data';
+
+export const revalidate = 86400;
+export const dynamicParams = false;
 
 interface Props {
   params: Promise<{ statut: string }>;
@@ -49,6 +52,10 @@ export default async function StatutPage({ params }: Props) {
     .map(s => statuts.find(st => st.slug === s))
     .filter(Boolean);
 
+  const compatibleProfessions = professions.filter(
+    p => p.statuts.includes(slug)
+  );
+
   const faqItems = [
     {
       question: `Quelles mentions légales sur une facture de ${data.nom} ?`,
@@ -59,12 +66,12 @@ export default async function StatutPage({ params }: Props) {
       answer: `${data.nom} est soumis au régime : ${data.regimeImposition}. ${data.tva.assujetti ? 'Vous êtes assujetti à la TVA et devez la collecter sur vos factures.' : `Vous n'êtes pas assujetti à la TVA. ${data.tva.seuilFranchise}`}`,
     },
     {
-      question: `Factu.me est-il adapté aux ${data.nom} ?`,
-      answer: `Oui, Factu.me s'adapte à tous les statuts juridiques dont ${data.nom}. Les mentions légales spécifiques à votre statut sont pré-remplies. Gratuit jusqu'à 10 factures/mois.`,
+      question: `Quand choisir le statut ${data.nom} ?`,
+      answer: data.casUsage,
     },
     {
-      question: `Quels sont les avantages du statut ${data.nom} ?`,
-      answer: `Les principaux avantages : ${data.avantages.slice(0, 3).join(', ')}. Consultez notre guide complet pour connaître tous les détails.`,
+      question: `${data.nom} vs ${similarStatuts[0]?.nom || 'autres statuts'} : quelle différence ?`,
+      answer: data.comparaison,
     },
   ];
 
@@ -94,7 +101,7 @@ export default async function StatutPage({ params }: Props) {
               Comment facturer en tant que <span className="text-emerald-600">{data.nom}</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
-              {data.description}
+              {data.texteIntro}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -109,8 +116,20 @@ export default async function StatutPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Mentions obligatoires */}
+      {/* Quand choisir ce statut */}
       <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
+            Quand choisir le statut {data.nom} ?
+          </h2>
+          <p className="text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg leading-relaxed">
+            {data.casUsage}
+          </p>
+        </div>
+      </section>
+
+      {/* Mentions obligatoires */}
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
             Vos obligations de facturation en {data.nom}
@@ -160,7 +179,7 @@ export default async function StatutPage({ params }: Props) {
       </section>
 
       {/* Régime fiscal & TVA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-16 sm:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
             Régime fiscal et TVA en {data.nom}
@@ -222,7 +241,7 @@ export default async function StatutPage({ params }: Props) {
       </section>
 
       {/* Avantages & Inconvénients */}
-      <section className="py-16 sm:py-24 bg-white">
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
             Avantages et inconvénients du statut {data.nom}
@@ -254,9 +273,49 @@ export default async function StatutPage({ params }: Props) {
         </div>
       </section>
 
+      {/* Comparaison */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-4">
+            {data.nom} vs autres statuts
+          </h2>
+          <p className="text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg leading-relaxed">
+            {data.comparaison}
+          </p>
+        </div>
+      </section>
+
+      {/* Professions compatibles — Maillage Statut→Profession */}
+      {compatibleProfessions.length > 0 && (
+        <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
+              Modèles de facture compatibles avec {data.nom}
+            </h2>
+            <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {compatibleProfessions.map(prof => (
+                <Link
+                  key={prof.slug}
+                  href={`/modeles-facture/${prof.slug}`}
+                  className="group p-6 bg-white rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-lg transition-all"
+                >
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                    Facture {prof.nom}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">TVA {prof.tva.taux}% • {prof.secteur}</p>
+                  <span className="inline-flex items-center gap-1 text-sm text-purple-600 font-medium">
+                    Voir le modèle <ArrowRightCircle className="w-4 h-4" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Autres statuts */}
       {similarStatuts.length > 0 && (
-        <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
+        <section className="py-16 sm:py-24 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
               Autres statuts juridiques
@@ -324,6 +383,7 @@ export default async function StatutPage({ params }: Props) {
           { href: '/comment-facturer', label: 'Tous les statuts' },
           { href: '/facture-gratuite', label: 'Facture gratuite' },
           { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' },
+          ...compatibleProfessions.slice(0, 3).map(p => ({ href: `/modeles-facture/${p.slug}`, label: `Facture ${p.nom}` })),
           ...similarStatuts.map(s => s && { href: `/comment-facturer/${s.slug}`, label: s.nom }),
         ].filter(Boolean) as { href: string; label: string }[]}
       />

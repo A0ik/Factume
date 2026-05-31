@@ -1,8 +1,17 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { calculateInvoiceTotals } from '@/lib/money';
+import type { NextRequest } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // BUG-22 fix: Rate limiting on the most critical endpoint
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 20, windowMs: 60000 });
+    if (!rateLimitResult.success) {
+      return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
+    }
+
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -36,6 +45,22 @@ export async function POST(req: Request) {
       notes, prefix, linked_invoice_id, idempotency_id
     } = body;
 
+    // FIX GAP-6: Validation serveur de la date d'émission (anti-antidatage)
+    if (issue_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const issueDate = new Date(issue_date);
+      issueDate.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (issueDate < yesterday) {
+        return NextResponse.json({ error: 'Date d\'émission invalide : antidatage détecté.' }, { status: 400 });
+      }
+      if (issueDate > today) {
+        return NextResponse.json({ error: 'Date d\'émission invalide : la date ne peut pas être dans le futur.' }, { status: 400 });
+      }
+    }
+
     // Server-side validation of items and amounts
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'La facture doit contenir au moins une ligne.' }, { status: 400 });
@@ -54,6 +79,17 @@ export async function POST(req: Request) {
       if (typeof item.vat_rate !== 'number' || item.vat_rate < 0 || item.vat_rate > 100) {
         return NextResponse.json({ error: `Ligne ${i + 1} : taux TVA invalide.` }, { status: 400 });
       }
+      // FIX BUG-EDGE-02: Valider le discount_percent par ligne (0-100)
+      if (item.discount_percent !== undefined && item.discount_percent !== null) {
+        if (typeof item.discount_percent !== 'number' || item.discount_percent < 0 || item.discount_percent > 100) {
+          return NextResponse.json({ error: `Ligne ${i + 1} : remise invalide (0-100%).` }, { status: 400 });
+        }
+      }
+      // Validate each item's total matches quantity * unit_price
+      const expectedTotal = Math.round(item.quantity * item.unit_price * 100) / 100;
+      if (item.total !== undefined && Math.abs(item.total - expectedTotal) > 0.02) {
+        return NextResponse.json({ error: `Ligne "${item.description || `Ligne ${i + 1}`}": total incohérent avec quantité × prix unitaire.` }, { status: 400 });
+      }
     }
     if (typeof total !== 'number' || total < -99999999 || total > 99999999) {
       return NextResponse.json({ error: 'Montant total invalide.' }, { status: 400 });
@@ -62,17 +98,74 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Pourcentage de remise invalide.' }, { status: 400 });
     }
 
-    // Recalculate totals server-side to verify client-sent values
-    const recalculatedSubtotal = items.reduce((s: number, i: any) => {
-      const lineNet = i.total ?? (i.quantity * i.unit_price);
-      return s + lineNet;
-    }, 0);
-    const recalculatedVat = items.reduce((s: number, i: any) => {
-      const lineNet = i.total ?? (i.quantity * i.unit_price);
-      const afterDisc = discount_percent ? lineNet * (1 - discount_percent / 100) : lineNet;
-      return s + afterDisc * (i.vat_rate / 100);
-    }, 0);
-    const recalculatedTotal = Math.round((recalculatedSubtotal - (discount_amount || 0) + recalculatedVat) * 100) / 100;
+    // FIX BUG-EDGE-03: Client obligatoire (au moins un identifiant)
+    if (!client_id && !client_name_override?.trim()) {
+      return NextResponse.json({ error: 'Un client est requis pour créer une facture.' }, { status: 400 });
+    }
+
+    // FIX BUG-AVOIR-02: Pour les avoirs, valider le signe et le lien
+    if (document_type === 'credit_note') {
+      if (!linked_invoice_id) {
+        return NextResponse.json({ error: 'Un avoir doit être lié à une facture originale. Art. L.441-9 du Code de commerce.' }, { status: 400 });
+      }
+      // Vérifier que la facture originale existe et appartient à l'utilisateur
+      const { data: originalInvoice } = await supabase
+        .from('invoices')
+        .select('id, total, status')
+        .eq('id', linked_invoice_id)
+        .eq('user_id', user.id)
+        .single();
+      if (!originalInvoice) {
+        return NextResponse.json({ error: 'Facture originale introuvable.' }, { status: 404 });
+      }
+      // Vérifier le montant cumulé des avoirs existants
+      const { data: existingCredits } = await supabase
+        .from('invoices')
+        .select('total')
+        .eq('linked_invoice_id', linked_invoice_id)
+        .eq('document_type', 'credit_note')
+        .neq('status', 'cancelled');
+      const existingCreditTotal = (existingCredits || []).reduce((sum: number, inv: any) => sum + Math.abs(inv.total), 0);
+      if (existingCreditTotal + Math.abs(total) > Math.abs(originalInvoice.total) + 0.01) {
+        return NextResponse.json({
+          error: `Le montant total des avoirs (${(existingCreditTotal + Math.abs(total)).toFixed(2)} EUR) dépasse la facture originale (${Math.abs(originalInvoice.total).toFixed(2)} EUR).`
+        }, { status: 400 });
+      }
+    }
+
+    // BUG-11 fix: Validate string lengths and sanitize HTML
+    if (client_name_override && client_name_override.length > 200) {
+      return NextResponse.json({ error: 'Nom du client trop long (max 200 caractères).' }, { status: 400 });
+    }
+    if (notes && notes.length > 5000) {
+      return NextResponse.json({ error: 'Notes trop longues (max 5000 caractères).' }, { status: 400 });
+    }
+    if (notes) {
+      body.notes = notes.replace(/<[^>]*>/g, '');
+    }
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].description || !items[i].description.trim()) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : description requise.` }, { status: 400 });
+      }
+      if (items[i].description.length > 500) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : description trop longue (max 500 caractères).` }, { status: 400 });
+      }
+      if (!Number.isFinite(items[i].quantity) || items[i].quantity < 0.01) {
+        return NextResponse.json({ error: `Ligne ${i + 1} : quantité trop petite (min 0.01).` }, { status: 400 });
+      }
+    }
+
+    // Recalculate totals server-side using shared cents arithmetic (BUG-08 fix)
+    const serverTotals = calculateInvoiceTotals(
+      items.map((i: any) => ({
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        vat_rate: i.vat_rate,
+        discount_percent: (i as any).discount_percent || 0,
+      })),
+      discount_percent || 0
+    );
+    const recalculatedTotal = serverTotals.total;
     // Allow 1 cent tolerance for rounding differences
     if (Math.abs(recalculatedTotal - total) > 0.02) {
       console.warn('[API /invoices/create] Amount mismatch:', { clientTotal: total, serverTotal: recalculatedTotal });
@@ -94,7 +187,7 @@ export async function POST(req: Request) {
         p_subtotal: subtotal,
         p_vat_amount: vat_amount,
         p_discount_percent: discount_percent || null,
-        p_discount_amount: discount_amount || null,
+        p_discount_amount: serverTotals.discountAmount || null,
         p_total: total,
         p_notes: notes || null,
         p_prefix: prefix || 'FACT',

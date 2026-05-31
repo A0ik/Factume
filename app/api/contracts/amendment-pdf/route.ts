@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
-import { getAmendments } from '@/lib/services/contract-amendment-service';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 export async function GET(req: NextRequest) {
   try {
+    // Authentication check — BUG-02 fix: was completely missing
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const id = req.nextUrl.searchParams.get('id');
     if (!id) {
       return NextResponse.json({ error: 'ID requis' }, { status: 400 });
@@ -19,6 +25,11 @@ export async function GET(req: NextRequest) {
 
     if (error || !amendment) {
       return NextResponse.json({ error: 'Avenant introuvable' }, { status: 404 });
+    }
+
+    // Ownership check — prevent IDOR
+    if (amendment.user_id !== user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     // Récupérer le contrat associé

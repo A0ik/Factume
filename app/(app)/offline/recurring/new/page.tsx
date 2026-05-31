@@ -94,7 +94,6 @@ export default function NewRecurringPage() {
       // Si la table n'existe pas
       if (error) {
         if (error.code === '42P01' || status === 404 || error.message.includes('does not exist')) {
-          console.log('Clients table does not exist yet');
           setClients([]);
           setLoading(false);
           return;

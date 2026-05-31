@@ -1,40 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Receipt,
-  Plus,
-  Search,
-  Filter,
-  Download,
-  Trash2,
-  Eye,
-  Edit,
-  Copy,
-  FileText,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Calendar,
-  RefreshCw,
-  Bell,
-  Send,
-  Loader2,
-  Mail,
+  Receipt, Plus, Search, FileText, CheckCircle, Clock, XCircle,
+  Send, Loader2, Bell, SlidersHorizontal, RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { BulkActions } from '@/components/invoices/BulkActions';
 import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
+import SwipeableCard from '@/components/layout/SwipeableCard';
 
 type StatusFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue';
 
+const statusConfig: Record<string, { color: string; dot: string; label: string; icon: any }> = {
+  draft: { color: 'text-slate-400', dot: 'bg-slate-500', label: 'Brouillon', icon: FileText },
+  sent: { color: 'text-blue-400', dot: 'bg-blue-500', label: 'Envoyée', icon: Send },
+  paid: { color: 'text-emerald-400', dot: 'bg-emerald-500', label: 'Payée', icon: CheckCircle },
+  overdue: { color: 'text-red-400', dot: 'bg-red-500', label: 'En retard', icon: XCircle },
+};
+
+const listContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+};
+
+const listItemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] } },
+};
+
 export default function FacturesPage() {
-  const router = useRouter();
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,60 +41,31 @@ export default function FacturesPage() {
   const [selectedFactures, setSelectedFactures] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<InvoiceFilters>({});
+  const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
-  // Filtrer uniquement les factures
   const factures = invoices.filter((inv) => (inv.document_type || 'invoice') === 'invoice');
 
-  // Filtrer par recherche et statut
   const filteredFactures = factures.filter((facture) => {
     const clientName = facture.client?.name || facture.client_name_override || '';
-    const matchesSearch =
-      searchQuery === '' ||
+    const matchesSearch = searchQuery === '' ||
       facture.number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       facture.id?.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchesStatus = statusFilter === 'all' || facture.status === statusFilter;
 
-    // Filtres avancés
     let matchesAdvanced = true;
-
-    if (advancedFilters.dateFrom) {
-      const factureDate = new Date(facture.issue_date || facture.created_at);
-      const fromDate = new Date(advancedFilters.dateFrom);
-      matchesAdvanced = matchesAdvanced && factureDate >= fromDate;
-    }
-
-    if (advancedFilters.dateTo) {
-      const factureDate = new Date(facture.issue_date || facture.created_at);
-      const toDate = new Date(advancedFilters.dateTo);
-      matchesAdvanced = matchesAdvanced && factureDate <= toDate;
-    }
-
-    if (advancedFilters.amountMin !== undefined) {
-      matchesAdvanced = matchesAdvanced && (facture.total || 0) >= advancedFilters.amountMin;
-    }
-
-    if (advancedFilters.amountMax !== undefined) {
-      matchesAdvanced = matchesAdvanced && (facture.total || 0) <= advancedFilters.amountMax;
-    }
-
-    if (advancedFilters.clientIds && advancedFilters.clientIds.length > 0) {
-      matchesAdvanced = matchesAdvanced && !!facture.client_id && advancedFilters.clientIds.includes(facture.client_id);
-    }
-
-    if (advancedFilters.statuses && advancedFilters.statuses.length > 0) {
-      matchesAdvanced = matchesAdvanced && facture.status && advancedFilters.statuses.includes(facture.status);
-    }
+    if (advancedFilters.dateFrom) { matchesAdvanced = matchesAdvanced && new Date(facture.issue_date || facture.created_at) >= new Date(advancedFilters.dateFrom); }
+    if (advancedFilters.dateTo) { matchesAdvanced = matchesAdvanced && new Date(facture.issue_date || facture.created_at) <= new Date(advancedFilters.dateTo); }
+    if (advancedFilters.amountMin !== undefined) { matchesAdvanced = matchesAdvanced && (facture.total || 0) >= advancedFilters.amountMin; }
+    if (advancedFilters.amountMax !== undefined) { matchesAdvanced = matchesAdvanced && (facture.total || 0) <= advancedFilters.amountMax; }
+    if (advancedFilters.clientIds && advancedFilters.clientIds.length > 0) { matchesAdvanced = matchesAdvanced && !!facture.client_id && advancedFilters.clientIds.includes(facture.client_id); }
+    if (advancedFilters.statuses && advancedFilters.statuses.length > 0) { matchesAdvanced = matchesAdvanced && facture.status !== undefined && advancedFilters.statuses.includes(facture.status); }
 
     return matchesSearch && matchesStatus && matchesAdvanced;
   });
 
-  // Calculer les statistiques
   const stats = {
     total: factures.length,
     draft: factures.filter((f) => f.status === 'draft').length,
@@ -105,397 +75,243 @@ export default function FacturesPage() {
     totalAmount: factures.reduce((sum, f) => sum + (f.total || 0), 0),
   };
 
-  const handleSelectAll = () => {
-    if (selectedFactures.size === filteredFactures.length) {
-      setSelectedFactures(new Set());
-    } else {
-      setSelectedFactures(new Set(filteredFactures.map((f) => f.id)));
-    }
-  };
-
-  const handleSelectOne = (id: string) => {
-    const newSelected = new Set(selectedFactures);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedFactures(newSelected);
-  };
-
-  const handleSendReminder = async (invoiceId: string, reminderLevel = 1) => {
+  const handleSendReminder = async (invoiceId: string) => {
     if (!session) return;
-
     setSendingReminder(invoiceId);
     try {
       const res = await fetch('/api/reminders/send', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ invoiceId, reminderLevel }),
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId, reminderLevel: 1 }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Erreur lors de l\'envoi de la relance');
-      }
-
-      toast.success('Relance envoyée avec succès !');
+      if (!res.ok) throw new Error();
+      toast.success('Relance envoyée');
       fetchInvoices();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de l\'envoi de la relance');
-    } finally {
-      setSendingReminder(null);
-    }
+    } catch { toast.error('Erreur'); } finally { setSendingReminder(null); }
   };
 
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { color: string; label: string; icon: any }> = {
-      draft: { color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', label: 'Brouillon', icon: FileText },
-      sent: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', label: 'Envoyée', icon: Calendar },
-      paid: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', label: 'Payée', icon: CheckCircle },
-      overdue: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', label: 'En retard', icon: XCircle },
-    };
-
-    const badge = badges[status] || badges.draft;
-    const Icon = badge.icon;
-
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${badge.color}`}>
-        <Icon size={14} />
-        {badge.label}
-      </span>
-    );
+  const handleDelete = async (invoiceId: string) => {
+    if (!session) return;
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.access_token}` } });
+      if (!res.ok) throw new Error();
+      toast.success('Facture supprimée');
+      fetchInvoices();
+    } catch { toast.error('Erreur suppression'); }
   };
+
+  const handleMarkPaid = async (invoiceId: string) => {
+    if (!session) return;
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/status`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'paid' }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Marquée comme payée');
+      fetchInvoices();
+    } catch { toast.error('Erreur'); }
+  };
+
+  const statusTabs: { key: StatusFilter; label: string; count: number }[] = [
+    { key: 'all', label: 'Tout', count: stats.total },
+    { key: 'paid', label: 'Payées', count: stats.paid },
+    { key: 'sent', label: 'Envoyées', count: stats.sent },
+    { key: 'draft', label: 'Brouillons', count: stats.draft },
+    { key: 'overdue', label: 'En retard', count: stats.overdue },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900/50 p-4 md:p-8">
-      <BulkActions
-        selectedIds={Array.from(selectedFactures)}
-        onClear={() => setSelectedFactures(new Set())}
-        onActionComplete={() => fetchInvoices()}
-      />
+    <div>
+      <BulkActions selectedIds={Array.from(selectedFactures)} onClear={() => setSelectedFactures(new Set())} onActionComplete={() => fetchInvoices()} />
 
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                Factures
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Gérez toutes vos factures clients
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                href="/documents/factures/new"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Plus size={18} />
-                <span className="hidden sm:inline">Nouvelle facture</span>
-                <span className="sm:hidden">Nouvelle</span>
-              </Link>
-              <Link
-                href="/documents/factures/recurring"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <RefreshCw size={18} />
-                <span className="hidden sm:inline">Facture récurrente</span>
-                <span className="sm:hidden">Récurrente</span>
-              </Link>
-            </div>
+      {/* Header — big, airy, dark */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-3xl font-bold tracking-tight text-white">Factures</h1>
+          <div className="hidden md:flex gap-3">
+            <Link href="/documents/factures/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl transition-colors active:scale-95">
+              <Plus size={18} /> Nouvelle facture
+            </Link>
+            <Link href="/documents/factures/recurring" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl transition-colors">
+              <RefreshCw size={16} /> Récurrente
+            </Link>
           </div>
-        </motion.div>
+        </div>
+        <p className="text-sm text-slate-500 mb-6">{stats.total} factures · {stats.totalAmount.toFixed(2)} €</p>
+      </motion.div>
 
-        {/* Stats Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
-              <Receipt size={16} />
-              <span className="text-xs font-medium">Total</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+      {/* Stats row — minimal pills */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }} className="flex gap-2 mb-6 overflow-x-auto scrollbar-none">
+        {[
+          { label: 'Payées', value: stats.paid, dot: 'bg-emerald-500' },
+          { label: 'Envoyées', value: stats.sent, dot: 'bg-blue-500' },
+          { label: 'Brouillons', value: stats.draft, dot: 'bg-slate-500' },
+          ...(stats.overdue > 0 ? [{ label: 'En retard', value: stats.overdue, dot: 'bg-red-500' }] : []),
+        ].map(({ label, value, dot }) => (
+          <div key={label} className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/50 border border-white/5 rounded-xl flex-shrink-0">
+            <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+            <span className="text-xs text-slate-400">{label}</span>
+            <span className="text-xs font-bold text-white">{value}</span>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
-              <FileText size={16} />
-              <span className="text-xs font-medium">Brouillons</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.draft}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-              <Calendar size={16} />
-              <span className="text-xs font-medium">Envoyées</span>
-            </div>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.sent}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
-              <CheckCircle size={16} />
-              <span className="text-xs font-medium">Payées</span>
-            </div>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.paid}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-              <XCircle size={16} />
-              <span className="text-xs font-medium">En retard</span>
-            </div>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</p>
-          </div>
-        </motion.div>
+        ))}
+      </motion.div>
 
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-6 border border-gray-200 dark:border-gray-700 shadow-sm"
-        >
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Rechercher par numéro, client..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
+      {/* Search */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }} className="mb-5">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={17} />
+          <input
+            type="text"
+            placeholder="Rechercher par numéro, client..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-12 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+          />
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${
+              showFilters ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <SlidersHorizontal size={16} />
+          </button>
+        </div>
 
-            {/* Status filter */}
-            <div className="flex gap-2 flex-wrap items-center">
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden mt-3"
+            >
               <AdvancedFilters
                 filters={advancedFilters}
                 onFiltersChange={setAdvancedFilters}
                 clients={clients.map(c => ({ id: c.id, name: c.name }))}
                 onReset={() => setAdvancedFilters({})}
               />
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Tous
-              </button>
-              <button
-                onClick={() => setStatusFilter('draft')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === 'draft'
-                    ? 'bg-gray-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Brouillons
-              </button>
-              <button
-                onClick={() => setStatusFilter('sent')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === 'sent'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Envoyées
-              </button>
-              <button
-                onClick={() => setStatusFilter('paid')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === 'paid'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                Payées
-              </button>
-              <button
-                onClick={() => setStatusFilter('overdue')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === 'overdue'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                En retard
-              </button>
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Status tabs — horizontal scroll */}
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.12 }} className="flex gap-1.5 mb-6 overflow-x-auto scrollbar-none">
+        {statusTabs.map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(key)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              statusFilter === key
+                ? 'bg-white/15 text-white'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+            }`}
+          >
+            {label}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+              statusFilter === key ? 'bg-white/10' : 'bg-white/5'
+            }`}>{count}</span>
+          </button>
+        ))}
+      </motion.div>
+
+      {/* List */}
+      {filteredFactures.length === 0 ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+          <div className="w-14 h-14 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Receipt className="text-slate-600" size={28} />
           </div>
+          <p className="text-sm text-slate-400 font-medium">Aucune facture</p>
+          <p className="text-xs text-slate-600 mt-1 mb-5">Créez votre première facture</p>
+          <Link href="/documents/factures/new" className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
+            <Plus size={16} /> Créer
+          </Link>
         </motion.div>
-
-        {/* Table */}
-        {filteredFactures.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-12 border border-gray-200 dark:border-gray-700 shadow-sm text-center"
-          >
-            <Receipt className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {searchQuery || statusFilter !== 'all'
-                ? 'Aucune facture trouvée'
-                : 'Aucune facture pour le moment'}
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              {searchQuery || statusFilter !== 'all'
-                ? 'Essayez de modifier vos critères de recherche'
-                : 'Créez une facture en moins d\'une minute et envoyez-la directement à votre client par email.'}
-            </p>
-            {!searchQuery && statusFilter === 'all' && (
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link
-                  href="/documents/factures/new"
-                  className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:shadow-lg transition-all shadow-blue-500/30"
-                >
-                  <Plus size={14} /> Nouvelle facture
-                </Link>
-                <Link
-                  href="/documents/factures/recurring"
-                  className="inline-flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl hover:shadow-lg transition-all shadow-purple-500/30"
-                >
-                  <RefreshCw size={14} /> Facture récurrente
-                </Link>
-              </div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
-          >
-            {/* Table header */}
-            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-              <div className="col-span-1 flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedFactures.size === filteredFactures.length && filteredFactures.length > 0}
-                  onChange={handleSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-                />
-              </div>
-              <div className="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Numéro</div>
-              <div className="col-span-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Client</div>
-              <div className="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</div>
-              <div className="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total TTC</div>
-              <div className="col-span-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Statut</div>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/5">
+              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Numéro</div>
+              <div className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client</div>
+              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date</div>
+              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Total</div>
+              <div className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Statut</div>
             </div>
-
-            {/* Table body */}
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredFactures.map((facture) => (
-                <div
-                  key={facture.id}
-                  className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors items-center"
-                >
-                  <div className="col-span-1">
-                    <input
-                      type="checkbox"
-                      checked={selectedFactures.has(facture.id)}
-                      onChange={() => handleSelectOne(facture.id)}
-                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Link
-                      href={`/invoices/${facture.id}`}
-                      className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      {facture.number || '—'}
-                    </Link>
-                  </div>
-                  <div className="col-span-3">
-                    <p className="text-sm text-gray-900 dark:text-white font-medium">
-                      {facture.client?.name || facture.client_name_override || 'Client inconnu'}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {facture.issue_date ? new Date(facture.issue_date).toLocaleDateString('fr-FR') : '—'}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {facture.total ? facture.total.toFixed(2) + ' €' : '—'}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    {getStatusBadge(facture.status || 'draft')}
-                  </div>
-                </div>
-              ))}
-
-              {/* Mobile cards */}
-              {filteredFactures.map((facture) => (
-                <div key={facture.id} className="md:hidden p-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedFactures.has(facture.id)}
-                        onChange={() => handleSelectOne(facture.id)}
-                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-                      />
-                      {getStatusBadge(facture.status || 'draft')}
-                    </div>
-                    {(facture.status === 'sent' || facture.status === 'overdue') && (
-                      <button
-                        onClick={() => handleSendReminder(facture.id)}
-                        disabled={sendingReminder === facture.id}
-                        className="p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-                        title="Envoyer une relance"
-                      >
-                        {sendingReminder === facture.id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Bell size={16} />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <Link
-                    href={`/invoices/${facture.id}`}
-                    className="block"
-                  >
-                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                      {facture.number || 'Sans numéro'}
-                    </p>
-                    <p className="text-sm text-gray-900 dark:text-white font-medium mb-1">
-                      {facture.client?.name || facture.client_name_override || 'Client inconnu'}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span>{facture.issue_date ? new Date(facture.issue_date).toLocaleDateString('fr-FR') : '—'}</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {facture.total ? facture.total.toFixed(2) + ' €' : '—'}
+            <div className="divide-y divide-white/5">
+              {filteredFactures.map((facture) => {
+                const s = statusConfig[facture.status || 'draft'] || statusConfig.draft;
+                return (
+                  <Link key={facture.id} href={`/invoices/${facture.id}`} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-white/[0.03] transition-colors items-center group">
+                    <div className="col-span-2 text-sm font-semibold text-emerald-400 group-hover:underline">{facture.number || '—'}</div>
+                    <div className="col-span-3 text-sm text-slate-300 truncate">{facture.client?.name || facture.client_name_override || '—'}</div>
+                    <div className="col-span-2 text-sm text-slate-500">{facture.issue_date ? new Date(facture.issue_date).toLocaleDateString('fr-FR') : '—'}</div>
+                    <div className="col-span-2 text-sm font-bold text-white text-right">{facture.total ? facture.total.toFixed(2) + ' €' : '—'}</div>
+                    <div className="col-span-3">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                        {s.label}
                       </span>
                     </div>
                   </Link>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
-        )}
-      </div>
+
+          {/* Mobile card list */}
+          <motion.div variants={listContainerVariants} initial="hidden" animate="visible" className="md:hidden space-y-2.5">
+            {filteredFactures.map((facture) => {
+              const s = statusConfig[facture.status || 'draft'] || statusConfig.draft;
+              const clientName = facture.client?.name || facture.client_name_override || 'Client inconnu';
+              const amount = facture.total ? facture.total.toFixed(2) + ' €' : '—';
+              const date = facture.issue_date ? new Date(facture.issue_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
+
+              return (
+                <motion.div key={facture.id} variants={listItemVariants}>
+                  <SwipeableCard
+                    onDelete={() => handleDelete(facture.id)}
+                    onMarkPaid={facture.status !== 'paid' ? () => handleMarkPaid(facture.id) : undefined}
+                  >
+                    <Link href={`/invoices/${facture.id}`} className="block p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">{clientName}</p>
+                          <p className="text-xs text-slate-500 mt-0.5 font-mono">{facture.number || '—'}</p>
+                        </div>
+                        <p className="text-base font-bold text-white flex-shrink-0">{amount}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                          {s.label}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {date && <span className="text-xs text-slate-500">{date}</span>}
+                          {(facture.status === 'sent' || facture.status === 'overdue') && (
+                            <button
+                              onClick={(e) => { e.preventDefault(); handleSendReminder(facture.id); }}
+                              disabled={sendingReminder === facture.id}
+                              className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40"
+                            >
+                              {sendingReminder === facture.id ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </SwipeableCard>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </>
+      )}
     </div>
   );
 }

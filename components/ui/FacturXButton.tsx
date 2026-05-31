@@ -60,8 +60,6 @@ export function FacturXButton({
     }
 
     try {
-      console.log('[FacturXButton] Téléchargement Factur-X pour facture:', invoiceId);
-
       const response = await fetch(`/api/download/facturx/${invoiceId}`);
 
       if (!response.ok) {
@@ -88,7 +86,6 @@ export function FacturXButton({
       }
 
       const blob = await response.blob();
-      console.log('[FacturXButton] Blob reçu, taille:', blob.size, 'octets');
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

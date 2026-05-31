@@ -138,15 +138,11 @@ export function isPDF(mimeType: string): boolean {
 export function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
   if (analyses.length === 0) return [];
 
-  console.log('[Detect Invoices] buildSegments - Analyses:', analyses.length);
-
   const segments: InvoiceSegment[] = [];
 
   for (let i = 0; i < analyses.length; i++) {
     const analysis = analyses[i];
     const pageNumber = analysis.pageNumber;
-
-    console.log(`[Detect Invoices] Page ${pageNumber}: start=${analysis.isInvoiceStart}, end=${analysis.isInvoiceEnd}, vendor=${analysis.vendor || 'N/A'}, conf=${analysis.confidence}`);
 
     // CAS 1: Explicit start of a new invoice
     if (analysis.isInvoiceStart) {
@@ -229,9 +225,6 @@ export function buildSegments(analyses: PageAnalysis[]): InvoiceSegment[] {
   // Filter valid segments
   const valid = merged.filter(s => s.endPage !== null && s.startPage <= s.endPage);
 
-  console.log(`[Detect Invoices] ${valid.length} segments:`);
-  valid.forEach((s, i) => console.log(`  Segment ${i + 1}: pages ${s.startPage}-${s.endPage}, vendor=${s.vendor || 'N/A'}`));
-
   // Fallback: if no segments, one per page
   if (valid.length === 0 && analyses.length > 0) {
     return analyses.map(a => ({
@@ -291,7 +284,6 @@ export async function detectInvoiceSegments(
   let structuralInfos: StructuralPageInfo[] = [];
   try {
     structuralInfos = await structuralAnalysis(pdfBuffer);
-    console.log('[Detect Invoices] Structural analysis done:', structuralInfos.length, 'pages');
   } catch (e) {
     console.warn('[Detect Invoices] Structural analysis failed, continuing without:', e);
   }

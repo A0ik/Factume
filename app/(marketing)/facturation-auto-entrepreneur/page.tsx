@@ -340,6 +340,36 @@ export default function AutoEntrepreneurPage() {
           </div>
         </div>
       </section>
+
+      {/* Guides par statut — Maillage Segment→Hub */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
+            Guides de facturation par statut juridique
+          </h2>
+          <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            {[
+              { slug: 'auto-entrepreneur', nom: 'Auto-entrepreneur' },
+              { slug: 'micro-entreprise', nom: 'Micro-entreprise' },
+              { slug: 'ei', nom: 'Entreprise Individuelle' },
+              { slug: 'eurl', nom: 'EURL' },
+              { slug: 'sasu', nom: 'SASU' },
+              { slug: 'sarl', nom: 'SARL' },
+            ].map(statut => (
+              <Link key={statut.slug} href={`/comment-facturer/${statut.slug}`}
+                className="group p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all text-center">
+                <span className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">{statut.nom}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/comment-facturer" className="text-emerald-600 font-medium hover:underline">
+              Voir tous les guides par statut →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },

@@ -258,11 +258,43 @@ export default function ArtisanPage() {
           { name: 'Facturation Artisans', url: 'https://factu.me/facturation-artisans' },
         ]}
       />
+      {/* Modèles par métier — Maillage Segment→Hub */}
+      <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
+            Modèles de facture par métier d'artisan
+          </h2>
+          <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-4 max-w-5xl mx-auto">
+            {[
+              { slug: 'plombier', nom: 'Plombier' },
+              { slug: 'electricien', nom: 'Électricien' },
+              { slug: 'menuisier', nom: 'Menuisier' },
+              { slug: 'peintre', nom: 'Peintre' },
+              { slug: 'carreleur', nom: 'Carreleur' },
+              { slug: 'chauffagiste', nom: 'Chauffagiste' },
+              { slug: 'couvreur', nom: 'Couvreur' },
+              { slug: 'macon', nom: 'Maçon' },
+            ].map(metier => (
+              <Link key={metier.slug} href={`/modeles-facture/${metier.slug}`}
+                className="group p-4 bg-white rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all text-center">
+                <span className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Facture {metier.nom}</span>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Link href="/modeles-facture" className="text-blue-600 font-medium hover:underline">
+              Voir tous les modèles de facture →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <RelatedPages
         pages={[
-          { href: '/facturation-btp', label: 'Facturation BTP' },
-          { href: '/facturation-electricien', label: 'Facturation Electricien' },
-          { href: '/facturation-plomberie', label: 'Facturation Plomberie' },
+          { href: '/modeles-facture', label: 'Tous les modèles de facture' },
+          { href: '/comment-facturer', label: 'Guides par statut juridique' },
+          { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },
+          { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' },
         ]}
       />
     </div>

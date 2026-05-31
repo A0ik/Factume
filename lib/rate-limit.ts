@@ -1,17 +1,62 @@
 /**
  * Rate limiter for edge runtime.
  *
- * IMPORTANT: In-memory rate limiting is NOT effective in serverless
- * environments (Vercel, AWS Lambda) where each invocation may run on
- * a different instance. For production, migrate to Upstash Redis:
+ * Supports both Upstash Redis (production) and in-memory (development) backends.
  *
- *   import { Redis } from '@upstash/redis'
- *   const redis = Redis.fromEnv()
- *   const count = await redis.incr(key)
- *   await redis.expire(key, windowMs / 1000)
- *
- * The in-memory fallback below is kept for development and low-traffic deploys.
+ * PRODUCTION: Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for
+ * distributed rate limiting across serverless instances. Without Redis, the
+ * in-memory fallback is unreliable in serverless environments (Vercel, AWS Lambda)
+ * because each invocation may run on a different instance.
  */
+
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
+
+// ---------------------------------------------------------------------------
+// Redis singleton (lazy initialization, edge-compatible)
+// ---------------------------------------------------------------------------
+let _redis: Redis | null | undefined;
+
+function getRedis(): Redis | null {
+  if (_redis !== undefined) return _redis;
+  try {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (url && token) {
+      _redis = new Redis({ url, token });
+    } else {
+      _redis = null;
+    }
+  } catch {
+    _redis = null;
+  }
+  return _redis;
+}
+
+// ---------------------------------------------------------------------------
+// Upstash rate limiters (cached by limit:window configuration)
+// ---------------------------------------------------------------------------
+const _limiterCache = new Map<string, Ratelimit>();
+
+function getLimiter(limit: number, windowSeconds: number): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  const cacheKey = `${limit}:${windowSeconds}`;
+  let limiter = _limiterCache.get(cacheKey);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.fixedWindow(limit, `${windowSeconds} s`),
+    });
+    _limiterCache.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+// ---------------------------------------------------------------------------
+// In-memory fallback (for development / no-Redis environments)
+// ---------------------------------------------------------------------------
 
 interface RateLimitEntry {
   count: number;
@@ -63,6 +108,36 @@ export function rateLimit(options: {
   // Within limit, increment
   entry.count++;
   return { success: true, remaining: limit - entry.count, resetTime: entry.resetTime };
+}
+
+// ---------------------------------------------------------------------------
+// Async rate limiting (uses Upstash Redis when available, falls back to in-memory)
+// Use this in middleware for production-grade distributed rate limiting.
+// ---------------------------------------------------------------------------
+
+export async function rateLimitAsync(options: {
+  key: string;
+  limit: number;
+  windowMs: number;
+}): Promise<{ success: boolean; remaining: number; resetTime: number }> {
+  const windowSeconds = Math.ceil(options.windowMs / 1000);
+  const limiter = getLimiter(options.limit, windowSeconds);
+
+  if (limiter) {
+    try {
+      const result = await limiter.limit(options.key);
+      return {
+        success: result.success,
+        remaining: result.remaining,
+        resetTime: result.reset,
+      };
+    } catch {
+      // Redis error — fall back to in-memory (graceful degradation)
+    }
+  }
+
+  // No Redis or Redis error — use in-memory fallback
+  return rateLimit(options);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -116,6 +116,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const [mode, setMode] = useState<'voice' | 'ai' | 'manual'>('manual');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -176,10 +177,22 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     .filter((c): c is NonNullable<typeof c> => Boolean(c))
     .filter((c) => c.name.toLowerCase().includes(clientName.toLowerCase()));
 
+  // Calcul avec remise par ligne + remise globale (identique à new/page.tsx)
+  const lineItemSubtotals = items.map((i) => {
+    const lineHT = i.quantity * i.unit_price;
+    const lineDisc = (i as any).discount_percent ?? 0;
+    return lineHT * (1 - lineDisc / 100);
+  });
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const vatAmount = items.reduce((s, i) => s + i.quantity * i.unit_price * (i.vat_rate / 100), 0);
-  const discountAmount = discountPercent > 0 ? (subtotal + vatAmount) * (discountPercent / 100) : 0;
-  const total = subtotal + vatAmount - discountAmount;
+  const subtotalAfterLineDiscounts = lineItemSubtotals.reduce((s, v) => s + v, 0);
+  const vatAmount = items.reduce((s, i, idx) => s + lineItemSubtotals[idx] * (i.vat_rate / 100), 0);
+  const discountAmount = discountPercent > 0 ? subtotalAfterLineDiscounts * (discountPercent / 100) : 0;
+  const discountedSubtotal = subtotalAfterLineDiscounts - discountAmount;
+  const recalculatedVat = items.reduce((s, i, idx) => {
+    const afterGlobalDisc = lineItemSubtotals[idx] * (discountPercent > 0 ? 1 - discountPercent / 100 : 1);
+    return s + afterGlobalDisc * (i.vat_rate / 100);
+  }, 0);
+  const total = discountedSubtotal + recalculatedVat;
 
   const dueDate = paymentDays === 0
     ? ''
@@ -334,6 +347,12 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   const handleSave = async () => {
     if (!invoice) return;
 
+    // Double-submit guard
+    if (savingRef.current) {
+      console.log('[handleSave] Already saving, ignoring click');
+      return;
+    }
+
     if (!clientName && !items[0]?.description) {
       setError('Renseignez au moins un client ou une prestation');
       return;
@@ -344,6 +363,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -380,6 +400,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         setError(e.message || 'Erreur lors de la modification');
       }
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -419,6 +440,26 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         </p>
         <Button onClick={() => router.push(`/invoices/${invoice.id}`)} icon={<ArrowLeft size={16} />}>
           Retour au devis
+        </Button>
+      </div>
+    );
+  }
+
+  // FIX BUG-IMMU-01: Bloquer l'édition pour les factures non-brouillon (conformité légale)
+  const IMMUTABLE = ['sent', 'paid', 'overdue', 'cancelled', 'refunded', 'partial', 'delivered', 'rejected'];
+  if (invoice && IMMUTABLE.includes(invoice.status)) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+        <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+          <Lock size={32} className="text-amber-600" />
+        </div>
+        <h1 className="text-2xl font-black text-gray-900 mb-2">Facture non modifiable</h1>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          Cette facture a le statut « {invoice.status} » et ne peut plus être modifiée (Art. L.441-9 du Code de commerce).
+          Créez un avoir si une correction est nécessaire.
+        </p>
+        <Button onClick={() => router.push(`/invoices/${invoice.id}`)} icon={<ArrowLeft size={16} />}>
+          Retour à la facture
         </Button>
       </div>
     );
@@ -1033,11 +1074,11 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 <div className="px-5 py-4 space-y-2.5">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Sous-total HT</span>
-                    <span className="font-semibold tabular-nums">{formatCurrency(subtotal)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(subtotalAfterLineDiscounts)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">TVA</span>
-                    <span className="font-semibold tabular-nums">{formatCurrency(vatAmount)}</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(recalculatedVat)}</span>
                   </div>
                   {discountPercent > 0 && (
                     <div className="flex justify-between text-sm text-green-400">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
 
 // Routes publiques explicites (pas besoin d'auth)
 const PUBLIC_PATHS = [
@@ -9,22 +9,33 @@ const PUBLIC_PATHS = [
   '/auth/callback',
 ];
 
-// Routes API/pages publiques par préfixe
+// Routes API/pages publiques par préfixe (webhooks, callbacks, public resources)
 const PUBLIC_PREFIXES = [
-  '/api/stripe/webhook',
-  '/api/share/',
-  '/api/client-portal/',
-  '/api/contract-signing/',
-  '/api/integrations/pennylane/webhook',
-  '/api/bank-feed/callback',
-  '/api/cron/',
-  '/api/health',
-  '/api/eidas/verify/',
-  '/api/sumup/webhook',
   '/share/',
   '/client/',
   '/sign/',
   '/workspace/join',
+];
+
+// API routes that do NOT require authentication (webhooks, callbacks, public endpoints)
+const PUBLIC_API_PREFIXES = [
+  '/api/stripe/webhook',
+  '/api/stripe-connect/callback',
+  '/api/stripe/trial-subscription',
+  '/api/share/',
+  '/api/client-portal/',
+  '/api/contract-signing/',
+  '/api/quote-signing/',
+  '/api/integrations/pennylane/webhook',
+  '/api/bank-feed/callback',
+  '/api/cron/',
+  '/api/health',
+  '/api/sumup/webhook',
+  '/api/sumup/oauth',
+  '/api/google/callback',
+  '/api/google/oauth',
+  '/api/email/inbound',
+  '/api/webhooks/',
 ];
 
 // Préfixes protégés : tout ce qui commence par ces segments nécessite une session
@@ -101,24 +112,47 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 
-  let rlLimit = 300;
-  let rlWindow = 60_000;
-  if (isApiRoute) { rlLimit = 300; rlWindow = 60_000; }
-  if (isAuthRoute) { rlLimit = 5; rlWindow = 3_600_000; }
-  if (pathname === '/api/stripe/trial-subscription') { rlLimit = 3; rlWindow = 86_400_000; }
-  if (isCrawler) { rlLimit = 5000; rlWindow = 60_000; }
+  // Differentiated rate limits per route tier
+  let rlLimit: number;
+  let rlWindow: number;
+
+  if (isCrawler) {
+    rlLimit = 5000;
+    rlWindow = 60_000;
+  } else if (pathname === '/api/stripe/trial-subscription') {
+    rlLimit = 3;
+    rlWindow = 86_400_000;
+  } else if (isAuthRoute) {
+    rlLimit = 10;
+    rlWindow = 900_000; // 10 per 15 minutes — strict but human
+  } else if (isApiRoute) {
+    rlLimit = 100;
+    rlWindow = 60_000; // 100 per minute
+  } else {
+    // Page requests (SSR/ISR) — very permissive
+    rlLimit = 1000;
+    rlWindow = 60_000; // 1000 per minute
+  }
 
   // Use per-path-group key so /api/cabinet/* doesn't share the same bucket as /api/stripe/*
   const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
     : isApiRoute ? 'api'
     : isAuthRoute ? 'auth'
     : 'page';
-  const rl = rateLimit({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit, windowMs: rlWindow });
+
+  const rl = await rateLimitAsync({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit, windowMs: rlWindow });
+
   if (!rl.success) {
-    const retryAfter = Math.ceil((rl.resetTime - Date.now()) / 1000);
-    return new Response('Too Many Requests', {
+    const retryAfter = Math.max(1, Math.ceil((rl.resetTime - Date.now()) / 1000));
+    return new Response(JSON.stringify({
+      error: 'Too Many Requests',
+      message: `Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`,
+    }), {
       status: 429,
-      headers: { 'Retry-After': String(retryAfter) },
+      headers: {
+        'Retry-After': String(retryAfter),
+        'Content-Type': 'application/json',
+      },
     });
   }
 
@@ -129,15 +163,22 @@ export async function middleware(req: NextRequest) {
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return res;
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return res;
 
+  // API routes: public API routes are allowed through without auth
+  if (pathname.startsWith('/api/')) {
+    const isPublicApi = PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p));
+    if (isPublicApi) return res;
+    // All other API routes require authentication (fall through to auth check below)
+  }
+
   // Vérifier si Supabase est configuré
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     console.error('Missing Supabase environment variables in middleware');
     return res;
   }
 
-  // N'effectuer la vérification auth que pour les routes protégées
+  // N'effectuer la vérification auth que pour les routes protégées ou API routes non publiques
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
-  if (!isProtected) return res;
+  if (!isProtected && !isApiRoute) return res;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -158,6 +199,10 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
+    // For API routes, return 401 JSON instead of redirecting
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
     return NextResponse.redirect(new URL('/login', req.url));
   }
 

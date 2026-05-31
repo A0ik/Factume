@@ -3,97 +3,96 @@ import { getAllBlogSlugs } from '@/lib/blog-data';
 import { getAllProfessionSlugs, getAllStatutSlugs } from '@/lib/seo-data';
 
 const baseUrl = 'https://factu.me';
-const now = new Date();
+const may2026 = new Date('2026-05-15');
 
 // Landing pages pour différents segments (SEO)
 const segmentPages = [
-  { url: `${baseUrl}/facturation-artisans`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/logiciel-facturation-artisan`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-freelances`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/logiciel-facture-freelance`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-pme`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/logiciel-facturation-pme`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-auto-entrepreneur`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/logiciel-facture-auto-entrepreneur`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-btp`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/facturation-construction`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/facturation-menuiserie`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facturation-plomberie`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facturation-electricien`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facturation-developpeur`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/facturation-designer`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facturation-consultant`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.75 },
-  { url: `${baseUrl}/logiciel-cabinet-comptable`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
+  { url: `${baseUrl}/facturation-artisans`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/logiciel-facturation-artisan`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-freelances`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/logiciel-facture-freelance`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-pme`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/logiciel-facturation-pme`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-auto-entrepreneur`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/logiciel-facture-auto-entrepreneur`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-btp`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/facturation-construction`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/facturation-menuiserie`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facturation-plomberie`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facturation-electricien`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facturation-developpeur`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/facturation-designer`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facturation-consultant`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/logiciel-cabinet-comptable`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
 ];
 
 // Pages fonctionnalités SEO
 const featurePages = [
-  { url: `${baseUrl}/facturation-factur-x`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-electronique`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-ocr`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facturation-vocale`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facture-gratuite`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/modele-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/editeur-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/generateur-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/creer-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/facture-sans-tva`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facture-acompte`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/facture-en-anglais`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-  { url: `${baseUrl}/devis-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/logiciel-devis`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/creer-devis`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/suivi-paiement`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-  { url: `${baseUrl}/relance-facture`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-  { url: `${baseUrl}/mentions-obligatoires-facture`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.85 },
-  { url: `${baseUrl}/generateur-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
+  { url: `${baseUrl}/facturation-factur-x`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-electronique`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-ocr`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facturation-vocale`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facture-gratuite`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/modele-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/editeur-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/generateur-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/creer-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/facture-sans-tva`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facture-acompte`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/facture-en-anglais`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/devis-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/logiciel-devis`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/creer-devis`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/suivi-paiement`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/relance-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/mentions-obligatoires-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
 ];
 
 // Pages de comparaison (SEO)
 const comparisonPages = [
-  { url: `${baseUrl}/logiciel-facture-gratuit`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/logiciel-facture-simple`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.85 },
-  { url: `${baseUrl}/logiciel-facture-francais`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/meilleur-logiciel-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
-  { url: `${baseUrl}/top-logiciels-facturation`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/alternative-henrj`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/alternative-tiime`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
-  { url: `${baseUrl}/alternative-abby`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/logiciel-facture-gratuit`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/logiciel-facture-simple`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/logiciel-facture-francais`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/meilleur-logiciel-facture`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
+  { url: `${baseUrl}/top-logiciels-facturation`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/alternative-henrj`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/alternative-tiime`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
+  { url: `${baseUrl}/alternative-abby`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
 ];
 
 // Pages légales
 const legalPages = [
-  { url: `${baseUrl}/legal/mentions-legales`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
-  { url: `${baseUrl}/legal/confidentialite`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
-  { url: `${baseUrl}/legal/cgu`, lastModified: now, changeFrequency: 'yearly' as const, priority: 0.3 },
+  { url: `${baseUrl}/legal/mentions-legales`, lastModified: new Date('2026-01-15'), changeFrequency: 'yearly' as const, priority: 0.3 },
+  { url: `${baseUrl}/legal/confidentialite`, lastModified: new Date('2026-01-15'), changeFrequency: 'yearly' as const, priority: 0.3 },
+  { url: `${baseUrl}/legal/cgu`, lastModified: new Date('2026-01-15'), changeFrequency: 'yearly' as const, priority: 0.3 },
 ];
 
 // Pages E-E-A-T
 const trustPages = [
-  { url: `${baseUrl}/securite`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-  { url: `${baseUrl}/experts`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/securite`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/experts`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
 ];
 
 // Pages hub programmatiques
 const hubPages = [
-  { url: `${baseUrl}/modeles-facture`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${baseUrl}/comment-facturer`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
+  { url: `${baseUrl}/modeles-facture`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.9 },
+  { url: `${baseUrl}/comment-facturer`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.9 },
 ];
 
 // Pages principales
 const mainPages = [
-  { url: baseUrl, lastModified: now, changeFrequency: 'daily' as const, priority: 1 },
-  { url: `${baseUrl}/demo`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.9 },
-  { url: `${baseUrl}/login`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
-  { url: `${baseUrl}/register`, lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: baseUrl, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 1 },
+  { url: `${baseUrl}/demo`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
+  { url: `${baseUrl}/login`, lastModified: new Date('2026-03-01'), changeFrequency: 'yearly' as const, priority: 0.5 },
+  { url: `${baseUrl}/register`, lastModified: new Date('2026-03-01'), changeFrequency: 'yearly' as const, priority: 0.5 },
 ];
 
 // Blog
 const blogPages = [
-  { url: `${baseUrl}/blog`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.8 },
+  { url: `${baseUrl}/blog`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.8 },
   ...getAllBlogSlugs().map((slug) => ({
     url: `${baseUrl}/blog/${slug}`,
-    lastModified: now,
+    lastModified: may2026,
     changeFrequency: 'monthly' as const,
     priority: 0.7,
   })),
@@ -102,7 +101,7 @@ const blogPages = [
 // Pages programmatiques professions
 const professionPages = getAllProfessionSlugs().map((slug) => ({
   url: `${baseUrl}/modeles-facture/${slug}`,
-  lastModified: now,
+  lastModified: may2026,
   changeFrequency: 'monthly' as const,
   priority: 0.8,
 }));
@@ -110,7 +109,7 @@ const professionPages = getAllProfessionSlugs().map((slug) => ({
 // Pages programmatiques statuts
 const statutPages = getAllStatutSlugs().map((slug) => ({
   url: `${baseUrl}/comment-facturer/${slug}`,
-  lastModified: now,
+  lastModified: may2026,
   changeFrequency: 'monthly' as const,
   priority: 0.8,
 }));

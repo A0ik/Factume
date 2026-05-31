@@ -22,6 +22,9 @@ export interface ProfessionData {
   regimes: string[];
   description: string;
   color: string;
+  texteIntro: string;
+  conseilsFacturation: string[];
+  erreursCourantes: string[];
 }
 
 export const professions: ProfessionData[] = [
@@ -43,6 +46,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Plombier professionnel : dépannage, installation et rénovation sanitaire. Facturation avec TVA réduite à 10% pour les travaux de rénovation.',
     color: 'blue',
+    texteIntro: 'La facturation du plombier obéit à des règles précises, notamment la TVA réduite à 10% pour les travaux de rénovation dans les logements de plus de 2 ans. Le devis plomberie doit distinguer les fournitures de la main-d\'œuvre et mentionner la garantie décennale. En auto-entreprise, la franchise de TVA s\'applique sous les seuils de 77 700€ de CA annuel.',
+    conseilsFacturation: [
+      'Appliquez systématiquement le taux de TVA réduit de 10% pour les travaux de rénovation dans les logements de plus de 2 ans. Le taux de 5,5% est réservé aux travaux d\'amélioration énergétique (isolation des tuyaux, robinets thermostatiques).',
+      'Mentionnez toujours votre numéro de garantie décennale sur chaque facture. Son absence en cas de sinistre peut engager votre responsabilité personnelle.',
+      'Séparez clairement les fournitures (robinets, tuyaux, joints) de la main-d\'œuvre sur vos factures. Cela facilite les remboursements d\'assurance en cas de litige.',
+      'Pour les dépannages d\'urgence, vous pouvez appliquer un coefficient majorateur (1,5x à 2x) le week-end et les jours fériés, à condition de le mentionner explicitement sur le devis préalable.',
+    ],
+    erreursCourantes: [
+      'Oublier la mention "Autoliquidation de la TVA" pour les sous-traitants plombiers dans le BTP',
+      'Ne pas différencier TVA 5,5% (rénovation énergétique) et TVA 10% (rénovation classique)',
+      'Facturer au forfait sans détail des lignes — invalide en cas de contrôle fiscal',
+      'Omettre la mention de la garantie décennale sur la facture finale',
+    ],
   },
   {
     slug: 'electricien',
@@ -60,6 +76,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Électricien professionnel : installation, dépannage et mise aux normes électriques. TVA réduite à 10% en rénovation.',
     color: 'yellow',
+    texteIntro: 'L\'électricien doit facturer avec une TVA réduite à 10% pour les travaux de rénovation résidentielle, et 5,5% pour l\'amélioration de la performance énergétique (installation de systèmes domotiques, régulation chauffage). La certification Consuel est obligatoire pour les installations neuves et doit être mentionnée dans le dossier technique.',
+    conseilsFacturation: [
+      'Distinguez sur votre facture les travaux neufs (TVA 20%) des travaux de rénovation (TVA 10%). Un mélange des deux sur une même facture est possible mais doit être ventilé ligne par ligne.',
+      'Pour les installations photovoltaïques ou les bornes de recharge véhicule, le taux de TVA peut descendre à 5,5%. Renseignez-vous au cas par cas.',
+      'Joignez systématiquement le certificat Consuel à votre facture finale pour les installations neuves. C\'est une obligation légale et un gage de professionnalisme.',
+      'Facturez les matériaux et la main-d\'œuvre séparément pour faciliter le traitement par les assurances habitation de vos clients.',
+    ],
+    erreursCourantes: [
+      'Appliquer un taux de TVA unique au lieu de ventiler les différents taux selon la nature des travaux',
+      'Oublier de mentionner l\'habilitation électrique et la certification Consuel sur les devis et factures',
+      'Ne pas conserver les attestations d\'assurance décennale jointes aux factures pendant 10 ans',
+      'Facturer la mise aux normes d\'une installation électrique sans mentionner la norme NF C 15-100',
+    ],
   },
   {
     slug: 'menuisier',
@@ -77,6 +106,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Menuisier professionnel : pose, rénovation et création sur mesure. TVA réduite à 10% pour les travaux de rénovation.',
     color: 'amber',
+    texteIntro: 'Le menuisier intervient sur des chantiers variés : agencement intérieur, pose de menuiseries extérieures, création sur mesure. La TVA est réduite à 10% en rénovation (logement de plus de 2 ans) et 5,5% pour les travaux d\'isolation thermique (fenêtres double vitrage, portes isolantes). Le sur-mesure nécessite un devis détaillé avec côtes et matériaux.',
+    conseilsFacturation: [
+      'Pour les travaux de sur-mesure, détaillez chaque élément avec les dimensions, l\'essence de bois et les finitions. Une facture vague ("pose menuiseries") sera rejetée en cas de litige.',
+      'Les fenêtres et portes isolantes benefit d\'un taux de TVA à 5,5% dans le cadre de l\'amélioration énergétique. Condition : le logement doit avoir plus de 2 ans.',
+      'Incluez une clause de réserve de propriété sur vos factures pour les ouvrages sur mesure. Tant que le client n\'a pas payé intégralement, l\'ouvrage vous appartient.',
+      'Facturez un acompte de 30% à la commande pour les travaux sur mesure. Mentionnez-le clairement avec la mention "Acompte" et le pourcentage.',
+    ],
+    erreursCourantes: [
+      'Facturer au même taux de TVA des travaux de rénovation et des travaux neufs',
+      'Oublier la clause de réserve de propriété sur les ouvrages sur mesure',
+      'Ne pas ventiler les fournitures (bois, quincaillerie) de la main-d\'œuvre',
+      'Omettre les dimensions et matériaux précis sur la facture — source de litiges fréquents',
+    ],
   },
   {
     slug: 'peintre',
@@ -94,6 +136,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Peintre professionnel en bâtiment : intérieur, extérieur, décoration. TVA réduite à 10% pour les travaux de rénovation.',
     color: 'orange',
+    texteIntro: 'Le peintre en bâtiment facture majoritairement en TVA réduite à 10% pour les travaux de rénovation. La facture doit distinguer la préparation des supports (enduit, lessivage, ponçage) de l\'application de peinture. Les fournitures (peinture, rouleaux) peuvent être facturées séparément ou incluses dans un prix global.',
+    conseilsFacturation: [
+      'Détaillez la préparation des supports sur votre facture : lessivage, ponçage, enduit, impression. C\'est souvent la partie la plus chronophage du travail et elle justifie votre tarif.',
+      'Mentionnez la marque et la référence des peintures utilisées. En cas de défaut, le fabricant peut être tenu responsable et le client apprecie la transparence.',
+      'Pour les chantiers importants, facturez par situation d\'avancement (acomptes) plutôt qu\'en une seule fois. Cela sécurise votre trésorerie.',
+      'Incluez une clause de garantie de résultat dans vos conditions générales de vente pour les travaux de peinture intérieure.',
+    ],
+    erreursCourantes: [
+      'Facturer la peinture sans détailler la préparation des supports, ce qui rend la facture contestable',
+      'Ne pas mentionner la marque et la quantité de peinture utilisée — problème en cas de réclamation',
+      'Appliquer la TVA 10% sur des travaux de peinture neuve (TVA 20% applicable)',
+      'Oublier de facturer les frais de protection (bâches, ruban de masquage) qui sont des charges réelles',
+    ],
   },
   {
     slug: 'carreleur',
@@ -111,6 +166,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Carreleur professionnel : pose de carrelage, faïence et mosaïque. TVA réduite à 10% pour les travaux de rénovation.',
     color: 'teal',
+    texteIntro: 'Le carreleur mosaiclaïste facture la pose et les fournitures. La TVA réduite à 10% s\'applique aux travaux de rénovation en logement de plus de 2 ans. La facture doit préciser le type de carrelage (grès cérame, faïence, mosaïque), la surface en m² et le prix unitaire posé, ce qui est essentiel pour les assurances.',
+    conseilsFacturation: [
+      'Facturez la fourniture de carrelage et la pose séparément. Le client peut ainsi vérifier les prix des matériaux et comparer.',
+      'Mentionnez la surface réelle posée en m² et le nombre de carreaux. Ajoutez une ligne pour les chutes et découpes (généralement 10% de surplus).',
+      'Pour les poses complexes (mosaïque, frises, cabochons), facturez un supplément "pose décorative" avec un tarif spécifique.',
+      'Incluez les frais de préparation du support (ragréage, étanchéité) qui sont souvent sous-estimés mais essentiels.',
+    ],
+    erreursCourantes: [
+      'Facturer au m² sans préciser si le prix inclut ou non les fournitures',
+      'Oublier la ligne "approvisionnement et livraison" pour les carreaux commandés chez un grossiste',
+      'Ne pas facturer l\'étanchéité préalable en salle de bain — obligation légale dans les pièces humides',
+      'Confondre TVA 10% (rénovation) et TVA 20% (neuf) sur un même chantier mixte',
+    ],
   },
   {
     slug: 'chauffagiste',
@@ -128,6 +196,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Chauffagiste professionnel : installation et entretien de systèmes de chauffage. TVA à 5.5% pour les travaux d\'amélioration énergétique.',
     color: 'red',
+    texteIntro: 'Le chauffagiste bénéficie d\'un taux de TVA particulièrement avantageux à 5,5% pour les travaux d\'amélioration énergétique (installation chaudière, pompe à chaleur, raccordement réseau de chaleur). La certification RGE (Reconnu Garant de l\'Environnement) est obligatoire pour que le client bénéficie des aides de l\'État et doit apparaître sur les devis.',
+    conseilsFacturation: [
+      'Le taux de TVA à 5,5% s\'applique aux travaux d\'amélioration énergétique. Mentionnez explicitement "Travaux d\'amélioration de la performance énergétique" sur votre facture.',
+      'Votre certification RGE doit figurer sur chaque devis et facture. Sans elle, le client perd ses droits aux aides (MaPrimeRénov\', CEE).',
+      'Pour l\'entretien annuel des chaudières, le taux de TVA est de 10%. N\'utilisez pas le taux de 5,5% qui est réservé aux travaux d\'amélioration.',
+      'Facturez séparément la mise en service et le contrat d\'entretien annuel. C\'est plus clair et facilite les renouvellements.',
+    ],
+    erreursCourantes: [
+      'Appliquer la TVA 5,5% à un simple dépannage ou entretien (taux normal 10% pour ces prestations)',
+      'Oublier de mentionner le numéro de certification RGE sur les devis et factures',
+      'Ne pas distinguer l\'installation (TVA 5,5%) de la main-d\'œuvre d\'entretien (TVA 10%)',
+      'Facturer un contrat d\'entretien sans préciser les prestations incluses et exclues',
+    ],
   },
   {
     slug: 'couvreur',
@@ -145,6 +226,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Couvreur professionnel : réfection, entretien et réparation de toiture. TVA réduite en rénovation.',
     color: 'slate',
+    texteIntro: 'Le couvreur intervient sur des chantiers à risque nécessitant une assurance spécifique "travail en hauteur". La TVA est réduite à 10% pour les travaux de rénovation et 5,5% pour les travaux d\'isolation thermique (sous condition RGE). La garantie décennale est cruciale : elle couvre les désordres touchant la solidité de la toiture pendant 10 ans.',
+    conseilsFacturation: [
+      'Mentionnez systématiquement la garantie décennale sur vos factures de couverture. C\'est le premier document réclamé par les assurances en cas de sinistre.',
+      'Si vous effectuez des travaux d\'isolation sous toiture, le taux de TVA passe à 5,5%. Précisez-le sur votre facture avec la mention "Amélioration énergétique".',
+      'Détailllez les matériaux : type de tuiles (mécaniques, plates), zinc, ardoises naturelles ou fibro-ciment. Le prix varie du simple au triple.',
+      'Facturez la dépose de l\'ancienne couverture séparément de la pose de la nouvelle. Ce sont deux prestations distinctes.',
+    ],
+    erreursCourantes: [
+      'Oublier la mention de la garantie décennale spécifique "toiture" — le premier contrôle fiscal la réclame',
+      'Appliquer un taux de TVA uniforme sur un chantier mixte (dépose en 10%, isolation en 5,5%, neuf en 20%)',
+      'Ne pas facturer l\'échafaudage et la protection du chantier qui sont des charges importantes',
+      'Facturer au forfait sans détailler la surface en m² et le type de matériaux posés',
+    ],
   },
   {
     slug: 'macon',
@@ -162,6 +256,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Maçon professionnel : gros œuvre, maçonnerie et agrandissement. TVA réduite à 10% en rénovation.',
     color: 'stone',
+    texteIntro: 'Le maçon intervient principalement sur le gros œuvre : fondations, murs porteurs, dalles, agrandissements. La TVA varie selon la nature des travaux : 20% pour le neuf, 10% pour la rénovation et 5,5% pour l\'amélioration énergétique (isolation par l\'extérieur). La garantie décennale est indispensable et doit être mentionnée sur chaque facture.',
+    conseilsFacturation: [
+      'Ventilez votre facture par nature de travaux : gros œuvre, second œuvre, finitions. Chaque poste peut avoir un taux de TVA différent.',
+      'Mentionnez les quantités exactes : m² de mur, m³ de béton, ml de fondation. Le client et l\'assureur ont besoin de ces données pour vérifier les prix.',
+      'Pour les agrandissements, facturez par situation d\'avancement (fondations, élévation, couverture, finitions). Cela sécurise votre paiement.',
+      'Incluez les frais d\'échafaudage, de benne à gravats et de livraison de matériaux dans votre facture. Ce sont des charges réelles à récupérer.',
+    ],
+    erreursCourantes: [
+      'Appliquer la TVA 10% sur des travaux de construction neuve (le taux normal de 20% s\'applique)',
+      'Oublier de mentionner la garantie décennale sur les travaux de gros œuvre — les plus exposés juridiquement',
+      'Facturer les matériaux au même prix que le client aurait payé chez le grossiste (mark-up non transparent)',
+      'Ne pas détailler les situations d\'avancement sur les chantiers de longue durée',
+    ],
   },
   // === FREELANCES ===
   {
@@ -180,6 +287,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié', 'réel normal'],
     description: 'Développeur freelance : web, mobile, backend ou frontend. Facturation au TJM ou au forfait avec TVA 20%.',
     color: 'indigo',
+    texteIntro: 'Le développeur freelance facture généralement au TJM (Taux Journalier Moyen) ou au forfait pour les projets complets. La TVA de 20% s\'applique aux prestations informatiques en France. En auto-entreprise sous les seuils, la franchise de TVA s\'applique. La cession de droits de propriété intellectuelle (code source) doit être formalisée dans les CG ou un contrat de mission.',
+    conseilsFacturation: [
+      'Facturez au TJM avec un détail quotidien si possible : date, nombre d\'heures, tâches réalisées. C\'est la facturation la plus transparente pour les clients.',
+      'Mentionnez explicitement la cession de droits de propriété intellectuelle sur le code source. Sans cette mention, vous conservez les droits sur votre code.',
+      'Pour les forfaits, détaillez le périmètre : nombre de pages, fonctionnalités incluses, itérations prévues. Toute demande hors périmètre doit faire l\'objet d\'un avenant facturé.',
+      'Ajoutez une pénalité de retard (3x le taux d\'intérêt légal) et l\'indemnité forfaitaire de recouvrement (40€) à vos conditions de paiement.',
+    ],
+    erreursCourantes: [
+      'Ne pas mentionner la cession de propriété intellectuelle du code source — le client n\'a aucun droit sur le code livré',
+      'Facturer au forfait sans borner le périmètre (nombre de révisions, fonctionnalités incluses)',
+      'Oublier les pénalités de retard et l\'indemnité forfaitaire de recouvrement de 40€',
+      'Facturer en TTC sans indiquer le HT et le montant de TVA — la facture est irrégulière',
+    ],
   },
   {
     slug: 'designer',
@@ -197,6 +317,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Designer freelance : UI/UX, graphisme, identité visuelle. Facturation avec cession de droits et TVA 20%.',
     color: 'pink',
+    texteIntro: 'Le designer freelance vend des prestations créatives soumises au régime des droits d\'auteur. La facture doit obligatoirement mentionner la cession des droits de reproduction et d\'adaptation, avec ou sans exclusivité. La TVA de 20% s\'applique. Attention : les maquettes non validées (propositions) restent votre propriété tant que le client ne les a pas acceptées.',
+    conseilsFacturation: [
+      'Mentionnez précisément l\'étendue de la cession de droits : supports (print, web, réseaux sociaux), durée (limitée ou perpétuelle), territoire (France, monde). Plus la cession est large, plus le tarif doit être élevé.',
+      'Facturez les propositions et itérations comme des livrables intermédiaires. Le client ne paie pas seulement le résultat final, mais votre processus créatif.',
+      'Utilisez un "Bon à Tirer" (BAT) numérique comme validation formelle avant la facturation finale. Il constitue une preuve d\'acceptation.',
+      'Distinguez sur votre facture la prestation créative (cession de droits) de la prestation technique (intégration, déclinaison). Ce sont deux services distincts.',
+    ],
+    erreursCourantes: [
+      'Céder tous les droits sans limites (supports, durée, territoire) pour le prix d\'une seule utilisation',
+      'Ne pas utiliser de Bon à Tirer (BAT) pour valider formellement les livrables avant facturation',
+      'Confondre cession de droits d\'auteur et licence d\'utilisation — les implications juridiques sont différentes',
+      'Facturer un forfait "design global" sans détailler les livrables et le nombre de révisions incluses',
+    ],
   },
   {
     slug: 'consultant',
@@ -214,6 +347,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié', 'réel normal'],
     description: 'Consultant freelance : stratégie, management, organisation. Facturation au TJM ou au forfait.',
     color: 'emerald',
+    texteIntro: 'Le consultant freelance facture principalement au TJM (Taux Journalier Moyen), typiquement entre 400€ et 1 200€ selon l\'expertise. La facture doit inclure un rapport d\'intervention détaillant les jours travaillés, les livrables produits et les prochaines étapes. La TVA de 20% s\'applique aux prestations de conseil en France.',
+    conseilsFacturation: [
+      'Joignez un rapport d\'intervention à chaque facture : dates, personnes rencontrées, sujets traités, livrables. C\'est essentiel pour la traçabilité et le client l\'exige souvent.',
+      'Pour les missions longues, facturez mensuellement plutôt qu\'en fin de mission. Cela améliore votre trésorerie et réduit le risque d\'impayés.',
+      'Mentionnez le contrat de mission ou la convention de conseil en référence sur chaque facture. Cela lie la facture au cadre contractuel.',
+      'Proposez un versement d\'acompte de 30% au démarrage de la mission pour sécuriser votre engagement.',
+    ],
+    erreursCourantes: [
+      'Facturer en fin de mission sans rapport d\'intervention intermédiaire — impossible de justifier les jours facturés',
+      'Ne pas mentionner le contrat de mission ou la convention en référence sur la facture',
+      'Oublier les frais de déplacement, d\'hébergement et de repas qui doivent être refacturés',
+      'Facturer au forfait sans avoir borné le périmètre de la mission dans un contrat',
+    ],
   },
   {
     slug: 'coach',
@@ -231,6 +377,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Coach professionnel : coaching de vie, d\'entreprise ou sportif. Facturation à la séance ou en package.',
     color: 'violet',
+    texteIntro: 'Le coach professionnel facture à la séance, en package ou en programme. La TVA de 20% s\'applique aux prestations de coaching. La certification RNCP n\'est pas obligatoire mais renforce la crédibilité et permet aux entreprises de faire financer les séances via leur OPCO. La facturation en package est recommandée pour fidéliser.',
+    conseilsFacturation: [
+      'Facturez vos séances de coaching en package (ex: 10 séances) plutôt qu\'à l\'unité. Cela fidélise le client et améliore votre prévisibilité de revenus.',
+      'Mentionnez sur la facture si la séance est éligible au financement OPCO ou CPF. C\'est un argument de vente important pour les clients entreprises.',
+      'Précisez la politique d\'annulation sur vos factures : annulation moins de 24h avant = facturation à 50%, no-show = facturation à 100%.',
+      'Distinguez le coaching individuel du coaching d\'équipe dans votre facturation. Les tarifs et la TVA sont identiques mais la nature du service diffère.',
+    ],
+    erreursCourantes: [
+      'Facturer sans contrat ou lettre d\'engagement définissant les objectifs et le nombre de séances',
+      'Ne pas mentionner la politique d\'annulation — source de conflits fréquents',
+      'Oublier que les packages de coaching doivent être facturés à l\'avance, pas après chaque séance',
+      'Confondre coaching (accompagnement) et formation (transfert de compétences) — le cadre légal diffère',
+    ],
   },
   {
     slug: 'photographe',
@@ -248,6 +407,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Photographe professionnel : événementiel, portrait, produit. Facturation avec cession de droits d\'image.',
     color: 'fuchsia',
+    texteIntro: 'Le photographe professionnel vend un service de prise de vue ET une cession de droits d\'utilisation des images. Ces deux éléments doivent apparaître distinctement sur la facture. La TVA de 20% s\'applique. La cession de droits doit préciser : usage (print, web, réseaux sociaux), durée, territoire et exclusivité. Sans cession écrite, le client n\'a aucun droit d\'utiliser les photos.',
+    conseilsFacturation: [
+      'Séparez clairement sur votre facture la prestation de shooting (prise de vue) de la cession de droits d\'utilisation des photos. Ce sont deux contrats distincts.',
+      'Précisez l\'étendue de la cession : usage commercial, éditorial, publicitaire, personnel, durée (1 an, 5 ans, illimitée), territoire (France, Europe, monde).',
+      'Facturez les retouches et le post-traitement comme une prestation supplémentaire. Le prix du shooting ne les inclut pas sauf mention contraire.',
+      'Mentionnez le nombre de photos livrées et le format (haute résolution, web optimisé). Toute photo supplémentaire doit être facturée.',
+    ],
+    erreursCourantes: [
+      'Livrer les photos sans contrat de cession de droits — le client n\'a aucun droit légal de les utiliser',
+      'Inclure "tous droits" dans la facture sans majorer le prix — vous perdez la possibilité de revendre les images',
+      'Ne pas facturer les retouches et le tri des photos, qui représentent souvent 50% du temps de travail',
+      'Oublier les frais de déplacement et d\'hébergement pour les shootings en dehors de votre zone',
+    ],
   },
   {
     slug: 'redacteur',
@@ -265,6 +437,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Rédacteur freelance : web, SEO, copywriting, technique. Facturation au mot, à la page ou au forfait.',
     color: 'sky',
+    texteIntro: 'Le rédacteur freelance vend du contenu textuel avec cession de droits d\'auteur. La facture doit préciser le mode de tarification (au mot, à la page, au forfait), le nombre de mots ou pages livrées, et l\'étendue de la cession de droits. La TVA de 20% s\'applique. Les révisions doivent être encadrées : précisez le nombre de tours de révision inclus dans votre tarif.',
+    conseilsFacturation: [
+      'Facturez au mot pour les articles SEO (ex: 0,10€ à 0,20€/mot) et au forfait pour les projets éditoriaux globaux. Mentionnez le nombre de mots sur la facture.',
+      'Limitez le nombre de révisions incluses dans votre tarif (ex: 2 tours de révision). Toute révision supplémentaire doit être facturée.',
+      'Mentionnez la cession exclusive ou non-exclusive des droits d\'auteur. Une cession exclusive doit être facturée plus cher.',
+      'Pour les contrats récurrents (blog mensuel), facturez en début de mois avec un bon de commande en référence.',
+    ],
+    erreursCourantes: [
+      'Céder les droits d\'auteur sans limites ni compensation pour une utilisation exclusive',
+      'Accepter des révisions illimitées sans facturation supplémentaire — le coût réel dépasse vite le tarif initial',
+      'Facturer au forfait sans préciser le nombre de mots, ce qui rend le prix au mot inconnu',
+      'Ne pas mentionner les délais de livraison sur la facture — source de litiges fréquents',
+    ],
   },
   {
     slug: 'traducteur',
@@ -282,6 +467,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Traducteur freelance : juridique, technique, littéraire. Facturation au mot source ou au forfait.',
     color: 'cyan',
+    texteIntro: 'Le traducteur professionnel facture généralement au mot source (texte original) avec des tarifs variant de 0,08€ à 0,25€/mot selon la langue et la spécialité. La TVA de 20% s\'applique. La facture doit mentionner la combinaison linguistique, le nombre de mots sources et la nature du document. La relecture et la post-édition (traduction automatique révisée) sont tarifées différemment.',
+    conseilsFacturation: [
+      'Facturez au mot source (texte d\'origine) plutôt qu\'au mot cible. Le nombre de mots sources est connu à l\'avance et ne varie pas.',
+      'Distinguez la traduction humaine de la post-édition (révision d\'une traduction automatique). La post-édition est facturée 30 à 50% moins cher.',
+      'Majorer votre tarif de 20 à 50% pour les traductions juridiques, médicales ou techniques qui nécessitent une expertise sectorielle.',
+      'Mentionnez la norme NF EN 15038 (norme qualité traduction) sur vos factures pour les clients exigeants.',
+    ],
+    erreursCourantes: [
+      'Facturer au mot cible sans préciser que le tarif est basé sur le mot source — source de confusion',
+      'Ne pas majorer les traductions urgentes (+30% minimum pour un délai divisé par 2)',
+      'Oublier de facturer la mise en page et le formatage quand le client exige un fichier identique à l\'original',
+      'Confondre relecture (correction) et post-édition (révision de traduction automatique) — les tarifs diffèrent',
+    ],
   },
   {
     slug: 'graphiste',
@@ -299,6 +497,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Graphiste freelance : identité visuelle, print, digital. Facturation avec cession de droits d\'auteur.',
     color: 'rose',
+    texteIntro: 'Le graphiste freelance travaille sur l\'identité visuelle, le print et le digital. La facturation est encadrée par le droit d\'auteur : chaque création est protégée dès sa réalisation. La cession de droits doit être expresse et écrite sur la facture. Le Bon à Tirer (BAT) est le document qui valide formellement le travail et déclenche la facturation finale.',
+    conseilsFacturation: [
+      'Utilisez le Bon à Tirer (BAT) comme étape obligatoire avant facturation. Le BAT signé est votre preuve d\'acceptation du travail par le client.',
+      'Facturez les propositions créatives (sketchs, maquettes) comme des livrables intermédiaires. Le travail créatif a une valeur, même si la proposition n\'est pas retenue.',
+      'Précisez le nombre de propositions incluses dans votre devis (ex: "3 propositions initiales, 2 jeux de corrections"). Toute proposition supplémentaire est facturée.',
+      'Distinguez la création (cession de droits) de la déclinaison (adaptation sur supports). Ce sont deux prestations avec des tarifs différents.',
+    ],
+    erreursCourantes: [
+      'Commencer la production sans BAT signé — en cas de litige, vous n\'avez aucune preuve d\'acceptation',
+      'Céder les droits sans limites de durée, territoire et supports pour le prix d\'une utilisation unique',
+      'Facturer l\'identité visuelle complète (logo + charte) au même prix qu\'un simple logo',
+      'Oublier de facturer les déclinaisons (carte de visite, papier à en-tête, signature email) qui font partie du projet',
+    ],
   },
   {
     slug: 'formateur',
@@ -316,6 +527,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Formateur professionnel : formation continue, intra-entreprise, e-learning. Facturation avec programme détaillé.',
     color: 'lime',
+    texteIntro: 'Le formateur professionnel est soumis à des obligations spécifiques : déclaration d\'activité de formation auprès du préfet de région, programme détaillé, convention de formation. La facture doit référencer la convention et inclure le détail des prestations. Les formations peuvent être financées par les OPCO, ce qui impose un formalisme de facturation rigoureux.',
+    conseilsFacturation: [
+      'Référencez systématiquement le numéro de convention de formation sur votre facture. Sans cette référence, l\'OPCO peut refuser le financement.',
+      'Détaillez chaque journée ou demi-journée de formation avec l\'intitulé, la durée et le nombre de stagiaires. C\'est une obligation légale.',
+      'Facturez le support pédagogique et les matériaux de formation séparément. C\'est un livrable distinct de la prestation de formation.',
+      'Mentionnez votre numéro de déclaration d\'activité de formation (NDA) sur vos factures pour les clients financés par un OPCO.',
+    ],
+    erreursCourantes: [
+      'Facturer sans convention de formation signée — le client peut refuser le paiement et l\'OPKO ne financera pas',
+      'Oublier le programme détaillé (objectifs, contenu, méthodes, durée) — obligatoire pour le financement OPCO',
+      'Ne pas facturer les frais de déplacement et d\'hébergement séparément de la prestation de formation',
+      'Confondre formation (transfert de compétences) et coaching (accompagnement) — le cadre légal et fiscal diffère',
+    ],
   },
   // === SERVICES ===
   {
@@ -334,6 +558,19 @@ export const professions: ProfessionData[] = [
     regimes: ['réel simplifié', 'réel normal'],
     description: 'Avocat : consultation, rédaction, plaidoirie et conseil juridique. Facturation avec mention du barreau.',
     color: 'navy',
+    texteIntro: 'La facturation de l\'avocat est strictement encadrée par le Code de déontologie. La convention d\'honoraires est obligatoire pour les honoraires forfaitaires et recommandée pour les honoraires au temps passé. La facture doit mentionner le barreau de rattachement et le numéro TOQUE. Les frais de dossier, de déplacement et de greffe doivent être séparés des honoraires.',
+    conseilsFacturation: [
+      'Rédigez une convention d\'honoraires avant toute intervention. Elle fixe le mode de facturation (forfait, taux horaire, résultat) et évite les contestations.',
+      'Séparez les honoraires des frais (dossier, déplacement, greffe, expertise) sur votre facture. Les frais ne sont pas soumis à la TVA de la même manière.',
+      'Mentionnez votre numéro TOQUE et votre barreau de rattachement sur chaque facture. C\'est une obligation déontologique.',
+      'Pour les provisions, facturez avec la mention "Provision sur honoraires" et régularisez en fin de dossier avec une facture de solde.',
+    ],
+    erreursCourantes: [
+      'Facturer sans convention d\'honoraires signée — en cas de litige, le bâtonnier peut être saisi',
+      'Inclure les frais de greffe et d\'expertise dans les honoraires au lieu de les ventiler séparément',
+      'Oublier de mentionner le barreau et le numéro TOQUE sur la facture',
+      'Ne pas régulariser les provisions en fin de dossier avec une facture de solde détaillée',
+    ],
   },
   {
     slug: 'architecte',
@@ -351,6 +588,19 @@ export const professions: ProfessionData[] = [
     regimes: ['réel simplifié', 'réel normal'],
     description: 'Architecte : conception, permis de construire, suivi de chantier. Facturation par phase (ESQ, AVP, PRO, DCE, ACT).',
     color: 'zinc',
+    texteIntro: 'L\'architecte facture typiquement par phase de projet : esquisse (ESQ), avant-projet sommaire (APS), avant-projet définitif (APD), projet (PRO), dossier d\'appel d\'offres (DCE), assistance aux contrats de travaux (ACT) et suivi de chantier (VISA/DET/AOR). La facturation est souvent un pourcentage du coût des travaux (8 à 15%) ventilé par phase. La mention "Maître d\'œuvre" est obligatoire.',
+    conseilsFacturation: [
+      'Facturez par phase de projet (ESQ, APS, APD, PRO, DCE, ACT, VISA). Chaque phase correspond à un livrable spécifique et justifie un acompte.',
+      'Mentionnez le pourcentage du coût des travaux que représente votre rémunération. C\'est la pratique la plus courante et la plus transparente.',
+      'Séparez les honoraires de conception des honoraires de suivi de chantier. Ce sont deux missions distinctes avec des responsabilités différentes.',
+      'Facturez les modifications demandées par le client en dehors du périmètre initial comme des "honoraires complémentaires" avec un avenant au contrat.',
+    ],
+    erreursCourantes: [
+      'Facturer un forfait global sans ventilé par phase — le client ne comprend pas ce qu\'il paie à chaque étape',
+      'Oublier la mention "Maître d\'œuvre" et le numéro d\'inscription à l\'Ordre sur chaque facture',
+      'Ne pas facturer les modifications hors périmètre (avenants) qui représentent souvent 20 à 30% du budget initial',
+      'Confondre honoraires de conception (TVA 20%) et honoraires de suivi de chantier (TVA 10% en rénovation)',
+    ],
   },
   {
     slug: 'agent-immobilier',
@@ -368,6 +618,19 @@ export const professions: ProfessionData[] = [
     regimes: ['réel simplifié', 'réel normal'],
     description: 'Agent immobilier : vente, location, estimation. Facturation en honoraires libres ou tarifaires.',
     color: 'green',
+    texteIntro: 'L\'agent immobilier facture des honoraires de transaction (vente, location) et des prestations annexes (estimation, état des lieux, gestion locative). Depuis la loi ALUR, les honoraires de location sont encadrés et plafonnés. Les honoraires de vente sont libres mais doivent être affichés de manière transparente. La carte T professionnelle doit être mentionnée.',
+    conseilsFacturation: [
+      'Mentionnez clairement si les honoraires sont à la charge du vendeur ou de l\'acquéreur. Depuis la loi ALUR, l\'affichage est obligatoire.',
+      'Pour les locations, respectez les plafonds d\'honoraires : un mois de loyer HT pour la rédaction du bail, un mois pour l\'état des lieux.',
+      'Distinguez les honoraires de transaction (pourcentage du prix de vente) des honoraires forfaitaires (estimation, état des lieux, dossier).',
+      'Référencez le mandat (exclusif, semi-exclusif, simple) sur chaque facture. Le type de mandat détermine vos droits à rémunération.',
+    ],
+    erreursCourantes: [
+      'Facturer des honoraires de location au-delà des plafonds légaux (1 mois de loyer HC par prestation)',
+      'Ne pas afficher clairement qui paie les honoraires (vendeur ou acquéreur) — obligation ALUR',
+      'Oublier de mentionner la carte T professionnelle et le numéro de carte sur les factures',
+      'Facturer l\'état des lieux sans le détailler comme prestation distincte de la mise en location',
+    ],
   },
   // === SANTE ===
   {
@@ -385,6 +648,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Ostéopathe : consultation, traitement manuel. Facturation sans TVA (profession de santé non assujettie).',
     color: 'sky',
+    texteIntro: 'L\'ostéopathe est une profession de santé non assujettie à la TVA. La facture ne comporte donc ni TVA ni montant TTC : uniquement le prix HT. La mention "TVA non applicable, article 293 B du CGI" doit figurer sur chaque facture. Le diplôme d\'ostéopathie (DO) et le numéro Adéli doivent être mentionnés.',
+    conseilsFacturation: [
+      'N\'incluez aucune ligne de TVA sur vos factures. Mentionnez simplement "TVA non applicable, article 293 B du CGI" en bas de page.',
+      'Faites figurer votre numéro Adéli et votre diplôme d\'ostéopathie (DO) sur chaque facture. C\'est un gage de confiance pour vos patients.',
+      'Pour les consultations non remboursées (cas le plus fréquent), précisez-le sur la facture : "Consultation non prise en charge par l\'Assurance Maladie".',
+      'Si vous acceptez les mutuelles, indiquez les coordonnées de la mutuelle du patient et le numéro de carte de tiers payant sur la facture.',
+    ],
+    erreursCourantes: [
+      'Inclure une ligne TVA sur la facture alors que la profession n\'est pas assujettie',
+      'Oublier la mention "TVA non applicable, article 293 B du CGI" — la facture est irrégulière sans elle',
+      'Ne pas indiquer que la consultation n\'est pas remboursée par la Sécurité sociale',
+      'Facturer sous un statut qui ne permet pas l\'exercice de la profession (vérifier les statuts autorisés)',
+    ],
   },
   {
     slug: 'kinesitherapeute',
@@ -401,6 +677,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Kinésithérapeute : rééducation, masso-kinésithérapie. Facturation sans TVA (profession de santé).',
     color: 'teal',
+    texteIntro: 'Le kinésithérapeute est une profession de santé réglementée, non assujettie à la TVA. La facturation se fait en HT uniquement avec la mention de franchise. Les séances peuvent être prises en charge par la Sécurité sociale et la mutuelle (convention secteur 1 ou 2). La facture doit indiquer clairement le secteur de conventionnement.',
+    conseilsFacturation: [
+      'Indiquez votre secteur de conventionnement (secteur 1 ou 2) sur vos factures. Cela détermine le ticket modérateur et les dépassements possibles.',
+      'Pour les patients en tiers payant, indiquez le montant pris en charge par la CPAM et le reste à charge du patient ou de la mutuelle.',
+      'Mentionnez le nombre de séances prescrites par le médecin et le numéro de la prescription. C\'est obligatoire pour le remboursement.',
+      'Distinguez les actes de masso-kinésithérapie (remboursés) des actes hors nomenclature (non remboursés) sur votre facture.',
+    ],
+    erreursCourantes: [
+      'Facturer des actes de kinésithérapie sans prescription médicale — aucun remboursement possible',
+      'Oublier d\'indiquer le secteur de conventionnement (1 ou 2) sur la facture',
+      'Inclure une ligne TVA alors que la profession est non assujettie',
+      'Ne pas séparer les actes remboursés des actes hors nomenclature sur la facture',
+    ],
   },
   {
     slug: 'psychologue',
@@ -417,6 +706,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié'],
     description: 'Psychologue : consultation clinique, thérapie. Facturation sans TVA (profession de santé).',
     color: 'purple',
+    texteIntro: 'Le psychologue est un professionnel de santé non assujetti à la TVA. La facturation se fait en HT uniquement avec la mention de franchise. Le titre de psychologue est protégé par la loi (décret de 1990). Les consultations ne sont généralement pas remboursées par la Sécurité sociale, sauf dans le cadre des CMS ou des établissements de santé.',
+    conseilsFacturation: [
+      'Mentionnez votre titre de "Psychologue" et votre numéro Adéli (si applicable) sur chaque facture. Le titre est protégé et son usage est contrôlé.',
+      'Précisez que la consultation n\'est pas remboursée par la Sécurité sociale (sauf cas particulier). Le patient doit le savoir avant la consultation.',
+      'Pour les consultations en ligne (téléconsultation), ajoutez une mention spécifique sur la facture : "Consultation réalisée par visioconférence".',
+      'Facturez les séances au fur et à mesure plutôt qu\'en package. Cela évite les litiges en cas d\'arrêt prématuré de la thérapie.',
+    ],
+    erreursCourantes: [
+      'Utiliser le titre de "psychothérapeute" sans avoir l\'autorisation — titre réglementé depuis 2010',
+      'Oublier de préciser que les consultations ne sont pas remboursées par la CPAM',
+      'Facturer des packages de séances sans clause de remboursement en cas d\'arrêt',
+      'Ne pas mentionner le secret professionnel et les conditions de confidentialité',
+    ],
   },
   // === COMMERCE ===
   {
@@ -435,6 +737,19 @@ export const professions: ProfessionData[] = [
     regimes: ['réel simplifié', 'réel normal'],
     description: 'Restaurateur : restauration traditionnelle, traiteur, livraison. Facturation avec TVA à 10% (restauration).',
     color: 'red',
+    texteIntro: 'Le restaurateur facture avec un taux de TVA réduit à 10% pour la consommation sur place (restauration traditionnelle) et 5,5% pour les produits alimentaires à emporter. La TVA à 20% s\'applique aux boissons alcoolisées. Le ticket de caisse est obligatoire pour les transactions professionnelles. Les prestations de traiteur suivent un régime fiscal spécifique.',
+    conseilsFacturation: [
+      'Appliquez le bon taux de TVA : 10% pour la consommation sur place, 5,5% pour les produits alimentaires à emporter, et 20% pour les boissons alcoolisées.',
+      'Pour les prestations de traiteur, facturez séparément les repas (TVA 10%) et les boissons alcoolisées (TVA 20%).',
+      'Mentionnez la licence d\'exploitation et la formation hygiène (HACCP) sur vos factures de traiteur. C\'est rassurant pour les clients professionnels.',
+      'Pour les factures B2B (entreprises, comités des fêtes), précisez le nombre de convives et le menu détaillé. C\'est obligatoire pour la déductibilité.',
+    ],
+    erreursCourantes: [
+      'Appliquer un taux de TVA unique (10%) alors que les boissons alcoolisées sont soumises à 20%',
+      'Confondre TVA 5,5% (à emporter) et TVA 10% (sur place) pour les mêmes plats',
+      'Facturer le traiteur sans détailler le menu, le nombre de convives et les options choisies',
+      'Oublier de facturer le service (15% automatique en France) quand il n\'est pas inclus dans le prix',
+    ],
   },
   {
     slug: 'e-commerce',
@@ -452,6 +767,19 @@ export const professions: ProfessionData[] = [
     regimes: ['micro', 'réel simplifié', 'réel normal'],
     description: 'E-commerçant : vente en ligne de produits physiques ou digitaux. Facturation avec TVA 20% et CGV.',
     color: 'orange',
+    texteIntro: 'L\'e-commerçant doit se conformer à des obligations de facturation spécifiques : mention des CGV, droit de rétractation de 14 jours, politique de retours, et informations sur la livraison. La TVA de 20% s\'applique sur la plupart des produits. Pour les ventes intracommunautaires, le régime de l\'autoliquidation peut s\'appliquer au-delà de 10 000€ de CA dans l\'UE.',
+    conseilsFacturation: [
+      'Mentionnez les CGV acceptées lors de la commande (date et heure d\'acceptation). C\'est votre preuve contractuelle en cas de litige.',
+      'Distinguez le prix du produit des frais de livraison sur votre facture. Le client doit pouvoir identifier chaque poste.',
+      'Pour les ventes B2B intracommunautaires, appliquez l\'autoliquidation de la TVA et mentionnez le numéro de TVA intracommunautaire du client.',
+      'Incluez les informations de garantie légale de conformité (2 ans en France) sur vos factures de vente de biens.',
+    ],
+    erreursCourantes: [
+      'Facturer sans mentionner les CGV acceptées par le client — la vente est contestable',
+      'Inclure les frais de livraison dans le prix du produit au lieu de les ventiler séparément',
+      'Oublier la mention du droit de rétractation de 14 jours pour les ventes aux particuliers',
+      'Ne pas appliquer l\'autoliquidation de la TVA pour les ventes intracommunautaires B2B',
+    ],
   },
 ];
 
@@ -480,13 +808,16 @@ export interface StatutData {
   inconvenients: string[];
   statutsCompatibles: string[];
   color: string;
+  texteIntro: string;
+  casUsage: string;
+  comparaison: string;
 }
 
 export const statuts: StatutData[] = [
   {
     slug: 'auto-entrepreneur',
     nom: 'Auto-entrepreneur (Micro-entreprise)',
-    description: 'Régime simplifié pour les entrepreneurs individuels avec des seuils de chiffre d\'affaires. Idéal pour démarrer une activité.',
+    description: 'Régime simplifié pour les entrepreneurs individuels avec des seuils de chiffre d\'affaires. Idéal pour démarrer une activité sans investissement initial.',
     regimeImposition: 'Impôt sur le revenu (micro-fiscal)',
     tva: {
       assujetti: false,
@@ -498,11 +829,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Plafonds de CA', 'Pas de déduction des charges', 'Pas de déficit reportable', 'Responsabilité illimitée'],
     statutsCompatibles: ['micro-entreprise', 'ei'],
     color: 'blue',
+    texteIntro: 'Le régime auto-entrepreneur (micro-entreprise) est le statut le plus simple pour lancer une activité. Les cotisations sociales sont calculées sur le chiffre d\'affaires réel, pas sur un bénéfice estimé. La comptabilité est réduite au strict minimum : un livre des recettes et un registre des achats. Attention, ce régime ne permet pas de déduire vos charges réelles.',
+    casUsage: 'L\'auto-entrepreneur est idéal pour tester une activité, démarrer en complément d\'un salaire, ou exercer une activité à faible charges. Si vos frais réels dépassent 30-50% de votre CA, le régime réel sera plus avantageux fiscalement.',
+    comparaison: 'L\'auto-entrepreneur et la micro-entreprise sont le même régime depuis 2016. Le choix principal est entre micro-entreprise et EI au réel : la micro est plus simple mais ne permet pas de déduire les charges. Si vous avez beaucoup de frais (matériel, loyer, voiture), l\'EI au réel sera plus intéressant.',
   },
   {
     slug: 'micro-entreprise',
     nom: 'Micro-entreprise',
-    description: 'Le régime micro-entreprise est le régime fiscal des auto-entrepreneurs depuis 2016. Même chose que l\'auto-entrepreneur.',
+    description: 'Régime fiscal simplifié pour les entrepreneurs individuels. Apparu en 2009, il a fusionné avec l\'auto-entrepreneur en 2016 pour ne former qu\'un seul régime.',
     regimeImposition: 'Impôt sur le revenu (micro-fiscal)',
     tva: {
       assujetti: false,
@@ -514,11 +848,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Plafonds de CA stricts', 'Pas de déduction charges réelles', 'Responsabilité personnelle', 'Pas de lissage des revenus'],
     statutsCompatibles: ['auto-entrepreneur'],
     color: 'cyan',
+    texteIntro: 'La micro-entreprise est le prolongement de l\'auto-entrepreneur. Depuis 2016, les deux régimes ont fusionné. Le terme "micro-entreprise" désigne désormais le régime fiscal (micro-fiscal), tandis que le statut juridique est l\'entreprise individuelle. Cette distinction est importante pour comprendre vos obligations comptables et fiscales.',
+    casUsage: 'La micro-entreprise convient parfaitement aux activités de services et de commerce à faible marge de charges. C\'est le régime recommandé pour les freelances débutants, les artisans en phase de lancement, et toute activité dont les frais réels représentent moins de 30% du CA.',
+    comparaison: 'Contrairement à l\'EI au réel, la micro-entreprise applique un abattement forfaitaire (50% pour les services, 71% pour les ventes) plutôt que de déduire vos charges réelles. Si vos charges réelles sont supérieures à cet abattement, passez au réel. L\'option pour le versement libératoire de l\'impôt simplifie encore la fiscalité.',
   },
   {
     slug: 'ei',
     nom: 'Entreprise Individuelle (EI)',
-    description: 'L\'entreprise individuelle est la forme la plus simple pour créer une activité seule, sans associé.',
+    description: 'L\'entreprise individuelle est la forme la plus simple pour créer une activité seule, sans associé. Elle offre le choix entre le régime micro et le régime réel.',
     regimeImposition: 'IR (micro ou réel)',
     tva: {
       assujetti: true,
@@ -530,11 +867,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Responsabilité illimitée', 'Confusion patrimoine pro/perso', 'Pas de transmission facile', 'Pas d\'associés possibles'],
     statutsCompatibles: ['auto-entrepreneur', 'micro-entreprise'],
     color: 'indigo',
+    texteIntro: 'L\'Entreprise Individuelle (EI) est le statut par défaut de tout entrepreneur solo. Contrairement à la micro-entreprise, l\'EI permet de choisir le régime réel d\'imposition, ce qui ouvre la déduction des charges réelles. La responsabilité est illimitée : vos biens personnels peuvent être saisis en cas de dettes professionnelles, sauf si vous optez pour l\'EIRL.',
+    casUsage: 'L\'EI est recommandée quand vos charges réelles sont significatives (matériel, loyer professionnel, frais de déplacement) et que vous souhaitez les déduire. C\'est aussi le passage obligé quand vous dépassez les seuils de la micro-entreprise et que vous ne souhaitez pas créer une société.',
+    comparaison: 'L\'EI au réel permet de déduire vos charges réelles (contrairement à la micro-entreprise). Par rapport à l\'EURL, l\'EI est plus simple à créer mais ne protège pas votre patrimoine personnel. L\'option EIRL (Entrepreneur Individuel à Responsabilité Limitée) permet d\'isoler un patrimoine professionnel sans créer de société.',
   },
   {
     slug: 'eurl',
     nom: 'EURL (SARL unipersonnelle)',
-    description: 'L\'EURL est une SARL avec un seul associé. Elle protège le patrimoine personnel de l\'entrepreneur.',
+    description: 'L\'EURL est une SARL avec un seul associé. Elle protège le patrimoine personnel de l\'entrepreneur tout en conservant une structure simple.',
     regimeImposition: 'IR (gérant majoritaire) ou IS (option)',
     tva: {
       assujetti: true,
@@ -544,13 +884,16 @@ export const statuts: StatutData[] = [
     mentionsSpecifiques: ['Dénomination sociale', 'SIRET', 'RCS', 'Capital social', 'Siège social', 'Mention "EURL"'],
     avantages: ['Responsabilité limitée aux apports', 'Possibilité d\'IS ou IR', 'Gérance unique', 'Protection du patrimoine'],
     inconvenients: ['Formalités comptables plus lourdes', 'Capital social à constituer', 'Publication légale obligatoire', 'Comptabilité obligatoire'],
-    statutsCompatibles: ['sasu', 'sarL'],
+    statutsCompatibles: ['sasu', 'sarl'],
     color: 'purple',
+    texteIntro: 'L\'EURL est la forme unipersonnelle de la SARL. Le gérant est l\'unique associé et sa responsabilité est limitée au montant de ses apports au capital. La gestion est simplifiée par rapport à une SARL classique (pas d\'assemblées générales avec d\'autres associés). Le gérant peut opter pour l\'IR ou l\'IS selon sa situation fiscale.',
+    casUsage: 'L\'EURL est idéale pour un entrepreneur solo qui souhaite protéger son patrimoine personnel tout en gardant une structure simple. Elle convient aux professions libérales, aux artisans et aux commerçants qui ont des investissements importants ou des risques de responsabilité.',
+    comparaison: 'Par rapport à la SASU, l\'EURL est soumise aux règles de la SARL : rédaction de statuts, capital social minimum libre, gérant obligatoirement personne physique. La SASU offre plus de souplesse statutaire mais le président est salarié (régime général), tandis que le gérant EURL est travailleur non salarié (régime des indépendants).',
   },
   {
     slug: 'sasu',
     nom: 'SASU (SAS unipersonnelle)',
-    description: 'La SASU est une SAS avec un seul associé. Souplesse statutaire et protection du patrimoine personnel.',
+    description: 'La SASU est une SAS avec un seul associé. Elle offre une souplesse statutaire maximale et protège le patrimoine personnel.',
     regimeImposition: 'IS (par défaut) ou IR (option)',
     tva: {
       assujetti: true,
@@ -562,11 +905,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Formalités de création', 'Comptabilité obligatoire', 'Rémunération du président = salaire', 'Pas de sécurité sociale des indépendants'],
     statutsCompatibles: ['eurl', 'sas'],
     color: 'emerald',
+    texteIntro: 'La SASU est la forme unipersonnelle de la SAS. Sa force principale est la souplesse : les statuts sont librement rédigés, le président peut être rémunéré ou non, et les décisions sont prises librement. Le président est affilié au régime général de la Sécurité sociale (comme un salarié), ce qui peut être un avantage ou un inconvénient selon la situation.',
+    casUsage: 'La SASU est recommandée pour les entrepreneurs qui veulent maximiser la flexibilité statutaire, prévoir l\'entrée future d\'associés (transformation facile en SAS), ou optimiser la rémunération (choix entre salaire et dividendes). C\'est le statut préféré des startups en phase de lancement.',
+    comparaison: 'Contrairement à l\'EURL, la SASU permet de nommer un président moral (une autre société) et d\'organiser librement la gouvernance. Le président SASU est salarié (régime général) alors que le gérant EURL est travailleur non salarié. En termes de charges sociales, la SASU est souvent plus coûteuse pour les faibles rémunérations mais plus avantageuse pour les rémunérations élevées.',
   },
   {
     slug: 'sarl',
     nom: 'SARL',
-    description: 'La SARL est une société commerciale avec 2 à 100 associés. Cadre juridique protecteur et bien connu.',
+    description: 'La SARL est une société commerciale avec 2 à 100 associés. Cadre juridique protecteur et bien connu des banques et des partenaires.',
     regimeImposition: 'IR (par défaut) ou IS (option)',
     tva: {
       assujetti: true,
@@ -578,11 +924,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Formalisme important', 'Assemblées générales obligatoires', 'Rédaction des statuts', 'Comptabilité obligatoire'],
     statutsCompatibles: ['eurl', 'sas'],
     color: 'teal',
+    texteIntro: 'La SARL est la société commerciale la plus répandue en France. Elle offre un cadre juridique bien rodé avec 2 à 100 associés et un gérant obligatoirement personne physique. Le gérant majoritaire est au régime des travailleurs non salariés (TNS), tandis que le gérant minoritaire est au régime général. Ce statut inspire confiance aux banques et partenaires commerciaux.',
+    casUsage: 'La SARL est recommandée pour les projets avec plusieurs associés (2 minimum) qui souhaitent un cadre juridique structuré et protecteur. C\'est le statut de prédilection pour les commerces, les artisans et les PME familiales. La SARL de famille (entre parents et enfants) bénéficie d\'un régime fiscal avantageux.',
+    comparaison: 'Par rapport à la SAS, la SARL est plus rigide (statuts encadrés par la loi, gérant personne physique) mais son cadre est mieux connu des banques. Le gérant majoritaire SARL paie des charges sociales TNS souvent moins élevées que le président SAS (régime général). La SAS est plus flexible mais plus coûteuse en charges sociales.',
   },
   {
     slug: 'sas',
     nom: 'SAS',
-    description: 'La SAS offre une grande souplesse statutaire. Idéale pour les startups et les entreprises innovantes.',
+    description: 'La SAS offre une grande souplesse statutaire. Idéale pour les startups et les entreprises innovantes nécessitant une gouvernance flexible.',
     regimeImposition: 'IS (par défaut) ou IR (option)',
     tva: {
       assujetti: true,
@@ -594,11 +943,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Pas de sécurité sociale des indépendants', 'Rémunération = salaire', 'Charges sociales plus élevées', 'Comptabilité obligatoire'],
     statutsCompatibles: ['sasu', 'sarl'],
     color: 'orange',
+    texteIntro: 'La SAS est la forme sociétale la plus flexible du droit français. Les statuts sont rédigés librement : vous pouvez organiser la gouvernance, les conditions d\'entrée et de sortie des associés, la répartition des droits de vote, et les clauses d\'agrément comme vous le souhaitez. C\'est le statut favori des startups et des entreprises à fort potentiel de croissance.',
+    casUsage: 'La SAS est recommandée pour les projets avec plusieurs associés qui veulent organiser librement la gouvernance, prévoir des tours de table (investisseurs), ou mettre en place des mécanismes d\'interests alignment (BSPCE, actions de préférence). C\'est le standard des startups françaises.',
+    comparaison: 'Contrairement à la SARL, la SAS permet une totale liberté statutaire. Le président SAS est salarié (régime général), pas TNS. Les actions SAS sont librement cessibles (sauf clause d\'agrément), tandis que les parts SARL nécessitent l\'accord des associés. En contrepartie, les charges sociales du président SAS sont plus élevées que celles du gérant majoritaire SARL.',
   },
   {
     slug: 'profession-liberale',
     nom: 'Profession libérale',
-    description: 'Les professions libérales réglementées (avocats, médecins, architectes) exercent en indépendant sous un cadre spécifique.',
+    description: 'Les professions libérales réglementées (avocats, médecins, architectes) exercent en indépendant sous un cadre spécifique avec des obligations déontologiques.',
     regimeImposition: 'IR (BNC) avec déclaration contrôlée',
     tva: {
       assujetti: false,
@@ -610,11 +962,14 @@ export const statuts: StatutData[] = [
     inconvenients: ['Responsabilité professionnelle', 'Cotisations sociales élevées', 'Formations continues obligatoires', 'Assurances spécifiques'],
     statutsCompatibles: ['ei', 'eurl'],
     color: 'slate',
+    texteIntro: 'Les professions libérales réglementées (avocats, médecins, architectes, experts-comptables, notaires) exercent sous un cadre juridique et déontologique strict. La facturation se fait sans TVA (profession non assujettie) avec la mention de franchise. L\'inscription à un ordre professionnel et le respect du secret professionnel sont des obligations fondamentales.',
+    casUsage: 'Le statut de profession libérale s\'impose pour les activités réglementées. Il n\'y a pas de choix : si vous êtes médecin, avocat ou architecte, vous exercez obligatoirement sous ce cadre. La question est plutôt le statut juridique (EI, SELARL, SELAS) et le régime fiscal associé.',
+    comparaison: 'La profession libérale ne peut pas se comparer aux autres statuts car elle est imposée par la loi pour certaines activités. Le choix se fait entre les formes d\'exercice : EI en direct, SELARL (forme SARL adaptée), ou SELAS (forme SAS adaptée). Chacune a des implications fiscales et sociales différentes.',
   },
   {
     slug: 'sci',
     nom: 'SCI (Société Civile Immobilière)',
-    description: 'La SCI est une société civile dédiée à la gestion immobilière. Utile pour l\'achat en commun ou la transmission.',
+    description: 'La SCI est une société civile dédiée à la gestion immobilière. Utile pour l\'achat en commun, la transmission et la gestion de patrimoine.',
     regimeImposition: 'IR (par défaut) ou IS (option)',
     tva: {
       assujetti: false,
@@ -624,13 +979,16 @@ export const statuts: StatutData[] = [
     mentionsSpecifiques: ['Dénomination sociale', 'SIRET', 'Siège social', 'Capital social', 'Mention "SCI"', 'Nom du gérant'],
     avantages: ['Transmission facilitée', 'Gestion en commun', 'Déduction des charges', 'Protection du patrimoine'],
     inconvenients: ['Obligations comptables', 'Assemblées annuelles', 'Imposition des associés', 'Frais de création'],
-    statutsCompatibles: ['ei', 'sarL'],
+    statutsCompatibles: ['ei', 'sarl'],
     color: 'zinc',
+    texteIntro: 'La SCI est une société civile exclusivement destinée à la gestion immobilière. Elle permet à plusieurs personnes (familles, investisseurs) de détenir et gérer ensemble un ou plusieurs biens immobiliers. La SCI est translucide fiscalement : ce sont les associés qui sont imposés sur leur quote-part de bénéfices, pas la société elle-même.',
+    casUsage: 'La SCI est recommandée pour l\'achat immobilier en commun (couple non marié, frères et sœurs, investisseurs), la transmission de patrimoine (démembrement de parts), ou la gestion de plusieurs biens locatifs. Elle n\'est pas adaptée aux marchands de biens (activité commerciale).',
+    comparaison: 'Par rapport à la détention en nom propre, la SCI facilite la transmission (donation de parts plutôt que vente du bien), permet d\'organiser la gestion entre associés, et offre une continuité en cas de décès. Par rapport à l\'OPCI (fonds immobilier), la SCI reste un véhicule familial et non un produit financier.',
   },
   {
     slug: 'sa',
     nom: 'SA (Société Anonyme)',
-    description: 'La SA est une société de capitaux adaptée aux grandes entreprises. Capital minimum de 37 000€.',
+    description: 'La SA est une société de capitaux adaptée aux grandes entreprises. Capital minimum de 37 000€ et au moins 2 actionnaires (depuis 2015).',
     regimeImposition: 'IS',
     tva: {
       assujetti: true,
@@ -639,9 +997,12 @@ export const statuts: StatutData[] = [
     },
     mentionsSpecifiques: ['Dénomination sociale', 'SIRET', 'RCS', 'Capital social (min 37 000€)', 'Siège social', 'Mention "SA"'],
     avantages: ['Capacité d\'emprunt importante', 'Cotation en bourse possible', 'Transfert d\'actions libre', 'Crédibilité institutionnelle'],
-    inconvenients: ['Capital minimum 37 000€', '7 actionnaires minimum', 'Gouvernance lourde', 'Formalismes nombreux'],
+    inconvenients: ['Capital minimum 37 000€', '2 actionnaires minimum', 'Gouvernance lourde', 'Formalismes nombreux'],
     statutsCompatibles: ['sas', 'sarl'],
     color: 'red',
+    texteIntro: 'La Société Anonyme est la forme sociétale réservée aux grandes entreprises. Le capital minimum est de 37 000€ et elle nécessite au moins 2 actionnaires depuis 2015 (7 auparavant). La gouvernance est stricte : assemblées générales obligatoires, commissaires aux comptes, publication des comptes. C\'est le seul statut permettant une introduction en bourse.',
+    casUsage: 'La SA est destinée aux entreprises de taille significative nécessitant des levées de fonds importantes, une introduction en bourse, ou une crédibilité institutionnelle maximale (appels d\'offres publics, contrats internationaux). Pour les PME, la SAS est préférable.',
+    comparaison: 'Par rapport à la SAS, la SA est plus contraignante (capital minimum, commissaires aux comptes obligatoires, gouvernance imposée) mais offre une crédibilité supérieure et l\'accès à la cotation en bourse. La SAS est recommandée en dessous de 37 000€ de capital ou si vous ne prévoyez pas d\'introduction en bourse.',
   },
 ];
 

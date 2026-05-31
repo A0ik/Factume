@@ -1,1080 +1,768 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, ArrowRight, LogIn, Menu, Star, PlayCircle, Layers, FileText, Sparkles, Send, Users, Calculator, LayoutGrid, Mic, Type, Pencil, Tag, Link as LinkIcon, ShieldCheck, CreditCard, CheckCircle, ChevronDown, HelpCircle, MessageCircle, Lock, Rocket, Check, Building2, Code2, Briefcase, HeartPulse, Store, Palette, Share2, Twitter, Linkedin, Github, Calendar, Package, Truck, FileClock, Shield, FileBadge, Eye
+  ArrowRight, Menu, X, Zap, Play, Sparkles, FileText,
+  Send, Users, Calculator, LayoutGrid, Calendar, Package,
+  Truck, FileClock, Mic, Type, Pencil, ShieldCheck, Lock,
+  CheckCircle, Check, CreditCard, Link as LinkIcon, Star,
+  Building2, Code2, Store, Briefcase, Palette, HeartPulse,
+  ChevronDown, LogIn, Shield, Eye, Share2,
+  Twitter, Linkedin, Github,
 } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { BorderBeam } from '@/components/ui/border-beam';
+import { Marquee } from '@/components/ui/marquee';
 
-/* ─── Particles Canvas ─── */
-function ParticlesCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const cvs = canvasRef.current; if (!cvs) return;
-    const ctx = cvs.getContext('2d'); if (!ctx) return;
-    const isMobile = window.innerWidth < 768;
-    const isXL = window.innerWidth >= 1280;
-    const is2XL = window.innerWidth >= 1536;
-    const count = isMobile ? 20 : isXL ? (is2XL ? 80 : 65) : 45;
-    const connections = !isMobile;
-    let w = 0, h = 0;
-    const resize = () => { const p = cvs.parentElement; if (p) { w = cvs.width = p.offsetWidth; h = cvs.height = p.offsetHeight; } };
-    resize();
-    const ro = new ResizeObserver(resize); if (cvs.parentElement) ro.observe(cvs.parentElement);
-    const ps: { x: number; y: number; s: number; vx: number; vy: number; o: number; l: number; ml: number }[] = [];
-    for (let i = 0; i < count; i++) { const l = Math.random() * 200 + 100; ps.push({ x: Math.random() * w, y: Math.random() * h, s: Math.random() * (isXL ? 2.5 : 1.5) + 0.5, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, o: Math.random() * 0.4 + 0.1, l, ml: l }); }
-    const reset = (p: typeof ps[0]) => { p.x = Math.random() * w; p.y = Math.random() * h; p.s = Math.random() * (isXL ? 2.5 : 1.5) + 0.5; p.vx = (Math.random() - 0.5) * 0.3; p.vy = (Math.random() - 0.5) * 0.3; p.o = Math.random() * 0.4 + 0.1; p.l = Math.random() * 200 + 100; p.ml = p.l; };
-    let raf: number;
-    const draw = () => {
-      ctx.clearRect(0, 0, w, h);
-      ps.forEach((p, i) => {
-        p.x += p.vx; p.y += p.vy; p.l--;
-        if (p.l <= 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) reset(p);
-        const a = (p.l / p.ml) * p.o;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fillStyle = `rgba(52,211,153,${a})`; ctx.fill();
-        if (connections) { for (let j = i + 1; j < ps.length; j++) { const dx = p.x - ps[j].x, dy = p.y - ps[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < (isXL ? 150 : 120)) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(ps[j].x, ps[j].y); ctx.strokeStyle = `rgba(52,211,153,${0.05 * (1 - d / (isXL ? 150 : 120))})`; ctx.lineWidth = isXL ? 0.75 : 0.5; ctx.stroke(); } } }
-      });
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
-  }, []);
-  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-10" />;
-}
+/* ═══════════════════════════════════════════════════════════
+   COURBE EXCLUSIVE — Loi 4 du Manifeste Anti-IA
+   ═══════════════════════════════════════════════════════════ */
+const ease = [0.16, 1, 0.3, 1] as unknown as number[];
 
-/* ─── 3D Card Wrapper ─── */
-function Card3D({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'ontouchstart' in window) return;
-    const el = ref.current; if (!el) return;
-    const isXL = window.innerWidth >= 1280;
-    const is2XL = window.innerWidth >= 1536;
-    const tiltAmount = is2XL ? 10 : isXL ? 8 : 7;
-    const scaleAmount = is2XL ? 1.03 : 1.02;
-    const onMove = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect();
-      const rx = ((e.clientY - r.top - r.height / 2) / (r.height / 2)) * -tiltAmount;
-      const ry = ((e.clientX - r.left - r.width / 2) / (r.width / 2)) * tiltAmount;
-      el.style.transform = `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(${scaleAmount},${scaleAmount},1)`;
-    };
-    const onLeave = () => { el.style.transform = 'perspective(1200px) rotateX(0) rotateY(0) scale3d(1,1,1)'; };
-    el.addEventListener('mousemove', onMove); el.addEventListener('mouseleave', onLeave);
-    return () => { el.removeEventListener('mousemove', onMove); el.removeEventListener('mouseleave', onLeave); };
-  }, []);
-  return <div className="card-3d"><div ref={ref} className={`card-3d-inner transition-transform duration-500 ease-out ${className}`} style={{ transformStyle: 'preserve-3d' }}>{children}</div></div>;
-}
+/* ═══════════════════════════════════════════════════════════
+   LAYOUT — Container pour grands écrans (MODIF 1)
+   ═══════════════════════════════════════════════════════════ */
+const LC = 'max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32';
 
-/* ─── Voice Bars ─── */
-function VoiceBars() {
-  const [heights, setHeights] = useState<number[]>([]);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    // Generate random heights only on client
-    setHeights([0, 1, 2, 3, 4, 5].map(() => 10 + Math.random() * 16));
-  }, []);
-
-  if (!isClient) {
-    // Return placeholder bars on server to avoid hydration mismatch
-    return (
-      <>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="w-[2.5px] sm:w-[2.5px] lg:w-[3px] bg-brand-400 rounded-full" style={{ height: '16px' }} />
-        ))}
-      </>
-    );
-  }
-
+/* ═══════════════════════════════════════════════════════════
+   REVEAL — Animation au scroll
+   ═══════════════════════════════════════════════════════════ */
+function R({ children, delay = 0, x = 0, y = 30, className }: { children: React.ReactNode; delay?: number; x?: number; y?: number; className?: string }) {
   return (
-    <>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="w-[2.5px] sm:w-[2.5px] lg:w-[3px] bg-brand-400 rounded-full" style={{ height: `${heights[i] || 16}px`, animation: `voicePulse${(i % 3) + 1} 1s ease-in-out infinite`, animationDelay: `${i * 0.08}s` }} />
-      ))}
-    </>
+    <motion.div
+      initial={{ opacity: 0, x, y }}
+      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, delay, ease }}
+      className={className}
+    >
+      {children}
+    </motion.div>
   );
 }
 
-/* ─── Scroll Reveal ─── */
-function ScrollReveal({ children, direction = 'up', delay = 0 }: { children: React.ReactNode; direction?: 'up' | 'down' | 'left' | 'right' | 'scale'; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+/* ═══════════════════════════════════════════════════════════
+   GRADIENT OVERLAP — Fondu entre sections (MODIF 2)
+   ═══════════════════════════════════════════════════════════ */
+function Fade({ to = 'transparent' }: { to?: string }) {
+  return <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent pointer-events-none z-10" style={{ '--tw-gradient-to': to } as React.CSSProperties} />;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DATA — Features issues du backup (MODIF 3)
+   ═══════════════════════════════════════════════════════════ */
+const features = [
+  { icon: FileText, title: 'Facturation multi-documents', desc: 'Factures, devis, avoirs, bons de commande, bons de livraison, factures d\'acompte.' },
+  { icon: Sparkles, title: 'Intelligence Artificielle', desc: 'Dictez ou décrivez votre facture. L\'IA remplit tout et comprend les modifications.' },
+  { icon: Send, title: 'Envoi et suivi', desc: 'E-mail avec PDF, liens de paiement, portail client, relances automatiques, signature.' },
+  { icon: Users, title: 'CRM intégré', desc: 'Fiches clients, import CSV, auto-complétion SIRET, tags, historique et pipeline de vente.' },
+  { icon: Calculator, title: 'Comptabilité', desc: 'Export officiel pour les impôts, suivi des dépenses, scan de reçus, rapprochement bancaire.' },
+  { icon: LayoutGrid, title: 'Espace collaboratif', desc: 'Jusqu\'à 10 espaces de travail isolés, rôles, flux d\'activité et notifications.' },
+  { icon: Calendar, title: 'Gestion de planning', desc: 'Calendrier intégré pour suivre vos échéances et relances.' },
+  { icon: Package, title: 'Catalogue produits', desc: 'Créez votre catalogue de produits/services pour une facturation plus rapide.' },
+  { icon: Truck, title: 'Fournisseurs', desc: 'Gérez vos dépenses et vos fournisseurs en un seul endroit.' },
+  { icon: FileClock, title: 'Factures récurrentes', desc: 'Automatisez vos factures récurrentes avec un seul clic.' },
+];
+
+const steps = [
+  { num: '01', title: 'Créez votre compte', desc: 'Inscription en 2 minutes. Choisissez votre template préféré.' },
+  { num: '02', title: 'Décrivez votre facture', desc: 'Dites-la à voix haute ou tapez-la. L\'IA fait le reste.' },
+  { num: '03', title: 'Recevez votre paiement', desc: 'Envoyez par e-mail, votre client paie en un clic.' },
+  { num: '04', title: 'Gérez vos contrats', desc: 'CDI, CDD, freelance — générez et signez en 5 minutes.' },
+];
+
+const testimonials = [
+  { name: 'Sarah M.', role: 'Développeuse freelance', text: 'Je passais 2h par mois sur mes factures. Depuis Factu.me, je dicte en 10 secondes et c\'est envoyé. Un gain de temps énorme.' },
+  { name: 'Thomas L.', role: 'Auto-entrepreneur, transport', text: 'Le scan de reçus est bluffant. Je photographie mes tickets essence et c\'est directement catégorisé. Mon comptable est impressionné.' },
+  { name: 'Claire D.', role: 'Directrice, agence digitale', text: 'On était 4 dans l\'agence, chacun avait son outil. Aujourd\'hui on est tous sur Factu.me avec des workspaces séparés.' },
+];
+
+const plans = [
+  { name: 'Solo', price: '14,99€', yearly: '12€', tag: 'Freelances & Auto-entrepreneurs', features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], popular: false },
+  { name: 'Pro', price: '29,99€', yearly: '24€', tag: 'Contrats + Facturation', features: ['Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail', 'Factures récurrentes'], popular: true },
+  { name: 'Business', price: '59,99€', yearly: '48€', tag: 'PME qui embauchent', features: ['Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Support prioritaire', 'Multi-utilisateurs', 'Rapports avancés'], popular: false },
+];
+
+const faqItems = [
+  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Découverte est 100% gratuit (3 factures/mois). Pour tester les plans payants, profitez de 7 jours d\'essai complet avec carte bancaire requise, sans engagement.' },
+  { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données.' },
+  { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données ou demander la suppression totale de votre compte.' },
+  { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Dites "5 jours de dev à 600€" et elle créera la facture complète.' },
+  { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. L\'export officiel pour les impôts est disponible sur les plans Pro et Business.' },
+];
+
+const trustItems = [
+  { icon: Building2, label: 'Auto-entrepreneurs' },
+  { icon: Code2, label: 'Freelances' },
+  { icon: Store, label: 'TPE / PME' },
+  { icon: Briefcase, label: 'Consultants' },
+  { icon: Palette, label: 'Agences' },
+  { icon: HeartPulse, label: 'Santé' },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   LANDING PAGE — 4 MODIFS APPLIQUÉES
+   ═══════════════════════════════════════════════════════════ */
+export default function LandingPageClient() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+
   useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(e.target); } }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
-    obs.observe(el); return () => obs.disconnect();
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', fn, { passive: true });
+    return () => window.removeEventListener('scroll', fn);
   }, []);
-  const tf = direction === 'up' ? 'translateY(40px)' : direction === 'down' ? 'translateY(-25px)' : direction === 'left' ? 'translateX(-50px)' : direction === 'right' ? 'translateX(50px)' : 'scale(0.85)';
-  return <div ref={ref} className={`transition-all duration-700 ease-out ${visible ? 'opacity-100' : 'opacity-0'}`} style={{ transform: visible ? 'none' : tf, transitionDelay: `${delay}s` }}>{children}</div>;
-}
 
-/* ─── Animated Counter ─── */
-function Counter({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { let cur = 0; const inc = target / 35; const t = setInterval(() => { cur += inc; if (cur >= target) { cur = target; clearInterval(t); } setCount(Math.round(cur)); }, 25); obs.unobserve(e.target); } }, { threshold: 0.5 });
-    obs.observe(el); return () => obs.disconnect();
-  }, [target]);
-  return <span ref={ref}>{count}{suffix}</span>;
-}
+  const scrollTo = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    document.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setMenuOpen(false);
+  };
 
-/* ─── FAQ Item ─── */
-function FAQItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition-colors">
-        <span className="font-semibold text-base pr-4 text-slate-900">{question}</span>
-        <ChevronDown className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
-      </button>
-      <div className={`overflow-hidden transition-all duration-400 ease-in-out ${open ? 'max-h-40 px-5 pb-5' : 'max-h-0'}`}>
-        <p className="text-sm text-slate-500 leading-relaxed">{answer}</p>
-      </div>
+    <div className="bg-slate-950 text-white antialiased overflow-x-hidden">
+
+      {/* ════════════ NAVBAR — Glassmorphism ════════════ */}
+      <nav className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+        scrolled
+          ? 'bg-slate-950/80 backdrop-blur-2xl border-b border-white/[0.06] shadow-2xl shadow-black/20'
+          : 'bg-transparent'
+      )}>
+        <div className={`${LC} flex items-center justify-between h-16 md:h-20`}>
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/logo-lg.png" alt="Factu.me" width={38} height={38} className="rounded-lg" priority />
+            <span className="text-lg font-bold tracking-tight text-white">Factu<span className="text-emerald-400">.me</span></span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-8">
+            {[{ label: 'Fonctionnalités', href: '#features' }, { label: 'IA', href: '#ai' }, { label: 'Tarifs', href: '#pricing' }].map((l) => (
+              <a key={l.href} href={l.href} onClick={(e) => scrollTo(e, l.href)} className="text-[13px] font-medium text-slate-400 hover:text-emerald-400 transition-colors duration-300">{l.label}</a>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-white transition-colors"><LogIn className="w-3.5 h-3.5" />Connexion</Link>
+            <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 px-4 py-2 rounded-full transition-all duration-300 active:scale-95">
+              Commencer gratuitement<ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white p-1">{menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3, ease }} className="md:hidden bg-slate-950/95 backdrop-blur-2xl overflow-hidden">
+              <div className="px-6 py-4 space-y-1">
+                {[{ label: 'Fonctionnalités', href: '#features' }, { label: 'IA', href: '#ai' }, { label: 'Tarifs', href: '#pricing' }].map((l) => (
+                  <a key={l.href} href={l.href} onClick={(e) => scrollTo(e, l.href)} className="block py-3 text-sm font-medium text-slate-300 hover:text-emerald-400">{l.label}</a>
+                ))}
+                <Link href="/login" className="flex items-center gap-2 py-3 text-sm text-slate-400"><LogIn className="w-4 h-4" />Se connecter</Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
+
+      {/* ════════════ HERO — Asymétrique 7/5 + Floating Card (MODIF 4) ════════════ */}
+      <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
+        {/* Background blobs — fond commun slate-950 */}
+        <div className="absolute inset-0 bg-slate-950">
+          <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-emerald-500/[0.07] rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-emerald-400/[0.05] rounded-full blur-[100px]" />
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        </div>
+
+        {/* Gradient overlap vers marquee */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-slate-950/90 pointer-events-none z-10" />
+
+        <div className={`relative z-10 ${LC} py-24 md:py-32 2xl:py-40 w-full`}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 2xl:gap-20 items-center">
+            {/* Left — 7 cols */}
+            <div className="lg:col-span-7 space-y-8 2xl:space-y-10">
+              <R delay={0}>
+                <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 text-xs 2xl:text-sm font-medium text-emerald-400">
+                  <Sparkles className="w-3.5 h-3.5" />Nouveau : IA intégrée
+                </div>
+              </R>
+
+              <R delay={0.08}>
+                <h1 className="text-5xl md:text-7xl 2xl:text-9xl font-medium tracking-tighter text-slate-50 leading-[1.05]">
+                  Contrats + Facturation<br />
+                  propulsés par <span className="text-emerald-400">l&apos;IA</span>
+                </h1>
+              </R>
+
+              <R delay={0.16}>
+                <p className="text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-400 max-w-lg 2xl:max-w-xl">
+                  Le seul outil qui gère vos salariés <span className="text-white font-medium">ET</span> vos clients. Créez des CDI/CDD conformes et facturez en 30 secondes.
+                </p>
+              </R>
+
+              <R delay={0.24}>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <ShimmerButton onClick={() => window.location.href = '/register'} className="rounded-full px-7 py-3.5 2xl:px-9 2xl:py-4 text-sm 2xl:text-base" background="rgba(16, 185, 129, 1)">
+                    Créer votre première facture <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                  </ShimmerButton>
+                  <Link href="/demo" className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-white px-7 py-3.5 2xl:px-9 2xl:py-4 rounded-full text-sm 2xl:text-base font-medium transition-all duration-300 hover:bg-white/[0.04]">
+                    <Play className="w-4 h-4 text-emerald-400" />Voir la démo
+                  </Link>
+                </div>
+              </R>
+
+              <R delay={0.32}>
+                <div className="flex items-center gap-5 pt-3">
+                  <div className="flex -space-x-2">
+                    {['M', 'S', 'A', 'L'].map((c, i) => {
+                      const bg = ['bg-blue-500/30 text-blue-300', 'bg-purple-500/30 text-purple-300', 'bg-emerald-500/30 text-emerald-300', 'bg-amber-500/30 text-amber-300'][i];
+                      return <div key={i} className={cn('w-8 2xl:w-10 h-8 2xl:h-10 rounded-full border-2 border-slate-950 text-[10px] 2xl:text-xs font-bold flex items-center justify-center', bg)}>{c}</div>;
+                    })}
+                    <div className="w-8 2xl:w-10 h-8 2xl:h-10 rounded-full border-2 border-slate-950 bg-emerald-500/20 text-[9px] 2xl:text-[10px] font-bold text-emerald-300 flex items-center justify-center">+2k</div>
+                  </div>
+                  <div>
+                    <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-3 h-3 text-white fill-white" />)}</div>
+                    <div className="text-[10px] 2xl:text-xs text-slate-500 mt-0.5">2 000+ entrepreneurs</div>
+                  </div>
+                </div>
+              </R>
+            </div>
+
+            {/* Right — 5 cols : Floating BorderBeam Card (MODIF 4) */}
+            <div className="lg:col-span-5 flex justify-center">
+              <R delay={0.2} y={0} x={40}>
+                <div className="relative w-full max-w-md 2xl:max-w-lg">
+                  {/* Glow underneath — lévitation lumineuse (MODIF 4.3) */}
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[80%] h-24 bg-emerald-500/20 blur-3xl rounded-full" />
+
+                  {/* Floating animation (MODIF 4.2) */}
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <div className="relative bg-slate-900/60 backdrop-blur border border-white/10 rounded-3xl shadow-2xl shadow-emerald-500/10 overflow-visible p-5 2xl:p-7 space-y-4">
+                      <BorderBeam duration={5} size={280} borderWidth={2} />
+
+                      {/* Browser chrome */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+                        </div>
+                        <div className="flex-1 bg-slate-800/60 rounded-lg px-3 py-1 flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 text-emerald-400" />
+                          <span className="text-[10px] 2xl:text-xs text-slate-500 font-mono">factu.me/invoice/FACT-2026-0042</span>
+                        </div>
+                      </div>
+
+                      {/* Invoice mockup — détails enrichis (MODIF 4.1) */}
+                      <div className="space-y-3">
+                        {/* Header avec logo + infos */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 2xl:w-10 2xl:h-10 bg-emerald-500 rounded-lg flex items-center justify-center shadow-md shadow-emerald-500/30">
+                              <Zap className="w-4 h-4 2xl:w-5 2xl:h-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="text-xs 2xl:text-sm font-bold text-white">Martin Consulting</div>
+                              <div className="text-[9px] 2xl:text-[10px] text-slate-500">12 rue de la Paix, 75002</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[8px] 2xl:text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Facture</div>
+                            <div className="text-[10px] 2xl:text-xs font-mono text-slate-400 font-semibold">FACT-2026-0042</div>
+                            <div className="text-[8px] 2xl:text-[9px] text-slate-600">19 avril 2026</div>
+                          </div>
+                        </div>
+
+                        {/* Client + badge Payée */}
+                        <div className="bg-slate-800/40 rounded-xl p-2.5 2xl:p-3 flex justify-between items-center">
+                          <div>
+                            <div className="text-[8px] 2xl:text-[9px] text-slate-500 uppercase font-semibold">Client</div>
+                            <div className="text-[10px] 2xl:text-xs font-semibold text-white">Dupont Consulting SAS</div>
+                          </div>
+                          <div className="flex items-center gap-1 text-[8px] 2xl:text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                            <CheckCircle className="w-3 h-3" />Payée
+                          </div>
+                        </div>
+
+                        {/* Lignes de facture */}
+                        <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+                          <div className="bg-slate-800/60 px-3 py-1.5 grid grid-cols-12">
+                            <span className="col-span-5 text-[7px] 2xl:text-[8px] text-slate-500 uppercase font-semibold">Description</span>
+                            <span className="col-span-2 text-right text-[7px] 2xl:text-[8px] text-slate-500 uppercase font-semibold">Qté</span>
+                            <span className="col-span-2 text-right text-[7px] 2xl:text-[8px] text-slate-500 uppercase font-semibold">Prix</span>
+                            <span className="col-span-3 text-right text-[7px] 2xl:text-[8px] text-slate-500 uppercase font-semibold">Total</span>
+                          </div>
+                          {[
+                            { d: 'Développement web', sub: 'Site vitrine React', q: '5j', p: '600 €', t: '3 000 €' },
+                            { d: 'Conseil UX/UI', sub: 'Design système', q: '2j', p: '400 €', t: '800 €' },
+                          ].map((r, i) => (
+                            <div key={i} className="px-3 py-2 2xl:py-2.5 grid grid-cols-12 border-t border-white/[0.04] items-center">
+                              <div className="col-span-5">
+                                <div className="text-[10px] 2xl:text-[11px] text-slate-300">{r.d}</div>
+                                <div className="text-[8px] 2xl:text-[9px] text-slate-600">{r.sub}</div>
+                              </div>
+                              <span className="col-span-2 text-right text-[10px] 2xl:text-[11px] text-slate-500">{r.q}</span>
+                              <span className="col-span-2 text-right text-[10px] 2xl:text-[11px] text-slate-500">{r.p}</span>
+                              <span className="col-span-3 text-right text-[10px] 2xl:text-[11px] font-bold text-white">{r.t}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Totaux */}
+                        <div className="flex justify-end">
+                          <div className="w-[55%] 2xl:w-1/2 space-y-0.5">
+                            <div className="flex justify-between text-[9px] 2xl:text-[10px] text-slate-500 px-1"><span>Total HT</span><span className="text-slate-400">3 800,00 €</span></div>
+                            <div className="flex justify-between text-[9px] 2xl:text-[10px] text-slate-500 px-1"><span>TVA 20%</span><span className="text-slate-400">760,00 €</span></div>
+                            <div className="flex justify-between items-center bg-emerald-500 text-white rounded-xl px-3 py-2 mt-1">
+                              <span className="text-[10px] 2xl:text-[11px] font-bold">Total TTC</span>
+                              <span className="text-sm 2xl:text-base font-extrabold">4 560 €</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer carte */}
+                        <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+                          <div className="flex items-center gap-1 text-[8px] 2xl:text-[9px] text-slate-600">
+                            <ShieldCheck className="w-3 h-3 text-emerald-500/50" />Paiement sécurisé
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-3.5 px-1.5 bg-slate-800 rounded flex items-center justify-center"><span className="text-[7px] 2xl:text-[8px] font-bold text-white tracking-wider">VISA</span></div>
+                            <div className="h-3.5 px-1.5 bg-emerald-600 rounded flex items-center justify-center"><span className="text-[6px] 2xl:text-[7px] font-bold text-white">stripe</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Floating badge IA */}
+                      <div className="absolute -top-3 -right-3 z-20">
+                        <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}>
+                          <div className="bg-slate-900/90 backdrop-blur border border-white/10 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg">
+                            <div className="w-5 h-5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-md flex items-center justify-center"><Sparkles className="w-3 h-3 text-white" /></div>
+                            <div>
+                              <div className="text-[8px] font-bold text-white">IA Active</div>
+                              <div className="text-[6px] text-emerald-400 font-semibold">Générée en 3s</div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      {/* Floating badge Payée bas-gauche */}
+                      <div className="absolute -bottom-3 -left-3 z-20">
+                        <motion.div animate={{ y: [0, 4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1 }}>
+                          <div className="bg-slate-900/90 backdrop-blur border border-white/10 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg">
+                            <div className="w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-md flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
+                            <div>
+                              <div className="text-[8px] font-bold text-white">Payée</div>
+                              <div className="text-[6px] text-green-400 font-semibold">via Stripe</div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </R>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════ SOCIAL PROOF — Marquee (MODIF 2: no border) ════════════ */}
+      <section className="relative py-16 2xl:py-20 overflow-hidden">
+        <div className={`${LC}`}>
+          <R>
+            <p className="text-center text-[11px] 2xl:text-xs text-slate-600 uppercase tracking-[0.2em] font-medium mb-8">Ils nous font confiance</p>
+          </R>
+        </div>
+        <Marquee pauseOnHover className="[--duration:30s]" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' } as React.CSSProperties}>
+          {trustItems.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-2.5 text-slate-500 flex-shrink-0 px-3">
+              <Icon className="w-4 h-4" />
+              <span className="text-sm font-semibold whitespace-nowrap">{label}</span>
+            </div>
+          ))}
+        </Marquee>
+        {/* Gradient overlap vers features */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-slate-950 pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ FEATURES — Anciennes features redesignées (MODIF 3) ════════════ */}
+      <section id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden">
+        <div className={`${LC}`}>
+          <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
+            <R>
+              <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Fonctionnalités</p>
+            </R>
+            <R delay={0.05}>
+              <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white leading-[1.1]">Tout ce dont vous avez besoin, <span className="text-emerald-400">en un seul endroit</span></h2>
+            </R>
+            <R delay={0.1}>
+              <p className="text-base 2xl:text-lg 2xl:leading-relaxed text-slate-500 mt-4">Remplacez vos 5 outils par une seule plateforme.</p>
+            </R>
+          </div>
+
+          {/* Grille 2 cols haut, 4 cols bas — style Bento adapté */}
+          <div className="space-y-5 2xl:space-y-6">
+            {/* Première rangée : 2 grandes cartes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 2xl:gap-6">
+              {features.slice(0, 2).map((f, i) => (
+                <R key={i} delay={i * 0.06}>
+                  <div className="group relative bg-slate-900/40 border border-white/[0.06] rounded-3xl p-7 2xl:p-10 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden">
+                    {/* Gradient subtil en fond */}
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 2xl:w-14 2xl:h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-5">
+                        <f.icon className="w-6 h-6 2xl:w-7 2xl:h-7 text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg 2xl:text-xl font-semibold text-white mb-2">{f.title}</h3>
+                      <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-400">{f.desc}</p>
+                    </div>
+                  </div>
+                </R>
+              ))}
+            </div>
+
+            {/* Deuxième rangée : 4 cartes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 2xl:gap-6">
+              {features.slice(2, 6).map((f, i) => (
+                <R key={i} delay={i * 0.04}>
+                  <div className="group relative bg-slate-900/40 border border-white/[0.06] rounded-3xl p-6 2xl:p-8 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden h-full">
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 2xl:w-12 2xl:h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4">
+                        <f.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-emerald-400" />
+                      </div>
+                      <h3 className="text-sm 2xl:text-base font-semibold text-white mb-1.5">{f.title}</h3>
+                      <p className="text-xs 2xl:text-sm 2xl:leading-relaxed text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                </R>
+              ))}
+            </div>
+
+            {/* Troisième rangée : 4 cartes */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 2xl:gap-6">
+              {features.slice(6, 10).map((f, i) => (
+                <R key={i} delay={i * 0.04}>
+                  <div className="group relative bg-slate-900/40 border border-white/[0.06] rounded-3xl p-6 2xl:p-8 transition-all duration-500 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden h-full">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative z-10">
+                      <div className="w-10 h-10 2xl:w-12 2xl:h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4">
+                        <f.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-emerald-400" />
+                      </div>
+                      <h3 className="text-sm 2xl:text-base font-semibold text-white mb-1.5">{f.title}</h3>
+                      <p className="text-xs 2xl:text-sm 2xl:leading-relaxed text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                </R>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Gradient overlap vers AI */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-[rgb(15,23,42)] pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ AI SECTION (MODIF 2: no border, smooth transition) ════════════ */}
+      <section id="ai" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden" style={{ background: 'rgb(15,23,42)' }}>
+        <div className="absolute top-0 right-0 w-[500px] 2xl:w-[700px] h-[500px] 2xl:h-[700px] bg-emerald-500/[0.06] rounded-full blur-[120px]" />
+
+        <div className={`${LC} relative z-10`}>
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
+            {/* Chat visual */}
+            <R x={-40} y={0}>
+              <div className="bg-slate-900/80 backdrop-blur border border-white/[0.06] rounded-3xl overflow-hidden shadow-2xl shadow-emerald-500/5">
+                <div className="flex items-center gap-2 px-5 py-3 border-b border-white/[0.06]">
+                  <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-400/50" /><div className="w-2.5 h-2.5 rounded-full bg-amber-400/50" /><div className="w-2.5 h-2.5 rounded-full bg-green-400/50" /></div>
+                  <span className="text-[10px] 2xl:text-xs text-emerald-400 font-medium ml-2">Factu.me AI</span>
+                </div>
+                <div className="p-5 2xl:p-7 space-y-4 font-mono text-xs 2xl:text-sm">
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center flex-shrink-0"><Mic className="w-3.5 h-3.5 text-emerald-400" /></div>
+                    <div className="bg-slate-800/60 rounded-2xl rounded-tl-none px-4 py-2.5 text-slate-300 max-w-[90%] border border-white/[0.04] 2xl:text-sm">
+                      &quot;Facture pour Dupont, 5 jours de dev à 600€ HT, TVA 20%, ajoute 2 jours conseil à 400€&quot;
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center flex-shrink-0"><Sparkles className="w-3.5 h-3.5 text-emerald-400" /></div>
+                    <div className="space-y-2 max-w-[90%]">
+                      <div className="bg-slate-800/60 rounded-2xl rounded-tl-none px-4 py-2 text-emerald-400 border border-white/[0.04]">Analyse en cours...</div>
+                      <div className="bg-slate-800/60 rounded-2xl rounded-tl-none px-4 py-3 text-slate-300 space-y-1.5 border border-white/[0.04]">
+                        {['Client : Dupont Consulting SAS', 'Développement — 5j x 600€', 'Conseil — 2j x 400€', 'TVA 20% appliquée'].map((t, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-green-400"><Check className="w-3 h-3" /><span className="text-[11px] 2xl:text-xs">{t}</span></div>
+                        ))}
+                        <div className="flex items-center gap-1.5 text-emerald-300 font-semibold pt-1 border-t border-white/[0.06]"><Zap className="w-3 h-3 text-emerald-400" /><span className="text-[11px] 2xl:text-xs">FACT-2026-0042 créée</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </R>
+
+            {/* Text */}
+            <div className="space-y-8">
+              <R x={40} y={0}>
+                <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-3">Propulsé par l&apos;IA</p>
+                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white leading-[1.1] mb-6">Dites-le, l&apos;IA<br />le fait pour vous</h2>
+                <div className="space-y-5">
+                  {[
+                    { icon: Mic, title: 'Dictée vocale', desc: 'Parlez naturellement, l\'IA remplit tous les champs.' },
+                    { icon: Type, title: 'Génération textuelle', desc: 'Tapez en langage naturel, descriptions automatiques.' },
+                    { icon: Pencil, title: 'Modification intelligente', desc: '"Ajoute 2 jours" — l\'IA comprend et modifie.' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4">
+                      <div className="w-10 h-10 2xl:w-12 2xl:h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center flex-shrink-0"><item.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-emerald-400" /></div>
+                      <div><h3 className="font-semibold text-sm 2xl:text-base text-white mb-1">{item.title}</h3><p className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-500">{item.desc}</p></div>
+                    </div>
+                  ))}
+                </div>
+              </R>
+            </div>
+          </div>
+        </div>
+
+        {/* Gradient overlap vers Timeline */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-slate-950 pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ TIMELINE ════════════ */}
+      <section className="relative py-24 md:py-40 2xl:py-48 overflow-hidden">
+        <div className={`${LC}`}>
+          <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
+            <R>
+              <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Comment ça marche</p>
+              <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white leading-[1.1]">Opérationnel en quelques minutes</h2>
+            </R>
+          </div>
+
+          <div className="relative max-w-4xl 2xl:max-w-5xl mx-auto">
+            <div className="absolute left-[23px] md:left-1/2 md:-translate-x-px top-0 bottom-0 w-px bg-gradient-to-b from-slate-800 via-emerald-500/30 to-slate-800" />
+
+            <div className="space-y-12 md:space-y-16 2xl:space-y-20">
+              {steps.map((step, i) => (
+                <div key={i} className={cn('relative flex items-start gap-8', i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse')}>
+                  <div className="absolute left-[15px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 border-4 border-slate-950 z-10 shadow-lg shadow-emerald-500/30" />
+                  <R delay={i * 0.1} x={i % 2 === 0 ? -30 : 30} y={0} className={cn('ml-12 md:ml-0 md:w-[calc(50%-2rem)]', i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12 md:text-left')}>
+                    <span className="text-emerald-400 font-mono text-xs 2xl:text-sm font-bold">{step.num}</span>
+                    <h3 className="text-lg 2xl:text-xl font-semibold text-white mt-1 mb-2">{step.title}</h3>
+                    <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-500">{step.desc}</p>
+                  </R>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-[rgb(15,23,42)] pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ TESTIMONIALS (MODIF 2: smooth) ════════════ */}
+      <section className="relative py-24 md:py-40 2xl:py-48 overflow-hidden" style={{ background: 'rgb(15,23,42)' }}>
+        <div className={`${LC}`}>
+          <div className="max-w-2xl 2xl:max-w-3xl mb-16">
+            <R>
+              <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Témoignages</p>
+              <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white leading-[1.1]">Ce qu&apos;ils en disent</h2>
+            </R>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 2xl:gap-7">
+            {testimonials.map((t, i) => (
+              <R key={i} delay={i * 0.08}>
+                <div className="bg-slate-900/40 border border-white/[0.06] rounded-3xl p-6 md:p-8 2xl:p-10 h-full flex flex-col transition-all duration-500 hover:border-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-1">
+                  <div className="flex gap-0.5 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-amber-400 fill-amber-400" />)}</div>
+                  <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-400 flex-grow mb-6">&ldquo;{t.text}&rdquo;</p>
+                  <div className="flex items-center gap-3 pt-4 border-t border-white/[0.06]">
+                    <div className="w-9 h-9 2xl:w-11 2xl:h-11 rounded-full bg-emerald-500/10 text-emerald-400 font-bold text-xs 2xl:text-sm flex items-center justify-center">{t.name.charAt(0)}</div>
+                    <div><div className="font-semibold text-sm 2xl:text-base text-white">{t.name}</div><div className="text-[11px] 2xl:text-xs text-slate-500">{t.role}</div></div>
+                  </div>
+                </div>
+              </R>
+            ))}
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-slate-950 pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ PRICING — BorderBeam (MODIF 2: smooth) ════════════ */}
+      <section id="pricing" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden">
+        <div className={`${LC}`}>
+          <div className="text-center mb-14 2xl:mb-20">
+            <R>
+              <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Tarifs transparents</p>
+              <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white mb-4">Choisissez votre plan</h2>
+              <p className="text-base 2xl:text-lg text-slate-500">Sans engagement. Évoluez quand vous voulez.</p>
+            </R>
+
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <button onClick={() => setBilling('monthly')} className={cn('px-4 py-2 rounded-2xl text-sm 2xl:text-base font-semibold transition-all', billing === 'monthly' ? 'bg-white text-slate-950' : 'bg-slate-900 text-slate-400 hover:text-white')}>Mensuel</button>
+              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-2xl text-sm 2xl:text-base font-semibold transition-all', billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white')}>
+                Annuel <span className="text-xs opacity-70">(-20%)</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 2xl:gap-7 max-w-5xl 2xl:max-w-6xl mx-auto items-start">
+            {plans.map((plan, i) => (
+              <R key={i} delay={i * 0.06} y={plan.popular ? 0 : 8}>
+                <div className={cn(
+                  'relative bg-slate-900/40 border rounded-3xl p-7 2xl:p-9 flex flex-col h-full transition-all duration-500',
+                  plan.popular
+                    ? 'border-emerald-500/40 scale-100 md:scale-105 shadow-xl shadow-emerald-500/15 z-10'
+                    : 'border-white/[0.06] hover:border-white/10'
+                )}>
+                  {plan.popular && (
+                    <>
+                      <BorderBeam duration={8} size={220} borderWidth={2} />
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="bg-emerald-500 text-white text-[10px] 2xl:text-xs font-bold px-3 py-1 rounded-full">Populaire</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="mb-6">
+                    <h3 className="text-xl 2xl:text-2xl font-bold text-white mb-1">{plan.name}</h3>
+                    <p className="text-xs 2xl:text-sm text-slate-500 mb-4">{plan.tag}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl 2xl:text-5xl font-extrabold text-white tracking-tight">{billing === 'monthly' ? plan.price : plan.yearly}</span>
+                      <span className="text-sm 2xl:text-base text-slate-500">/mois</span>
+                    </div>
+                    {billing === 'yearly' && <p className="text-xs 2xl:text-sm text-emerald-400 font-medium mt-1">Économisez sur l&apos;annuel</p>}
+                  </div>
+                  <ul className="space-y-2.5 mb-6 flex-grow">
+                    {plan.features.map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm 2xl:text-base"><Check className="w-4 h-4 2xl:w-5 2xl:h-5 text-emerald-400 flex-shrink-0" /><span className="text-slate-400">{f}</span></li>
+                    ))}
+                  </ul>
+                  <Link href={`/register?plan=${plan.name.toLowerCase()}&billing=${billing}`} className={cn('block text-center font-semibold py-3 2xl:py-3.5 rounded-2xl text-sm 2xl:text-base transition-all duration-300 active:scale-95', plan.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25' : 'bg-white/[0.05] hover:bg-white/[0.08] text-white border border-white/[0.08]')}>
+                    Essai 7 jours gratuit
+                  </Link>
+                </div>
+              </R>
+            ))}
+          </div>
+
+          <R>
+            <p className="text-center text-xs 2xl:text-sm text-slate-600 mt-8 flex items-center justify-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />Données en France · SSL · RGPD · Annulation en un clic
+            </p>
+          </R>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-[rgb(15,23,42)] pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ FAQ (MODIF 2: smooth) ════════════ */}
+      <section className="relative py-24 md:py-40 2xl:py-48 overflow-hidden" style={{ background: 'rgb(15,23,42)' }}>
+        <div className={`max-w-3xl 2xl:max-w-4xl mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32`}>
+          <div className="mb-14 2xl:mb-20">
+            <R>
+              <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">FAQ</p>
+              <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-medium tracking-tighter text-white">Questions fréquentes</h2>
+            </R>
+          </div>
+          <div className="space-y-3 2xl:space-y-4">
+            {faqItems.map((item, i) => (
+              <FAQItem key={i} question={item.q} answer={item.a} />
+            ))}
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-slate-950 pointer-events-none z-10" />
+      </section>
+
+      {/* ════════════ CTA FINAL — Glow immense (MODIF 2: smooth) ════════════ */}
+      <section className="relative py-24 md:py-40 2xl:py-48 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] 2xl:w-[900px] h-[600px] 2xl:h-[900px] bg-emerald-500/15 blur-[120px] 2xl:blur-[180px] rounded-full" />
+        <div className={`max-w-3xl 2xl:max-w-4xl mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32 text-center relative z-10`}>
+          <R y={0}>
+            <h2 className="text-4xl md:text-6xl 2xl:text-8xl font-medium tracking-tighter text-white leading-[1.1] mb-6 2xl:mb-8">
+              Prêt à en finir avec<br /><span className="text-emerald-400">la paperasse ?</span>
+            </h2>
+            <p className="text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-500 mb-10 2xl:mb-12 max-w-lg 2xl:max-w-2xl mx-auto">Rejoignez 2 000+ entrepreneurs qui ont repris le contrôle de leur facturation.</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <ShimmerButton onClick={() => window.location.href = '/register'} className="rounded-full px-8 py-4 2xl:px-10 2xl:py-5 text-base 2xl:text-lg" background="rgba(16, 185, 129, 1)">
+                Commencer gratuitement <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
+              </ShimmerButton>
+              <Link href="/login" className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-white px-8 py-4 2xl:px-10 2xl:py-5 rounded-full text-base 2xl:text-lg font-medium transition-all duration-300">
+                Se connecter
+              </Link>
+            </div>
+            <p className="text-xs 2xl:text-sm text-slate-600 mt-8">Sans engagement · Annulation en un clic</p>
+          </R>
+        </div>
+      </section>
+
+      {/* ════════════ FOOTER ════════════ */}
+      <footer className="relative py-14 md:py-20 2xl:py-24 overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+        <div className={`${LC}`}>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 2xl:gap-12 mb-12">
+            <div className="col-span-2">
+              <Link href="/" className="flex items-center gap-2 mb-4">
+                <Image src="/logo-lg.png" alt="Factu.me" width={38} height={38} className="rounded-lg" />
+                <span className="text-lg 2xl:text-xl font-bold text-white">Factu<span className="text-emerald-400">.me</span></span>
+              </Link>
+              <p className="text-xs 2xl:text-sm text-slate-600 max-w-xs leading-relaxed mb-4">La plateforme de facturation 100% française, propulsée par l&apos;IA.</p>
+              <div className="flex gap-2">
+                {[Twitter, Linkedin, Github].map((Icon, i) => (
+                  <a key={i} href="#" className="w-8 h-8 2xl:w-9 2xl:h-9 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center transition-colors"><Icon className="w-3.5 h-3.5 text-slate-600" /></a>
+                ))}
+              </div>
+            </div>
+            {[
+              { title: 'Produit', links: [['Fonctionnalités', '#features'], ['Tarifs', '#pricing'], ['IA', '#ai']] },
+              { title: 'Ressources', links: [['Démo', '/demo'], ['Blog', '/blog'], ['Modèles', '/modeles-facture'], ['Mentions obligatoires', '/mentions-obligatoires-facture']] },
+              { title: 'Par statut', links: [['Auto-entrepreneur', '/comment-facturer/auto-entrepreneur'], ['SASU', '/comment-facturer/sasu'], ['EURL', '/comment-facturer/eurl'], ['Tous', '/comment-facturer']] },
+              { title: 'Confiance', links: [['Sécurité', '/securite'], ['Mentions légales', '/legal/mentions-legales'], ['CGU', '/legal/cgu'], ['Confidentialité', '/legal/confidentialite']] },
+            ].map((col) => (
+              <div key={col.title}>
+                <h4 className="font-semibold text-xs 2xl:text-sm text-slate-400 mb-3">{col.title}</h4>
+                <ul className="space-y-2">
+                  {col.links.map(([label, href]) => (
+                    <li key={label}>
+                      {href.startsWith('#') ? (
+                        <a href={href} onClick={(e) => scrollTo(e, href)} className="text-xs 2xl:text-sm text-slate-600 hover:text-emerald-400 transition-colors">{label}</a>
+                      ) : (
+                        <Link href={href} className="text-xs 2xl:text-sm text-slate-600 hover:text-emerald-400 transition-colors">{label}</Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-white/[0.04] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs 2xl:text-sm text-slate-700">2026 Factu.me. Fait en France.</p>
+            <div className="flex items-center gap-1.5 text-[11px] 2xl:text-xs text-slate-700"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />Opérationnel</div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LANDING PAGE
-   ═══════════════════════════════════════════════════════════════════════════ */
-export default function LandingPageClient() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [showStickyCta, setShowStickyCta] = useState(false);
-  const [showSocialProof, setShowSocialProof] = useState(false);
-
-  // Social proof notification: appears after 5s, disappears after 8s
-  useEffect(() => {
-    const showTimer = setTimeout(() => setShowSocialProof(true), 5000);
-    const hideTimer = setTimeout(() => setShowSocialProof(false), 13000);
-    return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => { setScrolled(window.scrollY > 50); setShowStickyCta(window.scrollY > 600); };
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const scrollTo = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    const el = document.querySelector(id);
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.pageYOffset - 80, behavior: 'smooth' });
-    setMobileMenuOpen(false);
-  };
-
-  const features = [
-    { icon: FileText, title: 'Facturation multi-documents', desc: 'Factures, devis, avoirs, bons de commande, bons de livraison, factures d\'acompte.' },
-    { icon: Sparkles, title: 'Intelligence Artificielle', desc: 'Dictez ou décrivez votre facture. L\'IA remplit tout et comprend les modifications.' },
-    { icon: Send, title: 'Envoi et suivi', desc: 'E-mail avec PDF, liens de paiement, portail client, relances automatiques, signature.' },
-    { icon: Users, title: 'CRM intégré', desc: 'Fiches clients, import CSV, auto-complétion SIRET, tags, historique et pipeline de vente.' },
-    { icon: Calculator, title: 'Comptabilité', desc: 'Export officiel pour les impôts, suivi des dépenses, scan de reçus, rapprochement bancaire.' },
-    { icon: LayoutGrid, title: 'Espace collaboratif', desc: 'Jusqu\'à 10 espaces de travail isolés, rôles, flux d\'activité et notifications.' },
-    { icon: Calendar, title: 'Gestion de planning', desc: 'Calendrier intégré pour suivre vos échéances et relances.' },
-    { icon: Package, title: 'Catalogue produits', desc: 'Créez votre catalogue de produits/services pour une facturation plus rapide.' },
-    { icon: Truck, title: 'Fournisseurs', desc: 'Gérez vos dépenses et vos fournisseurs en un seul endroit.' },
-    { icon: FileClock, title: 'Factures récurrentes', desc: 'Automatisez vos factures récurrentes avec un seul clic.' }
-  ];
-
-  const testimonials = [
-    { name: 'Sarah M.', role: 'Développeuse freelance', text: 'Je passais 2h par mois sur mes factures. Depuis Factu.me, je dicte en 10 secondes et c\'est envoyé. Un gain de temps énorme.', avatar: 'sarah-m' },
-    { name: 'Thomas L.', role: 'Auto-entrepreneur, transport', text: 'Le scan de reçus est bluffant. Je photographie mes tickets essence et c\'est directement catégorisé. Mon comptable est impressionné.', avatar: 'thomas-l' },
-    { name: 'Claire D.', role: 'Directrice, agence digitale', text: 'On était 4 dans l\'agence, chacun avait son outil. Aujourd\'hui on est tous sur Factu.me avec des workspaces séparés.', avatar: 'claire-d' }
-  ];
-
-  const faqItems = [
-    { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Découverte est 100% gratuit (3 factures/mois). Pour tester les plans payants, profitez de 7 jours d\'essai complet avec carte bancaire requise, sans engagement.' },
-    { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données. Vous pouvez exporter ou supprimer vos données à tout moment.' },
-    { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données à tout moment ou demander la suppression totale de votre compte.' },
-    { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Vous pouvez dire "5 jours de dev à 600€" et elle créera la facture complète.' },
-    { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. L\'export officiel pour les impôts est disponible sur les plans Pro et Business.' }
-  ];
-
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-
-  const plans = [
-    {
-      name: 'Solo',
-      monthlyPrice: '14,99€',
-      yearlyPrice: '12€',
-      yearlySavings: '36€',
-      tagline: 'Freelances & Auto-entrepreneurs',
-      features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'],
-      popular: false,
-    },
-    {
-      name: 'Pro',
-      monthlyPrice: '29,99€',
-      yearlyPrice: '24€',
-      yearlySavings: '72€',
-      tagline: 'Contrats + Facturation',
-      features: ['Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail', 'Factures récurrentes'],
-      popular: true,
-    },
-    {
-      name: 'Business',
-      monthlyPrice: '59,99€',
-      yearlyPrice: '48€',
-      yearlySavings: '144€',
-      tagline: 'PME qui embauchent',
-      features: ['Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Support prioritaire', 'Multi-utilisateurs', 'Rapports avancés'],
-      popular: false,
-    },
-  ];
-
+/* ═══════════════════════════════════════════════════════════
+   FAQ ITEM
+   ═══════════════════════════════════════════════════════════ */
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="font-sans bg-white text-slate-900 antialiased overflow-x-hidden min-h-screen">
-
-      {/* Progress bar */}
-      <div className="fixed top-0 left-0 h-1 bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 z-[100] origin-left" style={{ width: scrolled ? '100%' : '0%', transition: 'width 0.3s' }} />
-
-      {/* Sticky mobile CTA */}
-      <div className={`fixed bottom-0 left-0 right-0 z-40 p-3 transition-transform duration-300 sm:hidden ${showStickyCta ? 'translate-y-0' : 'translate-y-full'}`}>
-        <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="flex items-center justify-center gap-2 bg-brand-500 text-white font-semibold py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm">
-          <Zap className="w-4 h-4" />Commencer gratuitement
-        </a>
+    <div className="bg-slate-900/30 border border-white/[0.06] rounded-2xl overflow-hidden transition-all duration-500 hover:border-white/10">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between p-5 2xl:p-6 text-left">
+        <span className="font-semibold text-sm 2xl:text-base text-white pr-4">{question}</span>
+        <ChevronDown className={cn('w-4 h-4 2xl:w-5 2xl:h-5 text-slate-500 flex-shrink-0 transition-transform duration-300', open && 'rotate-180')} />
+      </button>
+      <div className={cn('overflow-hidden transition-all duration-400', open ? 'max-h-40 px-5 2xl:px-6 pb-5 2xl:pb-6' : 'max-h-0')}>
+        <p className="text-sm 2xl:text-base text-slate-500 leading-relaxed">{answer}</p>
       </div>
-
-      {/* Sticky desktop CTA */}
-      {showStickyCta && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="hidden sm:block fixed bottom-20 right-6 z-40"
-        >
-          <Link href="/register" className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-3 rounded-2xl shadow-xl shadow-brand-500/30 text-sm transition-all active:scale-95">
-            <Zap className="w-4 h-4" />Commencer gratuitement
-          </Link>
-        </motion.div>
-      )}
-
-      {/* Social proof notification */}
-      <AnimatePresence>
-        {showSocialProof && (
-          <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.4 }}
-            className="fixed bottom-6 left-6 z-50 hidden sm:flex items-center gap-3 bg-white/95 backdrop-blur-xl border border-brand-100 rounded-2xl px-4 py-3 shadow-xl shadow-black/10 max-w-xs"
-          >
-            <div className="w-9 h-9 rounded-full bg-brand-50 flex items-center justify-center flex-shrink-0">
-              <Users className="w-4 h-4 text-brand-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">47 entrepreneurs cette semaine</p>
-              <p className="text-xs text-slate-500">ont rejoint Factu.me</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══════════ NAVBAR ═══════════ */}
-      <nav className={`fixed top-2 sm:top-3 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto z-50 backdrop-blur-2xl bg-white/90 rounded-full border transition-all duration-300 sm:max-w-[680px] lg:max-w-[800px] xl:max-w-[900px] px-3 sm:px-5 py-2 sm:py-2.5 ${scrolled ? 'border-brand-200/60 shadow-lg shadow-brand-500/8' : 'border-brand-100/30 shadow-md shadow-black/[0.03]'}`}>
-        <div className="flex items-center justify-between gap-2">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <Image
-              src="/logo-lg.png"
-              alt="Factu.me"
-              width={44}
-              height={44}
-              className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl shadow-md"
-              priority
-              style={{ borderRadius: '12px' }}
-            />
-            <span className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">Factu<span className="text-brand-500">.me</span></span>
-          </Link>
-
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-6 lg:gap-8">
-            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">Fonctionnalités</a>
-            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">IA</a>
-            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-[13px] sm:text-sm lg:text-base font-medium text-slate-500 hover:text-brand-600 transition-colors">Tarifs</a>
-          </div>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-medium text-slate-600 hover:text-brand-600 transition-colors px-2.5 py-1.5 rounded-full hover:bg-brand-50">
-              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>Connexion</span>
-            </Link>
-            <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] sm:text-sm lg:text-base font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3.5 py-1.5 rounded-full transition-all shadow-md shadow-brand-500/20 active:scale-[0.97]">
-              <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Link>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-1.5 rounded-full hover:bg-brand-50 transition-colors">
-              <Menu className="w-4.5 h-4.5 text-slate-600" />
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile menu dropdown */}
-      {mobileMenuOpen && (
-        <div className="fixed top-14 sm:top-16 left-2 right-2 sm:left-4 sm:right-4 z-50 md:hidden backdrop-blur-2xl bg-white/95 rounded-2xl border border-brand-100/30 shadow-xl shadow-black/[0.06] overflow-hidden">
-          <div className="px-4 py-3 space-y-1">
-            <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Fonctionnalités</a>
-            <a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Intelligence Artificielle</a>
-            <a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="block text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">Tarifs</a>
-            <div className="pt-2 border-t border-slate-100 mt-1">
-              <Link href="/login" className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-brand-600 hover:bg-brand-50 py-2.5 px-3 rounded-xl transition-colors">
-                <LogIn className="w-4 h-4" />Se connecter
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════ HERO ═══════════ */}
-      <section className="relative min-h-[100dvh] flex flex-col justify-center overflow-hidden bg-brand-950 pt-24 pb-16 sm:pt-0 sm:pb-0">
-        <div className="absolute inset-0">
-          {/* Blob 1 — top left, ULTRA MASSIVE for 4K */}
-          <div className="absolute top-[-40%] left-[-30%] w-[140vw] sm:w-[1100px] md:w-[1500px] lg:w-[2000px] xl:w-[2400px] 2xl:w-[2800px] h-[140vw] sm:h-[1100px] md:h-[1500px] lg:h-[2000px] xl:h-[2400px] 2xl:h-[2800px] bg-brand-500/15 rounded-full blur-[180px] sm:blur-[250px] lg:blur-[300px] animate-[blob_15s_ease-in-out_infinite]" />
-          {/* Blob 2 — bottom right, ULTRA MASSIVE for 4K */}
-          <div className="absolute bottom-[-40%] right-[-30%] w-[120vw] sm:w-[1000px] md:w-[1400px] lg:w-[1800px] xl:w-[2200px] 2xl:w-[2600px] h-[120vw] sm:h-[1000px] md:h-[1400px] lg:h-[1800px] xl:h-[2200px] 2xl:h-[2600px] bg-brand-400/12 rounded-full blur-[160px] sm:blur-[220px] lg:blur-[280px] animate-[blob_15s_ease-in-out_infinite]" style={{ animationDelay: '-5s' }} />
-          {/* Blob 3 — center glow, ULTRA MASSIVE for 4K */}
-          <div className="absolute top-[25%] left-[25%] w-[70vw] sm:w-[700px] md:w-[1000px] lg:w-[1400px] xl:w-[1800px] 2xl:w-[2200px] h-[70vw] sm:h-[700px] md:h-[1000px] lg:h-[1400px] xl:h-[1800px] 2xl:h-[2200px] bg-brand-500/8 rounded-full blur-[120px] sm:blur-[180px] lg:blur-[250px] animate-[blob_15s_ease-in-out_infinite]" style={{ animationDelay: '-10s' }} />
-          {/* Blob 4 — extra glow for 4K impact */}
-          <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[40vw] sm:w-[500px] md:w-[800px] lg:w-[1200px] xl:w-[1600px] h-[40vw] sm:h-[500px] md:h-[800px] lg:h-[1200px] xl:h-[1600px] bg-brand-400/5 rounded-full blur-[100px] sm:blur-[150px] lg:blur-[200px] animate-[blob_15s_ease-in-out_infinite]" style={{ animationDelay: '-2s' }} />
-          {/* Gradient overlay for extra depth */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-950/20 to-brand-950/40" />
-          {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px)', backgroundSize: '50px 50px' }} />
-          <ParticlesCanvas />
-        </div>
-
-        <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-5 sm:px-8 lg:px-10 xl:px-12 py-4 sm:py-8 lg:py-10 xl:py-12 relative z-10 w-full">
-          <div className="grid lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 xl:gap-14 2xl:gap-16 items-center">
-            {/* Text */}
-            <div className="lg:col-span-7 space-y-5 sm:space-y-7 lg:space-y-8 xl:space-y-9 order-2 lg:order-1 text-center lg:text-left">
-              <ScrollReveal direction="down">
-                <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-3 sm:px-4 xl:px-5 py-1.5 sm:py-2 xl:py-2.5 text-[11px] sm:text-sm xl:text-base font-medium text-brand-300">
-                  <span className="relative flex h-2 w-2 xl:h-2.5 xl:w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 xl:h-2.5 xl:w-2.5 bg-brand-400" /></span>
-                  100% Français <Zap className="w-3 h-3 sm:w-4 sm:h-4 xl:w-5 xl:h-5 text-brand-400" />
-                </div>
-              </ScrollReveal>
-
-              <ScrollReveal delay={0.1}>
-                <h1 className="text-[1.85rem] leading-[1.1] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-extrabold tracking-tight">
-                  <span className="text-white">Contrats + Facturation</span><br />
-                  <span className="gradient-text-light">propulsés</span>
-                  <span className="text-white"> par</span><br />
-                  <span className="gradient-text-light">l&apos;IA</span>
-                  <Zap className="inline-block w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-brand-400 ml-1 sm:ml-2 md:ml-3 lg:ml-3 animate-[wiggle_2s_ease-in-out_infinite]" />
-                </h1>
-              </ScrollReveal>
-
-              <ScrollReveal delay={0.2}>
-                <div className="space-y-4 sm:space-y-5 xl:space-y-6">
-                  <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 2xl:text-3xl text-brand-200/70 leading-relaxed max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto lg:mx-0">Le seul outil qui gère vos salariés <span className="text-brand-300 font-semibold">ET</span> vos clients. Créez des CDI/CDD conformes et facturez en 30 secondes.</p>
-                  {/* Voice bars */}
-                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 lg:gap-2.5 bg-white/5 border border-white/10 rounded-2xl px-3 sm:px-3.5 lg:px-4 py-3 sm:py-4 lg:py-5 max-w-[280px] sm:max-w-[320px] lg:max-w-[360px] mx-auto lg:mx-0 backdrop-blur">
-                    <div className="flex items-end gap-[1.5px] sm:gap-2 lg:gap-[2px] h-[22px] sm:h-[26px] lg:h-[32px] overflow-hidden">
-                      <VoiceBars />
-                    </div>
-                    <Mic className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-brand-400 flex-shrink-0" />
-                    <div className="flex items-end gap-[1.5px] sm:gap-2 lg:gap-[2px] h-[22px] sm:h-[26px] lg:h-[32px] overflow-hidden">
-                      <VoiceBars />
-                    </div>
-                  </div>
-                </div>
-              </ScrollReveal>
-
-              <ScrollReveal delay={0.3}>
-                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 lg:gap-5 mx-auto lg:mx-0 max-w-sm sm:max-w-none">
-                  <Link href="/register" className="group inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-400 text-white font-semibold px-5 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-4.5 rounded-2xl transition-all shadow-xl shadow-brand-500/30 hover:shadow-2xl active:scale-[0.97] text-[13px] sm:text-base lg:text-lg relative overflow-hidden">
-                    <span className="relative z-10">Créer votre première facture en 30 secondes</span>
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 relative z-10 group-hover:translate-x-1 transition-transform" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_ease-in-out]" />
-                  </Link>
-                  <Link href="/demo" className="group inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium px-5 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-4.5 rounded-2xl transition-all border border-white/10 hover:border-white/20 text-[13px] sm:text-base lg:text-lg backdrop-blur">
-                    <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" />Essayer la démo IA
-                  </Link>
-                </div>
-              </ScrollReveal>
-
-              <ScrollReveal delay={0.4}>
-                <div className="flex items-center justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-5 text-[10px] sm:text-[11px] lg:text-[12px] text-brand-200/30">
-                  <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 lg:w-4 lg:h-4" />France</span>
-                  <span className="flex items-center gap-1"><Lock className="w-3 h-3 lg:w-4 lg:h-4" />SSL</span>
-                  <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3 lg:w-4 lg:h-4" />RGPD</span>
-                </div>
-              </ScrollReveal>
-
-              <ScrollReveal delay={0.5}>
-                <div className="flex items-center gap-3 sm:gap-5 lg:gap-6 pt-1 justify-center lg:justify-start">
-                  <div className="flex -space-x-2">
-                    {['M', 'S', 'A', 'L'].map((initial, i) => {
-                      const colors = ['bg-blue-500/30 text-blue-300', 'bg-purple-500/30 text-purple-300', 'bg-emerald-500/30 text-emerald-300', 'bg-amber-500/30 text-amber-300'];
-                      return <div key={i} className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 ${colors[i]} font-bold text-[10px] sm:text-xs lg:text-sm flex items-center justify-center`}>{initial}</div>;
-                    })}
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-full border-2 border-brand-950 bg-brand-500/20 flex items-center justify-center text-[9px] sm:text-[10px] lg:text-[11px] font-bold text-brand-300">+2k</div>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-0.5">{[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 text-white fill-white" />)}</div>
-                    <div className="text-[10px] sm:text-[11px] lg:text-[12px] text-brand-300/40 mt-0.5">2 000+ entrepreneurs</div>
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-
-            {/* 3D Invoice V2 */}
-            <div className="lg:col-span-5 relative order-1 lg:order-2 flex justify-center items-center px-2 sm:px-0">
-              <ScrollReveal direction="scale" delay={0.3}>
-                <div className="relative w-full max-w-[280px] sm:max-w-[380px] md:max-w-[450px] lg:max-w-[500px] xl:max-w-[550px] 2xl:max-w-[600px]">
-                  {/* Background glow */}
-                  <div className="absolute -inset-3 sm:-inset-4 md:-inset-5 lg:-inset-6 bg-brand-500/10 rounded-[2rem] blur-[30px] sm:blur-[40px] md:blur-[50px] lg:blur-[60px] animate-[blob_15s_ease-in-out_infinite]" />
-
-                  {/* Main floating wrapper */}
-                  <div className="relative animate-[heroFloat_8s_ease-in-out_infinite]" style={{ transformStyle: 'preserve-3d', filter: 'drop-shadow(0 0 60px rgba(16,185,129,.25)) drop-shadow(0 30px 60px rgba(0,0,0,.15))' }}>
-
-                    {/* The invoice card */}
-                    <div className="relative bg-white rounded-2xl sm:rounded-3xl overflow-hidden" style={{ transform: 'perspective(1200px) rotateY(-12deg) rotateX(3deg)' }}>
-
-                      {/* Accent bar top */}
-                      <div className="h-1 sm:h-1.5 lg:h-2 bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600" />
-
-                      {/* Browser chrome */}
-                      <div className="bg-gradient-to-b from-slate-800 to-slate-900 px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 flex items-center gap-2 sm:gap-2.5 lg:gap-3">
-                        <div className="flex gap-1.5 sm:gap-2">
-                          <div className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-[#FF5F57]" />
-                          <div className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-[#FEBC2E]" />
-                          <div className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-[#28C840]" />
-                        </div>
-                        <div className="flex-1 bg-slate-700/80 rounded-md sm:rounded-lg px-2 sm:px-2.5 lg:px-3 py-0.5 sm:py-0.75 lg:py-1 flex items-center gap-1 sm:gap-1.25">
-                          <Lock className="w-[9px] h-[9px] sm:w-[11px] sm:h-[11px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5 text-green-400 flex-shrink-0" />
-                          <span className="text-[8px] sm:text-[10px] md:text-[11px] lg:text-[11px] text-slate-400 font-mono truncate">factu.me/invoice/FACT-2026-0042</span>
-                        </div>
-                      </div>
-
-                      {/* Invoice body */}
-                      <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-2.5 sm:space-y-3 md:space-y-4 lg:space-y-5 bg-gradient-to-b from-white to-slate-50/50">
-
-                        {/* Header row */}
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="flex items-center gap-2 sm:gap-2.5">
-                            <div className="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 bg-brand-500 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-5.5 lg:h-5.5 text-white" />
-                            </div>
-                            <div>
-                              <div className="font-bold text-[10px] sm:text-xs md:text-sm lg:text-sm text-slate-800">Martin Consulting</div>
-                              <div className="text-[7px] sm:text-[9px] md:text-[10px] lg:text-xs text-slate-400">12 rue de la Paix, 75002</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Facture</div>
-                            <div className="text-[8px] sm:text-[10px] md:text-[11px] lg:text-xs font-mono text-slate-600 font-semibold">FACT-2026-0042</div>
-                            <div className="text-[7px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 mt-0.5">19 avril 2026</div>
-                          </div>
-                        </div>
-
-                        {/* Client + Status row */}
-                        <div className="flex justify-between items-center bg-slate-50 rounded-lg sm:rounded-xl p-2 sm:p-2.5 lg:p-3">
-                          <div>
-                            <div className="text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Client</div>
-                            <div className="font-semibold text-[9px] sm:text-[11px] md:text-[13px] lg:text-sm text-slate-800">Dupont Consulting SAS</div>
-                          </div>
-                          <div className="inline-flex items-center gap-0.5 sm:gap-1 bg-green-50 text-green-700 text-[7px] sm:text-[9px] md:text-[10px] lg:text-xs font-bold px-1.5 sm:px-2 lg:px-2.5 py-0.5 sm:py-0.75 lg:py-1 rounded-full border border-green-200">
-                            <CheckCircle className="w-[9px] h-[9px] sm:w-[11px] sm:h-[11px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5" />Payée
-                          </div>
-                        </div>
-
-                        {/* Line items */}
-                        <div className="overflow-hidden rounded-lg sm:rounded-xl border border-slate-200/80">
-                          <div className="bg-slate-800 px-2 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2 grid grid-cols-12 gap-1">
-                            <span className="col-span-5 text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Description</span>
-                            <span className="col-span-2 text-right text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Qté</span>
-                            <span className="col-span-2 text-right text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Prix</span>
-                            <span className="col-span-3 text-right text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400 uppercase tracking-wider font-semibold">Total</span>
-                          </div>
-                          <div className="divide-y divide-slate-100">
-                            <div className="px-2 sm:px-3 md:px-4 lg:px-5 py-2 sm:py-2.5 md:py-3 lg:py-3 grid grid-cols-12 gap-1 items-center bg-white">
-                              <div className="col-span-5">
-                                <div className="text-[8px] sm:text-[11px] md:text-[13px] lg:text-sm font-medium text-slate-800">Développement web</div>
-                                <div className="text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400">Site vitrine React</div>
-                              </div>
-                              <span className="col-span-2 text-right text-[8px] sm:text-[10px] md:text-[12px] lg:text-sm text-slate-500">5 j</span>
-                              <span className="col-span-2 text-right text-[8px] sm:text-[10px] md:text-[12px] lg:text-sm text-slate-500">600 €</span>
-                              <span className="col-span-3 text-right text-[8px] sm:text-[11px] md:text-[13px] lg:text-base font-bold text-slate-800">3 000 €</span>
-                            </div>
-                            <div className="px-2 sm:px-3 md:px-4 lg:px-5 py-2 sm:py-2.5 md:py-3 lg:py-3 grid grid-cols-12 gap-1 items-center bg-white">
-                              <div className="col-span-5">
-                                <div className="text-[8px] sm:text-[11px] md:text-[13px] lg:text-sm font-medium text-slate-800">Conseil UX/UI</div>
-                                <div className="text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-400">Design système</div>
-                              </div>
-                              <span className="col-span-2 text-right text-[8px] sm:text-[10px] md:text-[12px] lg:text-sm text-slate-500">2 j</span>
-                              <span className="col-span-2 text-right text-[8px] sm:text-[10px] md:text-[12px] lg:text-sm text-slate-500">400 €</span>
-                              <span className="col-span-3 text-right text-[8px] sm:text-[11px] md:text-[13px] lg:text-base font-bold text-slate-800">800 €</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Totals */}
-                        <div className="flex justify-end">
-                          <div className="w-[55%] sm:w-[50%] lg:w-[45%] space-y-0.5 sm:space-y-1">
-                            <div className="flex justify-between text-[7px] sm:text-[10px] md:text-[11px] lg:text-xs text-slate-400 px-1"><span>Total HT</span><span className="text-slate-600">3 800,00 €</span></div>
-                            <div className="flex justify-between text-[7px] sm:text-[10px] md:text-[11px] lg:text-xs text-slate-400 px-1"><span>TVA 20%</span><span className="text-slate-600">760,00 €</span></div>
-                            <div className="flex justify-between items-center bg-brand-500 text-white rounded-lg sm:rounded-xl px-2 sm:px-3 lg:px-3.5 py-1.5 sm:py-2 lg:py-2.5 mt-1">
-                              <span className="text-[8px] sm:text-[11px] md:text-[13px] lg:text-sm font-bold">Total TTC</span>
-                              <span className="text-[10px] sm:text-sm md:text-base lg:text-lg font-extrabold">4 560 €</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                          <div className="flex items-center gap-1 text-[6px] sm:text-[8px] md:text-[9px] lg:text-xs text-slate-300">
-                            <ShieldCheck className="w-[8px] h-[8px] sm:w-[10px] sm:h-[10px] md:w-3 md:h-3 lg:w-3.5 lg:h-3.5" />Paiement sécurisé
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="h-3 sm:h-4 md:h-5 lg:h-5.5 px-1 sm:px-1.5 bg-slate-800 rounded-[2px] sm:rounded-[3px] flex items-center justify-center">
-                              <span className="text-[5px] sm:text-[7px] md:text-[8px] lg:text-[9px] font-bold text-white tracking-wider">VISA</span>
-                            </div>
-                            <div className="h-3 sm:h-4 md:h-5 lg:h-5.5 px-1 sm:px-1.5 bg-brand-500 rounded-[2px] sm:rounded-[3px] flex items-center justify-center">
-                              <span className="text-[4px] sm:text-[6px] md:text-[7px] lg:text-[8px] font-bold text-white">stripe</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating badge: IA Active */}
-                  <div className="absolute -top-2 -right-1 sm:-top-3 sm:-right-3 md:-top-4 md:-right-4 lg:-top-5 lg:-right-5 animate-[float_6s_ease-in-out_infinite] z-20" style={{ animationDelay: '0.5s' }}>
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl shadow-brand-500/15 px-2 py-1.5 sm:px-3 sm:py-2 lg:px-4 lg:py-2.5 flex items-center gap-2 sm:gap-2.5 border border-brand-100/50">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:w-8 lg:w-9 lg:h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-brand-500/30">
-                        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-bold text-slate-800">IA Active</div>
-                        <div className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[9px] text-brand-500 font-semibold">Générée en 3s</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating badge: Payée */}
-                  <div className="absolute -bottom-2 -left-1 sm:-bottom-3 sm:-left-3 md:-bottom-4 md:-left-4 lg:-bottom-5 lg:-left-5 animate-[float_6s_ease-in-out_infinite] z-20" style={{ animationDelay: '1.5s' }}>
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl shadow-brand-500/15 px-2 py-1.5 sm:px-3 sm:py-2 lg:px-4 lg:py-2.5 flex items-center gap-2 sm:gap-2.5 border border-brand-100/50">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:w-8 lg:w-9 lg:h-9 bg-gradient-to-br from-green-400 to-green-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-green-500/30">
-                        <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-bold text-slate-800">Payée</div>
-                        <div className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[9px] text-green-500 font-semibold">via Stripe</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Floating badge: Amount (desktop only) */}
-                  <div className="hidden sm:block absolute top-1/2 -translate-y-1/2 -right-2 md:-right-3 lg:-right-4 animate-[float_6s_ease-in-out_infinite] z-20" style={{ animationDelay: '2.5s' }}>
-                    <div className="bg-brand-950/90 backdrop-blur-sm rounded-xl sm:rounded-2xl px-2.5 py-1.5 sm:px-3 sm:py-2 lg:px-3.5 lg:py-2.5 border border-brand-800/50 shadow-xl shadow-brand-500/10">
-                      <div className="text-[8px] sm:text-[9px] lg:text-[10px] text-brand-300/60 font-medium">Montant</div>
-                      <div className="text-xs sm:text-sm md:text-base lg:text-lg font-extrabold text-white">4 560€</div>
-                    </div>
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-
-        {/* Wave */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <svg viewBox="0 0 1440 60" fill="none" className="w-full"><path d="M0 30C360 60 720 60 1080 40C1260 30 1380 25 1440 30V60H0V30Z" fill="white" /></svg>
-        </div>
-      </section>
-
-      {/* ═══════════ STATS ═══════════ */}
-      <section className="py-6 sm:py-10 lg:py-12 bg-white dark:bg-slate-950 relative z-10">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-5 sm:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
-            {[{ target: 6, label: 'Types de documents' }, { target: 6, label: 'Templates PDF' }].map((s, i) => (
-              <div key={i} className="text-center">
-                <ScrollReveal delay={i * 0.1}><div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight"><Counter target={s.target} /></div><div className="text-xs sm:text-sm lg:text-base xl:text-lg text-slate-400 dark:text-slate-500 mt-1 font-medium">{s.label}</div></ScrollReveal>
-              </div>
-            ))}
-            <div className="text-center"><ScrollReveal delay={0.2}><div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-brand-500 tracking-tight">3<span className="text-base sm:text-lg lg:text-xl xl:text-2xl">s</span></div><div className="text-xs sm:text-sm lg:text-base xl:text-lg text-slate-400 dark:text-slate-500 mt-1 font-medium">Facturation par IA</div></ScrollReveal></div>
-            <div className="text-center"><ScrollReveal delay={0.3}><div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight"><Counter target={100} suffix="%" /></div><div className="text-xs sm:text-sm lg:text-base xl:text-lg text-slate-400 dark:text-slate-500 mt-1 font-medium">Conforme droit FR</div></ScrollReveal></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ TRUST ═══════════ */}
-      <section className="py-10 sm:py-14 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <ScrollReveal>
-            <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 font-medium mb-6 uppercase tracking-wider">Ils nous font confiance</p>
-            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 sm:gap-x-12">
-              {[{ icon: Building2, label: 'Auto-entrepreneurs' }, { icon: Code2, label: 'Freelances' }, { icon: Store, label: 'TPE / PME' }, { icon: Briefcase, label: 'Consultants' }, { icon: Palette, label: 'Agences' }, { icon: HeartPulse, label: 'Santé' }].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 text-slate-400 dark:text-slate-500"><Icon className="w-5 h-5" /><span className="text-sm font-semibold">{label}</span></div>
-              ))}
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-
-      {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-white">
-        <div className="max-w-5xl lg:max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-700 mb-4"><Rocket className="w-4 h-4 lg:w-5 lg:h-5" />Comment ça marche</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight mb-3">Opérationnel en 3 étapes</h2>
-            </ScrollReveal>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 relative">
-            <div className="hidden sm:block absolute top-10 left-[16%] right-[16%] h-px bg-brand-200" />
-            {[{ num: 1, title: 'Créez votre compte', desc: 'Inscription en 2 minutes. Choisissez votre template de facture préféré.' }, { num: 2, title: 'Décrivez votre facture', desc: 'Dites-la à voix haute ou tapez-la. L\'IA fait le reste.' }, { num: 3, title: 'Recevez votre paiement', desc: 'Envoyez par e-mail, votre client paie en un clic.' }].map((step, i) => (
-              <ScrollReveal key={i} delay={0.05 + i * 0.1}>
-                <div className="text-center relative">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-brand-500 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-brand-500/20 relative z-10"><span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white">{step.num}</span></div>
-                  <h3 className="font-bold text-base sm:text-lg lg:text-xl mb-2">{step.title}</h3>
-                  <p className="text-sm lg:text-base text-slate-500 max-w-[240px] lg:max-w-[280px] mx-auto">{step.desc}</p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-      {/* ═══════════ FEATURES ═══════════ */}
-      <section id="features" className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-white">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-16">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-700 mb-4"><Layers className="w-4 h-4 lg:w-5 lg:h-5" />Fonctionnalités</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight mb-3">Tout en un seul endroit</h2>
-              <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-slate-500 max-w-2xl mx-auto">Remplacez vos 5 outils par une seule plateforme.</p>
-            </ScrollReveal>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8">
-            {features.slice(0, 6).map((f, i) => (
-              <ScrollReveal key={i} delay={i * 0.05}>
-                <Card3D><div className="bg-white rounded-2xl p-6 sm:p-7 lg:p-8 border border-slate-100 h-full hover:shadow-lg">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-brand-50 rounded-xl flex items-center justify-center mb-4"><f.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-brand-500" /></div>
-                  <h3 className="text-base sm:text-lg lg:text-xl font-bold mb-2">{f.title}</h3>
-                  <p className="text-sm lg:text-base text-slate-500 leading-relaxed">{f.desc}</p>
-                </div></Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {features.slice(6, 10).map((f, i) => (
-              <ScrollReveal key={i} delay={i * 0.05}>
-                <Card3D><div className="bg-white rounded-2xl p-5 sm:p-6 lg:p-7 border border-slate-100 h-full hover:shadow-lg">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-brand-50 rounded-xl flex items-center justify-center mb-3"><f.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-brand-500" /></div>
-                  <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1">{f.title}</h3>
-                  <p className="text-xs sm:text-sm lg:text-base text-slate-500 leading-relaxed">{f.desc}</p>
-                </div></Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ AI SECTION ═══════════ */}
-      <section id="ai" className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-brand-950 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[400px] sm:w-[500px] lg:w-[700px] xl:w-[900px] h-[400px] sm:h-[500px] lg:h-[700px] xl:h-[900px] bg-brand-500/10 rounded-full blur-[100px] sm:blur-[120px] lg:blur-[150px] animate-[blob_15s_ease-in-out_infinite]" />
-        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px)', backgroundSize: '50px 50px' }} />
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 xl:gap-20 items-center">
-            <div className="order-2 lg:order-1">
-              <ScrollReveal direction="left">
-                <div className="bg-brand-900/80 backdrop-blur rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl shadow-brand-500/10 border border-brand-800/50">
-                  <div className="flex items-center gap-2 px-3 sm:px-5 lg:px-6 py-2.5 sm:py-3 lg:py-4 bg-brand-900 border-b border-brand-800/50">
-                    <div className="flex gap-1.5"><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-red-400/60" /><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-amber-400/60" /><div className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5 rounded-full bg-green-400/60" /></div>
-                    <span className="ml-2 text-[10px] sm:text-xs lg:text-sm text-brand-400 font-medium">Factu.me AI</span>
-                  </div>
-                  <div className="p-4 sm:p-6 lg:p-8 space-y-3 sm:space-y-4 lg:space-y-5 font-mono text-xs sm:text-sm lg:text-base">
-                    <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-brand-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"><Mic className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-brand-400" /></div>
-                      <div className="bg-brand-800/50 rounded-xl rounded-tl-none px-3 py-2 sm:px-4 sm:py-3 lg:px-5 lg:py-4 text-brand-200 max-w-[92%] border border-brand-700/30 text-[11px] sm:text-[13px] lg:text-sm">
-                        &quot;Facture pour Dupont, 5 jours de dev à 600€ HT, TVA 20%, ajoute 2 jours conseil à 400€&quot;
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 sm:gap-3 lg:gap-4">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-brand-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"><Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-brand-400" /></div>
-                      <div className="space-y-2 max-w-[92%]">
-                        <div className="bg-brand-800/50 rounded-xl rounded-tl-none px-3 py-2 sm:px-4 sm:py-2.5 lg:px-5 lg:py-3 text-brand-300 border border-brand-700/30 text-[11px] sm:text-[13px] lg:text-sm"><span className="text-brand-400">Analyse...</span></div>
-                        <div className="bg-brand-800/50 rounded-xl rounded-tl-none px-3 py-2.5 sm:px-4 sm:py-3 lg:px-5 lg:py-4 text-brand-200 space-y-1.5 sm:space-y-2 lg:space-y-2.5 border border-brand-700/30 text-[10px] sm:text-xs lg:text-sm">
-                          <div className="flex items-center gap-1.5 text-green-400"><Check className="w-3 h-3 lg:w-4 lg:h-4" />Client : Dupont Consulting SAS</div>
-                          <div className="flex items-center gap-1.5 text-green-400"><Check className="w-3 h-3 lg:w-4 lg:h-4" />Développement — 5j x 600€</div>
-                          <div className="flex items-center gap-1.5 text-green-400"><Check className="w-3 h-3 lg:w-4 lg:h-4" />Conseil — 2j x 400€</div>
-                          <div className="flex items-center gap-1.5 text-green-400"><Check className="w-3 h-3 lg:w-4 lg:h-4" />TVA 20% appliquée</div>
-                          <div className="flex items-center gap-1.5 text-brand-300 font-semibold pt-1 border-t border-brand-700/30"><Zap className="w-3 h-3 lg:w-4 lg:h-4 text-brand-400" /> FACT-2026-0042 créée</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ScrollReveal>
-            </div>
-            <div className="space-y-5 sm:space-y-7 lg:space-y-8 order-1 lg:order-2">
-              <ScrollReveal direction="right">
-                <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-300"><Sparkles className="w-4 h-4 lg:w-5 lg:h-5" />Propulsé par l&apos;IA</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight">Dites-le, l&apos;IA<br />le fait pour vous</h2>
-                <div className="space-y-6 sm:space-y-5 lg:space-y-6">
-                  {[{ icon: Mic, title: 'Dictée vocale', desc: 'Parlez naturellement, l\'IA remplit tous les champs.' }, { icon: Type, title: 'Génération textuelle', desc: 'Tapez en langage naturel, descriptions professionnelles automatiques.' }, { icon: Pencil, title: 'Modification intelligente', desc: '"Ajoute 2 jours" — l\'IA comprend et modifie en conséquence.' }].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3 sm:gap-4 lg:gap-5">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-brand-500/10 rounded-xl flex items-center justify-center flex-shrink-0"><item.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" /></div>
-                      <div><h3 className="font-bold text-sm sm:text-base lg:text-lg mb-1">{item.title}</h3><p className="text-xs sm:text-sm lg:text-base text-brand-200/60">{item.desc}</p></div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ PAYMENT ═══════════ */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <ScrollReveal direction="left">
-              <div className="bg-slate-50 rounded-2xl p-5 sm:p-8 border border-slate-100 space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center"><LinkIcon className="w-5 h-5 text-brand-600" /></div>
-                  <div><div className="font-bold text-sm">Lien de paiement envoyé</div><div className="text-xs text-slate-400">factu.me/pay/inv-0042</div></div>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-100 space-y-3">
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Conception site web</span><span className="font-semibold">3 000€</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Conseil UX/UI</span><span className="font-semibold">800€</span></div>
-                  <div className="flex justify-between text-sm border-t border-slate-100 pt-2"><span className="font-semibold">Total TTC</span><span className="font-bold text-brand-600">4 560€</span></div>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400"><ShieldCheck className="w-3.5 h-3.5 text-brand-500" />Paiement sécurisé par Stripe</div>
-                <Link href="/login" className="block w-full bg-brand-500 text-white font-semibold py-3 rounded-xl text-sm text-center hover:bg-brand-600 transition-colors">
-                  <span className="flex items-center justify-center gap-2"><CreditCard className="w-4 h-4" />Payer maintenant</span>
-                </Link>
-              </div>
-            </ScrollReveal>
-            <div className="space-y-5 sm:space-y-6">
-              <ScrollReveal direction="right">
-                <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-700"><CreditCard className="w-4 h-4" />Paiement en ligne</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Envoyez un lien,<br />votre client paie directement</h2>
-                <p className="text-base sm:text-lg text-slate-500 leading-relaxed">Plus besoin d&apos;attendre un virement. Votre client clique, paie par carte, et le statut se met à jour instantanément.</p>
-                <div className="space-y-3">
-                  {['Paiement par carte ou virement instantané', 'Statut mis à jour en temps réel', 'Relances automatiques si impayé'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-3"><div className="w-8 h-8 bg-brand-50 rounded-lg flex items-center justify-center flex-shrink-0"><Check className="w-4 h-4 text-brand-500" /></div><span className="text-sm text-slate-600">{item}</span></div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-
-      {/* ═══════════ CONTRATS DE TRAVAIL ═══════════ */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="space-y-5 sm:space-y-6">
-              <ScrollReveal direction="left">
-                <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-primary"><FileBadge className="w-4 h-4" />Contrats de travail</div>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">CDI, CDD, Freelance<span className="text-primary">—générez et signez en 5 minutes</span></h2>
-                <p className="text-base sm:text-lg text-slate-500 leading-relaxed">Le seul outil qui combine facturation et gestion RH. Créez des contrats conformes au droit français, faites-les signer électroniquement.</p>
-                <div className="space-y-3">
-                  {[
-                    { icon: FileText, title: 'CDI & CDD conformes', desc: 'Clauses légales, SMIC actualisé, conventions collectives' },
-                    { icon: Shield, title: 'Signature eIDAS incluse', desc: 'Niveau Avancé gratuit, valeur légale en France' },
-                    { icon: Users, title: 'Suivi des salariés', desc: 'Avenants, renouvellements, dates d&apos;expiration' }
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"><item.icon className="w-4 h-4 text-primary" /></div>
-                      <div><div className="font-bold text-sm mb-0.5">{item.title}</div><div className="text-xs text-slate-500">{item.desc}</div></div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollReveal>
-            </div>
-            <ScrollReveal direction="right">
-              <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-xl shadow-primary/5">
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                  <div>
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contrat de travail</div>
-                    <div className="text-sm font-bold text-slate-900">CDI — Développeur Full Stack</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                    <CheckCircle className="w-3 h-3" />Conforme
-                  </div>
-                </div>
-                <div className="space-y-3 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Type de contrat</span>
-                    <span className="font-semibold">CDI</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Salaire brut</span>
-                    <span className="font-semibold">3 500€/mois</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Convention collective</span>
-                    <span className="font-semibold">SYNTEC</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Durée période d&apos;essai</span>
-                    <span className="font-semibold">4 mois</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Lieu de travail</span>
-                    <span className="font-semibold">Paris + Télétravail</span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="flex-1 bg-primary/10 text-primary font-semibold py-2.5 rounded-xl text-sm hover:bg-primary/20 transition-colors flex items-center justify-center gap-2">
-                    <Eye className="w-4 h-4" />Aperçu
-                  </button>
-                  <button className="flex-1 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold py-2.5 rounded-xl text-sm hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2">
-                    <Share2 className="w-4 h-4" />Faire signer
-                  </button>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <Shield className="w-3.5 h-3.5 text-primary" />
-                    Signature eIDAS Avancé gratuite · Valeur légale
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-
-
-
-
-
-      {/* ═══════════ TESTIMONIALS ═══════════ */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium text-brand-700 mb-4"><MessageCircle className="w-4 h-4" />Témoignages</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3">Ce qu&apos;ils en disent</h2>
-            </ScrollReveal>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            {testimonials.map((t, i) => (
-              <ScrollReveal key={i} delay={i * 0.1}>
-                <Card3D><div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-100 h-full flex flex-col hover:shadow-lg">
-                  <div className="flex items-center gap-1 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />)}</div>
-                  <p className="text-sm text-slate-600 leading-relaxed flex-grow mb-5">&ldquo;{t.text}&rdquo;</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                    <div className="w-11 h-11 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center flex-shrink-0">{t.name.charAt(0)}</div>
-                    <div><div className="font-bold text-sm">{t.name}</div><div className="text-xs text-slate-400">{t.role}</div></div>
-                  </div>
-                </div></Card3D>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-      {/* ═════════ PRICING ═══════════ */}
-      <section id="tarifs" className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-slate-50">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-700 mb-4"><Tag className="w-4 h-4 lg:w-5 lg:h-5" />Tarifs transparents</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight mb-3">Choisissez votre plan</h2>
-              <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-slate-500 max-w-2xl mx-auto">Sans engagement. Évoluez quand vous voulez.</p>
-            </ScrollReveal>
-
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-3 sm:gap-4 mt-8">
-              <button
-                onClick={() => setBillingPeriod('monthly')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all ${billingPeriod === 'monthly' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-              >
-                Mensuel
-              </button>
-              <button
-                onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-                className={`relative w-16 sm:w-20 h-10 rounded-full transition-all ${billingPeriod === 'yearly' ? 'bg-brand-500' : 'bg-slate-200'}`}
-              >
-                <motion.div
-                  className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-md"
-                  animate={{ left: billingPeriod === 'yearly' ? 'calc(100% - 28px)' : '4px' }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                />
-              </button>
-              <button
-                onClick={() => setBillingPeriod('yearly')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold transition-all ${billingPeriod === 'yearly' ? 'bg-green-600 text-white shadow-md' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
-              >
-                Annuel
-                <span className="hidden sm:inline ml-1 text-xs opacity-80">(-20%)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Pricing Cards - CENTERED */}
-          <div className="flex justify-center">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-6xl">
-              {plans.map((plan, i) => (
-                <ScrollReveal key={i} delay={i * 0.05}>
-                  <div className={`relative ${plan.popular ? 'pricing-popular' : ''}`}>
-                    <Card3D>
-                      <div className={`bg-white rounded-2xl p-5 sm:p-7 lg:p-8 border h-full flex flex-col hover:shadow-lg relative z-10 ${plan.popular ? 'border-brand-300 shadow-xl' : 'border-slate-100'}`}>
-                        {plan.popular && (
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                            <span className="bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full">Populaire</span>
-                          </div>
-                        )}
-                        <div className="mb-5 mt-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold">{plan.name}</h3>
-                            {plan.popular && <span className="bg-brand-100 text-brand-700 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">Top</span>}
-                          </div>
-                          <p className="text-xs sm:text-sm text-slate-500 mb-3">{plan.tagline}</p>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
-                              {billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
-                            </span>
-                            <span className="text-sm sm:text-base text-slate-500">
-                              {billingPeriod === 'monthly' ? '/mois' : '/mois (annuel)'}
-                            </span>
-                          </div>
-                          {billingPeriod === 'yearly' && (
-                            <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">
-                              Économisez {plan.yearlySavings} par an
-                            </p>
-                          )}
-                        </div>
-                        <ul className="space-y-2.5 mb-6 flex-grow">
-                          {plan.features.map((f, j) => (
-                            <li key={j} className="flex items-center gap-2 text-sm lg:text-base"><Check className="w-4 h-4 lg:w-5 lg:h-5 text-brand-500 flex-shrink-0" /><span className="text-slate-600">{f}</span></li>
-                          ))}
-                        </ul>
-                        <Link
-                          href={`/register?plan=${plan.name.toLowerCase()}&trial=4&billing=${billingPeriod}`}
-                          className={`block text-center font-semibold py-3 rounded-xl transition-all text-sm lg:text-base active:scale-[0.97] ${
-                            plan.popular
-                              ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25'
-                              : 'bg-slate-900 hover:bg-slate-800 text-white'
-                          }`}
-                        >
-                          Essai 7 jours gratuit
-                        </Link>
-                      </div>
-                    </Card3D>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-          <div className="text-center mt-6 sm:mt-8">
-            <ScrollReveal><p className="text-xs sm:text-sm lg:text-base text-slate-400 flex items-center justify-center gap-3"><ShieldCheck className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-brand-500" />Données hébergées en France · Connexion sécurisée · Annulation en un clic</p></ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ FAQ ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-white">
-        <div className="max-w-3xl lg:max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10 sm:mb-14">
-            <ScrollReveal>
-              <div className="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-full px-3.5 py-1.5 text-xs sm:text-sm lg:text-base font-medium text-brand-700 mb-4"><HelpCircle className="w-4 h-4 lg:w-5 lg:h-5" />Questions fréquentes</div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight">Tout ce que vous voulez savoir</h2>
-            </ScrollReveal>
-          </div>
-          <ScrollReveal>
-            <div className="space-y-3 sm:space-y-4 lg:space-y-5">{faqItems.map((item, i) => <FAQItem key={i} question={item.q} answer={item.a} />)}</div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══════════ FINAL CTA ═══════════ */}
-      <section className="py-16 sm:py-24 lg:py-32 xl:py-40 bg-brand-950 text-white relative overflow-hidden">
-        <div className="absolute inset-0"><div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[800px] lg:w-[1000px] xl:w-[1200px] h-[500px] sm:h-[800px] lg:h-[1000px] xl:h-[1200px] bg-brand-500/10 rounded-full blur-[100px] sm:blur-[150px] lg:blur-[200px] animate-[blob_15s_ease-in-out_infinite]" /></div>
-        <div className="max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
-          <ScrollReveal direction="scale">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-brand-500 rounded-2xl sm:rounded-3xl mb-6 sm:mb-8 animate-[float_6s_ease-in-out_infinite] shadow-2xl shadow-brand-500/30"><Zap className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white" /></div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-extrabold tracking-tight mb-5 sm:mb-6 lg:mb-8">Prêt à en finir avec<br /><span className="gradient-text-light">la paperasse ?</span></h2>
-            <p className="text-base sm:text-lg lg:text-xl xl:text-2xl text-brand-200/60 max-w-2xl xl:max-w-3xl mx-auto mb-8 sm:mb-10 lg:mb-12">Rejoignez les 2 000+ entrepreneurs qui ont repris le contrôle de leur facturation.</p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-5 justify-center">
-              <Link href="/register" className="group inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-400 text-white font-semibold px-6 py-3.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-2xl transition-all shadow-xl shadow-brand-500/30 hover:shadow-2xl active:scale-[0.97] text-sm sm:text-base lg:text-lg relative overflow-hidden">
-                <span className="relative z-10">Commencer gratuitement</span><ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 relative z-10 group-hover:translate-x-1 transition-transform" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_ease-in-out]" />
-              </Link>
-              <Link href="/login" className="group inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium px-6 py-3.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-2xl transition-all border border-white/10 hover:border-white/20 text-sm sm:text-base lg:text-lg backdrop-blur">
-                <LogIn className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-brand-400" />Se connecter
-              </Link>
-            </div>
-            <p className="text-xs sm:text-sm lg:text-base text-brand-200/30 mt-5 sm:mt-6 lg:mt-8">Sans engagement · Annulation en un clic</p>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══════════ FOOTER ═══════════ */}
-      <footer className="bg-brand-950 text-white border-t border-brand-900 py-12 sm:py-16 lg:py-20">
-        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 mb-10 sm:mb-12">
-            <div className="col-span-2">
-              <Link href="/" className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-brand-500 rounded-xl flex items-center justify-center"><Zap className="w-[18px] h-[18px] sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" /></div>
-                <span className="text-lg sm:text-xl lg:text-2xl font-bold">Factu<span className="text-brand-400">.me</span></span>
-              </Link>
-              <p className="text-xs sm:text-sm lg:text-base text-brand-200/40 leading-relaxed max-w-xs lg:max-w-sm mb-4">La plateforme de facturation 100% française, propulsée par l&apos;IA.</p>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-brand-900 hover:bg-brand-800 rounded-lg flex items-center justify-center transition-all active:scale-95"><Twitter className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-brand-300/60" /></a>
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-brand-900 hover:bg-brand-800 rounded-lg flex items-center justify-center transition-all active:scale-95"><Linkedin className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-brand-300/60" /></a>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-brand-900 hover:bg-brand-800 rounded-lg flex items-center justify-center transition-all active:scale-95"><Github className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-brand-300/60" /></a>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Produit</h4>
-              <ul className="space-y-2">
-                <li><a href="#features" onClick={(e) => scrollTo(e, '#features')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Fonctionnalités</a></li>
-                <li><a href="#tarifs" onClick={(e) => scrollTo(e, '#tarifs')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Tarifs</a></li>
-                <li><a href="#ai" onClick={(e) => scrollTo(e, '#ai')} className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">IA</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Ressources</h4>
-              <ul className="space-y-2">
-                <li><Link href="/demo" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Démo interactive</Link></li>
-                <li><Link href="/blog" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Blog facturation</Link></li>
-                <li><Link href="/modeles-facture" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Modèles de facture</Link></li>
-                <li><Link href="/mentions-obligatoires-facture" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Mentions obligatoires</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Par statut</h4>
-              <ul className="space-y-2">
-                <li><Link href="/comment-facturer/auto-entrepreneur" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Auto-entrepreneur</Link></li>
-                <li><Link href="/comment-facturer/sasu" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">SASU</Link></li>
-                <li><Link href="/comment-facturer/eurl" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">EURL</Link></li>
-                <li><Link href="/comment-facturer" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Tous les statuts</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm lg:text-base mb-3 text-brand-200">Confiance</h4>
-              <ul className="space-y-2">
-                <li><Link href="/securite" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Sécurité</Link></li>
-                <li><Link href="/experts" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Équipe</Link></li>
-                <li><Link href="/legal/mentions-legales" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Mentions légales</Link></li>
-                <li><Link href="/legal/cgu" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">CGU</Link></li>
-                <li><Link href="/legal/confidentialite" className="text-xs sm:text-sm lg:text-base text-brand-200/40 hover:text-brand-400 transition-colors">Confidentialité</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-brand-900 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs sm:text-sm lg:text-base text-brand-200/30">2026 Factu.me. Fait avec <Zap className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 inline text-brand-400" /> en France.</p>
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs lg:text-sm text-brand-200/30"><span className="w-1.5 h-1.5 sm:w-2 sm:h-2 lg:w-2.5 lg:h-2.5 bg-brand-500 rounded-full animate-pulse" />Opérationnel</div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

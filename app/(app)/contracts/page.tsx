@@ -1,28 +1,32 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Plus, Search, Filter, FileCheck, Clock, AlertCircle,
-  CheckCircle, FileEdit, ArrowRight, Trash2, Copy, Loader2, BarChart3, X, Crown
+  CheckCircle, FileEdit, ArrowRight, Trash2, Copy, Loader2, BarChart3, X, Crown,
+  User, Building2, Calendar, Euro, Eye, Send, RefreshCw, ChevronDown,
 } from 'lucide-react';
 import { useContractStore } from '@/stores/contractStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { ContractSummary, ContractType, ContractStatus } from '@/types';
 import { ContractCard } from '@/components/contracts/ContractCard';
+import { ContractStatusBadge, ContractTypeBadge } from '@/components/contracts/ContractStatusBadge';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { downloadCSV } from '@/lib/utils';
 
-const STATUS_FILTERS: { value: string; label: string }[] = [
+const ease = [0.25, 0.1, 0.25, 1] as [number, number, number, number];
+
+const STATUS_FILTERS: { value: string; label: string; color?: string }[] = [
   { value: 'all', label: 'Tous' },
-  { value: 'draft', label: 'Brouillons' },
-  { value: 'pending_signature', label: 'En attente' },
-  { value: 'signed', label: 'Signés' },
-  { value: 'active', label: 'Actifs' },
-  { value: 'ended', label: 'Terminés' },
+  { value: 'draft', label: 'Brouillons', color: 'text-slate-400' },
+  { value: 'pending_signature', label: 'En attente', color: 'text-amber-400' },
+  { value: 'signed', label: 'Signés', color: 'text-blue-400' },
+  { value: 'active', label: 'Actifs', color: 'text-emerald-400' },
+  { value: 'ended', label: 'Terminés', color: 'text-slate-500' },
 ];
 
 const TYPE_FILTERS: { value: string; label: string }[] = [
@@ -48,33 +52,32 @@ export default function ContractsPage() {
   const [salaryMax, setSalaryMax] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'salary' | 'name' | 'status'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => { fetchContracts(); }, []);
 
-  // Vérifier les droits d'accès aux contrats
   useEffect(() => {
     if (!canUseContracts) {
       router.push('/paywall');
     }
   }, [canUseContracts, router]);
 
-  // Afficher un message si pas accès
   if (!canUseContracts) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Crown className="w-10 h-10 text-amber-600" />
+          <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Crown className="w-10 h-10 text-amber-400" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Fonctionnalité Pro</h2>
-          <p className="text-gray-600 mb-6">
-            Les contrats de travail avec signatures électroniques sont disponibles avec les abonnements Pro et Business.
+          <h2 className="text-2xl font-bold tracking-tight text-white mb-3">Fonctionnalite Pro</h2>
+          <p className="text-slate-400 mb-6">
+            Les contrats de travail avec signatures electroniques sont disponibles avec les abonnements Pro et Business.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/paywall" className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors">
+            <Link href="/paywall" className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors">
               Voir les offres
             </Link>
-            <Link href="/dashboard" className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+            <Link href="/dashboard" className="px-6 py-3 bg-slate-800/50 border border-white/5 text-slate-300 rounded-xl font-semibold hover:bg-slate-700/50 transition-colors">
               Retour au tableau de bord
             </Link>
           </div>
@@ -120,7 +123,7 @@ export default function ContractsPage() {
     if (!confirm('Supprimer ce contrat ?')) return;
     try {
       await deleteContract(id, type);
-      toast.success('Contrat supprimé');
+      toast.success('Contrat supprime');
     } catch (e) {
       toast.error('Erreur lors de la suppression');
     }
@@ -129,7 +132,7 @@ export default function ContractsPage() {
   const handleDuplicate = async (id: string, type: ContractType) => {
     try {
       await duplicateContract(id, type, profile);
-      toast.success('Contrat dupliqué');
+      toast.success('Contrat duplique');
     } catch (e) {
       toast.error('Erreur lors de la duplication');
     }
@@ -143,7 +146,7 @@ export default function ContractsPage() {
         if (c) await deleteContract(id, c.contract_type);
       }
       setSelectedIds(new Set());
-      toast.success('Contrats supprimés');
+      toast.success('Contrats supprimes');
     } catch {
       toast.error('Erreur lors de la suppression');
     }
@@ -161,9 +164,9 @@ export default function ContractsPage() {
       );
       setSelectedIds(new Set());
       await fetchContracts();
-      toast.success(`Statut mis à jour : ${newStatus}`);
+      toast.success(`Statut mis a jour : ${newStatus}`);
     } catch (e) {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast.error('Erreur lors de la mise a jour du statut');
     }
   };
 
@@ -180,8 +183,11 @@ export default function ContractsPage() {
       c.status,
     ]);
     downloadCSV('contrats.csv', headers, rows);
-    toast.success('Export CSV réussi');
+    toast.success('Export CSV reussi');
   };
+
+  const fmtMoney = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 
   return (
     <>
@@ -189,242 +195,419 @@ export default function ContractsPage() {
       <main aria-label="Gestion des contrats de travail">
         <div className="w-full space-y-6">
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ease }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Contrats</h2>
-              <p className="text-gray-600 dark:text-gray-400">Gérez vos contrats de travail conformes 2026</p>
+              <h2 className="text-3xl font-bold tracking-tight text-white">Contrats</h2>
+              <p className="text-slate-400 mt-1">Gerez vos contrats de travail conformes 2026</p>
             </div>
-            <div className="flex gap-3">
-              <Link href="/contracts/reports" className="px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 text-sm">
+            <div className="flex gap-2">
+              <Link href="/contracts/reports" className="px-4 py-2.5 bg-slate-800/50 border border-white/5 text-slate-300 rounded-xl font-semibold hover:bg-slate-700/50 transition-colors flex items-center gap-2 text-sm">
                 <BarChart3 className="w-4 h-4" />Rapports
               </Link>
-          <Link href="/contracts/new/cdi" className="px-4 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" />CDI
-          </Link>
-          <Link href="/contracts/new/cdd" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" />CDD
-          </Link>
-          <Link href="/contracts/new/other" className="px-4 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm">
-            <Plus className="w-4 h-4" />Autre
-          </Link>
-        </div>
-      </motion.div>
+              <Link href="/contracts/new/cdi" className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" />CDI
+              </Link>
+              <Link href="/contracts/new/cdd" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" />CDD
+              </Link>
+              <Link href="/contracts/new/other" className="px-4 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-500 transition-colors flex items-center gap-2 text-sm">
+                <Plus className="w-4 h-4" />Autre
+              </Link>
+            </div>
+          </motion.div>
 
-      {/* Stats */}
-      {stats && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Total', value: stats.total, icon: FileText, color: 'text-primary', bg: 'bg-primary/10' },
-            { label: 'Brouillons', value: stats.drafts, icon: FileEdit, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
-            { label: 'En attente', value: stats.pendingSignature, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-            { label: 'Actifs', value: stats.active + stats.signed, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30' },
-          ].map((stat, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/30 dark:border-white/10 shadow-sm p-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg}`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+          {/* Stats */}
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Total', value: stats.total, icon: FileText, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                { label: 'Brouillons', value: stats.drafts, icon: FileEdit, color: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/20' },
+                { label: 'En attente', value: stats.pendingSignature, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+                { label: 'Actifs', value: stats.active + stats.signed, icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
+              ].map((stat, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, ease }}
+                  className="bg-slate-800/50 border border-white/5 rounded-2xl p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.bg}`}>
+                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">{stat.value}</p>
+                      <p className="text-xs text-slate-500">{stat.label}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Search & Filters */}
+          <div className="space-y-3">
+            {/* Search bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher par nom, entreprise, numero..."
+                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+                />
+              </div>
+              <div className="hidden sm:flex gap-2">
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
+                  {STATUS_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
+                  {TYPE_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Mobile status filter pills (horizontal scroll) */}
+            <div className="sm:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                    statusFilter === f.value
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Mobile type filter pills */}
+            <div className="sm:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+              {TYPE_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setTypeFilter(f.value)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                    typeFilter === f.value
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort & Advanced toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+              >
+                <Filter className="w-3 h-3" />
+                Filtres avances
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+              </button>
+              <span className="text-xs text-white/10">|</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1.5 text-xs rounded-lg bg-slate-800/50 border border-white/5 text-slate-400 outline-none focus:ring-1 focus:ring-emerald-500/30"
+              >
+                <option value="date">Trier par date</option>
+                <option value="salary">Trier par salaire</option>
+                <option value="name">Trier par nom</option>
+                <option value="status">Trier par statut</option>
+              </select>
+              <button
+                onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
+                className="p-1.5 rounded-lg bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 transition-colors"
+                title={sortDir === 'asc' ? 'Croissant' : 'Decroissant'}
+              >
+                <ArrowRight className={`w-3 h-3 text-slate-400 transition-transform ${sortDir === 'desc' ? 'rotate-90' : '-rotate-90'}`} />
+              </button>
+            </div>
+
+            {/* Expandable Advanced Filters */}
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ ease }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Date debut (apres)</label>
+                        <input
+                          type="date"
+                          value={dateRangeStart}
+                          onChange={(e) => setDateRangeStart(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Date fin (avant)</label>
+                        <input
+                          type="date"
+                          value={dateRangeEnd}
+                          onChange={(e) => setDateRangeEnd(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Salaire min</label>
+                        <input
+                          type="number"
+                          value={salaryMin}
+                          onChange={(e) => setSalaryMin(e.target.value)}
+                          placeholder="Euros"
+                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Salaire max</label>
+                        <input
+                          type="number"
+                          value={salaryMax}
+                          onChange={(e) => setSalaryMax(e.target.value)}
+                          placeholder="Euros"
+                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
+                        />
+                      </div>
+                    </div>
+                    {(dateRangeStart || dateRangeEnd || salaryMin || salaryMax) && (
+                      <button
+                        onClick={() => { setDateRangeStart(''); setDateRangeEnd(''); setSalaryMin(''); setSalaryMax(''); }}
+                        className="mt-3 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
+                      >
+                        <X className="w-3 h-3" /> Reinitialiser les filtres
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bulk Actions */}
+          <AnimatePresence>
+            {selectedIds.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ ease }}
+                className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-auto z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-2xl"
+              >
+                <div className="flex items-center justify-between sm:justify-start gap-3 px-2">
+                  <span className="text-sm font-medium text-white whitespace-nowrap">{selectedIds.size} selectionne(s)</span>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-xs text-gray-500">{stat.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={handleBulkDelete} className="px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors whitespace-nowrap">
+                    <Trash2 className="w-3 h-3 inline mr-1" />Supprimer
+                  </button>
+                  <button onClick={() => handleBulkStatusChange('pending_signature')} className="px-3 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-500/20 transition-colors whitespace-nowrap">
+                    Signature
+                  </button>
+                  <button onClick={() => handleBulkStatusChange('signed')} className="px-3 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-colors whitespace-nowrap">
+                    Signe
+                  </button>
+                  <button onClick={() => handleBulkStatusChange('active')} className="px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
+                    Activer
+                  </button>
+                  <button onClick={handleBulkExportCSV} className="px-3 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg text-xs font-medium hover:bg-purple-500/20 transition-colors whitespace-nowrap">
+                    <Copy className="w-3 h-3 inline mr-1" />CSV
+                  </button>
+                  <button onClick={() => setSelectedIds(new Set())} className="px-3 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs font-medium hover:text-white transition-colors whitespace-nowrap">
+                    Annuler
+                  </button>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && filtered.length === 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ease }} className="text-center py-20">
+              <div className="w-16 h-16 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-slate-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Aucun contrat</h2>
+              <p className="text-slate-400 mb-6">Creez votre premier contrat de travail conforme 2026</p>
+              <div className="flex justify-center gap-3">
+                <Link href="/contracts/new/cdi" className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors flex items-center gap-2">
+                  <Plus className="w-5 h-5" />CDI
+                </Link>
+                <Link href="/contracts/new/cdd" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2">
+                  <Plus className="w-5 h-5" />CDD
+                </Link>
               </div>
             </motion.div>
-          ))}
-        </motion.div>
-      )}
+          )}
 
-      {/* Filters */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-        {/* Search + Basic Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par nom, entreprise, numéro..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 outline-none text-sm"
-            />
-          </div>
-          <div className="flex gap-2">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 text-sm outline-none focus:border-primary/50">
-              {STATUS_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 text-sm outline-none focus:border-primary/50">
-              {TYPE_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Advanced Filters */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => document.getElementById('advanced-filters')?.classList.toggle('hidden')}
-            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-1"
-          >
-            <Filter className="w-3 h-3" />
-            Filtres avancés
-          </button>
-          <span className="text-xs text-gray-400">|</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 outline-none"
-          >
-            <option value="date">Trier par date</option>
-            <option value="salary">Trier par salaire</option>
-            <option value="name">Trier par nom</option>
-            <option value="status">Trier par statut</option>
-          </select>
-          <button
-            onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
-            className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 hover:bg-gray-100 dark:hover:bg-slate-800"
-            title={sortDir === 'asc' ? 'Croissant' : 'Décroissant'}
-          >
-            <ArrowRight className={`w-3 h-3 text-gray-500 transition-transform ${sortDir === 'desc' ? 'rotate-90' : '-rotate-90'}`} />
-          </button>
-        </div>
-
-        {/* Expandable Advanced Filters */}
-        <div id="advanced-filters" className="hidden">
-          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-white/10">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Date début (après)</label>
-                <input
-                  type="date"
-                  value={dateRangeStart}
-                  onChange={(e) => setDateRangeStart(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm outline-none focus:border-primary/50"
-                />
+          {/* Contract List - Desktop */}
+          {!loading && filtered.length > 0 && (
+            <>
+              {/* Desktop grid with ContractCard */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((contract, i) => (
+                  <motion.div
+                    key={contract.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, ease }}
+                    className="relative group"
+                  >
+                    <div className="absolute top-2 left-2 z-10">
+                      <div className="w-6 h-6 rounded-md bg-slate-900/90 flex items-center justify-center border border-white/5 group-hover:border-emerald-500/50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(contract.id)}
+                          onChange={(e) => {
+                            setSelectedIds(prev => {
+                              const next = new Set(prev);
+                              e.target.checked ? next.add(contract.id) : next.delete(contract.id);
+                              return next;
+                            });
+                          }}
+                          className="w-4 h-4 rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/30 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                    <div className="pl-4">
+                      <ContractCard contract={contract} onDelete={handleDelete} onDuplicate={handleDuplicate} />
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Date fin (avant)</label>
-                <input
-                  type="date"
-                  value={dateRangeEnd}
-                  onChange={(e) => setDateRangeEnd(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Salaire min</label>
-                <input
-                  type="number"
-                  value={salaryMin}
-                  onChange={(e) => setSalaryMin(e.target.value)}
-                  placeholder="€"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm outline-none focus:border-primary/50"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Salaire max</label>
-                <input
-                  type="number"
-                  value={salaryMax}
-                  onChange={(e) => setSalaryMax(e.target.value)}
-                  placeholder="€"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 text-sm outline-none focus:border-primary/50"
-                />
-              </div>
-            </div>
-            {(dateRangeStart || dateRangeEnd || salaryMin || salaryMax) && (
-              <button
-                onClick={() => { setDateRangeStart(''); setDateRangeEnd(''); setSalaryMin(''); setSalaryMax(''); }}
-                className="mt-3 text-xs text-red-500 hover:text-red-600 flex items-center gap-1"
-              >
-                <X className="w-3 h-3" /> Réinitialiser les filtres
-              </button>
-            )}
-          </div>
-        </div>
-      </motion.div>
 
-      {/* Bulk Actions */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-auto z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-gray-900 dark:bg-slate-800 rounded-2xl shadow-2xl border border-white/10">
-          <div className="flex items-center justify-between sm:justify-start gap-3 px-2">
-            <span className="text-sm font-medium text-white whitespace-nowrap">{selectedIds.size} sélectionné(s)</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleBulkDelete} className="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors whitespace-nowrap">
-              <Trash2 className="w-3 h-3 inline mr-1" />Supprimer
-            </button>
-            <button onClick={() => handleBulkStatusChange('pending_signature')} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors whitespace-nowrap">
-              Signature
-            </button>
-            <button onClick={() => handleBulkStatusChange('signed')} className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors whitespace-nowrap">
-              Signé
-            </button>
-            <button onClick={() => handleBulkStatusChange('active')} className="px-3 py-2 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 transition-colors whitespace-nowrap">
-              Activer
-            </button>
-            <button onClick={handleBulkExportCSV} className="px-3 py-2 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 transition-colors whitespace-nowrap">
-              <Copy className="w-3 h-3 inline mr-1" />CSV
-            </button>
-            <button onClick={() => setSelectedIds(new Set())} className="px-3 py-2 bg-gray-700 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors whitespace-nowrap">
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
+                {filtered.map((contract, i) => (
+                  <motion.div
+                    key={contract.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06, ease }}
+                    className="bg-slate-800/50 border border-white/5 rounded-2xl p-4"
+                  >
+                    {/* Checkbox + header row */}
+                    <div className="flex items-start gap-3 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(contract.id)}
+                        onChange={(e) => {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev);
+                            e.target.checked ? next.add(contract.id) : next.delete(contract.id);
+                            return next;
+                          });
+                        }}
+                        className="mt-1 w-4 h-4 rounded border-slate-600 text-emerald-500 focus:ring-emerald-500/30 cursor-pointer flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <ContractTypeBadge type={contract.contract_type} />
+                          <ContractStatusBadge status={contract.status} />
+                          {(contract.renewal_count || 0) > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              <RefreshCw className="w-3 h-3" />R{contract.renewal_count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {contract.contract_number && (
+                        <span className="text-xs text-slate-500 font-mono flex-shrink-0">{contract.contract_number}</span>
+                      )}
+                    </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      )}
+                    {/* Employee name */}
+                    <div className="flex items-center gap-2 mb-2 ml-7">
+                      <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <span className="font-semibold text-white text-sm">{contract.employee_name}</span>
+                    </div>
 
-      {/* Empty State */}
-      {!loading && filtered.length === 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
-          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aucun contrat</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">Créez votre premier contrat de travail conforme 2026</p>
-          <div className="flex justify-center gap-3">
-            <Link href="/contracts/new/cdi" className="px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2">
-              <Plus className="w-5 h-5" />CDI
-            </Link>
-            <Link href="/contracts/new/cdd" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
-              <Plus className="w-5 h-5" />CDD
-            </Link>
-          </div>
-        </motion.div>
-      )}
+                    {/* Company & job title */}
+                    <div className="ml-7 space-y-1 mb-3">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{contract.company_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{contract.job_title}</span>
+                      </div>
+                    </div>
 
-      {/* Contract List */}
-      {!loading && filtered.length > 0 && (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((contract) => (
-            <div key={contract.id} className="relative group">
-              {/* Checkbox avec fond pour meilleure visibilité */}
-              <div className="absolute top-2 left-2 z-10">
-                <div className="w-6 h-6 rounded-md bg-white/90 dark:bg-slate-900/90 shadow-sm flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:border-primary/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(contract.id)}
-                    onChange={(e) => {
-                      setSelectedIds(prev => {
-                        const next = new Set(prev);
-                        e.target.checked ? next.add(contract.id) : next.delete(contract.id);
-                        return next;
-                      });
-                    }}
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                  />
-                </div>
+                    {/* Dates & salary */}
+                    <div className="flex items-center justify-between ml-7 mb-3">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{fmtDate(contract.start_date)}{contract.end_date ? ` -> ${fmtDate(contract.end_date)}` : ''}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm font-semibold text-white">
+                        <Euro className="w-3.5 h-3.5 text-emerald-400" />
+                        {fmtMoney(contract.salary_amount)}{contract.salary_frequency === 'hourly' ? '/h' : contract.salary_frequency === 'monthly' ? '/mois' : ''}
+                      </div>
+                    </div>
+
+                    {/* Active signing indicator */}
+                    {(() => {
+                      const expiresAt = contract.signing_token_expires_at;
+                      const hasActiveSigning = expiresAt ? new Date(expiresAt) > new Date() : false;
+                      return hasActiveSigning ? (
+                        <div className="ml-7 mb-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <div className="flex items-center gap-1.5 text-xs text-blue-400">
+                            <Send className="w-3 h-3" />
+                            <span className="font-medium">Signature envoyee</span>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-3 ml-7 border-t border-white/5">
+                      <Link href={`/contracts/${contract.id}?type=${contract.contract_type}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-500/20 transition-colors">
+                        <Eye className="w-3.5 h-3.5" />Voir
+                      </Link>
+                      <Link href={`/contracts/${contract.id}/edit?type=${contract.contract_type}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-colors">
+                        <FileEdit className="w-3.5 h-3.5" />Editer
+                      </Link>
+                      <button onClick={() => handleDuplicate(contract.id, contract.contract_type)} className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors" title="Dupliquer">
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(contract.id, contract.contract_type)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Supprimer">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <div className="pl-4">
-                <ContractCard contract={contract} onDelete={handleDelete} onDuplicate={handleDuplicate} />
-              </div>
-            </div>
-          ))}
+            </>
+          )}
         </div>
-      )}
-    </div>
-  </main>
-  </>
+      </main>
+    </>
   );
 }

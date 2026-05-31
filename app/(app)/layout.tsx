@@ -5,6 +5,8 @@ import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileDrawer from '@/components/layout/MobileDrawer';
+import BottomTabBar from '@/components/layout/BottomTabBar';
+import MobileLayout from '@/components/layout/MobileLayout';
 import { Logo } from '@/components/ui/Logo';
 import { ServiceWorkerRegistration } from '@/components/ui/ServiceWorkerRegistration';
 import dynamic from 'next/dynamic';
@@ -18,6 +20,26 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
+
+/** Titre contextuel de la page pour la top bar mobile */
+function getPageTitle(pathname: string): string {
+  if (pathname === '/dashboard' || pathname === '/') return 'Accueil';
+  if (pathname.startsWith('/documents/factures')) return 'Factures';
+  if (pathname.startsWith('/documents/devis')) return 'Devis';
+  if (pathname.startsWith('/documents/avoirs')) return 'Avoirs';
+  if (pathname.startsWith('/documents/commandes')) return 'Commandes';
+  if (pathname.startsWith('/documents/livraisons')) return 'Livraisons';
+  if (pathname.startsWith('/documents/acomptes')) return 'Acomptes';
+  if (pathname.startsWith('/clients')) return 'Clients';
+  if (pathname.startsWith('/invoices/new')) return 'Nouveau document';
+  if (pathname.startsWith('/invoices/')) return 'Document';
+  if (pathname.startsWith('/settings')) return 'Paramètres';
+  if (pathname.startsWith('/contracts')) return 'Contrats';
+  if (pathname.startsWith('/expenses')) return 'Dépenses';
+  if (pathname.startsWith('/notifications')) return 'Notifications';
+  if (pathname.startsWith('/recurring')) return 'Récurrentes';
+  return 'Factu.me';
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -39,7 +61,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fetchClients();
   }, [initialized, user, fetchInvoices, fetchClients]);
 
-  // Handle Stripe payment success redirect — refresh profile to pick up new tier
   useEffect(() => {
     if (typeof window === 'undefined' || !initialized || !user) return;
     const params = new URLSearchParams(window.location.search);
@@ -51,15 +72,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [initialized, user]);
 
-  // Hide banners on paywall and trial pages
   const hideBanners = pathname === '/paywall' || pathname === '/trial';
 
   if (!initialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400 dark:text-gray-500">Chargement...</p>
+          <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Chargement...</p>
         </div>
       </div>
     );
@@ -75,21 +95,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <CommandPalette />
       <AutoSaveIndicator />
 
-      {/* Trial Countdown Banner - shows for active trial users */}
       {isTrialActive && showTrialBanner && !hideBanners && (
         <TrialCountdown onClose={() => setShowTrialBanner(false)} trialDocumentCount={profile?.trial_document_count || 0} trialDocLimit={3} />
       )}
 
-      {/* Invoice Counter - shows for free users */}
       {isFree && showInvoiceCounter && !hideBanners && (
-        <InvoiceCounter
-          invoiceCount={invoiceCount}
-          maxInvoices={5}
-          onClose={() => setShowInvoiceCounter(false)}
-        />
+        <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={5} onClose={() => setShowInvoiceCounter(false)} />
       )}
 
-      {/* Upgrade Banner - shows for free users only on /invoices */}
       {isFree && !hideBanners && !pathname.startsWith('/cabinet') && showUpgradeBanner && pathname === '/invoices' && (
         <div className="container mx-auto px-4 lg:px-8 pt-4">
           <UpgradeBanner
@@ -102,47 +115,57 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
+      <div className="flex min-h-screen bg-slate-950 overflow-x-hidden">
         {!pathname.startsWith('/cabinet') && <Sidebar />}
         <main className={cn(
-          "flex-1 flex flex-col min-w-0 pb-20 lg:pb-0",
-          pathname.startsWith('/cabinet') && "lg:pl-0"
+          "flex-1 flex flex-col min-w-0",
+          pathname.startsWith('/cabinet') ? "pb-20 lg:pb-0 lg:pl-0" : "pb-20 lg:pb-0"
         )}>
-          {/* Mobile top bar - Enhanced with logo (hidden on cabinet pages which have their own) */}
+          {/* Mobile top bar — native app style with contextual title */}
           {!pathname.startsWith('/cabinet') && (
-          <div className="lg:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200/80 dark:border-slate-700/80 px-4 py-3 flex items-center justify-between shadow-sm">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="p-2.5 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200/80 dark:from-slate-800 dark:to-slate-700/80 hover:from-gray-200 hover:to-gray-300/80 dark:hover:from-slate-700 dark:hover:to-slate-600/80 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-105 active:scale:95 -ml-1"
-              aria-label="Menu navigation"
-            >
-              <Menu size={20} strokeWidth={2} />
-            </button>
-            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
-              <Logo size="sm" variant="icon" />
-            </Link>
-            <div className="w-10" />
+          <div className="lg:hidden sticky top-0 z-30 bg-slate-950/80 backdrop-blur-2xl border-b border-white/[0.06]"
+               style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+            <div className="flex items-center justify-between px-4 h-14">
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                aria-label="Menu navigation"
+              >
+                <Menu size={20} strokeWidth={1.8} />
+              </button>
+              <h1 className="text-[15px] font-semibold text-white">
+                {getPageTitle(pathname)}
+              </h1>
+              <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+                <Logo size="sm" variant="icon" />
+              </Link>
+            </div>
           </div>
           )}
 
-          <div className={cn(
-            "flex-1 w-full py-5 lg:py-6",
-            pathname.startsWith('/cabinet')
-              ? "px-0 lg:px-0"
-              : "mx-auto px-4 lg:px-8",
-            pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
-              ? "max-w-[1800px]"
-              : pathname.startsWith('/contracts')
-              ? "max-w-[1400px]"
-              : !pathname.startsWith('/cabinet')
-              ? "max-w-5xl"
-              : ""
-          )}>
-            {children}
-          </div>
+          <MobileLayout>
+            <div className={cn(
+              "flex-1 w-full py-5 lg:py-6",
+              pathname.startsWith('/cabinet')
+                ? "px-0 lg:px-0"
+                : "mx-auto px-5 lg:px-8",
+              pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
+                ? "max-w-[1800px]"
+                : pathname.startsWith('/contracts')
+                ? "max-w-[1400px]"
+                : !pathname.startsWith('/cabinet')
+                ? "max-w-7xl"
+                : ""
+            )}>
+              {children}
+            </div>
+          </MobileLayout>
         </main>
 
-        {/* Mobile slide-out drawer (hidden on cabinet which has its own) */}
+        {/* Floating pill navigation */}
+        {!pathname.startsWith('/cabinet') && <BottomTabBar />}
+
+        {/* Mobile drawer */}
         {!pathname.startsWith('/cabinet') && <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
       </div>
     </>

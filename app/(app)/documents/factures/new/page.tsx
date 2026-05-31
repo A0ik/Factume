@@ -287,7 +287,14 @@ export default function NewFacturePage() {
   };
 
   const updateItem = (id: string, field: string, value: string | number) => {
-    setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: value } : item));
+    setItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      if (field === 'quantity' || field === 'unit_price') {
+        const val = Math.max(0, typeof value === 'string' ? parseFloat(value) || 0 : value);
+        return { ...item, [field]: val };
+      }
+      return { ...item, [field]: value };
+    }));
   };
 
   const addItem = () => setItems((prev) => [
@@ -362,7 +369,6 @@ export default function NewFacturePage() {
   const handleSave = async () => {
     // Use ref for synchronous guard — useState can let a second click through before re-render
     if (savingRef.current) {
-      console.log('[handleSave] Already saving, ignoring click');
       return;
     }
     savingRef.current = true;
@@ -390,11 +396,6 @@ export default function NewFacturePage() {
     if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
     const currentIdempotencyId = pendingIdRef.current;
     setError('');
-
-    console.log('[handleSave] Starting invoice creation...', {
-      clientId, clientName, docType, issueDate, itemsCount: items.length,
-      profileId: profile.id, idempotencyId: currentIdempotencyId
-    });
 
     try {
       const newInvoice = await Promise.race([
@@ -957,7 +958,7 @@ export default function NewFacturePage() {
                           min="0"
                           step="0.5"
                           value={item.quantity}
-                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItem(item.id, 'quantity', Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         <Input
                           type="number"
@@ -965,7 +966,7 @@ export default function NewFacturePage() {
                           min="0"
                           step="0.01"
                           value={item.unit_price}
-                          onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateItem(item.id, 'unit_price', Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         <Select
                           label="TVA"

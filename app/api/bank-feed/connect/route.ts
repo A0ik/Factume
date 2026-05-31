@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { BridgeClient } from '@/lib/bridge-client';
+import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +23,17 @@ export async function POST(req: NextRequest) {
 
     const bridge = new BridgeClient(clientId, clientSecret);
     const userUuid = user.id;
-    const url = await bridge.getConnectUrl(userUuid);
+
+    // Generate a cryptographically random state token and store it to prevent user_id injection
+    const stateToken = randomUUID();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min expiry
+    await admin.from('oauth_states').insert({
+      state: stateToken,
+      user_id: user.id,
+      expires_at: expiresAt,
+    });
+
+    const url = await bridge.getConnectUrl(userUuid) + `&state=${stateToken}`;
 
     await admin
       .from('integrations')

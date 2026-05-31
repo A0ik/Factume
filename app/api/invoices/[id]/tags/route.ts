@@ -21,6 +21,17 @@ export async function GET(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    // Vérifier que la facture appartient à l'utilisateur
+    const { data: invoice } = await admin
+      .from('invoices')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (!invoice || invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
     // Récupérer les tags de la facture
     const { data: tags, error } = await admin
       .from('invoice_tags')
@@ -59,6 +70,17 @@ export async function POST(
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
+    // Vérifier que la facture appartient à l'utilisateur
+    const { data: invoice } = await admin
+      .from('invoices')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (!invoice || invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
     const { tagId } = await req.json();
@@ -127,6 +149,17 @@ export async function DELETE(
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
+    // Vérifier que la facture appartient à l'utilisateur
+    const { data: invoice } = await admin
+      .from('invoices')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (!invoice || invoice.user_id !== user.id) {
+      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
     // Supprimer l'association

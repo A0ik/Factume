@@ -36,7 +36,12 @@ export async function GET(
       .eq('id', user.id)
       .single();
 
-    const pdfBuffer = await generatePdfBuffer(invoice, profile);
+    const pdfBuffer = await Promise.race([
+      generatePdfBuffer(invoice, profile),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('PDF generation timed out')), 30000)
+      ),
+    ]);
 
     const filename = `${invoice.number.replace(/[/\r\n"']/g, '-')}.pdf`;
 

@@ -52,15 +52,20 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Get contract for amendment number
+    // Get contract for amendment number + verify ownership (BUG-06 fix)
     const { data: contract } = await admin
       .from(`contracts_${contractType}`)
-      .select('contract_number')
+      .select('contract_number, user_id')
       .eq('id', contractId)
       .single();
 
     if (!contract) {
       return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
+    }
+
+    // Ownership check — prevent creating amendments on someone else's contract
+    if (contract.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     // Count existing amendments for this contract

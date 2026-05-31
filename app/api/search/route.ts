@@ -5,6 +5,14 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 // Types
 // ---------------------------------------------------------------------------
 
+// Sanitize user input for PostgREST ilike/or filters (BUG-07 fix)
+function sanitizeSearchQuery(input: string): string {
+  return input
+    .replace(/[%_()\\]/g, '\\$&')
+    .replace(/['";]/g, '')
+    .substring(0, 200);
+}
+
 interface SearchFilters {
   query?: string;
   category?: string[];
@@ -61,7 +69,8 @@ export async function POST(req: NextRequest) {
     if (filters) {
       // Text search
       if (filters.query) {
-        query = query.or(`vendor.ilike.%${filters.query}%,description.ilike.%${filters.query}%,invoice_number.ilike.%${filters.query}%,notes.ilike.%${filters.query}%`);
+        const safeQuery = sanitizeSearchQuery(filters.query);
+        query = query.or(`vendor.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,invoice_number.ilike.%${safeQuery}%,notes.ilike.%${safeQuery}%`);
       }
 
       // Category filter
@@ -223,7 +232,8 @@ async function calculateFacets(
   // Apply same filters (except pagination)
   if (filters) {
     if (filters.query) {
-      query = query.or(`vendor.ilike.%${filters.query}%,description.ilike.%${filters.query}%,invoice_number.ilike.%${filters.query}%`);
+      const safeQuery = sanitizeSearchQuery(filters.query);
+      query = query.or(`vendor.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,invoice_number.ilike.%${safeQuery}%`);
     }
     if (filters.category && filters.category.length > 0) {
       query = query.in('category', filters.category);
@@ -333,7 +343,7 @@ async function generateSearchSuggestions(
     .from('expenses')
     .select('vendor')
     .eq('user_id', userId)
-    .ilike('vendor', `%${query}%`)
+    .ilike('vendor', `%${sanitizeSearchQuery(query)}%`)
     .limit(5);
 
   for (const v of vendorMatches || []) {
@@ -347,7 +357,7 @@ async function generateSearchSuggestions(
     .from('expenses')
     .select('category')
     .eq('user_id', userId)
-    .ilike('category', `%${query}%`)
+    .ilike('category', `%${sanitizeSearchQuery(query)}%`)
     .limit(5);
 
   for (const c of categoryMatches || []) {
@@ -380,6 +390,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
+    const safeQ = sanitizeSearchQuery(q);
+
     const results: any[] = [];
 
     if (type === 'vendors' || type === 'all') {
@@ -387,7 +399,7 @@ export async function GET(req: NextRequest) {
         .from('expenses')
         .select('vendor')
         .eq('user_id', user.id)
-        .ilike('vendor', `%${q}%`)
+        .ilike('vendor', `%${safeQ}%`)
         .limit(10);
 
       const uniqueVendors = [...new Set(vendors?.map(v => v.vendor).filter(Boolean))];
@@ -401,7 +413,7 @@ export async function GET(req: NextRequest) {
         .from('expenses')
         .select('category')
         .eq('user_id', user.id)
-        .ilike('category', `%${q}%`)
+        .ilike('category', `%${safeQ}%`)
         .limit(10);
 
       const uniqueCategories = [...new Set(categories?.map(c => c.category).filter(Boolean))];
@@ -416,7 +428,7 @@ export async function GET(req: NextRequest) {
         .from('expenses')
         .select('invoice_number, vendor, amount')
         .eq('user_id', user.id)
-        .ilike('invoice_number', `%${q}%`)
+        .ilike('invoice_number', `%${safeQ}%`)
         .limit(5);
 
       for (const inv of invoices || []) {

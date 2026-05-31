@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ImportClientsModal } from '@/components/ui/ImportClientsModal';
 import DocPickerModal from '@/components/clients/DocPickerModal';
+import BottomSheet from '@/components/layout/BottomSheet';
 import {
   getInitials, downloadCSV, validateSiret, validateVatNumber, formatCurrency,
 } from '@/lib/utils';
@@ -22,264 +23,456 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GRADIENT_PAIRS = [
-  ['#1D9E75', '#0F6E56'],
-  ['#3B82F6', '#1D4ED8'],
-  ['#8B5CF6', '#6D28D9'],
-  ['#EF9F27', '#D97706'],
-  ['#EF4444', '#DC2626'],
-  ['#EC4899', '#DB2777'],
-  ['#06B6D4', '#0891B2'],
-  ['#10B981', '#059669'],
+const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
+const AVATAR_COLORS = [
+  'bg-emerald-600',
+  'bg-blue-600',
+  'bg-violet-600',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-pink-500',
+  'bg-cyan-600',
+  'bg-teal-600',
 ];
 
-// Glassmorphism Card Component
-const GlassCard = ({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, delay }}
-    className={cn(
-      'relative bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl overflow-hidden',
-      'shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300',
-      className
-    )}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
-    {children}
-  </motion.div>
-);
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04, delayChildren: 0.05 },
+  },
+};
 
-// Animated Stat Card
-const StatCard = ({
-  title, value, subtitle, icon: Icon, gradient, delay,
-}: { title: string; value: string | number; subtitle: string; icon: any; gradient: string; delay: number }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ duration: 0.4, delay }}
-    className={cn(
-      'relative overflow-hidden rounded-3xl p-6 border border-white/20 dark:border-white/10',
-      'bg-gradient-to-br backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300',
-      gradient
-    )}
-  >
-    {/* Animated background pattern */}
-    <div className="absolute inset-0 opacity-[0.05]">
-      <div className="absolute inset-0" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-      }} />
-    </div>
+const staggerItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: EASE },
+  },
+};
 
-    <div className="relative">
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 rounded-2xl bg-white/20 dark:bg-white/10 backdrop-blur-sm">
-          <Icon size={20} className="text-white dark:text-white/90" />
-        </div>
-        <motion.div
-          animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
-          className="text-white/30"
-        >
-          <Activity size={24} />
-        </motion.div>
+/* ------------------------------------------------------------------ */
+/*  Client creation form (shared between Modal and BottomSheet)       */
+/* ------------------------------------------------------------------ */
+function ClientForm({
+  form,
+  set,
+  error,
+  loading,
+  onSubmit,
+}: {
+  form: Record<string, string>;
+  set: (k: string, v: string) => void;
+  error: string;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <CompanySearch
+        label="Nom *"
+        value={form.name}
+        onChange={(v) => set('name', v)}
+        onSelect={(company) => {
+          set('name', company.name);
+          if (company.siret) set('siret', company.siret);
+          if (company.address) set('address', company.address);
+          if (company.postal_code) set('postal_code', company.postal_code);
+          if (company.city) set('city', company.city);
+          if (company.vat_number) set('vat_number', company.vat_number);
+        }}
+        placeholder="Rechercher par nom ou SIRET..."
+        required
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input label="Email" type="email" placeholder="contact@exemple.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
+        <Input label="Telephone" placeholder="+33 6 12 34 56 78" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
       </div>
-      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">{title}</p>
-      <p className="text-3xl font-black text-white mb-1">{value}</p>
-      <p className="text-xs text-white/60">{subtitle}</p>
-    </div>
-  </motion.div>
-);
+      <Input label="Adresse" placeholder="123 rue de la Paix" value={form.address} onChange={(e) => set('address', e.target.value)} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Input label="Code postal" placeholder="75001" value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} />
+        <Input label="Ville" placeholder="Paris" value={form.city} onChange={(e) => set('city', e.target.value)} className="sm:col-span-2" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input label="SIRET" placeholder="12345678901234" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
+        <Input label="N degre TVA intracommunautaire" placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
+      </div>
+      <Input label="Site web" placeholder="https://exemple.com" value={form.website} onChange={(e) => set('website', e.target.value)} />
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"
+        >
+          <p className="text-sm text-red-400">{error}</p>
+        </motion.div>
+      )}
+      <div className="flex gap-3 pt-2">
+        <Button type="submit" className="flex-1" loading={loading}>
+          Creer le client
+        </Button>
+      </div>
+    </form>
+  );
+}
 
-// Client Card Component
-const ClientCard = ({ client, stats, idx, onDelete, viewMode }: {
+/* ------------------------------------------------------------------ */
+/*  Mobile Client Card                                                */
+/* ------------------------------------------------------------------ */
+function MobileClientCard({
+  client,
+  stats,
+  idx,
+  onDelete,
+}: {
   client: any;
-  stats: any;
+  stats: { count: number; revenue: number; pending: number };
   idx: number;
   onDelete: (e: React.MouseEvent) => void;
-  viewMode: 'grid' | 'list';
-}) => {
-  const [from, to] = GRADIENT_PAIRS[idx % GRADIENT_PAIRS.length];
+}) {
   const [docPickerOpen, setDocPickerOpen] = useState(false);
   const router = useRouter();
+  const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
-  if (viewMode === 'list') {
-    return (
-      <motion.tr
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3, delay: idx * 0.05 }}
-        className="hover:bg-primary/5 cursor-pointer transition-colors group"
-        onClick={() => router.push(`/clients/${client.id}`)}
-      >
-        <td className="px-5 py-4">
-          <div className="flex items-center gap-3">
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+  return (
+    <>
+      <Link href={`/clients/${client.id}`} className="block">
+        <motion.div
+          variants={staggerItem}
+          whileTap={{ scale: 0.98 }}
+          className="bg-slate-800/50 border border-white/5 rounded-2xl p-5 cursor-pointer active:bg-slate-800/70 transition-colors"
+        >
+          {/* Top: avatar + name + delete */}
+          <div className="flex items-start gap-3.5 mb-3">
+            <div
+              className={cn(
+                'w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                color,
+              )}
             >
               {getInitials(client.name)}
-            </motion.div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">{client.name}</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold truncate">{client.name}</p>
               {client.city && (
-                <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <MapPin size={9} />{client.city}
+                <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                  <MapPin size={10} className="flex-shrink-0" />
+                  {client.city}
                 </p>
               )}
             </div>
-          </div>
-        </td>
-        <td className="px-4 py-4">
-          <div className="space-y-1">
-            {client.email && (
-              <p className="text-xs text-gray-600 flex items-center gap-1">
-                <Mail size={10} className="text-gray-400" />{client.email}
-              </p>
-            )}
-            {client.phone && (
-              <p className="text-xs text-gray-600 flex items-center gap-1">
-                <Phone size={10} className="text-gray-400" />{client.phone}
-              </p>
-            )}
-          </div>
-        </td>
-        <td className="px-4 py-4 text-center">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-            {stats.count}
-          </span>
-        </td>
-        <td className="px-4 py-4 text-right">
-          <p className="text-sm font-bold text-primary truncate">{formatCurrency(stats.revenue)}</p>
-          {stats.pending > 0 && (
-            <p className="text-xs text-amber-600 font-medium truncate">{formatCurrency(stats.pending)} en att.</p>
-          )}
-        </td>
-        <td className="px-4 py-4">
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
             <button
-              onClick={(e) => { e.stopPropagation(); setDocPickerOpen(true); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(e);
+              }}
+              className="p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+
+          {/* Contact info */}
+          {(client.email || client.phone) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-slate-400">
+              {client.email && (
+                <span className="flex items-center gap-1">
+                  <Mail size={11} className="flex-shrink-0" />
+                  {client.email}
+                </span>
+              )}
+              {client.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone size={11} className="flex-shrink-0" />
+                  {client.phone}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-700/50 text-xs">
+              <FileText size={12} className="text-slate-400" />
+              <span className="text-white font-medium">{stats.count}</span>
+              <span className="text-slate-400">facture{stats.count !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-xs">
+              <span className="text-emerald-400 font-semibold">{formatCurrency(stats.revenue)}</span>
+            </div>
+            {stats.pending > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-xs">
+                <span className="text-amber-400 font-medium">{formatCurrency(stats.pending)} att.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDocPickerOpen(true);
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors"
             >
               <FileText size={12} />
               <span>+ Doc</span>
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(e); }}
-              className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all"
-            >
-              <Trash2 size={14} />
-            </button>
-            <ChevronRight size={16} className="text-gray-300 group-hover:text-primary transition-colors" />
+            <ChevronRight size={16} className="text-slate-500" />
           </div>
-        </td>
-        <DocPickerModal
-          open={docPickerOpen}
-          onClose={() => setDocPickerOpen(false)}
-          clientId={client.id}
-          clientName={client.name}
-        />
-      </motion.tr>
-    );
-  }
+        </motion.div>
+      </Link>
+
+      <DocPickerModal
+        open={docPickerOpen}
+        onClose={() => setDocPickerOpen(false)}
+        clientId={client.id}
+        clientName={client.name}
+      />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Desktop Client Card (grid mode)                                   */
+/* ------------------------------------------------------------------ */
+function DesktopClientCardGrid({
+  client,
+  stats,
+  idx,
+  onDelete,
+}: {
+  client: any;
+  stats: { count: number; revenue: number; pending: number };
+  idx: number;
+  onDelete: (e: React.MouseEvent) => void;
+}) {
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
   return (
-    <Link href={`/clients/${client.id}`} className="block">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: idx * 0.05 }}
-        whileHover={{ y: -4 }}
-        className="group relative"
-      >
-        {/* Glow effect on hover */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-3xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-        <GlassCard className="relative p-5 cursor-pointer">
+    <>
+      <Link href={`/clients/${client.id}`} className="block">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: idx * 0.04, ease: EASE }}
+          whileHover={{ y: -2 }}
+          className="group bg-slate-900 border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-white/10 transition-colors"
+        >
           {/* Header */}
-          <div className="flex items-start gap-4 mb-4">
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
-              transition={{ duration: 0.5 }}
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg flex-shrink-0"
-              style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+          <div className="flex items-start gap-3.5 mb-4">
+            <div
+              className={cn(
+                'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                color,
+              )}
             >
               {getInitials(client.name)}
-            </motion.div>
+            </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-gray-900 truncate text-base group-hover:text-primary transition-colors">{client.name}</h3>
+              <h3 className="text-white font-semibold truncate group-hover:text-emerald-400 transition-colors">
+                {client.name}
+              </h3>
               {client.email && (
-                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1 truncate">
-                  <Mail size={11} className="flex-shrink-0 text-gray-400" />{client.email}
+                <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
+                  <Mail size={11} className="flex-shrink-0" />
+                  {client.email}
                 </p>
               )}
               {client.city && (
-                <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
-                  <MapPin size={11} className="flex-shrink-0 text-gray-400" />{client.city}
+                <p className="text-xs text-slate-400 flex items-center gap-1 truncate">
+                  <MapPin size={11} className="flex-shrink-0" />
+                  {client.city}
                 </p>
               )}
             </div>
             <button
-              onClick={(e) => { e.preventDefault(); onDelete(e); }}
-              className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all flex-shrink-0"
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete(e);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex-shrink-0"
             >
               <Trash2 size={14} />
             </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50">
-              <p className="text-lg font-black text-gray-900">{stats.count}</p>
-              <p className="text-[10px] text-gray-500 font-medium">Facture{stats.count !== 1 ? 's' : ''}</p>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="text-center p-2.5 rounded-xl bg-slate-800/60">
+              <p className="text-white font-bold">{stats.count}</p>
+              <p className="text-[10px] text-slate-400">Facture{stats.count !== 1 ? 's' : ''}</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 min-w-0">
-              <p className="text-lg font-black text-primary truncate">{formatCurrency(stats.revenue)}</p>
-              <p className="text-[10px] text-gray-500 font-medium truncate">Encaissé</p>
+            <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
+              <p className="text-emerald-400 font-bold truncate">{formatCurrency(stats.revenue)}</p>
+              <p className="text-[10px] text-slate-400">Encaisse</p>
             </div>
             {stats.pending > 0 ? (
-              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 min-w-0">
-                <p className="text-lg font-black text-amber-600 truncate">{formatCurrency(stats.pending)}</p>
-                <p className="text-[10px] text-gray-500 font-medium truncate">En attente</p>
+              <div className="text-center p-2.5 rounded-xl bg-amber-500/10 min-w-0">
+                <p className="text-amber-400 font-bold truncate">{formatCurrency(stats.pending)}</p>
+                <p className="text-[10px] text-slate-400">En attente</p>
               </div>
             ) : (
-              <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 min-w-0">
-                <p className="text-lg font-black text-green-600"><Check size={20} /></p>
-                <p className="text-[10px] text-gray-500 font-medium truncate">À jour</p>
+              <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
+                <p className="text-emerald-400"><Check size={18} className="mx-auto" /></p>
+                <p className="text-[10px] text-slate-400">A jour</p>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
             <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDocPickerOpen(true); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-all"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDocPickerOpen(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors"
             >
               <FileText size={12} />
               <span>+ Doc</span>
             </button>
-            <motion.div
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
-              className="text-gray-300 group-hover:text-primary transition-colors"
-            >
-              <ArrowUpRight size={16} />
-            </motion.div>
+            <ArrowUpRight size={16} className="text-slate-500 group-hover:text-emerald-400 transition-colors" />
           </div>
-          <DocPickerModal
-            open={docPickerOpen}
-            onClose={() => setDocPickerOpen(false)}
-            clientId={client.id}
-            clientName={client.name}
-          />
-        </GlassCard>
-      </motion.div>
-    </Link>
-  );
-};
+        </motion.div>
+      </Link>
 
+      <DocPickerModal
+        open={docPickerOpen}
+        onClose={() => setDocPickerOpen(false)}
+        clientId={client.id}
+        clientName={client.name}
+      />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Desktop List Row                                                  */
+/* ------------------------------------------------------------------ */
+function DesktopClientRow({
+  client,
+  stats,
+  idx,
+  onDelete,
+}: {
+  client: any;
+  stats: { count: number; revenue: number; pending: number };
+  idx: number;
+  onDelete: (e: React.MouseEvent) => void;
+}) {
+  const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const router = useRouter();
+  const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+
+  return (
+    <>
+      <motion.tr
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: idx * 0.03, ease: EASE }}
+        className="hover:bg-white/[0.02] cursor-pointer transition-colors group border-b border-white/5 last:border-b-0"
+        onClick={() => router.push(`/clients/${client.id}`)}
+      >
+        {/* Client */}
+        <td className="px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                color,
+              )}
+            >
+              {getInitials(client.name)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{client.name}</p>
+              {client.city && (
+                <p className="text-xs text-slate-400 flex items-center gap-1">
+                  <MapPin size={9} />
+                  {client.city}
+                </p>
+              )}
+            </div>
+          </div>
+        </td>
+        {/* Contact */}
+        <td className="px-4 py-4 hidden md:table-cell">
+          <div className="space-y-1">
+            {client.email && (
+              <p className="text-xs text-slate-300 flex items-center gap-1">
+                <Mail size={10} className="text-slate-500" />
+                {client.email}
+              </p>
+            )}
+            {client.phone && (
+              <p className="text-xs text-slate-300 flex items-center gap-1">
+                <Phone size={10} className="text-slate-500" />
+                {client.phone}
+              </p>
+            )}
+          </div>
+        </td>
+        {/* Invoices */}
+        <td className="px-4 py-4 text-center">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">
+            {stats.count}
+          </span>
+        </td>
+        {/* Revenue */}
+        <td className="px-4 py-4 text-right">
+          <p className="text-sm font-bold text-emerald-400 truncate">{formatCurrency(stats.revenue)}</p>
+          {stats.pending > 0 && (
+            <p className="text-xs text-amber-400 font-medium truncate">{formatCurrency(stats.pending)} en att.</p>
+          )}
+        </td>
+        {/* Actions */}
+        <td className="px-4 py-4">
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setDocPickerOpen(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors"
+            >
+              <FileText size={12} />
+              <span>+ Doc</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(e);
+              }}
+              className="p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+            <ChevronRight size={16} className="text-slate-600 group-hover:text-emerald-400 transition-colors" />
+          </div>
+        </td>
+      </motion.tr>
+
+      <DocPickerModal
+        open={docPickerOpen}
+        onClose={() => setDocPickerOpen(false)}
+        clientId={client.id}
+        clientName={client.name}
+      />
+    </>
+  );
+}
+
+/* ================================================================== */
+/*  MAIN PAGE                                                         */
+/* ================================================================== */
 export default function ClientsPage() {
   const router = useRouter();
   const { clients, invoices, createClient, bulkCreateClients, deleteClient } = useDataStore();
@@ -295,408 +488,457 @@ export default function ClientsPage() {
   });
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Memoize search query to avoid recalculation
+  /* ---- Memoized data ---- */
   const searchQuery = useMemo(() => search.toLowerCase(), [search]);
 
-  // Memoize filtered clients - O(n) operation
-  const filtered = useMemo(() =>
-    clients.filter((c) => {
-      return !searchQuery || c.name.toLowerCase().includes(searchQuery) || (c.email || '').toLowerCase().includes(searchQuery) || (c.city || '').toLowerCase().includes(searchQuery);
-    }),
-    [clients, searchQuery]
+  const filtered = useMemo(
+    () =>
+      clients.filter(
+        (c) =>
+          !searchQuery ||
+          c.name.toLowerCase().includes(searchQuery) ||
+          (c.email || '').toLowerCase().includes(searchQuery) ||
+          (c.city || '').toLowerCase().includes(searchQuery),
+      ),
+    [clients, searchQuery],
   );
 
-  // Memoize client stats map to avoid recalculating for each client - O(n*m) operation
   const clientStatsMap = useMemo(() => {
-    const statsMap: Record<string, { count: number; revenue: number; pending: number; lastInvoice: any }> = {};
-
-    // Group invoices by client_id first - O(m)
-    const invoicesByClient: Record<string, any[]> = {};
+    const map: Record<string, { count: number; revenue: number; pending: number; lastInvoice: any }> = {};
+    const byClient: Record<string, any[]> = {};
     invoices.forEach((inv) => {
       if (!inv.client_id) return;
-      if (!invoicesByClient[inv.client_id]) {
-        invoicesByClient[inv.client_id] = [];
-      }
-      invoicesByClient[inv.client_id].push(inv);
+      (byClient[inv.client_id] ??= []).push(inv);
     });
-
-    // Calculate stats for each client - O(n*m) but optimized
-    Object.keys(invoicesByClient).forEach((clientId) => {
-      const clientInvoices = invoicesByClient[clientId];
-      const revenue = clientInvoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
-      const pending = clientInvoices.filter((i) => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + i.total, 0);
-      const lastInvoice = clientInvoices.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
-      statsMap[clientId] = { count: clientInvoices.length, revenue, pending, lastInvoice };
+    Object.entries(byClient).forEach(([id, invs]) => {
+      const revenue = invs.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
+      const pending = invs.filter((i) => i.status === 'sent' || i.status === 'overdue').reduce((s, i) => s + i.total, 0);
+      const lastInvoice = [...invs].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+      map[id] = { count: invs.length, revenue, pending, lastInvoice };
     });
-
-    return statsMap;
+    return map;
   }, [invoices]);
 
-  // Memoize total revenue - O(m) operation
-  const totalRevenue = useMemo(() =>
-    invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0),
-    [invoices]
+  const totalRevenue = useMemo(
+    () => invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0),
+    [invoices],
   );
 
-  // Memoize active clients - O(n*m) operation
-  const activeClients = useMemo(() =>
-    clients.filter((c) => invoices.some((i) => i.client_id === c.id)),
-    [clients, invoices]
+  const activeClients = useMemo(
+    () => clients.filter((c) => invoices.some((i) => i.client_id === c.id)),
+    [clients, invoices],
   );
 
-  // Helper function to get client stats from memoized map
-  const getClientStats = useCallback((clientId: string) => {
-    return clientStatsMap[clientId] || { count: 0, revenue: 0, pending: 0, lastInvoice: null };
-  }, [clientStatsMap]);
+  const getClientStats = useCallback(
+    (id: string) => clientStatsMap[id] || { count: 0, revenue: 0, pending: 0, lastInvoice: null },
+    [clientStatsMap],
+  );
 
+  /* ---- Handlers ---- */
   const handleExport = useCallback(() => {
     downloadCSV(
       `clients-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Nom', 'Email', 'Téléphone', 'Adresse', 'Code postal', 'Ville', 'Pays', 'SIRET', 'N° TVA'],
+      ['Nom', 'Email', 'Telephone', 'Adresse', 'Code postal', 'Ville', 'Pays', 'SIRET', 'N degre TVA'],
       clients.map((c) => [c.name, c.email, c.phone, c.address, c.postal_code, c.city, c.country, c.siret, c.vat_number]),
     );
   }, [clients]);
 
-  const handleCreate = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name) { setError('Le nom est requis'); return; }
-    if (form.siret && !validateSiret(form.siret)) { setError('SIRET invalide (14 chiffres requis)'); return; }
-    if (form.vat_number && !validateVatNumber(form.vat_number)) { setError('N° TVA invalide (ex: FR12345678901)'); return; }
-    setLoading(true); setError('');
-    try {
-      await createClient(form as any);
-      setShowModal(false);
-      toast.success('Client créé avec succès');
-      setForm({ name: '', email: '', phone: '', address: '', city: '', postal_code: '', country: 'France', siret: '', vat_number: '', website: '' });
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [form, createClient]);
+  const resetForm = useCallback(
+    () =>
+      setForm({
+        name: '', email: '', phone: '', address: '', city: '',
+        postal_code: '', country: 'France', siret: '', vat_number: '', website: '',
+      }),
+    [],
+  );
 
-  const handleDelete = useCallback(async (id: string, e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    const client = clients.find((c) => c.id === id);
-    toast('Supprimer ce client ?', {
-      description: client?.name,
-      action: {
-        label: 'Supprimer',
-        onClick: () => deleteClient(id).then(() => toast.success('Client supprimé')).catch((err: any) => toast.error(err.message)),
-      },
-    });
-  }, [clients, deleteClient]);
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!form.name) {
+        setError('Le nom est requis');
+        return;
+      }
+      if (form.siret && !validateSiret(form.siret)) {
+        setError('SIRET invalide (14 chiffres requis)');
+        return;
+      }
+      if (form.vat_number && !validateVatNumber(form.vat_number)) {
+        setError('N degre TVA invalide (ex: FR12345678901)');
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        await createClient(form as any);
+        setShowModal(false);
+        toast.success('Client cree avec succes');
+        resetForm();
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [form, createClient, resetForm],
+  );
+
+  const handleDelete = useCallback(
+    (id: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const client = clients.find((c) => c.id === id);
+      toast('Supprimer ce client ?', {
+        description: client?.name,
+        action: {
+          label: 'Supprimer',
+          onClick: () =>
+            deleteClient(id)
+              .then(() => toast.success('Client supprime'))
+              .catch((err: any) => toast.error(err.message)),
+        },
+      });
+    },
+    [clients, deleteClient],
+  );
+
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setError('');
+    resetForm();
+  }, [resetForm]);
+
+  const formProps = { form, set, error, loading, onSubmit: handleCreate };
 
   return (
     <>
       <h1 className="sr-only">Clients - Factu.me</h1>
       <main aria-label="Gestion des clients">
-        <div className="space-y-8">
-          {/* Animated Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-          >
+        <div className="space-y-6 md:space-y-8">
+          {/* ─── Header ─── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <motion.h2
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="text-3xl sm:text-4xl font-black text-gray-900 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent"
-              >
-            Clients
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-sm text-gray-500 mt-1"
-          >
-            {clients.length} client{clients.length !== 1 ? 's' : ''} enregistré{clients.length !== 1 ? 's' : ''} · {activeClients.length} actif{activeClients.length !== 1 ? 's' : ''}
-          </motion.p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {clients.length > 0 && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleExport}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 bg-white/70 backdrop-blur-sm border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-semibold hover:border-gray-300 hover:bg-gray-50 transition-all"
-            >
-              <Download size={15} />
-              <span className="hidden sm:inline">Export</span>
-            </motion.button>
-          )}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/40 transition-all"
-          >
-            <Sparkles size={15} />
-            <span className="hidden sm:inline">Import IA</span>
-          </motion.button>
-          <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
-            Nouveau client
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* Stats Dashboard */}
-      {clients.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            title="Total clients"
-            value={clients.length}
-            subtitle={`${activeClients.length} avec factures`}
-            icon={Users}
-            gradient="from-gray-900 to-gray-800"
-            delay={0}
-          />
-          <StatCard
-            title="CA encaissé"
-            value={formatCurrency(totalRevenue)}
-            subtitle="toutes factures payées"
-            icon={TrendingUp}
-            gradient="from-primary to-primary-dark"
-            delay={0.1}
-          />
-          <StatCard
-            title="Factures / client"
-            value={activeClients.length > 0 ? (invoices.filter(i => activeClients.some(c => c.id === i.client_id)).length / activeClients.length).toFixed(1) : '0'}
-            subtitle="en moyenne"
-            icon={FileText}
-            gradient="from-blue-500 to-blue-600"
-            delay={0.2}
-          />
-        </div>
-      )}
-
-      {/* Search & Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="flex flex-col sm:flex-row gap-3"
-      >
-        <div className="flex-1 relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            placeholder="Rechercher par nom, email ou ville..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white/70 backdrop-blur-xl border border-gray-200 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all text-sm"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
-        <div className="flex rounded-2xl overflow-hidden bg-white/70 backdrop-blur-xl border border-gray-200 p-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2',
-              viewMode === 'grid'
-                ? 'bg-primary text-white shadow-md'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-            )}
-          >
-            <Grid3X3 size={16} />
-            <span className="hidden sm:inline">Grille</span>
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2',
-              viewMode === 'list'
-                ? 'bg-primary text-white shadow-md'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-            )}
-          >
-            <List size={16} />
-            <span className="hidden sm:inline">Liste</span>
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Empty State */}
-      <AnimatePresence mode="wait">
-        {filtered.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="text-center py-20 px-4"
-          >
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200 flex items-center justify-center mx-auto mb-6">
-              <Users size={32} className="text-gray-400" />
+              <h2 className="text-3xl font-bold tracking-tight text-white">Clients</h2>
+              <p className="text-sm text-slate-400 mt-1">
+                {clients.length} client{clients.length !== 1 ? 's' : ''} enregistre{clients.length !== 1 ? 's' : ''}{' '}
+                &middot; {activeClients.length} actif{activeClients.length !== 1 ? 's' : ''}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">
-              {search ? 'Aucun client trouvé' : 'Votre carnet de clients vous attend'}
-            </h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-              {search
-                ? 'Essayez d\'autres mots-clés ou vérifiez l\'orthographe'
-                : 'Commencez par ajouter votre premier client — il sera ensuite disponible en un clic lors de la création de vos factures.'}
-            </p>
-            {!search && (
+
+            <div className="flex items-center gap-2">
+              {clients.length > 0 && (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleExport}
+                  className="flex items-center gap-2 text-slate-300 hover:text-white bg-slate-800/50 border border-white/5 px-4 py-2.5 rounded-xl text-sm font-medium hover:border-white/10 transition-colors"
+                >
+                  <Download size={15} />
+                  <span className="hidden sm:inline">Export</span>
+                </motion.button>
+              )}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 bg-slate-800/50 border border-white/5 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:border-white/10 transition-colors"
+              >
+                <Sparkles size={15} />
+                <span className="hidden sm:inline">Import IA</span>
+              </motion.button>
               <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
-                Ajouter mon premier client
+                Nouveau client
               </Button>
-            )}
-          </motion.div>
-        ) : viewMode === 'grid' ? (
-          /* Grid View */
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {filtered.map((client, idx) => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                stats={getClientStats(client.id)}
-                idx={idx}
-                onDelete={(e) => handleDelete(client.id, e)}
-                viewMode={viewMode}
-              />
-            ))}
+            </div>
+          </div>
 
-            {/* Add Card */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: filtered.length * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowModal(true)}
-              className="relative group"
-            >
-              <div className="h-full rounded-3xl border-2 border-dashed border-gray-300 hover:border-primary/50 p-6 transition-all group-hover:bg-primary/5 flex flex-col items-center justify-center gap-3 min-h-[220px]">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                  <Plus size={24} className="text-gray-400 group-hover:text-primary transition-colors" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-gray-600 group-hover:text-primary transition-colors">Ajouter un client</p>
-                  <p className="text-xs text-gray-400 mt-1">Créer une fiche client</p>
-                </div>
-              </div>
-            </motion.button>
-          </motion.div>
-        ) : (
-          /* List View */
-          <motion.div
-            key="list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="bg-white/70 backdrop-blur-xl rounded-3xl border border-gray-200 shadow-lg overflow-hidden"
-          >
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/50">
-                  <th className="text-left px-5 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="text-left px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                  <th className="text-center px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Factures</th>
-                  <th className="text-right px-4 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">CA encaissé</th>
-                  <th className="px-4 py-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((client, idx) => (
-                  <ClientCard
-                    key={client.id}
-                    client={client}
-                    stats={getClientStats(client.id)}
-                    idx={idx}
-                    onDelete={(e) => handleDelete(client.id, e)}
-                    viewMode={viewMode}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Create Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Nouveau client" size="lg">
-        <form onSubmit={handleCreate} className="space-y-4">
-          <CompanySearch
-            label="Nom *"
-            value={form.name}
-            onChange={(v) => set('name', v)}
-            onSelect={(company) => {
-              set('name', company.name);
-              if (company.siret) set('siret', company.siret);
-              if (company.address) set('address', company.address);
-              if (company.postal_code) set('postal_code', company.postal_code);
-              if (company.city) set('city', company.city);
-              if (company.vat_number) set('vat_number', company.vat_number);
-            }}
-            placeholder="Rechercher par nom ou SIRET..."
-            required
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Email" type="email" placeholder="contact@exemple.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
-            <Input label="Téléphone" placeholder="+33 6 12 34 56 78" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
-          </div>
-          <Input label="Adresse" placeholder="123 rue de la Paix" value={form.address} onChange={(e) => set('address', e.target.value)} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="Code postal" placeholder="75001" value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} />
-            <Input label="Ville" placeholder="Paris" value={form.city} onChange={(e) => set('city', e.target.value)} className="sm:col-span-2" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="SIRET" placeholder="12345678901234" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
-            <Input label="N° TVA intracommunautaire" placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
-          </div>
-          <Input label="Site web" placeholder="https://exemple.com" value={form.website} onChange={(e) => set('website', e.target.value)} />
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
-            >
-              <p className="text-sm text-red-600">{error}</p>
-            </motion.div>
+          {/* ─── Stats (desktop only) ─── */}
+          {clients.length > 0 && (
+            <div className="hidden md:grid grid-cols-3 gap-4">
+              {[
+                {
+                  title: 'Total clients',
+                  value: clients.length,
+                  sub: `${activeClients.length} avec factures`,
+                  icon: Users,
+                },
+                {
+                  title: 'CA encaisse',
+                  value: formatCurrency(totalRevenue),
+                  sub: 'toutes factures payees',
+                  icon: TrendingUp,
+                },
+                {
+                  title: 'Factures / client',
+                  value:
+                    activeClients.length > 0
+                      ? (
+                          invoices.filter((i) => activeClients.some((c) => c.id === i.client_id)).length /
+                          activeClients.length
+                        ).toFixed(1)
+                      : '0',
+                  sub: 'en moyenne',
+                  icon: FileText,
+                },
+              ].map((s, i) => (
+                <motion.div
+                  key={s.title}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: i * 0.06, ease: EASE }}
+                  className="bg-slate-900 border border-white/5 rounded-2xl p-5"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10">
+                      <s.icon size={18} className="text-emerald-400" />
+                    </div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{s.title}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{s.value}</p>
+                  <p className="text-xs text-slate-500 mt-1">{s.sub}</p>
+                </motion.div>
+              ))}
+            </div>
           )}
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowModal(false)}>Annuler</Button>
-            <Button type="submit" className="flex-1" loading={loading}>Créer le client</Button>
-          </div>
-        </form>
-      </Modal>
 
-      <ImportClientsModal
-        open={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={async (companies) => {
-          await bulkCreateClients(companies.map((c) => ({
-            name: c.name,
-            email: c.email || '',
-            phone: c.phone || '',
-            address: c.address || '',
-            city: c.city || '',
-            postal_code: c.postal_code || '',
-            country: c.country || 'France',
-            siret: c.siret || '',
-            vat_number: c.vat_number || '',
-            website: c.website || '',
-          } as any)));
-          toast.success(`${companies.length} client(s) importé(s)`);
-        }}
-      />
-    </div>
-  </main>
-  </>
+          {/* ─── Search & View Toggle ─── */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                placeholder="Rechercher par nom, email ou ville..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-slate-300 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* View toggle - desktop only */}
+            <div className="hidden md:flex rounded-xl overflow-hidden bg-slate-800/50 border border-white/5 p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                  viewMode === 'grid'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+                )}
+              >
+                <Grid3X3 size={15} />
+                <span>Grille</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                  viewMode === 'list'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+                )}
+              >
+                <List size={15} />
+                <span>Liste</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ─── Content ─── */}
+          <AnimatePresence mode="wait">
+            {filtered.length === 0 ? (
+              /* ─── Empty State ─── */
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.3, ease: EASE }}
+                className="text-center py-16 px-4"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-5">
+                  <Users size={28} className="text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {search ? 'Aucun client trouve' : 'Votre carnet de clients vous attend'}
+                </h3>
+                <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
+                  {search
+                    ? "Essayez d'autres mots-cles ou verifiez l'orthographe"
+                    : 'Commencez par ajouter votre premier client - il sera ensuite disponible en un clic lors de la creation de vos factures.'}
+                </p>
+                {!search && (
+                  <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
+                    Ajouter mon premier client
+                  </Button>
+                )}
+              </motion.div>
+            ) : (
+              <>
+                {/* ─── Mobile: Card List (always rendered on small screens) ─── */}
+                <motion.div
+                  key="mobile-cards"
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="show"
+                  className="md:hidden space-y-3"
+                >
+                  {filtered.map((client, idx) => (
+                    <MobileClientCard
+                      key={client.id}
+                      client={client}
+                      stats={getClientStats(client.id)}
+                      idx={idx}
+                      onDelete={(e) => handleDelete(client.id, e)}
+                    />
+                  ))}
+
+                  {/* Add card (mobile) */}
+                  <motion.button
+                    variants={staggerItem}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowModal(true)}
+                    className="w-full bg-slate-800/50 border border-white/5 border-dashed rounded-2xl p-5 flex items-center justify-center gap-3 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <Plus size={20} className="text-emerald-400" />
+                    </div>
+                    <span className="text-sm font-medium">Ajouter un client</span>
+                  </motion.button>
+                </motion.div>
+
+                {/* ─── Desktop: Grid View ─── */}
+                {viewMode === 'grid' && (
+                  <motion.div
+                    key="desktop-grid"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3, ease: EASE }}
+                    className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4"
+                  >
+                    {filtered.map((client, idx) => (
+                      <DesktopClientCardGrid
+                        key={client.id}
+                        client={client}
+                        stats={getClientStats(client.id)}
+                        idx={idx}
+                        onDelete={(e) => handleDelete(client.id, e)}
+                      />
+                    ))}
+
+                    {/* Add card */}
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: filtered.length * 0.04, ease: EASE }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setShowModal(true)}
+                      className="group h-full rounded-2xl border border-dashed border-white/10 hover:border-emerald-500/30 p-6 transition-colors flex flex-col items-center justify-center gap-3 min-h-[220px]"
+                    >
+                      <div className="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                        <Plus size={24} className="text-emerald-400" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-slate-400 group-hover:text-emerald-400 transition-colors">
+                          Ajouter un client
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Creer une fiche client</p>
+                      </div>
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {/* ─── Desktop: List View ─── */}
+                {viewMode === 'list' && (
+                  <motion.div
+                    key="desktop-list"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3, ease: EASE }}
+                    className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden"
+                  >
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/5">
+                          <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            Client
+                          </th>
+                          <th className="text-left px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider hidden lg:table-cell">
+                            Contact
+                          </th>
+                          <th className="text-center px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            Factures
+                          </th>
+                          <th className="text-right px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                            CA encaisse
+                          </th>
+                          <th className="px-4 py-3.5" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((client, idx) => (
+                          <DesktopClientRow
+                            key={client.id}
+                            client={client}
+                            stats={getClientStats(client.id)}
+                            idx={idx}
+                            onDelete={(e) => handleDelete(client.id, e)}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* ─── Create Client: Desktop Modal ─── */}
+          <Modal open={showModal} onClose={closeModal} title="Nouveau client" size="lg">
+            <div className="hidden md:block">
+              <ClientForm {...formProps} />
+            </div>
+          </Modal>
+
+          {/* ─── Create Client: Mobile BottomSheet ─── */}
+          <BottomSheet open={showModal} onClose={closeModal} title="Nouveau client">
+            <div className="md:hidden">
+              <ClientForm {...formProps} />
+            </div>
+          </BottomSheet>
+
+          {/* ─── Import Modal ─── */}
+          <ImportClientsModal
+            open={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onImport={async (companies) => {
+              await bulkCreateClients(
+                companies.map((c) => ({
+                  name: c.name,
+                  email: c.email || '',
+                  phone: c.phone || '',
+                  address: c.address || '',
+                  city: c.city || '',
+                  postal_code: c.postal_code || '',
+                  country: c.country || 'France',
+                  siret: c.siret || '',
+                  vat_number: c.vat_number || '',
+                  website: c.website || '',
+                } as any)),
+              );
+              toast.success(`${companies.length} client(s) importe(s)`);
+            }}
+          />
+        </div>
+      </main>
+    </>
   );
 }

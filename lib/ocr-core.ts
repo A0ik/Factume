@@ -343,7 +343,6 @@ export async function autoLearnVendorRule(
     return { ruleCreated: false, correctionCount: matchCount };
   }
 
-  console.log(`[AutoLearn] Auto-created vendor rule: "${normalized}" -> ${correctedCategory} (${matchCount} corrections)`);
   return { ruleCreated: true, correctionCount: matchCount };
 }
 
@@ -374,12 +373,10 @@ export async function extractInvoiceFromPDF(
   openrouter: any,
 ): Promise<MultiPageOCRResult> {
   const endPage = segment.endPage ?? segment.startPage;
-  console.log(`[OCR Multi-Page] Extraction segment PDF ${segment.startPage}-${endPage}`);
 
   try {
     // Extract the segment PDF pages
     const segmentPdfBuffer = await extractPageRange(pdfBuffer, segment.startPage, endPage);
-    console.log(`[OCR Multi-Page] Segment PDF extrait: ${segmentPdfBuffer.length} bytes`);
 
     // Upload to storage
     const storagePath = generateStoragePath(userId, `segment_${segment.startPage}-${endPage}.pdf`);
@@ -430,7 +427,6 @@ export async function extractInvoiceFromPDF(
       return { success: false, segment, error: 'Erreur sauvegarde: ' + result.dbError };
     }
 
-    console.log(`[OCR Multi-Page] Extraction réussie segment ${segment.startPage}-${endPage}`);
     return {
       success: true,
       segment,
@@ -466,7 +462,6 @@ export async function processSegments(
       const [idx, segment] = item;
 
       try {
-        console.log(`[OCR Multi-Page] Worker ${idx}: Processing segment pages ${segment.startPage}-${segment.endPage ?? segment.startPage}`);
         results[idx] = await extractInvoiceFromPDF(pdfBuffer, segment, userId, supabase, openrouter);
       } catch (error) {
         console.error(`[OCR Multi-Page] Worker error for segment ${segment.startPage}-${segment.endPage ?? segment.startPage}:`, error);

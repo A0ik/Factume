@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import PullToRefresh from '@/components/ui/PullToRefresh';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -11,41 +12,46 @@ import { StatusBadge } from '@/components/ui/Badge';
 import {
   FileText, Clipboard, RefreshCw, Plus, TrendingUp,
   ArrowUpRight, Clock, AlertTriangle, Zap, ShoppingCart, Truck,
-  TrendingDown, Users, Sparkles, Award, Flame, Target,
+  Users, Sparkles, ChevronRight, Receipt, Award,
+  ArrowDownRight,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-100 dark:border-white/10 shadow-2xl"
-      >
-        <p className="text-[11px] text-gray-400 font-semibold mb-2 capitalize">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            <p className="text-xs font-semibold text-gray-900 dark:text-white">
-              {entry.name}: <span className="font-black">{formatCurrency(entry.value)}</span>
-            </p>
+      <div className="bg-slate-800 border border-white/10 p-3 rounded-lg text-xs">
+        <p className="text-slate-400 font-medium mb-1 capitalize">{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-white font-semibold">{entry.name}: {formatCurrency(entry.value)}</span>
           </div>
         ))}
-      </motion.div>
+      </div>
     );
   }
   return null;
 };
 
+/**
+ * Dashboard Mobile — "Le Chiffre est Roi"
+ *
+ * Le point focal absolu : "À encaisser" en grand.
+ * L'utilisateur ouvre l'app pour UNE question : combien on me doit ?
+ * Le reste est secondaire et accessible en scrollant.
+ */
+
+const springTransition = { type: 'spring' as const, damping: 25, stiffness: 200 };
+
 export default function DashboardPage() {
   const router = useRouter();
   const { profile } = useAuthStore();
-  const { invoices, stats } = useDataStore();
+  const { invoices, stats, fetchInvoices } = useDataStore();
   const sub = useSubscription();
   const [period, setPeriod] = useState<1 | 3 | 6 | 12>(6);
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
-  // Greeting - client-only to avoid hydration mismatch
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
     const h = new Date().getHours();
@@ -54,32 +60,37 @@ export default function DashboardPage() {
 
   const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
-  // Memoize monthly chart data - O(n) operation
+  // --- Calcul du montant "À encaisser" (envoyées + en retard) ---
+  const { toCollect, toCollectOverdue, toCollectPending } = useMemo(() => {
+    const sent = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
+    const overdue = sent.filter(i => i.status === 'overdue');
+    const pending = sent.filter(i => i.status === 'sent');
+    return {
+      toCollect: sent.reduce((s, i) => s + i.total, 0),
+      toCollectOverdue: overdue.reduce((s, i) => s + i.total, 0),
+      toCollectPending: pending.reduce((s, i) => s + i.total, 0),
+    };
+  }, [invoices]);
+
+  const overdueCount = useMemo(() => invoices.filter(i => i.status === 'overdue').length, [invoices]);
+
   const chartData = useMemo(() => {
     const data = Array.from({ length: period }, (_, i) => {
       const d = new Date();
       d.setMonth(d.getMonth() - (period - 1 - i));
-      const key = d.toISOString().slice(0, 7);
-      const label = d.toLocaleString('fr-FR', { month: 'short' });
-      return { label, key, paid: 0, pending: 0 };
+      return { label: d.toLocaleString('fr-FR', { month: 'short' }), key: d.toISOString().slice(0, 7), paid: 0, pending: 0 };
     });
-
-    invoices
-      .filter((inv) => inv.document_type === 'invoice' || !inv.document_type)
-      .forEach((inv) => {
-        const refDate = inv.paid_at || inv.issue_date || inv.created_at;
-        if (!refDate) return;
-        const key = refDate.slice(0, 7);
-        const entry = data.find((d) => d.key === key);
-        if (!entry) return;
-        if (inv.status === 'paid') entry.paid += inv.total;
-        else if (inv.status === 'sent' || inv.status === 'draft') entry.pending += inv.total;
-      });
-
+    invoices.filter((inv) => inv.document_type === 'invoice' || !inv.document_type).forEach((inv) => {
+      const refDate = inv.paid_at || inv.issue_date || inv.created_at;
+      if (!refDate) return;
+      const entry = data.find((d) => d.key === refDate.slice(0, 7));
+      if (!entry) return;
+      if (inv.status === 'paid') entry.paid += inv.total;
+      else if (inv.status === 'sent' || inv.status === 'draft') entry.pending += inv.total;
+    });
     return data;
   }, [invoices, period]);
 
-  // Memoize top clients calculation - O(n log n) due to sort
   const { topClients, maxPaid } = useMemo(() => {
     const clientMap: Record<string, { name: string; id: string; paid: number; count: number }> = {};
     invoices.filter((inv) => inv.status === 'paid').forEach((inv) => {
@@ -89,554 +100,405 @@ export default function DashboardPage() {
       clientMap[id].paid += inv.total;
       clientMap[id].count += 1;
     });
-    const sortedClients = Object.values(clientMap).sort((a, b) => b.paid - a.paid).slice(0, 5);
-    return { topClients: sortedClients, maxPaid: sortedClients[0]?.paid || 1 };
+    const sorted = Object.values(clientMap).sort((a, b) => b.paid - a.paid).slice(0, 5);
+    return { topClients: sorted, maxPaid: sorted[0]?.paid || 1 };
   }, [invoices]);
 
-  // Memoize month-over-month growth calculation - O(n) operation
   const monthOverMonthGrowth = useMemo(() => {
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
-    const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 999);
-
-    const lastMonthMRR = invoices.filter((inv) => {
-      if (!inv.paid_at) return false;
-      const paidDate = new Date(inv.paid_at);
-      return paidDate >= lastMonthStart && paidDate <= lastMonthEnd;
-    }).reduce((sum, inv) => sum + inv.total, 0);
-
-    return lastMonthMRR > 0 ? ((stats?.mrr || 0) - lastMonthMRR) / lastMonthMRR * 100 : 0;
+    const start = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+    const end = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0, 23, 59, 999);
+    const lastMRR = invoices.filter((inv) => inv.paid_at && new Date(inv.paid_at) >= start && new Date(inv.paid_at) <= end).reduce((s, i) => s + i.total, 0);
+    return lastMRR > 0 ? ((stats?.mrr || 0) - lastMRR) / lastMRR * 100 : 0;
   }, [invoices, stats?.mrr]);
 
-  // Memoize recovery rate calculation - O(n) operation
-  const recoveryRate = useMemo(() => {
-    const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
-    const totalOverdue = invoices.filter((i) => i.status === 'sent' && i.due_date && new Date(i.due_date) < new Date()).reduce((s, i) => s + i.total, 0);
-    return totalPaid + totalOverdue > 0 ? Math.round((totalPaid / (totalPaid + totalOverdue)) * 100) : 100;
-  }, [invoices]);
-
-  // Memoize DSO calculation - O(n) operation with date math
   const dso = useMemo(() => {
-    const dsoInvoices = invoices.filter((i) => i.status === 'paid' && i.paid_at && i.issue_date);
-    return dsoInvoices.length > 0
-      ? Math.round(
-          dsoInvoices.reduce((sum, inv) => {
-            const issued = new Date(inv.issue_date);
-            const paid = new Date(inv.paid_at!);
-            const days = Math.floor((paid.getTime() - issued.getTime()) / (1000 * 60 * 60 * 24));
-            return sum + days;
-          }, 0) / dsoInvoices.length
-        )
-      : 0;
+    const paid = invoices.filter((i) => i.status === 'paid' && i.paid_at && i.issue_date);
+    return paid.length > 0 ? Math.round(paid.reduce((s, inv) => s + Math.floor((new Date(inv.paid_at!).getTime() - new Date(inv.issue_date).getTime()) / 86400000), 0) / paid.length) : 0;
   }, [invoices]);
 
-  const COLORS = ['#1D9E75', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899'];
+  const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'];
 
-  // Animation variants
+  // Animation variants — spring-based, not ease-in-out
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: 'spring' as const,
-        damping: 20,
-        stiffness: 100,
-      },
-    },
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring', damping: 25, stiffness: 200 } },
   };
 
-  // Animated progress value for recovery rate
-  const progressValue = useSpring(recoveryRate, { stiffness: 50, damping: 30 });
-  const progressWidth = useTransform(progressValue, (v) => `${v}%`);
-
-  // ── Cash flow forecast (90 days) ──
-  const cashFlowMonths = useMemo(() => {
-    const today = new Date();
-    const in90 = new Date(today); in90.setDate(in90.getDate() + 90);
-
-    const months: { key: string; label: string; toCollect: number; recurring: number; cumulative: number }[] = [];
-    for (let m = 0; m < 3; m++) {
-      const d = new Date(today);
-      d.setMonth(d.getMonth() + m);
-      const key = d.toISOString().slice(0, 7);
-      months.push({
-        key,
-        label: d.toLocaleString('fr-FR', { month: 'long', year: 'numeric' }),
-        toCollect: 0,
-        recurring: 0,
-        cumulative: 0,
-      });
-    }
-
-    invoices
-      .filter((inv) => inv.document_type === 'invoice' && (inv.status === 'sent' || inv.status === 'overdue'))
-      .forEach((inv) => {
-        const refDate = inv.due_date || inv.issue_date || '';
-        if (!refDate) return;
-        const key = refDate.slice(0, 7);
-        const bucket = months.find((b) => b.key === key);
-        if (bucket) bucket.toCollect += inv.total;
-      });
-
-    invoices
-      .filter((inv) => inv.document_type === 'invoice' && (inv as any).is_recurring)
-      .forEach((inv) => {
-        const freq: string = (inv as any).recurring_frequency || 'monthly';
-        const lastDate = new Date(inv.issue_date || inv.created_at);
-        let next = new Date(lastDate);
-        const freqDays = freq === 'weekly' ? 7 : freq === 'quarterly' ? 90 : 30;
-        while (next <= in90) {
-          next = new Date(next); next.setDate(next.getDate() + freqDays);
-          if (next >= today && next <= in90) {
-            const key = next.toISOString().slice(0, 7);
-            const bucket = months.find((b) => b.key === key);
-            if (bucket) bucket.recurring += inv.total;
-          }
-        }
-      });
-
-    let cumul = 0;
-    months.forEach((b) => {
-      cumul += b.toCollect + b.recurring;
-      b.cumulative = cumul;
-    });
-
-    return months;
-  }, [invoices]);
+  const quickActions = [
+    { href: '/invoices/new?type=invoice', icon: FileText, label: 'Facture', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { href: '/invoices/new?type=quote', icon: Clipboard, label: 'Devis', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { href: '/invoices/new?type=credit_note', icon: RefreshCw, label: 'Avoir', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    { href: '/invoices/new?type=purchase_order', icon: ShoppingCart, label: 'Bon cde', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    { href: '/invoices/new?type=delivery_note', icon: Truck, label: 'Bon liv.', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+  ];
 
   return (
     <>
-      <h1 className="sr-only">Tableau de bord - {profile?.company_name || 'Factu.me'}</h1>
-      <main aria-label="Tableau de bord">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-6 relative"
-        >
-          {/* Ambient glow effect */}
-          <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
-            <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-purple-500/[0.02] dark:bg-purple-500/[0.03] rounded-full blur-3xl" />
-          </div>
+      <h1 className="sr-only">Tableau de bord</h1>
+      <PullToRefresh onRefresh={fetchInvoices}>
+        <main>
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5">
 
-          {/* ── Header ── */}
-          <motion.div variants={itemVariants} className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 dark:text-gray-500 text-sm font-medium flex items-center gap-2">
-                <Sparkles size={14} className="text-primary animate-pulse" />
-                {greeting}
-              </p>
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white mt-0.5">
-                {profile?.company_name || 'Mon entreprise'}
-              </h2>
-            </div>
-        <Link
-          href="/documents"
-          className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95"
-        >
-          <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
-          Nouveau
-        </Link>
-      </motion.div>
-
-      {/* ── Paywall hint ── */}
-      {sub.isFree && sub.invoiceCount >= 2 && (
-        <motion.div
-          variants={itemVariants}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-        >
-          <Link
-            href="/paywall"
-            className="group flex items-center gap-3 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 dark:from-amber-500/10 dark:via-yellow-500/5 dark:to-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-3.5 hover:border-amber-300 dark:hover:border-amber-500/50 transition-all hover:shadow-lg hover:shadow-amber-500/10"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-              <Zap size={18} className="text-white fill-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-amber-700 dark:text-amber-400 font-bold flex-1">
-                {sub.isAtLimit ? 'Limite atteinte — Passez à Solo pour continuer' : `Plan Discovery · ${sub.invoiceCount}/5 factures ce mois`}
-              </p>
-            </div>
-            <ArrowUpRight size={18} className="text-amber-500 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </motion.div>
-      )}
-
-        {/* ── Stats grid ── */}
-        <section aria-label="Statistiques clés">
-          <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* CA ce mois — highlight card */}
-        <div className="col-span-2 lg:col-span-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary-dark rounded-2xl" />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/5 rounded-full blur-xl" />
-          </div>
-          <div className="relative p-5 text-white h-full flex flex-col justify-between">
-            <div>
-              <p className="text-xs text-white/70 font-semibold uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <TrendingUp size={11} />
-                CA ce mois
-              </p>
-              <motion.p
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                className="text-3xl font-black tracking-tight"
-              >
-                {formatCurrency(stats?.mrr || 0)}
-              </motion.p>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-white/60 mt-3">
-              <div className="flex items-center gap-1">
-                <Award size={11} />
-                <span>
-                  {monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}% vs mois dernier
-                </span>
+          {/* ══════════════════════════════════════════════════════════
+              HERO — LE CHIFFRE EST ROI
+              Point focal absolu : "À encaisser" en grand
+              ══════════════════════════════════════════════════════════ */}
+          <motion.div variants={itemVariants} className="lg:hidden">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6">
+              {/* Subtle pattern overlay */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/20" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white/10" />
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* DSO - Délai Moyen de Paiement */}
-        <Link href="/invoices?status=paid" className="block">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-purple-500/5 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">DSO</p>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock size={14} className="text-purple-500" />
-            </div>
-          </div>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-2xl font-black text-gray-900 dark:text-white"
-          >
-            {dso}
-          </motion.p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">jours moyen</p>
-        </motion.div>
-        </Link>
+              <div className="relative">
+                {/* Greeting */}
+                <p className="text-emerald-200/80 text-sm font-medium">{greeting} 👋</p>
 
-        {/* En retard */}
-        <Link href="/invoices?status=overdue" className="block">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className={`rounded-2xl p-5 border shadow-sm transition-all duration-300 group ${stats?.overdueCount
-            ? 'bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-500/10 dark:to-orange-500/5 border-red-100 dark:border-red-500/20 hover:shadow-lg hover:shadow-red-500/10'
-            : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-white/10 hover:shadow-md'
-            }`}>
-          <div className="flex items-center justify-between mb-2">
-            <p className={`text-xs font-semibold uppercase tracking-wide ${stats?.overdueCount ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
-              En retard
-            </p>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${stats?.overdueCount ? 'bg-red-100 dark:bg-red-500/20 group-hover:scale-110' : 'bg-gray-50 dark:bg-white/10'} transition-transform`}>
-              <AlertTriangle size={14} className={stats?.overdueCount ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'} />
-            </div>
-          </div>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className={`text-2xl font-black ${stats?.overdueCount ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}
-          >
-            {stats?.overdueCount || 0}
-          </motion.p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">factures</p>
-        </motion.div>
-        </Link>
+                {/* The BIG number */}
+                <div className="mt-3 mb-1">
+                  <p className="text-[11px] font-bold text-emerald-200/60 uppercase tracking-widest mb-1">
+                    À encaisser
+                  </p>
+                  <motion.p
+                    key={toCollect}
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={springTransition}
+                    className="text-4xl font-bold text-white tracking-tight"
+                  >
+                    {formatCurrency(toCollect)}
+                  </motion.p>
+                </div>
 
-        {/* En attente */}
-        <Link href="/invoices?status=sent" className="block">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-white/10 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">En attente</p>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock size={14} className="text-blue-500" />
-            </div>
-          </div>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-2xl font-black text-gray-900 dark:text-white"
-          >
-            {stats?.pendingCount || 0}
-          </motion.p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatCurrency(stats?.pendingRevenue || 0)}</p>
-        </motion.div>
-        </Link>
-      </motion.div>
-    </section>
-
-    {/* ── Quick actions ── */}
-    <section aria-label="Création rapide de documents">
-      <motion.div variants={itemVariants} className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl border border-gray-100 dark:border-white/10 shadow-lg p-5 sm:p-6">
-        <p className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <Sparkles size={14} className="text-primary" />
-          Créer rapidement
-        </p>
-        <div className="grid grid-cols-5 gap-3 sm:gap-4">
-          {[
-            { href: '/invoices/new?type=invoice', icon: FileText, label: 'Facture', hoverBg: 'hover:from-primary hover:to-primary-dark', iconBg: 'bg-primary/10', iconColor: 'text-primary' },
-            { href: '/invoices/new?type=quote', icon: Clipboard, label: 'Devis', hoverBg: 'hover:from-blue-500 hover:to-blue-600', iconBg: 'bg-blue-50', iconColor: 'text-blue-500' },
-            { href: '/invoices/new?type=credit_note', icon: RefreshCw, label: 'Avoir', hoverBg: 'hover:from-purple-500 hover:to-purple-600', iconBg: 'bg-purple-50', iconColor: 'text-purple-500' },
-            { href: '/invoices/new?type=purchase_order', icon: ShoppingCart, label: 'Bon cde', hoverBg: 'hover:from-orange-500 hover:to-orange-600', iconBg: 'bg-orange-50', iconColor: 'text-orange-500' },
-            { href: '/invoices/new?type=delivery_note', icon: Truck, label: 'Bon liv.', hoverBg: 'hover:from-cyan-500 hover:to-cyan-600', iconBg: 'bg-cyan-50', iconColor: 'text-cyan-500' },
-          ].map(({ href, icon: Icon, label, hoverBg, iconBg, iconColor }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group relative flex flex-col items-center gap-3 p-4 sm:p-5 rounded-xl bg-gray-50 dark:bg-white/5 bg-gradient-to-b hover:from-primary hover:to-primary-dark hover:text-white transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_ease-in-out]" />
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors shadow-sm bg-gray-50 group-hover:bg-white/20">
-                <Icon size={20} className="text-primary group-hover:text-white transition-colors" />
-              </div>
-              <span className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-white transition-colors whitespace-nowrap">{label}</span>
-            </Link>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ── Chart ── */}
-      <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-4 sm:p-5 overflow-x-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div>
-            <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <TrendingUp size={16} className="text-primary" />
-              Évolution mensuelle
-            </h2>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Facturé vs encaissé</p>
-          </div>
-          <div className="flex gap-1 bg-gray-50 dark:bg-white/5 rounded-xl p-1">
-            {([1, 3, 6, 12] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${period === p
-                  ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-white/50 dark:hover:bg-white/10'
-                  }`}
-              >
-                {p}M
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="h-[200px] sm:h-[220px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} barGap={4} barCategoryGap="35%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-              <YAxis
-                tick={{ fontSize: 11, fill: '#9CA3AF' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="paid" name="Payé" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill="#1D9E75" />
-                ))}
-              </Bar>
-              <Bar dataKey="pending" name="En attente" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill="#EF9F27" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </motion.div>
-
-      {/* ── Cash Flow Forecast (90 jours) ── */}
-      {cashFlowMonths.some((m) => m.toCollect + m.recurring > 0) && (
-        <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-primary" />
-            <div>
-              <h2 className="font-bold text-gray-900 dark:text-white text-sm">Prévision de trésorerie</h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Prochains 90 jours</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {cashFlowMonths.map((m, i) => {
-              const total = m.toCollect + m.recurring;
-              return (
-                <div key={m.key} className="group">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{m.label}</span>
-                    <span className="text-sm font-bold text-primary">{formatCurrency(total)}</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, (total / (cashFlowMonths.reduce((max, b) => Math.max(max, b.toCollect + b.recurring), 0) || 1)) * 100)}%` }}
-                      transition={{ duration: 0.6, delay: i * 0.1 }}
-                      className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-400"
-                    />
-                  </div>
-                  {m.toCollect > 0 && m.recurring > 0 && (
-                    <div className="flex gap-3 mt-1">
-                      <span className="text-[11px] text-gray-400">En attente : {formatCurrency(m.toCollect)}</span>
-                      <span className="text-[11px] text-gray-400">Récurrent : {formatCurrency(m.recurring)}</span>
+                {/* Sub-metrics */}
+                <div className="flex items-center gap-4 mt-3">
+                  {overdueCount > 0 && (
+                    <Link href="/documents/factures?status=overdue" className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse" />
+                      <span className="text-xs text-emerald-200/70 font-medium">
+                        {formatCurrency(toCollectOverdue)} en retard
+                      </span>
+                    </Link>
+                  )}
+                  {toCollectPending > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-200/50" />
+                      <span className="text-xs text-emerald-200/70 font-medium">
+                        {formatCurrency(toCollectPending)} en attente
+                      </span>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
 
-      {/* ── Top 5 Clients ── */}
-      {topClients.length > 0 && (
-        <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Users size={16} className="text-primary" />
-            <div>
-              <h2 className="font-bold text-gray-900 dark:text-white text-sm">Top 5 clients</h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Par chiffre d'affaires encaissé</p>
+                {/* Quick action strip — juste 2 boutons */}
+                <div className="flex gap-2 mt-4">
+                  <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
+                    <Link
+                      href="/invoices/new?type=invoice"
+                      className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+                    >
+                      <Plus size={16} strokeWidth={2.5} />
+                      Facturer
+                    </Link>
+                  </motion.div>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <button
+                      onClick={() => setShowQuickActions(!showQuickActions)}
+                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur text-white transition-colors"
+                    >
+                      <Sparkles size={16} />
+                    </button>
+                  </motion.div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="space-y-3">
-            {topClients.map((c, i) => {
-              const initials = c.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-              const pct = Math.round((c.paid / maxPaid) * 100);
-              return (
-                <motion.div
-                  key={c.id || c.name}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3 group cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg p-2 -mx-2 transition-colors"
-                >
-                  <span className="text-xs font-black text-gray-300 dark:text-gray-600 w-4 text-center flex-shrink-0 group-hover:text-primary transition-colors">#{i + 1}</span>
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 group-hover:scale-110 transition-transform"
-                    style={{ backgroundColor: COLORS[i % COLORS.length] + '20', color: COLORS[i % COLORS.length] }}
-                  >
-                    {initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{c.name}</p>
-                    <div className="h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden mt-1">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: i * 0.05 }}
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(c.paid)}</p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{c.count} facture{c.count !== 1 ? 's' : ''}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
 
-      {/* ── Recent invoices ── */}
-      <motion.div variants={itemVariants} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
-          <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <FileText size={14} className="text-primary" />
-            Documents récents
-          </h2>
-          <Link href="/invoices" className="text-xs font-bold text-primary hover:underline flex items-center gap-1 group">
-            Tout voir <ArrowUpRight size={11} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        {recentInvoices.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-3"
-            >
-              <FileText size={28} className="text-gray-300 dark:text-gray-600" />
-            </motion.div>
-            <p className="font-semibold text-gray-400 dark:text-gray-500 text-sm">Aucune facture</p>
-            <p className="text-xs text-gray-300 dark:text-gray-600 mt-1 mb-4">Créez votre première facture pour commencer</p>
-            <Link
-              href="/invoices/new"
-              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-primary to-primary-dark text-white text-xs font-bold px-4 py-2 rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95"
-            >
-              <Plus size={13} />
-              Créer une facture
-            </Link>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50 dark:divide-white/5">
+            {/* Quick actions — bottom sheet style expand */}
             <AnimatePresence>
-              {recentInvoices.map((inv, i) => (
+              {showQuickActions && (
                 <motion.div
-                  key={inv.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  exit={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="overflow-hidden"
                 >
-                  <Link
-                    href={`/invoices/${inv.id}`}
-                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-white/5 group-hover:bg-white dark:group-hover:bg-white/10 flex items-center justify-center flex-shrink-0 transition-colors border border-gray-100 dark:border-white/10 group-hover:scale-110">
-                      <FileText size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">
-                        {inv.client?.name || inv.client_name_override || 'Sans client'}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{inv.number}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0 space-y-1">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</p>
-                      <StatusBadge status={inv.status} />
-                    </div>
-                  </Link>
+                  <div className="flex gap-2 pt-3 pb-1 overflow-x-auto scrollbar-none">
+                    {quickActions.map(({ href, icon: Icon, label, color, bg }) => (
+                      <Link key={href} href={href} className="group flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl bg-slate-800/50 border border-white/5 hover:border-white/10 transition-colors active:scale-95 min-w-[72px]">
+                        <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
+                          <Icon size={16} className={color} />
+                        </div>
+                        <span className="text-[11px] font-medium text-slate-400">{label}</span>
+                      </Link>
+                    ))}
+                  </div>
                 </motion.div>
-              ))}
+              )}
             </AnimatePresence>
-          </div>
-        )}
-      </motion.div>
-    </section>
-    </motion.div>
+          </motion.div>
+
+          {/* Desktop header — unchanged */}
+          <motion.div variants={itemVariants} className="hidden lg:flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">{greeting}</p>
+              <h2 className="text-3xl font-bold tracking-tight text-white mt-0.5">
+                {profile?.company_name || 'Mon entreprise'}
+              </h2>
+            </div>
+            <Link
+              href="/documents"
+              className="group flex-shrink-0 inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95"
+            >
+              <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
+              Nouveau document
+            </Link>
+          </motion.div>
+
+          {/* Paywall hint */}
+          {sub.isFree && sub.invoiceCount >= 2 && (
+            <motion.div variants={itemVariants}>
+              <Link href="/paywall" className="flex items-center gap-3 p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl hover:border-amber-500/30 transition-colors group">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Zap size={16} className="text-amber-400" />
+                </div>
+                <p className="text-sm text-amber-300 font-medium flex-1 truncate">
+                  {sub.isAtLimit ? 'Limite atteinte' : `${sub.invoiceCount}/5 factures ce mois`}
+                </p>
+                <ArrowUpRight size={14} className="text-amber-500 flex-shrink-0" />
+              </Link>
+            </motion.div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════
+              STATS STRIP — 3 métriques essentielles en ligne
+              Mobile: cartes compactes, pas de grid 2x2
+              ══════════════════════════════════════════════════════════ */}
+          <motion.div variants={itemVariants}>
+            {/* Mobile: horizontal scroll strip */}
+            <div className="flex gap-2 lg:hidden overflow-x-auto scrollbar-none pb-1">
+              <div className="flex-shrink-0 bg-slate-800/50 border border-white/5 rounded-2xl p-3.5 min-w-[130px]">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">CA ce mois</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(stats?.mrr || 0)}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}%
+                </p>
+              </div>
+              <Link href="/documents/factures?status=overdue" className="flex-shrink-0 min-w-[130px]">
+                <motion.div whileTap={{ scale: 0.98 }} className={cn(
+                  "border rounded-2xl p-3.5 h-full",
+                  overdueCount ? "bg-red-500/5 border-red-500/20" : "bg-slate-800/50 border-white/5"
+                )}>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">En retard</p>
+                  <p className={cn("text-lg font-bold", overdueCount ? "text-red-400" : "text-white")}>{overdueCount}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">factures</p>
+                </motion.div>
+              </Link>
+              <div className="flex-shrink-0 bg-slate-800/50 border border-white/5 rounded-2xl p-3.5 min-w-[130px]">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">DSO moyen</p>
+                <p className="text-lg font-bold text-white">{dso}<span className="text-xs text-slate-500 ml-1">jours</span></p>
+                <p className="text-[10px] text-slate-500 mt-0.5">délai paiement</p>
+              </div>
+            </div>
+
+            {/* Desktop: grid 4 cols */}
+            <div className="hidden lg:grid grid-cols-4 gap-3">
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5">
+                <p className="text-xs text-emerald-200/70 font-medium uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <TrendingUp size={10} /> CA ce mois
+                </p>
+                <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(stats?.mrr || 0)}</p>
+                <p className="text-[11px] text-emerald-200/50 mt-1.5">
+                  {monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}% vs mois dernier
+                </p>
+              </div>
+
+              {[
+                { label: 'DSO', value: dso, sub: 'jours', icon: Clock, color: 'text-purple-400', bg: 'bg-purple-500/10', href: '/documents/factures?status=paid' },
+                { label: 'En retard', value: stats?.overdueCount || 0, sub: 'factures', icon: AlertTriangle, color: stats?.overdueCount ? 'text-red-400' : 'text-slate-500', bg: stats?.overdueCount ? 'bg-red-500/10' : 'bg-white/5', href: '/documents/factures?status=overdue' },
+                { label: 'En attente', value: stats?.pendingCount || 0, sub: formatCurrency(stats?.pendingRevenue || 0), icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10', href: '/documents/factures?status=sent' },
+              ].map(({ label, value, sub, icon: Icon, color, bg, href }) => (
+                <Link key={label} href={href} className="block">
+                  <motion.div whileTap={{ scale: 0.98 }} className="bg-slate-800/50 border border-white/5 rounded-2xl p-4 h-full">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
+                      <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center`}>
+                        <Icon size={13} className={color} />
+                      </div>
+                    </div>
+                    <p className="text-xl font-bold text-white">{value}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 truncate">{sub}</p>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Quick actions — desktop only */}
+          <motion.div variants={itemVariants} className="hidden lg:block bg-slate-800/30 border border-white/5 rounded-2xl p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Sparkles size={10} className="text-emerald-400" /> Créer
+            </p>
+            <div className="grid grid-cols-5 gap-2">
+              {quickActions.map(({ href, icon: Icon, label, color, bg }) => (
+                <Link key={href} href={href} className="group flex flex-col items-center gap-2.5 p-4 rounded-xl bg-slate-800/50 border border-white/5 hover:border-white/10 transition-colors">
+                  <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
+                    <Icon size={20} className={color} />
+                  </div>
+                  <span className="text-xs font-medium text-slate-400">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Chart */}
+          <motion.div variants={itemVariants} className="bg-slate-800/30 border border-white/5 rounded-2xl p-4 overflow-hidden">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                  <TrendingUp size={14} className="text-emerald-400" /> Évolution
+                </h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">Facturé vs encaissé</p>
+              </div>
+              <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
+                {([1, 3, 6, 12] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                      period === p ? 'bg-white/10 text-white' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {p}M
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="h-[170px] sm:h-[200px] lg:h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} barGap={3} barCategoryGap="35%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                  <Bar dataKey="paid" name="Payé" radius={[4, 4, 0, 0]}>{chartData.map((_, i) => <Cell key={i} fill="#10b981" />)}</Bar>
+                  <Bar dataKey="pending" name="En attente" radius={[4, 4, 0, 0]}>{chartData.map((_, i) => <Cell key={i} fill="#f59e0b" />)}</Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* Top clients + Recent invoices — côte à côte sur desktop */}
+          <div className="lg:grid lg:grid-cols-2 gap-5 space-y-5 lg:space-y-0">
+          {/* Top clients */}
+          {topClients.length > 0 && (
+            <motion.div variants={itemVariants} className="bg-slate-800/30 border border-white/5 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                  <Users size={14} className="text-emerald-400" /> Top clients
+                </h2>
+                <Link href="/clients" className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5 hover:underline">
+                  Tout <ChevronRight size={10} />
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {topClients.slice(0, 3).map((c, i) => {
+                  const initials = c.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+                  const pct = Math.round((c.paid / maxPaid) * 100);
+                  return (
+                    <motion.div key={c.id || c.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: COLORS[i] + '20', color: COLORS[i] }}>
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-white truncate">{c.name}</p>
+                        <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, delay: i * 0.05 }} className="h-full rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-white flex-shrink-0">{formatCurrency(c.paid)}</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Recent invoices — cartes épurées */}
+          <motion.div variants={itemVariants} className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 cursor-pointer">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                <FileText size={14} className="text-emerald-400" /> Récents
+              </h2>
+              <Link href="/documents/factures" className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5 hover:underline">
+                Tout <ChevronRight size={10} />
+              </Link>
+            </div>
+
+            {recentInvoices.length === 0 ? (
+              <div className="text-center py-10 px-4">
+                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Receipt size={22} className="text-slate-600" />
+                </div>
+                <p className="text-sm text-slate-400">Aucune facture</p>
+                <p className="text-xs text-slate-600 mt-0.5 mb-4">Créez votre première facture</p>
+                <Link href="/invoices/new" className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-emerald-400 transition-colors active:scale-95">
+                  <Plus size={13} /> Créer
+                </Link>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {recentInvoices.map((inv, i) => (
+                  <motion.div
+                    key={inv.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200, delay: i * 0.04 }}
+                  >
+                    <Link href={`/invoices/${inv.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.03] transition-colors group active:bg-white/[0.05] cursor-pointer">
+                      {/* Mini colored dot — status indicator */}
+                      <div className="relative w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <Receipt size={14} className="text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                        <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-slate-900 ${
+                          inv.status === 'paid' ? 'bg-emerald-400'
+                          : inv.status === 'overdue' ? 'bg-red-400'
+                          : inv.status === 'sent' ? 'bg-blue-400'
+                          : 'bg-slate-500'
+                        }`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate group-hover:text-emerald-400 transition-colors">
+                          {inv.client?.name || inv.client_name_override || 'Sans client'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-mono mt-0.5">{inv.number}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className={cn(
+                          "text-sm font-bold",
+                          inv.status === 'paid' ? 'text-emerald-400' : inv.status === 'overdue' ? 'text-red-400' : 'text-white',
+                        )}>
+                          {formatCurrency(inv.total)}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+          </div>{/* fin lg:grid-cols-2 */}
+        </motion.div>
       </main>
+      </PullToRefresh>
     </>
   );
 }
+

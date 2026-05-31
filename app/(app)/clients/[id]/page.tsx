@@ -7,14 +7,13 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
-import Header from '@/components/layout/Header';
 import Button from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { formatCurrency, formatDateShort, getInitials, cn } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase';
-import { Pencil, Trash2, FileText, Plus, Tag, MessageSquare, X, Globe, Copy, Check, Star, TrendingUp, Clock, Camera, ArrowLeft, Mail, Phone, MapPin, Building2, FileCheck, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, FileText, Plus, Tag, MessageSquare, X, Globe, Copy, Check, Star, TrendingUp, Clock, Camera, ArrowLeft, Mail, Phone, MapPin, Building2, FileCheck, AlertCircle, Receipt, ShoppingBag, Truck } from 'lucide-react';
 import DocPickerModal from '@/components/clients/DocPickerModal';
 import type { ClientNote } from '@/types';
 
@@ -22,64 +21,27 @@ import type { ClientNote } from '@/types';
 // Constants
 // ---------------------------------------------------------------------------
 
+const ease = [0.25, 0.1, 0.25, 1] as [number, number, number, number];
+
 const TAG_COLORS = [
-  'bg-blue-100 text-blue-700',
-  'bg-purple-100 text-purple-700',
-  'bg-green-100 text-green-700',
-  'bg-amber-100 text-amber-700',
-  'bg-pink-100 text-pink-700',
-  'bg-cyan-100 text-cyan-700',
-  'bg-orange-100 text-orange-700',
-  'bg-indigo-100 text-indigo-700',
+  'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'bg-pink-500/10 text-pink-400 border-pink-500/20',
+  'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
 ];
 
-// ---------------------------------------------------------------------------
-// Sub-components (module level — stable references)
-// ---------------------------------------------------------------------------
+type TabKey = 'invoices' | 'expenses' | 'documents' | 'health';
 
-function GlassCard({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className={cn(
-        'relative bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden',
-        'shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300',
-        className
-      )}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      {children}
-    </motion.div>
-  );
-}
-
-function StatCard({ title, value, subtitle, icon: Icon, gradient, delay = 0 }: {
-  title: string; value: string | number; subtitle: string; icon: React.ElementType; gradient: string; delay?: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay }}
-      className={cn('relative overflow-hidden rounded-3xl p-5 border border-white/20 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 group', gradient)}
-    >
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <Icon size={18} className="text-white/80" />
-          <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}>
-            <FileCheck size={16} className="text-white/60" />
-          </motion.div>
-        </div>
-        <p className="text-2xl font-black text-white">{value}</p>
-        <p className="text-xs text-white/70 mt-0.5">{title}</p>
-        <p className="text-[10px] text-white/50 mt-1">{subtitle}</p>
-      </div>
-    </motion.div>
-  );
-}
+const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
+  { key: 'invoices', label: 'Factures', icon: Receipt },
+  { key: 'expenses', label: 'Depenses', icon: ShoppingBag },
+  { key: 'documents', label: 'Documents', icon: FileText },
+  { key: 'health', label: 'Sante', icon: Star },
+];
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -96,6 +58,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [showDelete, setShowDelete] = useState(false);
   const [showNewDocument, setShowNewDocument] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Tab
+  const [activeTab, setActiveTab] = useState<TabKey>('invoices');
 
   // Portal
   const [portalUrl, setPortalUrl] = useState('');
@@ -164,6 +129,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   // Memoized computed data
   const clientInvoices = useMemo(() => invoices.filter((inv) => inv.client_id === id), [invoices, id]);
+  const clientExpenses = useMemo(() => [] as any[], [id]);
   const totalRevenue = useMemo(() => clientInvoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0), [clientInvoices]);
   const clientTags = useMemo(() => client?.tags ?? [], [client?.tags]);
 
@@ -192,13 +158,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         clientScore = Math.max(0, Math.round(score));
       }
 
-      const scoreColor = clientScore === null ? '' : clientScore >= 80 ? 'text-green-600' : clientScore >= 60 ? 'text-amber-600' : 'text-red-600';
-      const scoreBg = clientScore === null ? '' : clientScore >= 80 ? 'bg-green-50 border-green-100' : clientScore >= 60 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100';
-      const scoreLabel = clientScore === null ? '—' : clientScore >= 80 ? 'Excellent' : clientScore >= 60 ? 'Moyen' : 'Risqué';
+      const scoreColor = clientScore === null ? '' : clientScore >= 80 ? 'text-emerald-400' : clientScore >= 60 ? 'text-amber-400' : 'text-red-400';
+      const scoreBarBg = clientScore === null ? '' : clientScore >= 80 ? 'bg-emerald-500' : clientScore >= 60 ? 'bg-amber-500' : 'bg-red-500';
+      const scoreLabel = clientScore === null ? '' : clientScore >= 80 ? 'Excellent' : clientScore >= 60 ? 'Moyen' : 'Risque';
 
-      return { clientScore, avgPaymentDays, paymentRate, scoreColor, scoreBg, scoreLabel };
+      return { clientScore, avgPaymentDays, paymentRate, scoreColor, scoreBarBg, scoreLabel };
     } catch {
-      return { clientScore: null, avgPaymentDays: null, paymentRate: null, scoreColor: '', scoreBg: '', scoreLabel: '—' };
+      return { clientScore: null, avgPaymentDays: null, paymentRate: null, scoreColor: '', scoreBarBg: '', scoreLabel: '' };
     }
   }, [clientInvoices]);
 
@@ -221,14 +187,14 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error('L\'image ne doit pas dépasser 2 Mo.'); return; }
-    if (!file.type.startsWith('image/')) { toast.error('Veuillez sélectionner une image valide.'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('L\'image ne doit pas depasser 2 Mo.'); return; }
+    if (!file.type.startsWith('image/')) { toast.error('Veuillez selectionner une image valide.'); return; }
 
     setUploadingLogo(true);
     try {
       const supabase = getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Non authentifié');
+      if (!session?.user) throw new Error('Non authentifie');
 
       const fileExt = file.name.split('.').pop();
       const filePath = `client-logos/${session.user.id}/${id}.${fileExt}`;
@@ -238,9 +204,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       const { data: { publicUrl } } = supabase.storage.from('client-logos').getPublicUrl(filePath);
       await updateClient(id, { logo_url: publicUrl });
-      toast.success('Logo mis à jour !');
+      toast.success('Logo mis a jour !');
     } catch (e: any) {
-      toast.error(e.message || 'Erreur lors du téléchargement');
+      toast.error(e.message || 'Erreur lors du telechargement');
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
@@ -279,7 +245,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       if (error) throw new Error(error.message);
       setNotes((prev) => [data, ...prev]);
       setNoteInput('');
-      toast.success('Note ajoutée');
+      toast.success('Note ajoutee');
     } catch (e: any) { toast.error(e.message || 'Erreur lors de l\'ajout'); }
     finally { setAddingNote(false); }
   }, [id, user, noteInput]);
@@ -296,7 +262,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setPortalLoading(true);
     try {
       const { data: { session } } = await getSupabaseClient().auth.getSession();
-      if (!session) throw new Error('Non authentifié');
+      if (!session) throw new Error('Non authentifie');
       const res = await fetch('/api/client-portal/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
@@ -320,20 +286,20 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   if (clients.length === 0 && dataLoading) return (
     <div className="flex items-center justify-center py-20">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-gray-400">Chargement du client...</p>
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-400">Chargement du client...</p>
       </div>
     </div>
   );
 
   if (!client) return (
     <div className="text-center py-20">
-      <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-        <AlertCircle size={32} className="text-gray-300 dark:text-gray-600" />
+      <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
+        <AlertCircle size={32} className="text-slate-500" />
       </div>
-      <p className="text-gray-500 font-medium">Client introuvable</p>
-      <p className="text-gray-400 text-sm mt-1">Ce client n'existe pas ou a été supprimé.</p>
-      <Link href="/clients" className="mt-4 text-primary font-semibold text-sm hover:underline block">Retour aux clients</Link>
+      <p className="text-slate-400 font-medium">Client introuvable</p>
+      <p className="text-slate-500 text-sm mt-1">Ce client n'existe pas ou a ete supprime.</p>
+      <Link href="/clients" className="mt-4 text-emerald-400 font-semibold text-sm hover:text-emerald-300 block transition-colors">Retour aux clients</Link>
     </div>
   );
 
@@ -344,32 +310,26 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const overdueCount = clientInvoices.filter((i) => i.status === 'overdue').length;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-8">
-      {/* Ambient background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/[0.02] dark:bg-primary/[0.03] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-500/[0.02] dark:bg-purple-500/[0.03] rounded-full blur-3xl" />
-      </div>
-
+    <div className="space-y-6 max-w-4xl mx-auto pb-24 md:pb-8">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-4">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ ease }} className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
             href="/clients"
-            className="flex items-center justify-center w-12 h-12 rounded-2xl border border-white/20 bg-white/70 dark:bg-white/5 backdrop-blur-xl text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all shadow-lg hover:shadow-xl"
+            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-all"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">{client.name}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Fiche client</p>
+            <h1 className="text-3xl font-bold tracking-tight text-white">{client.name}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Fiche client</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" loading={portalLoading} icon={portalCopied ? <Check size={14} className="text-green-500" /> : <Globe size={14} />} onClick={handleGeneratePortal} className="backdrop-blur-xl bg-white/70 border-white/20">
-            {portalCopied ? 'Copié !' : 'Portail'}
+        <div className="hidden md:flex gap-2">
+          <Button variant="secondary" size="sm" loading={portalLoading} icon={portalCopied ? <Check size={14} className="text-emerald-400" /> : <Globe size={14} />} onClick={handleGeneratePortal}>
+            {portalCopied ? 'Copie !' : 'Portail'}
           </Button>
-          <Button variant="secondary" size="sm" icon={<Pencil size={14} />} onClick={() => setShowEdit(true)} className="backdrop-blur-xl bg-white/70 border-white/20">
+          <Button variant="secondary" size="sm" icon={<Pencil size={14} />} onClick={() => setShowEdit(true)}>
             Modifier
           </Button>
           <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => setShowDelete(true)}>
@@ -378,165 +338,131 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Factures" value={clientInvoices.length} subtitle={`${clientInvoices.filter((i) => i.status === 'paid').length} payée(s)`} icon={FileText} gradient="bg-gradient-to-br from-blue-500 to-blue-600" delay={0} />
-        <StatCard title="CA encaissé" value={formatCurrency(totalRevenue)} subtitle={`sur ${formatCurrency(clientInvoices.reduce((s, i) => s + i.total, 0))} total`} icon={TrendingUp} gradient="bg-gradient-to-br from-emerald-500 to-emerald-600" delay={0.1} />
-        <StatCard title="En attente" value={clientInvoices.filter((i) => i.status === 'sent').length} subtitle={overdueCount > 0 ? `${overdueCount} en retard` : 'À jour'} icon={Clock} gradient={clientInvoices.some((i) => i.status === 'overdue') ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-amber-500 to-amber-600'} delay={0.2} />
-      </div>
+      {/* Mobile back button */}
+      <Link
+        href="/clients"
+        className="md:hidden inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft size={16} /> Retour
+      </Link>
 
-      {/* Client score */}
-      {scoreData.clientScore !== null && (
-        <GlassCard delay={0.3} className={cn('p-5', scoreData.scoreBg)}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-                <Star size={18} className={scoreData.scoreColor} />
-              </motion.div>
-              <h3 className="font-bold text-gray-900 dark:text-white">Score de confiance</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 10 }} className={cn('text-3xl font-black', scoreData.scoreColor)}>
-                {scoreData.clientScore}
-              </motion.span>
-              <span className={cn('text-xs font-bold px-3 py-1 rounded-full border', scoreData.scoreBg, scoreData.scoreColor)}>{scoreData.scoreLabel}</span>
-            </div>
-          </div>
-          <div className="relative h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${scoreData.clientScore}%` }} transition={{ duration: 1, ease: 'easeOut' }} className={cn('absolute inset-y-0 left-0 rounded-full', scoreData.clientScore >= 80 ? 'bg-gradient-to-r from-green-400 to-green-500' : scoreData.clientScore >= 60 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-red-400 to-red-500')} />
-          </div>
-          <div className="flex gap-4 mt-4 text-xs text-gray-500 dark:text-gray-400">
-            {scoreData.avgPaymentDays !== null && (
-              <span className="flex items-center gap-1.5">
-                <Clock size={13} className="text-gray-400" />
-                Paiement moyen : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.avgPaymentDays)}j après échéance</strong>
-              </span>
+      {/* Client info card */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ease }}
+        className="bg-slate-800/30 border border-white/5 rounded-2xl p-5"
+      >
+        <div className="flex items-start gap-5">
+          {/* Logo / avatar */}
+          <div className="relative group flex-shrink-0">
+            {client.logo_url ? (
+              <img src={client.logo_url} alt={`Logo ${client.name}`} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-white/5 group-hover:scale-105 transition-transform duration-300" />
+            ) : (
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl md:text-2xl font-bold group-hover:scale-105 transition-transform duration-300">
+                {getInitials(client.name)}
+              </div>
             )}
-            {scoreData.paymentRate !== null && (
-              <span className="flex items-center gap-1.5">
-                <TrendingUp size={13} className="text-gray-400" />
-                Taux de paiement : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.paymentRate)}%</strong>
-              </span>
-            )}
+            <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+            <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg bg-slate-800 border border-white/10 text-slate-400 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors disabled:opacity-50" title="Modifier le logo">
+              {uploadingLogo ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : <Camera size={12} />}
+            </button>
           </div>
-        </GlassCard>
-      )}
+
+          {/* Contact details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-lg font-semibold text-white truncate">{client.name}</h2>
+              {scoreData.clientScore !== null && (
+                <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full border ${scoreData.clientScore >= 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : scoreData.clientScore >= 60 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                  {scoreData.clientScore}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {client.email && (
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-slate-500 flex-shrink-0" />
+                  <span className="text-sm text-slate-300 truncate">{client.email}</span>
+                </div>
+              )}
+              {client.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone size={14} className="text-slate-500 flex-shrink-0" />
+                  <span className="text-sm text-slate-300">{client.phone}</span>
+                </div>
+              )}
+              {(client.address || client.city || client.postal_code) && (
+                <div className="flex items-center gap-2">
+                  <MapPin size={14} className="text-slate-500 flex-shrink-0" />
+                  <span className="text-sm text-slate-300 truncate">{[client.address, client.postal_code, client.city].filter(Boolean).join(', ')}</span>
+                </div>
+              )}
+              {client.siret && (
+                <div className="flex items-center gap-2">
+                  <Building2 size={14} className="text-slate-500 flex-shrink-0" />
+                  <span className="text-sm text-slate-300">{client.siret}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-white/5">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-white">{clientInvoices.length}</p>
+            <p className="text-xs text-slate-500">Factures</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-emerald-400">{formatCurrency(totalRevenue)}</p>
+            <p className="text-xs text-slate-500">CA encaisse</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-400' : clientInvoices.filter((i) => i.status === 'sent').length > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+              {overdueCount > 0 ? overdueCount : clientInvoices.filter((i) => i.status === 'sent').length}
+            </p>
+            <p className="text-xs text-slate-500">{overdueCount > 0 ? 'En retard' : 'En attente'}</p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Portal URL banner */}
       <AnimatePresence>
         {portalUrl && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-3xl px-5 py-3 backdrop-blur-xl">
-            <Globe size={18} className="text-green-600 dark:text-green-400 flex-shrink-0" />
-            <p className="text-sm text-green-700 dark:text-green-300 truncate flex-1 font-medium">{portalUrl}</p>
-            <button onClick={() => { navigator.clipboard.writeText(portalUrl); setPortalCopied(true); setTimeout(() => setPortalCopied(false), 2000); }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-green-700 bg-green-100 rounded-xl hover:bg-green-200 transition-all flex-shrink-0">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }} className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+            <Globe size={16} className="text-emerald-400 flex-shrink-0" />
+            <p className="text-sm text-emerald-300 truncate flex-1 font-medium">{portalUrl}</p>
+            <button onClick={() => { navigator.clipboard.writeText(portalUrl); setPortalCopied(true); setTimeout(() => setPortalCopied(false), 2000); }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors flex-shrink-0">
               {portalCopied ? <Check size={14} /> : <Copy size={14} />}
-              {portalCopied ? 'Copié' : 'Copier'}
+              {portalCopied ? 'Copie' : 'Copier'}
             </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Logo section */}
-      <GlassCard delay={0.4} className="p-5">
-        <div className="flex items-center gap-5">
-          <div className="relative group">
-            {client.logo_url ? (
-              <img src={client.logo_url} alt={`Logo ${client.name}`} className="w-20 h-20 rounded-2xl object-cover border-2 border-white/30 shadow-lg group-hover:scale-105 transition-transform duration-300" />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-2xl font-black shadow-lg group-hover:scale-105 transition-transform duration-300">
-                {getInitials(client.name)}
-              </div>
-            )}
-            <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary-dark transition-colors disabled:opacity-50 shadow-lg" title="Modifier le logo">
-              {uploadingLogo ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Camera size={14} />}
-            </motion.button>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg">Logo du client</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {client.logo_url ? 'Cliquez sur l\'icône caméra pour remplacer le logo' : 'Ajoutez un logo pour personnaliser les factures de ce client'}
-            </p>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Contact info */}
-      <GlassCard delay={0.5} className="p-5 space-y-4">
-        <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-4">Coordonnées</h3>
-        <div className="grid gap-3">
-          {client.email && (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
-              <Mail size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">Email</p>
-                <p className="text-sm text-gray-900 dark:text-white font-medium truncate">{client.email}</p>
-              </div>
-            </div>
-          )}
-          {client.phone && (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
-              <Phone size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">Téléphone</p>
-                <p className="text-sm text-gray-900 dark:text-white font-medium">{client.phone}</p>
-              </div>
-            </div>
-          )}
-          {(client.address || client.city || client.postal_code) && (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
-              <MapPin size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">Adresse</p>
-                <p className="text-sm text-gray-900 dark:text-white font-medium">{[client.address, client.postal_code, client.city].filter(Boolean).join(', ')}</p>
-              </div>
-            </div>
-          )}
-          {client.siret && (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
-              <Building2 size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">SIRET</p>
-                <p className="text-sm text-gray-900 dark:text-white font-medium">{client.siret}</p>
-              </div>
-            </div>
-          )}
-          {client.vat_number && (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-white/5">
-              <FileCheck size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">N° TVA</p>
-                <p className="text-sm text-gray-900 dark:text-white font-medium">{client.vat_number}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </GlassCard>
-
       {/* Tags */}
-      <GlassCard delay={0.6} className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Tag size={18} className="text-gray-400" />
-          <h3 className="font-bold text-gray-900 dark:text-white">Tags</h3>
+      <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag size={16} className="text-slate-500" />
+          <h3 className="font-semibold text-white text-sm">Tags</h3>
         </div>
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-3">
           {clientTags.length === 0 && (
-            <p className="text-sm text-gray-400 italic">Aucun tag. Ajoutez-en ci-dessous.</p>
+            <p className="text-sm text-slate-500">Aucun tag. Ajoutez-en ci-dessous.</p>
           )}
           {clientTags.map((tag, i) => (
-            <motion.button
+            <button
               key={tag}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
               onClick={() => handleRemoveTag(tag)}
               disabled={savingTags}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-all hover:scale-105 hover:shadow-lg', TAG_COLORS[i % TAG_COLORS.length])}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors hover:opacity-80 ${TAG_COLORS[i % TAG_COLORS.length]}`}
               title="Cliquer pour supprimer"
             >
               {tag}
               <X size={12} />
-            </motion.button>
+            </button>
           ))}
         </div>
         <div className="flex gap-2">
@@ -545,114 +471,272 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(tagInput); } }}
-            placeholder="Nouveau tag... (Entrée pour ajouter)"
-            className="flex-1 px-4 py-2.5 text-sm border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all bg-white/50 dark:bg-white/5"
+            placeholder="Nouveau tag... (Entree pour ajouter)"
+            className="flex-1 px-4 py-2.5 text-sm bg-slate-800/50 border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all text-white placeholder-slate-500"
           />
-          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleAddTag(tagInput)} disabled={!tagInput.trim() || savingTags} className="px-4 py-2.5 bg-gradient-to-r from-primary to-primary-dark text-white rounded-2xl text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-40">
+          <button onClick={() => handleAddTag(tagInput)} disabled={!tagInput.trim() || savingTags} className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             <Plus size={16} />
-          </motion.button>
+          </button>
         </div>
-      </GlassCard>
+      </div>
 
-      {/* Documents / Invoices */}
-      <GlassCard delay={0.7} className="overflow-hidden p-0">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg">Documents</h3>
-          <motion.button onClick={() => setShowNewDocument(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-xl text-sm font-semibold hover:shadow-lg transition-all cursor-pointer">
-            <Plus size={16} strokeWidth={2.5} />
-            Nouveau document
-          </motion.button>
+      {/* Tabs */}
+      <div>
+        {/* Tab headers */}
+        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.key
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent'
+              }`}
+            >
+              <tab.icon size={16} />
+              {tab.label}
+            </button>
+          ))}
         </div>
-        {clientInvoices.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
-              <FileText size={32} className="text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-400">Aucune facture pour ce client</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50 dark:divide-white/5">
-            {clientInvoices.map((inv, idx) => (
-              <motion.div key={inv.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 + idx * 0.05 }}>
-                <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">{inv.number}</p>
-                    <p className="text-xs text-gray-400">{formatDateShort(inv.issue_date)}</p>
+
+        {/* Tab content */}
+        <div className="mt-4">
+          <AnimatePresence mode="wait">
+            {/* Invoices tab */}
+            {activeTab === 'invoices' && (
+              <motion.div key="invoices" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
+                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                    <h3 className="font-semibold text-white">Factures</h3>
+                    <button onClick={() => setShowNewDocument(true)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors">
+                      <Plus size={14} />Nouveau
+                    </button>
                   </div>
-                  <div className="text-right flex-shrink-0 space-y-1">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</p>
-                    <StatusBadge status={inv.status} />
-                  </div>
-                  <ArrowLeft size={16} className="text-gray-300 group-hover:text-primary rotate-180 transition-colors" />
-                </Link>
+                  {clientInvoices.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                        <Receipt size={28} className="text-slate-500" />
+                      </div>
+                      <p className="text-sm text-slate-400">Aucune facture pour ce client</p>
+                      <button onClick={() => setShowNewDocument(true)} className="mt-3 text-sm text-emerald-400 font-medium hover:text-emerald-300 transition-colors">Creer une facture</button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {clientInvoices.map((inv, idx) => (
+                        <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }}>
+                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-800/30 transition-colors group">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
+                              <p className="text-xs text-slate-500">{formatDateShort(inv.issue_date)}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0 space-y-1">
+                              <p className="text-sm font-semibold text-white">{formatCurrency(inv.total)}</p>
+                              <StatusBadge status={inv.status} />
+                            </div>
+                            <ArrowLeft size={14} className="text-slate-600 group-hover:text-emerald-400 rotate-180 transition-colors" />
+                          </Link>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </motion.div>
-            ))}
-          </div>
-        )}
-      </GlassCard>
+            )}
 
-      {/* Notes timeline */}
-      <GlassCard delay={0.8} className="p-5">
-        <div className="flex items-center gap-2 mb-5">
-          <MessageSquare size={18} className="text-gray-400" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg">Notes & suivi</h3>
+            {/* Expenses tab */}
+            {activeTab === 'expenses' && (
+              <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
+                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                    <h3 className="font-semibold text-white">Depenses</h3>
+                  </div>
+                  {clientExpenses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                        <ShoppingBag size={28} className="text-slate-500" />
+                      </div>
+                      <p className="text-sm text-slate-400">Aucune depense pour ce client</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {clientExpenses.map((exp: any, idx: number) => (
+                        <motion.div key={exp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }} className="px-5 py-3.5 hover:bg-slate-800/30 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white">{exp.description || exp.category || 'Depense'}</p>
+                              <p className="text-xs text-slate-500">{formatDateShort(exp.date || exp.created_at)}</p>
+                            </div>
+                            <p className="text-sm font-semibold text-white">{formatCurrency(exp.amount || 0)}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Documents tab */}
+            {activeTab === 'documents' && (
+              <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
+                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                    <h3 className="font-semibold text-white">Documents</h3>
+                    <button onClick={() => setShowNewDocument(true)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors">
+                      <Plus size={14} />Nouveau
+                    </button>
+                  </div>
+                  {clientInvoices.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                        <FileText size={28} className="text-slate-500" />
+                      </div>
+                      <p className="text-sm text-slate-400">Aucun document pour ce client</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {clientInvoices.map((inv, idx) => (
+                        <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }}>
+                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-800/30 transition-colors group">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
+                              <p className="text-xs text-slate-500">{formatDateShort(inv.issue_date)}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-semibold text-white">{formatCurrency(inv.total)}</p>
+                            </div>
+                            <ArrowLeft size={14} className="text-slate-600 group-hover:text-emerald-400 rotate-180 transition-colors" />
+                          </Link>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Health tab */}
+            {activeTab === 'health' && (
+              <motion.div key="health" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }} className="space-y-4">
+                {/* Score card */}
+                {scoreData.clientScore !== null ? (
+                  <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Star size={18} className={scoreData.scoreColor} />
+                        <h3 className="font-semibold text-white">Score de confiance</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-3xl font-bold ${scoreData.scoreColor}`}>{scoreData.clientScore}</span>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                          scoreData.clientScore >= 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : scoreData.clientScore >= 60 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}>{scoreData.scoreLabel}</span>
+                      </div>
+                    </div>
+                    <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${scoreData.clientScore}%` }} transition={{ duration: 0.8, ease }} className={`absolute inset-y-0 left-0 rounded-full ${scoreData.scoreBarBg}`} />
+                    </div>
+                    <div className="flex gap-6 mt-4 text-xs text-slate-400">
+                      {scoreData.avgPaymentDays !== null && (
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={13} className="text-slate-500" />
+                          Paiement moyen : <strong className="text-white">{Math.round(scoreData.avgPaymentDays)}j apres echeance</strong>
+                        </span>
+                      )}
+                      {scoreData.paymentRate !== null && (
+                        <span className="flex items-center gap-1.5">
+                          <TrendingUp size={13} className="text-slate-500" />
+                          Taux de paiement : <strong className="text-white">{Math.round(scoreData.paymentRate)}%</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-8 text-center">
+                    <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <Star size={28} className="text-slate-500" />
+                    </div>
+                    <p className="text-sm text-slate-400">Pas assez de donnees pour calculer le score</p>
+                  </div>
+                )}
+
+                {/* Notes section */}
+                <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MessageSquare size={16} className="text-slate-500" />
+                    <h3 className="font-semibold text-white">Notes & suivi</h3>
+                  </div>
+
+                  <div className="space-y-3 mb-5">
+                    <textarea
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="Ajouter une note ou un suivi..."
+                      rows={3}
+                      className="w-full px-4 py-3 text-sm bg-slate-800/50 border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all resize-none text-white placeholder-slate-500"
+                    />
+                    <Button onClick={handleAddNote} loading={addingNote} disabled={!noteInput.trim()} size="sm" icon={<Plus size={16} />}>
+                      Ajouter une note
+                    </Button>
+                  </div>
+
+                  {loadingNotes ? (
+                    <div className="flex justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : notes.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                        <MessageSquare size={24} className="text-slate-500" />
+                      </div>
+                      <p className="text-sm text-slate-400">Aucune note pour ce client</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <AnimatePresence>
+                        {notes.map((note, idx) => (
+                          <motion.div key={note.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ delay: idx * 0.04, ease }} className="group relative bg-slate-800/50 border border-white/5 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-[11px] font-medium text-slate-500">
+                                {new Date(note.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} {new Date(note.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                            <button onClick={() => handleDeleteNote(note.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all" title="Supprimer">
+                              <Trash2 size={14} />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+      </div>
 
-        <div className="space-y-3 mb-6">
-          <textarea
-            value={noteInput}
-            onChange={(e) => setNoteInput(e.target.value)}
-            placeholder="Ajouter une note ou un suivi..."
-            rows={3}
-            className="w-full px-4 py-3 text-sm border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all resize-none bg-white/50 dark:bg-white/5"
-          />
-          <Button onClick={handleAddNote} loading={addingNote} disabled={!noteInput.trim()} size="sm" icon={<Plus size={16} />} className="bg-gradient-to-r from-primary to-primary-dark">
-            Ajouter une note
-          </Button>
+      {/* Mobile floating action bar */}
+      <div className="fixed bottom-0 left-0 right-0 md:hidden z-30 bg-slate-900/95 backdrop-blur-lg border-t border-white/5 px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => router.push('/clients')} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft size={16} />Retour
+          </button>
+          <div className="flex gap-2">
+            <button onClick={handleGeneratePortal} disabled={portalLoading} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/20 transition-all disabled:opacity-50" title="Portail client">
+              {portalLoading ? <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : portalCopied ? <Check size={16} className="text-emerald-400" /> : <Globe size={16} />}
+            </button>
+            <button onClick={() => setShowEdit(true)} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-all" title="Modifier">
+              <Pencil size={16} />
+            </button>
+            <button onClick={() => setShowDelete(true)} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-red-400 hover:border-red-500/20 transition-all" title="Supprimer">
+              <Trash2 size={16} />
+            </button>
+          </div>
         </div>
-
-        {loadingNotes ? (
-          <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : notes.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
-              <MessageSquare size={28} className="text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-400">Aucune note pour ce client</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <AnimatePresence>
-              {notes.map((note, idx) => (
-                <motion.div key={note.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ delay: idx * 0.05 }} className="flex gap-4 group">
-                  <div className="flex-shrink-0 w-24 pt-2">
-                    <p className="text-[11px] font-semibold text-gray-400 leading-tight">
-                      {new Date(note.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                    </p>
-                    <p className="text-[10px] text-gray-300">
-                      {new Date(note.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 flex flex-col items-center">
-                    <motion.div whileHover={{ scale: 1.2 }} className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-primary to-primary-dark mt-2 shadow-lg shadow-primary/30" />
-                    <div className="w-px flex-1 bg-gradient-to-b from-primary/20 to-transparent mt-2" />
-                  </div>
-                  <div className="flex-1 pb-4">
-                    <motion.div whileHover={{ scale: 1.01 }} className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 relative group/note">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => handleDeleteNote(note.id)} className="absolute top-3 right-3 opacity-0 group-hover/note:opacity-100 text-gray-300 hover:text-red-500 transition-all" title="Supprimer">
-                        <Trash2 size={14} />
-                      </motion.button>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </GlassCard>
+      </div>
 
       {/* Edit modal */}
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier le client" size="lg">
@@ -660,7 +744,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <Input label="Nom *" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Email" type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} />
-            <Input label="Téléphone" value={form.phone} onChange={(e) => setField('phone', e.target.value)} />
+            <Input label="Telephone" value={form.phone} onChange={(e) => setField('phone', e.target.value)} />
           </div>
           <Input label="Adresse" value={form.address} onChange={(e) => setField('address', e.target.value)} />
           <div className="grid grid-cols-3 gap-3">
@@ -669,7 +753,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="SIRET" value={form.siret} onChange={(e) => setField('siret', e.target.value)} />
-            <Input label="N° TVA" value={form.vat_number} onChange={(e) => setField('vat_number', e.target.value)} />
+            <Input label="N TVA" value={form.vat_number} onChange={(e) => setField('vat_number', e.target.value)} />
           </div>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowEdit(false)}>Annuler</Button>
@@ -680,7 +764,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Delete modal */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Supprimer ce client">
-        <p className="text-gray-600 mb-4">Êtes-vous sûr de vouloir supprimer <strong>{client.name}</strong> ? Cette action est irréversible.</p>
+        <p className="text-slate-400 mb-4">Etes-vous sur de vouloir supprimer <strong className="text-white">{client.name}</strong> ? Cette action est irreversible.</p>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => setShowDelete(false)}>Annuler</Button>
           <Button variant="danger" className="flex-1" onClick={handleDelete}>Supprimer</Button>
