@@ -32,7 +32,7 @@ export function Reveal({ children, className, direction = 'up', delay = 0, durat
       whileInView="visible"
       viewport={{ once: true, amount: 0.1, margin: '-40px' }}
       variants={variants}
-      transition={{ duration, delay, ease: easeOut as unknown as number[] }}
+      transition={{ duration, delay, ease: easeOut }}
       className={cn(className)}
     >
       {children}

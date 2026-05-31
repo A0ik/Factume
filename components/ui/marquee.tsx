@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 
 interface MarqueeProps {
   className?: string;
+  style?: React.CSSProperties;
   reverse?: boolean;
   pauseOnHover?: boolean;
   children?: React.ReactNode;

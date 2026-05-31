@@ -7,7 +7,7 @@ import PullToRefresh from '@/components/ui/PullToRefresh';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/Badge';
 import {
   FileText, Clipboard, RefreshCw, Plus, TrendingUp,
@@ -128,7 +128,7 @@ export default function DashboardPage() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', damping: 25, stiffness: 200 } },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, damping: 25, stiffness: 200 } },
   };
 
   const quickActions = [

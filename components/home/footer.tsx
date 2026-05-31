@@ -30,32 +30,32 @@ export function Footer() {
             </div>
           </div>
 
-          {[
+          {([
             { title: 'Produit', links: [
               { label: 'Fonctionnalités', href: '#features', scroll: true },
               { label: 'Tarifs', href: '#tarifs', scroll: true },
               { label: 'IA', href: '#ai', scroll: true },
             ]},
             { title: 'Ressources', links: [
-              { label: 'Démo interactive', href: '/demo' },
-              { label: 'Blog facturation', href: '/blog' },
-              { label: 'Modèles de facture', href: '/modeles-facture' },
-              { label: 'Mentions obligatoires', href: '/mentions-obligatoires-facture' },
+              { label: 'Démo interactive', href: '/demo', scroll: false },
+              { label: 'Blog facturation', href: '/blog', scroll: false },
+              { label: 'Modèles de facture', href: '/modeles-facture', scroll: false },
+              { label: 'Mentions obligatoires', href: '/mentions-obligatoires-facture', scroll: false },
             ]},
             { title: 'Par statut', links: [
-              { label: 'Auto-entrepreneur', href: '/comment-facturer/auto-entrepreneur' },
-              { label: 'SASU', href: '/comment-facturer/sasu' },
-              { label: 'EURL', href: '/comment-facturer/eurl' },
-              { label: 'Tous les statuts', href: '/comment-facturer' },
+              { label: 'Auto-entrepreneur', href: '/comment-facturer/auto-entrepreneur', scroll: false },
+              { label: 'SASU', href: '/comment-facturer/sasu', scroll: false },
+              { label: 'EURL', href: '/comment-facturer/eurl', scroll: false },
+              { label: 'Tous les statuts', href: '/comment-facturer', scroll: false },
             ]},
             { title: 'Confiance', links: [
-              { label: 'Sécurité', href: '/securite' },
-              { label: 'Équipe', href: '/experts' },
-              { label: 'Mentions légales', href: '/legal/mentions-legales' },
-              { label: 'CGU', href: '/legal/cgu' },
-              { label: 'Confidentialité', href: '/legal/confidentialite' },
+              { label: 'Sécurité', href: '/securite', scroll: false },
+              { label: 'Équipe', href: '/experts', scroll: false },
+              { label: 'Mentions légales', href: '/legal/mentions-legales', scroll: false },
+              { label: 'CGU', href: '/legal/cgu', scroll: false },
+              { label: 'Confidentialité', href: '/legal/confidentialite', scroll: false },
             ]},
-          ].map((col) => (
+          ] as const).map((col) => (
             <div key={col.title}>
               <h4 className="font-bold text-xs sm:text-sm mb-3 text-brand-200">{col.title}</h4>
               <ul className="space-y-2">

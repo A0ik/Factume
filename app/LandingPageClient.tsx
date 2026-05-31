@@ -21,7 +21,7 @@ import { Marquee } from '@/components/ui/marquee';
 /* ═══════════════════════════════════════════════════════════
    COURBE EXCLUSIVE — Loi 4 du Manifeste Anti-IA
    ═══════════════════════════════════════════════════════════ */
-const ease = [0.16, 1, 0.3, 1] as unknown as number[];
+const ease = [0.16, 1, 0.3, 1] as const;
 
 /* ═══════════════════════════════════════════════════════════
    LAYOUT — Container pour grands écrans (MODIF 1)
