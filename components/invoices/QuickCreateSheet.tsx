@@ -136,7 +136,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="absolute left-0 right-0 bottom-0 bg-slate-900 rounded-t-3xl border-t border-white/10 shadow-2xl flex flex-col overflow-hidden"
+            className="absolute left-0 right-0 bottom-0 bg-card rounded-t-3xl border-t border-border shadow-2xl flex flex-col overflow-hidden"
             style={{
               height: '90vh',
               paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom, 2.5rem))',
@@ -154,13 +154,13 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                   <Sparkles size={17} className="text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Création rapide</h3>
-                  <p className="text-xs text-slate-500">Brouillon en 2 taps</p>
+                  <h3 className="text-lg font-semibold text-foreground">Création rapide</h3>
+                  <p className="text-xs text-muted-foreground">Brouillon en 2 taps</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/15 transition-all active:scale-90"
+                className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-90"
               >
                 <X size={18} />
               </button>
@@ -170,7 +170,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
             <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-none px-6 space-y-5">
               {/* Step 1: Client */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Client
                 </label>
 
@@ -186,9 +186,9 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                       {selectedClient.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{selectedClient.name}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{selectedClient.name}</p>
                       {selectedClient.email && (
-                        <p className="text-xs text-slate-500 truncate">{selectedClient.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{selectedClient.email}</p>
                       )}
                     </div>
                     <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20">
@@ -204,7 +204,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       autoFocus
-                      className="w-full bg-slate-800/50 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                      className="w-full bg-muted border border-border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                     />
                     {/* Client list */}
                     <div className="mt-2 space-y-1 max-h-[40vh] overflow-y-auto">
@@ -217,22 +217,22 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.15 }}
                             onClick={() => handleSelectClient(client.id)}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors text-left"
+                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted active:bg-secondary transition-colors text-left"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 font-semibold text-xs">
+                            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground font-semibold text-xs">
                               {client.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{client.name}</p>
+                              <p className="text-sm font-medium text-foreground truncate">{client.name}</p>
                               {client.email && (
-                                <p className="text-xs text-slate-500 truncate">{client.email}</p>
+                                <p className="text-xs text-muted-foreground truncate">{client.email}</p>
                               )}
                             </div>
                           </motion.button>
                         ))}
                       </AnimatePresence>
                       {filteredClients.length === 0 && (
-                        <p className="text-sm text-slate-500 text-center py-6">
+                        <p className="text-sm text-muted-foreground text-center py-6">
                           {search ? 'Aucun client trouvé' : 'Aucun client créé'}
                         </p>
                       )}
@@ -243,11 +243,11 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
 
               {/* Step 2: Amount */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Montant TTC
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-lg font-semibold">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-lg font-semibold">
                     €
                   </span>
                   <input
@@ -257,14 +257,14 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                     placeholder="0,00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full bg-slate-800/50 border border-white/5 rounded-xl pl-10 pr-4 py-4 text-2xl font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/20 transition-all tabular-nums"
+                    className="w-full bg-muted border border-border rounded-xl pl-10 pr-4 py-4 text-2xl font-bold text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/30 focus:ring-1 focus:ring-emerald-500/20 transition-all tabular-nums"
                   />
                 </div>
                 {amount && !isNaN(parseFloat(amount.replace(',', '.'))) && (
                   <motion.p
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-xs text-slate-500 mt-1.5 px-1"
+                    className="text-xs text-muted-foreground mt-1.5 px-1"
                   >
                     TVA 20% incluse · HT : {formatCurrency(parseFloat(amount.replace(',', '.')) / 1.2)}
                   </motion.p>
@@ -277,7 +277,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                   <button
                     key={preset}
                     onClick={() => setAmount(String(preset))}
-                    className="flex-1 py-2 rounded-xl bg-slate-800/50 border border-white/5 text-xs font-medium text-slate-400 hover:text-white hover:border-white/10 active:scale-95 transition-all"
+                    className="flex-1 py-2 rounded-xl bg-muted border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-emerald-500/30 active:scale-95 transition-all"
                   >
                     {preset}€
                   </button>
@@ -286,7 +286,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
             </div>
 
             {/* CTA — sticky bottom */}
-            <div className="px-6 pt-4 border-t border-white/5 mt-auto">
+            <div className="px-6 pt-4 border-t border-border mt-auto">
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleCreate}
@@ -302,7 +302,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
               </motion.button>
               <button
                 onClick={onClose}
-                className="w-full mt-2 py-2.5 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                className="w-full mt-2 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Formulaire complet →
               </button>

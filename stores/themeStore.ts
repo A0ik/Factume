@@ -33,7 +33,7 @@ function applyTheme(theme: Theme) {
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  theme: 'light',
+  theme: 'dark',
   toggle: () => {
     const next = get().theme === 'light' ? 'dark' : 'light';
     applyTheme(next);
@@ -49,9 +49,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       applyTheme(stored);
       set({ theme: stored });
     } else {
-      // Par défaut: thème clair (pas de préférences système)
-      applyTheme('light');
-      set({ theme: 'light' });
+      // Par défaut: thème sombre
+      applyTheme('dark');
+      set({ theme: 'dark' });
     }
   },
 }));

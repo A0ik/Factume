@@ -12,15 +12,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
-import { emitQuickCreate } from '@/lib/quick-create-events';
 
 /**
  * BottomTabBar — Navigation native mobile
  *
- * 4 onglets avec labels textuels (pas juste des icônes)
- * + FAB central pour création rapide
+ * 4 onglets + FAB central pour création rapide
+ * Layout : [Tab][Tab][FAB][Tab][Tab] — 5 colonnes égales
  *
- * Design : glassmorphism sur fond sombre, indicator animé,
+ * Design : glassmorphism, indicator animé via layoutId,
  * spring transitions, retour tactile visuel.
  */
 const tabs = [
@@ -45,42 +44,36 @@ export default function BottomTabBar() {
       className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {/* Glassmorphism backdrop — uniquement pour les éléments flottants */}
-      <div className="bg-slate-950/80 backdrop-blur-2xl border-t border-white/[0.06]">
-        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-          {tabs.map((tab, index) => {
-            const active = isActive(tab.href);
-            const Icon = tab.icon;
+      <div className="bg-background/80 backdrop-blur-2xl border-t border-border">
+        <div className="flex items-end justify-around h-16 max-w-lg mx-auto px-2">
 
-            // Insert FAB between tab index 1 and 2
-            if (index === 2) {
-              return (
-                <div key="fab-group" className="flex items-center gap-1 -mx-1">
-                  {/* Central FAB — ouvre le QuickCreateSheet sur mobile */}
-                  <button
-                    className="relative flex items-center justify-center -mt-5"
-                    onClick={() => {
-                      triggerHaptic('medium');
-                      emitQuickCreate();
-                    }}
-                  >
-                    <motion.div
-                      whileTap={{ scale: 0.88 }}
-                      transition={springTransition}
-                      className="w-13 h-13 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25"
-                      style={{ width: 52, height: 52 }}
-                    >
-                      <Plus size={24} className="text-white" strokeWidth={2.5} />
-                    </motion.div>
-                  </button>
-                  {/* The tab itself */}
-                  <TabItem tab={tab} active={active} />
-                </div>
-              );
-            }
+          {/* Tab 0: Accueil */}
+          <TabItem tab={tabs[0]} active={isActive(tabs[0].href)} />
 
-            return <TabItem key={tab.href} tab={tab} active={active} />;
-          })}
+          {/* Tab 1: Factures */}
+          <TabItem tab={tabs[1]} active={isActive(tabs[1].href)} />
+
+          {/* Central FAB — navigate to invoice creation */}
+          <Link
+            href="/documents/factures/new"
+            className="relative flex items-center justify-center -mt-6"
+            onClick={() => triggerHaptic('medium')}
+          >
+            <motion.div
+              whileTap={{ scale: 0.88 }}
+              transition={springTransition}
+              className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30"
+            >
+              <Plus size={26} className="text-white" strokeWidth={2.5} />
+            </motion.div>
+          </Link>
+
+          {/* Tab 2: Clients */}
+          <TabItem tab={tabs[2]} active={isActive(tabs[2].href)} />
+
+          {/* Tab 3: Compte */}
+          <TabItem tab={tabs[3]} active={isActive(tabs[3].href)} />
+
         </div>
       </div>
     </nav>
@@ -89,7 +82,7 @@ export default function BottomTabBar() {
 
 /**
  * TabItem — un onglet individuel avec icône + label
- * Animation : l'indicateur actif glisse horizontalement (spring)
+ * Animation : l'indicateur actif glisse horizontalement (layoutId spring)
  */
 function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean }) {
   const Icon = tab.icon;
@@ -99,17 +92,17 @@ function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean })
       href={tab.href}
       className="relative flex flex-col items-center justify-center w-16 h-full"
     >
-      {/* Active indicator — dot under the icon */}
+      {/* Active indicator — dot under the icon, animated with layoutId */}
       {active && (
         <motion.div
           layoutId="tabIndicator"
           transition={springTransition}
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-emerald-400"
+          className="absolute top-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-emerald-400"
         />
       )}
 
       <motion.div
-        animate={{ scale: active ? 1.05 : 1, y: active ? -1 : 0 }}
+        animate={{ scale: active ? 1.08 : 1, y: active ? -2 : 0 }}
         transition={springTransition}
         className="flex flex-col items-center gap-0.5"
       >
@@ -118,13 +111,13 @@ function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean })
           strokeWidth={active ? 2.2 : 1.5}
           className={cn(
             'transition-colors duration-200',
-            active ? 'text-emerald-400' : 'text-slate-500',
+            active ? 'text-emerald-400' : 'text-muted-foreground',
           )}
         />
         <span
           className={cn(
             'text-[10px] font-semibold transition-colors duration-200',
-            active ? 'text-emerald-400' : 'text-slate-500',
+            active ? 'text-emerald-400' : 'text-muted-foreground',
           )}
         >
           {tab.label}

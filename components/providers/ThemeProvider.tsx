@@ -15,14 +15,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Initialiser le thème depuis localStorage, par défaut: light
+    // Initialiser le thème depuis localStorage, par défaut: dark
     const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
 
     if (stored) {
       setTheme(stored);
     } else {
-      // Par défaut: thème clair
-      setTheme('light');
+      // Par défaut: thème sombre
+      setTheme('dark');
     }
   }, [setTheme, pathname]);
 

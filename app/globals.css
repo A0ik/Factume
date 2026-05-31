@@ -71,13 +71,11 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
   }
 
   body {
-    @apply bg-white text-gray-900;
-    overscroll-behavior: none;
-    overflow-x: hidden;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.3s ease, color 0.3s ease;

@@ -23,6 +23,7 @@ import {
 
 import { toast } from 'sonner';
 import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-recording';
+import InvoiceMobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
@@ -445,7 +446,7 @@ export default function NewFacturePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 pb-8">
+    <div className="max-w-4xl mx-auto space-y-5 pb-8 lg:pb-8 pb-28">
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.02] dark:bg-blue-500/[0.03] rounded-full blur-3xl" />
@@ -1254,6 +1255,13 @@ export default function NewFacturePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Floating Action Bar */}
+      <InvoiceMobileActionBar
+        onSave={handleSave}
+        saving={saving}
+        isEdit={false}
+      />
 
       {/* Product Catalog Modal */}
       <AnimatePresence>

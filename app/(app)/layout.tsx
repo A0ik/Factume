@@ -76,10 +76,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!initialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500">Chargement...</p>
+          <p className="text-sm text-muted-foreground">Chargement...</p>
         </div>
       </div>
     );
@@ -115,7 +115,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-h-screen bg-slate-950 overflow-x-hidden">
+      <div className="flex min-h-screen bg-background">
         {!pathname.startsWith('/cabinet') && <Sidebar />}
         <main className={cn(
           "flex-1 flex flex-col min-w-0",
@@ -123,17 +123,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}>
           {/* Mobile top bar — native app style with contextual title */}
           {!pathname.startsWith('/cabinet') && (
-          <div className="lg:hidden sticky top-0 z-30 bg-slate-950/80 backdrop-blur-2xl border-b border-white/[0.06]"
+          <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-2xl border-b border-border"
                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             <div className="flex items-center justify-between px-4 h-14">
               <button
                 onClick={() => setDrawerOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                className="flex items-center justify-center w-10 h-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
                 aria-label="Menu navigation"
               >
                 <Menu size={20} strokeWidth={1.8} />
               </button>
-              <h1 className="text-[15px] font-semibold text-white">
+              <h1 className="text-[15px] font-semibold text-foreground">
                 {getPageTitle(pathname)}
               </h1>
               <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
