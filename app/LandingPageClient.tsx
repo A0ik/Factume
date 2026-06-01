@@ -158,10 +158,10 @@ export default function LandingPageClient() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-white transition-colors"><LogIn className="w-3.5 h-3.5" />Connexion</Link>
-            <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-4 py-2 rounded-full transition-colors duration-200 active:scale-[0.97]">
-              Commencer gratuitement<ArrowRight className="w-3.5 h-3.5" />
+            <Link href="/register" className="inline-flex items-center gap-1 text-[11px] sm:text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-colors duration-200 active:scale-[0.97] whitespace-nowrap">
+              <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </Link>
             <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white p-1">{menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
           </div>
@@ -187,7 +187,7 @@ export default function LandingPageClient() {
           <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
         </div>
 
-        <div className={`relative z-10 ${LC} py-24 md:py-32 2xl:py-40 w-full`}>
+        <div className={`relative z-10 ${LC} py-16 sm:py-24 md:py-32 2xl:py-40 w-full`}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 2xl:gap-20 items-center">
             <div className="lg:col-span-7 space-y-8 2xl:space-y-10">
               <R delay={0}>
@@ -196,13 +196,13 @@ export default function LandingPageClient() {
                 </div>
               </R>
               <R delay={0.08}>
-                <h1 className="text-5xl md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
+                <h1 className="text-3xl sm:text-5xl md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
                   Votre facture électronique,<br />
                   <span className="text-emerald-400">dictée là,</span> c&apos;est encaissé.
                 </h1>
               </R>
               <R delay={0.16}>
-                <p className="text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-300 max-w-lg 2xl:max-w-xl">
+                <p className="text-base sm:text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-300 max-w-lg 2xl:max-w-xl">
                   Dites simplement ce que vous avez facturé, l&apos;IA s&apos;occupe du reste. Votre client paie en <span className="text-white font-medium">1 clic</span> via Stripe ou Sumup.
                 </p>
               </R>
