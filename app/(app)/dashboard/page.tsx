@@ -9,6 +9,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { formatCurrency, cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/Badge';
+import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
 import {
   FileText, Clipboard, RefreshCw, Plus, TrendingUp,
   ArrowUpRight, Clock, AlertTriangle, Zap, ShoppingCart, Truck,
@@ -51,6 +52,7 @@ export default function DashboardPage() {
   const sub = useSubscription();
   const [period, setPeriod] = useState<1 | 3 | 6 | 12>(6);
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showDocTypeSheet, setShowDocTypeSheet] = useState(false);
 
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
@@ -172,7 +174,7 @@ export default function DashboardPage() {
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={springTransition}
-                    className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight"
+                    className="text-4xl font-bold text-white tracking-tight"
                   >
                     {formatCurrency(toCollect)}
                   </motion.p>
@@ -203,7 +205,7 @@ export default function DashboardPage() {
                   <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
                     <Link
                       href="/invoices/new?type=invoice"
-                      className="flex items-center justify-center gap-2 bg-gray-200 hover:bg-white/30 backdrop-blur text-gray-900 dark:text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+                      className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
                     >
                       <Plus size={16} strokeWidth={2.5} />
                       Facturer
@@ -212,7 +214,7 @@ export default function DashboardPage() {
                   <motion.div whileTap={{ scale: 0.95 }}>
                     <button
                       onClick={() => setShowQuickActions(!showQuickActions)}
-                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 backdrop-blur text-gray-900 dark:text-white transition-colors"
+                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur text-white transition-colors"
                     >
                       <Sparkles size={16} />
                     </button>
@@ -268,13 +270,13 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
               {profile?.company_name || 'Mon entreprise'}
             </h2>
-            <Link
-              href="/documents/factures/new"
+            <button
+              onClick={() => setShowDocTypeSheet(true)}
               className="group flex-shrink-0 inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors active:scale-95"
             >
               <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-200" />
-              Nouveau
-            </Link>
+              Nouveau document
+            </button>
           </motion.div>
 
           {/* Paywall hint */}
@@ -329,7 +331,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-emerald-200/70 font-medium uppercase tracking-wider mb-1 flex items-center gap-1">
                   <TrendingUp size={10} /> CA ce mois
                 </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{formatCurrency(stats?.mrr || 0)}</p>
+                <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(stats?.mrr || 0)}</p>
                 <p className="text-[11px] text-emerald-200/50 mt-1.5">
                   {monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}% vs mois dernier
                 </p>
@@ -512,6 +514,9 @@ export default function DashboardPage() {
         </motion.div>
       </main>
       </PullToRefresh>
+
+      {/* Document Type Sheet — mobile bottom sheet for creating any document */}
+      <DocumentTypeSheet open={showDocTypeSheet} onClose={() => setShowDocTypeSheet(false)} />
     </>
   );
 }

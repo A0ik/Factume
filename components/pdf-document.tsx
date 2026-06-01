@@ -168,8 +168,12 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
 
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client';
   const companyName = profile.company_name || '';
+  // Payment link detection: check all possible fields for Stripe and SumUp
   const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
-  const paymentMethod = invoice.stripe_payment_link_url || invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
+  // Provider detection: explicit check using sumup_checkout_id to avoid ambiguity
+  const isStripePayment = !!(invoice.stripe_payment_link_url || invoice.stripe_payment_url);
+  const isSumUpPayment = !!invoice.sumup_checkout_id || (!isStripePayment && !!invoice.payment_link);
+  const paymentMethod = isStripePayment ? 'Stripe' : isSumUpPayment ? 'SumUp' : '';
 
   // Company info lines
   const senderInfo: string[] = [];

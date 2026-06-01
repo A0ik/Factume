@@ -495,13 +495,17 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     needPage();
     y -= 8;
 
-    // Fetch QR code image for the payment URL
-    const qrImage = await fetchAndEmbedImage(pdfDoc, `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(paymentUrl)}`);
+    // Fetch QR code image for the payment URL (works for both Stripe & SumUp)
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&data=${encodeURIComponent(paymentUrl)}`;
+    const qrImage = await fetchAndEmbedImage(pdfDoc, qrApiUrl);
     const boxH = qrImage ? 70 : 48;
     page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
 
-    const method = invoice.stripe_payment_url ? 'PAIEMENT EN LIGNE (STRIPE)' : 'PAIEMENT EN LIGNE (SUMUP)';
-    drawText(page, method, margin + 14, y - 8, 7, bold, accent);
+    // Provider detection: explicit check using sumup_checkout_id
+    const isStripe = !!(invoice.stripe_payment_url);
+    const isSumUp = !!(invoice.sumup_checkout_id) || (!isStripe && !!(invoice.payment_link));
+    const methodLabel = isStripe ? 'PAIEMENT EN LIGNE (STRIPE)' : isSumUp ? 'PAIEMENT EN LIGNE (SUMUP)' : 'PAIEMENT EN LIGNE';
+    drawText(page, methodLabel, margin + 14, y - 8, 7, bold, accent);
 
     if (qrImage) {
       // Draw text on the left, QR code on the right

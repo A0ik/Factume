@@ -235,11 +235,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      // Refresh invoice from DB to get updated payment_link + stripe_payment_url
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
       if (updatedInvoice) {
         setInvoice(updatedInvoice);
+        // Also update Zustand store so PDF generation picks up new data
+        useDataStore.getState().updateInvoiceInList(updatedInvoice);
       }
 
       setPaymentSuccessUrl(data.paymentLinkUrl);
@@ -263,11 +266,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
+      // Refresh invoice from DB to get updated payment_link + sumup_checkout_id
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
       if (updatedInvoice) {
         setInvoice(updatedInvoice);
+        // Also update Zustand store so PDF generation picks up new data
+        useDataStore.getState().updateInvoiceInList(updatedInvoice);
       }
 
       setPaymentSuccessUrl(data.url);
@@ -946,9 +952,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           },
           ...(invoice.document_type === 'invoice' && invoice.status !== 'paid' ? [{
             icon: CreditCard,
-            label: 'Lien de paiement',
+            label: 'Encaisser',
             onClick: () => setShowPaymentModal(true),
-            description: 'Créer un lien Stripe',
+            description: 'Créer un lien de paiement',
           }] : []),
           ...(invoice.status !== 'paid' ? [{
             icon: CheckCircle,

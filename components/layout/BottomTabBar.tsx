@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -12,11 +13,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
+import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
 
 /**
  * BottomTabBar — Navigation native mobile
  *
- * 4 onglets + FAB central pour création rapide
+ * 4 onglets + FAB central pour création rapide de documents
  * Layout : [Tab][Tab][FAB][Tab][Tab] — 5 colonnes égales
  *
  * Design : glassmorphism, indicator animé via layoutId,
@@ -33,6 +35,7 @@ const springTransition = { type: 'spring' as const, damping: 25, stiffness: 300 
 
 export default function BottomTabBar() {
   const pathname = usePathname();
+  const [showDocSheet, setShowDocSheet] = useState(false);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
@@ -40,43 +43,50 @@ export default function BottomTabBar() {
   };
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      <div className="bg-background/80 backdrop-blur-2xl border-t border-border">
-        <div className="flex items-end h-16 max-w-lg mx-auto px-2">
+    <>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="bg-background/80 backdrop-blur-2xl border-t border-border">
+          <div className="flex items-end h-16 max-w-lg mx-auto px-2">
 
-          {/* Tab 0: Accueil */}
-          <TabItem tab={tabs[0]} active={isActive(tabs[0].href)} />
+            {/* Tab 0: Accueil */}
+            <TabItem tab={tabs[0]} active={isActive(tabs[0].href)} />
 
-          {/* Tab 1: Factures */}
-          <TabItem tab={tabs[1]} active={isActive(tabs[1].href)} />
+            {/* Tab 1: Factures */}
+            <TabItem tab={tabs[1]} active={isActive(tabs[1].href)} />
 
-          {/* Central FAB — navigate to invoice creation */}
-          <Link
-            href="/documents/factures/new"
-            className="relative flex items-center justify-center -mt-6"
-            onClick={() => triggerHaptic('medium')}
-          >
-            <motion.div
-              whileTap={{ scale: 0.88 }}
-              transition={springTransition}
-              className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30"
+            {/* Central FAB — opens Document Type Sheet */}
+            <button
+              onClick={() => {
+                triggerHaptic('medium');
+                setShowDocSheet(true);
+              }}
+              className="relative flex items-center justify-center -mt-6"
             >
-              <Plus size={26} className="text-white" strokeWidth={2.5} />
-            </motion.div>
-          </Link>
+              <motion.div
+                whileTap={{ scale: 0.88 }}
+                transition={springTransition}
+                className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30"
+              >
+                <Plus size={26} className="text-white" strokeWidth={2.5} />
+              </motion.div>
+            </button>
 
-          {/* Tab 2: Clients */}
-          <TabItem tab={tabs[2]} active={isActive(tabs[2].href)} />
+            {/* Tab 2: Clients */}
+            <TabItem tab={tabs[2]} active={isActive(tabs[2].href)} />
 
-          {/* Tab 3: Compte */}
-          <TabItem tab={tabs[3]} active={isActive(tabs[3].href)} />
+            {/* Tab 3: Compte */}
+            <TabItem tab={tabs[3]} active={isActive(tabs[3].href)} />
 
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Document Type Sheet — accessible from FAB */}
+      <DocumentTypeSheet open={showDocSheet} onClose={() => setShowDocSheet(false)} />
+    </>
   );
 }
 

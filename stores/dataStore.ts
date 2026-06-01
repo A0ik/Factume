@@ -286,6 +286,11 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (error) throw error;
     set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) })); get().computeStats();
   },
+  /** Update a single invoice in the local list (no DB write). Used after payment link creation etc. */
+  updateInvoiceInList: (updated: any) => {
+    set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === updated.id ? { ...inv, ...updated } : inv)) }));
+    get().computeStats();
+  },
   updateInvoiceStatus: async (id, status) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');

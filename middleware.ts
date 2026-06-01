@@ -112,48 +112,48 @@ export async function middleware(req: NextRequest) {
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 
-  // Differentiated rate limits per route tier
+  // ── Rate Limiting (optimisé pour UX SaaS) ────────────────────────────────
+  // RULE: Navigation pages (SSR) = NO rate limit. A user refreshing 30 times
+  // should NEVER be blocked. Only auth routes and expensive API calls are limited.
+  let shouldRateLimit = false;
   let rlLimit: number;
   let rlWindow: number;
 
-  if (isCrawler) {
-    rlLimit = 5000;
-    rlWindow = 60_000;
-  } else if (pathname === '/api/stripe/trial-subscription') {
+  if (pathname === '/api/stripe/trial-subscription') {
+    shouldRateLimit = true;
     rlLimit = 3;
-    rlWindow = 86_400_000;
+    rlWindow = 86_400_000; // 3 per day — anti-abuse
   } else if (isAuthRoute) {
+    shouldRateLimit = true;
     rlLimit = 10;
-    rlWindow = 900_000; // 10 per 15 minutes — strict but human
+    rlWindow = 900_000; // 10 per 15 minutes — brute-force protection
   } else if (isApiRoute) {
-    rlLimit = 100;
-    rlWindow = 60_000; // 100 per minute
-  } else {
-    // Page requests (SSR/ISR) — very permissive
-    rlLimit = 1000;
-    rlWindow = 60_000; // 1000 per minute
+    shouldRateLimit = true;
+    rlLimit = 200;
+    rlWindow = 60_000; // 200 per minute — generous for normal usage
   }
+  // Page requests (SSR/ISR): NO rate limiting — users browse freely
 
-  // Use per-path-group key so /api/cabinet/* doesn't share the same bucket as /api/stripe/*
-  const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
-    : isApiRoute ? 'api'
-    : isAuthRoute ? 'auth'
-    : 'page';
+  if (shouldRateLimit) {
+    const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
+      : isApiRoute ? 'api'
+      : 'auth';
 
-  const rl = await rateLimitAsync({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit, windowMs: rlWindow });
+    const rl = await rateLimitAsync({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit!, windowMs: rlWindow! });
 
-  if (!rl.success) {
-    const retryAfter = Math.max(1, Math.ceil((rl.resetTime - Date.now()) / 1000));
-    return new Response(JSON.stringify({
-      error: 'Too Many Requests',
-      message: `Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`,
-    }), {
-      status: 429,
-      headers: {
-        'Retry-After': String(retryAfter),
-        'Content-Type': 'application/json',
-      },
-    });
+    if (!rl.success) {
+      const retryAfter = Math.max(1, Math.ceil((rl.resetTime - Date.now()) / 1000));
+      return new Response(JSON.stringify({
+        error: 'Too Many Requests',
+        message: `Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`,
+      }), {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfter),
+          'Content-Type': 'application/json',
+        },
+      });
+    }
   }
 
   // Racine toujours publique (headers already set above)

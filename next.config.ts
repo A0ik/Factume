@@ -31,6 +31,13 @@ const nextConfig: NextConfig = {
       { source: '/facturation-developpeur', destination: '/modeles-facture/developpeur', permanent: true },
       { source: '/facturation-designer', destination: '/modeles-facture/designer', permanent: true },
       { source: '/facturation-consultant', destination: '/modeles-facture/consultant', permanent: true },
+      // Canvas + Copilot unified creation page redirects
+      { source: '/documents/factures/new', destination: '/documents/create?type=invoice', permanent: false },
+      { source: '/documents/devis/new', destination: '/documents/create?type=quote', permanent: false },
+      { source: '/documents/avoirs/new', destination: '/documents/create?type=credit_note', permanent: false },
+      { source: '/documents/acomptes/new', destination: '/documents/create?type=deposit', permanent: false },
+      { source: '/documents/commandes/new', destination: '/documents/create?type=purchase_order', permanent: false },
+      { source: '/documents/livraisons/new', destination: '/documents/create?type=delivery_note', permanent: false },
     ];
   },
 

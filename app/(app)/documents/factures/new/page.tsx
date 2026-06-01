@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-recording';
 import InvoiceMobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
+import ClientTypeModal from '@/components/invoices/ClientTypeModal';
 import { useToast } from '@/components/ui/SuccessToast';
 
 const VAT_RATES = [
@@ -67,6 +68,8 @@ export default function NewFacturePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showClientTypeModal, setShowClientTypeModal] = useState(false);
+  const [clientType, setClientType] = useState<'b2b' | 'b2c' | null>(null);
 
   // AI generation
   const [aiPrompt, setAiPrompt] = useState('');
@@ -370,6 +373,28 @@ export default function NewFacturePage() {
   };
 
   const handleSave = async () => {
+    // If client type not yet chosen, show the B2B/B2C modal first
+    if (!clientType) {
+      setShowClientTypeModal(true);
+      return;
+    }
+    // Proceed to actual save
+    await doSave();
+  };
+
+  const handleClientTypeSelect = (type: 'b2b' | 'b2c') => {
+    setClientType(type);
+    setShowClientTypeModal(false);
+    // If B2C (particulier), clear SIRET & VAT number since not needed
+    if (type === 'b2c') {
+      setClientSiret('');
+      setClientVatNumber('');
+    }
+    // Auto-trigger save after selection
+    setTimeout(() => doSave(), 100);
+  };
+
+  const doSave = async () => {
     // Use ref for synchronous guard — useState can let a second click through before re-render
     if (savingRef.current) {
       return;
@@ -1410,6 +1435,13 @@ export default function NewFacturePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Client Type Modal — B2B (Entreprise) vs B2C (Particulier) */}
+      <ClientTypeModal
+        open={showClientTypeModal}
+        onSelect={handleClientTypeSelect}
+        clientName={clientName}
+      />
     </div>
   );
 }
