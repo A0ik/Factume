@@ -45,7 +45,7 @@ export default function BottomTabBar() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="bg-background/80 backdrop-blur-2xl border-t border-border">
-        <div className="flex items-end justify-around h-16 max-w-lg mx-auto px-2">
+        <div className="flex items-end h-16 max-w-lg mx-auto px-2">
 
           {/* Tab 0: Accueil */}
           <TabItem tab={tabs[0]} active={isActive(tabs[0].href)} />
@@ -83,6 +83,7 @@ export default function BottomTabBar() {
 /**
  * TabItem — un onglet individuel avec icône + label
  * Animation : l'indicateur actif glisse horizontalement (layoutId spring)
+ * Centrage strict via flex + items-center
  */
 function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean }) {
   const Icon = tab.icon;
@@ -90,14 +91,16 @@ function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean })
   return (
     <Link
       href={tab.href}
-      className="relative flex flex-col items-center justify-center w-16 h-full"
+      onClick={() => triggerHaptic('light')}
+      className="relative flex flex-1 flex-col items-center justify-center h-full"
     >
-      {/* Active indicator — dot under the icon, animated with layoutId */}
+      {/* Active indicator — perfectly centered above icon */}
       {active && (
         <motion.div
           layoutId="tabIndicator"
           transition={springTransition}
-          className="absolute top-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-emerald-400"
+          className="absolute top-1 w-5 h-0.5 rounded-full bg-emerald-400"
+          style={{ left: '50%', x: '-50%' }}
         />
       )}
 

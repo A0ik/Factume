@@ -425,7 +425,7 @@ export function AIChatWidget() {
       <motion.div
         initial={{ opacity: 0, scale: 0 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="fixed bottom-4 left-4 z-40"
+        className="fixed bottom-20 left-4 z-40"
       >
         <button
           onClick={handleUnhide}
@@ -444,7 +444,7 @@ export function AIChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-20 right-4 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (

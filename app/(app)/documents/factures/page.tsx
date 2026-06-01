@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Receipt, Plus, Search, FileText, CheckCircle, Clock, XCircle,
@@ -12,7 +12,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { BulkActions } from '@/components/invoices/BulkActions';
 import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
+import { InvoicePreviewSheet } from '@/components/invoices/InvoicePreviewSheet';
 import SwipeableCard from '@/components/layout/SwipeableCard';
+import { useToast } from '@/components/ui/SuccessToast';
+import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
 
 type StatusFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue';
 
@@ -36,12 +39,26 @@ const listItemVariants = {
 export default function FacturesPage() {
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedFactures, setSelectedFactures] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<InvoiceFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+
+  // Long Press preview state
+  const [previewInvoice, setPreviewInvoice] = useState<{
+    id: string;
+    number?: string;
+    clientName: string;
+    amount: string;
+    status: 'draft' | 'sent' | 'paid' | 'overdue';
+    issueDate?: string;
+    dueDate?: string;
+    paidAt?: string;
+  } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
@@ -90,17 +107,23 @@ export default function FacturesPage() {
     } catch { toast.error('Erreur'); } finally { setSendingReminder(null); }
   };
 
-  const handleDelete = async (invoiceId: string) => {
+  const handleDelete = useCallback(async (invoiceId: string) => {
     if (!session) return;
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.access_token}` } });
       if (!res.ok) throw new Error();
-      toast.success('Facture supprimée');
+      showToast({
+        icon: 'success',
+        title: 'Facture supprimée',
+        subtitle: 'La facture a été définitivement supprimée',
+      });
       fetchInvoices();
-    } catch { toast.error('Erreur suppression'); }
-  };
+    } catch {
+      toast.error('Erreur suppression');
+    }
+  }, [session, showToast, fetchInvoices]);
 
-  const handleMarkPaid = async (invoiceId: string) => {
+  const handleMarkPaid = useCallback(async (invoiceId: string) => {
     if (!session) return;
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/status`, {
@@ -109,10 +132,32 @@ export default function FacturesPage() {
         body: JSON.stringify({ status: 'paid' }),
       });
       if (!res.ok) throw new Error();
-      toast.success('Marquée comme payée');
+      showToast({
+        icon: 'success',
+        title: 'Facture marquée payée ✅',
+        subtitle: 'Le statut a été mis à jour',
+      });
       fetchInvoices();
-    } catch { toast.error('Erreur'); }
-  };
+    } catch {
+      toast.error('Erreur');
+    }
+  }, [session, showToast, fetchInvoices]);
+
+  const handleLongPress = useCallback((facture: any) => {
+    const clientName = facture.client?.name || facture.client_name_override || 'Client inconnu';
+    const amount = facture.total ? facture.total.toFixed(2) + ' €' : '—';
+    setPreviewInvoice({
+      id: facture.id,
+      number: facture.number,
+      clientName,
+      amount,
+      status: facture.status || 'draft',
+      issueDate: facture.issue_date,
+      dueDate: facture.due_date,
+      paidAt: facture.paid_at,
+    });
+    setShowPreview(true);
+  }, []);
 
   const statusTabs: { key: StatusFilter; label: string; count: number }[] = [
     { key: 'all', label: 'Tout', count: stats.total },
@@ -129,12 +174,12 @@ export default function FacturesPage() {
       {/* Header — big, airy, dark */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-3xl font-bold tracking-tight text-white">Factures</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Factures</h1>
           <div className="hidden md:flex gap-3">
-            <Link href="/documents/factures/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl transition-colors active:scale-95">
+            <Link href="/documents/factures/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white font-semibold rounded-xl transition-colors active:scale-95">
               <Plus size={18} /> Nouvelle facture
             </Link>
-            <Link href="/documents/factures/recurring" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl transition-colors">
+            <Link href="/documents/factures/recurring" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-white/15 text-gray-900 dark:text-white font-semibold rounded-xl transition-colors">
               <RefreshCw size={16} /> Récurrente
             </Link>
           </div>
@@ -150,10 +195,10 @@ export default function FacturesPage() {
           { label: 'Brouillons', value: stats.draft, dot: 'bg-slate-500' },
           ...(stats.overdue > 0 ? [{ label: 'En retard', value: stats.overdue, dot: 'bg-red-500' }] : []),
         ].map(({ label, value, dot }) => (
-          <div key={label} className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/50 border border-white/5 rounded-xl flex-shrink-0">
+          <div key={label} className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 border border-gray-200 rounded-xl flex-shrink-0">
             <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
             <span className="text-xs text-slate-400">{label}</span>
-            <span className="text-xs font-bold text-white">{value}</span>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">{value}</span>
           </div>
         ))}
       </motion.div>
@@ -167,7 +212,7 @@ export default function FacturesPage() {
             placeholder="Rechercher par numéro, client..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-12 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+            className="w-full pl-10 pr-12 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
           />
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -207,13 +252,13 @@ export default function FacturesPage() {
             onClick={() => setStatusFilter(key)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               statusFilter === key
-                ? 'bg-white/15 text-white'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                ? 'bg-white/15 text-gray-900 dark:text-white'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-gray-100'
             }`}
           >
             {label}
             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-              statusFilter === key ? 'bg-white/10' : 'bg-white/5'
+              statusFilter === key ? 'bg-gray-100' : 'bg-gray-50'
             }`}>{count}</span>
           </button>
         ))}
@@ -222,40 +267,41 @@ export default function FacturesPage() {
       {/* List */}
       {filteredFactures.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-          <div className="w-14 h-14 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Receipt className="text-slate-600" size={28} />
+          <div className="w-14 h-14 bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Receipt className="text-gray-400" size={28} />
           </div>
           <p className="text-sm text-slate-400 font-medium">Aucune facture</p>
-          <p className="text-xs text-slate-600 mt-1 mb-5">Créez votre première facture</p>
-          <Link href="/documents/factures/new" className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
+          <p className="text-xs text-gray-400 mt-1 mb-5">Créez votre première facture</p>
+          <Link href="/documents/factures/new" className="inline-flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
             <Plus size={16} /> Créer
           </Link>
         </motion.div>
       ) : (
         <>
           {/* Desktop table */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/5">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-200">
               <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Numéro</div>
               <div className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client</div>
               <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date</div>
               <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Total</div>
               <div className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Statut</div>
             </div>
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-gray-200">
               {filteredFactures.map((facture) => {
                 const s = statusConfig[facture.status || 'draft'] || statusConfig.draft;
                 return (
-                  <Link key={facture.id} href={`/invoices/${facture.id}`} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-white/[0.03] transition-colors items-center group">
+                  <Link key={facture.id} href={`/invoices/${facture.id}`} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-gray-100 transition-colors items-center group">
                     <div className="col-span-2 text-sm font-semibold text-emerald-400 group-hover:underline">{facture.number || '—'}</div>
                     <div className="col-span-3 text-sm text-slate-300 truncate">{facture.client?.name || facture.client_name_override || '—'}</div>
                     <div className="col-span-2 text-sm text-slate-500">{facture.issue_date ? new Date(facture.issue_date).toLocaleDateString('fr-FR') : '—'}</div>
-                    <div className="col-span-2 text-sm font-bold text-white text-right">{facture.total ? facture.total.toFixed(2) + ' €' : '—'}</div>
-                    <div className="col-span-3">
+                    <div className="col-span-2 text-sm font-bold text-gray-900 dark:text-white text-right">{facture.total ? facture.total.toFixed(2) + ' €' : '—'}</div>
+                    <div className="col-span-3 flex items-center gap-2">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}>
                         <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                         {s.label}
                       </span>
+                      <PdpStatusBadge status={facture.pdp_status} transmittedAt={facture.pdp_transmitted_at} compact />
                     </div>
                   </Link>
                 );
@@ -263,7 +309,7 @@ export default function FacturesPage() {
             </div>
           </motion.div>
 
-          {/* Mobile card list */}
+          {/* Mobile card list — with swipe + long press */}
           <motion.div variants={listContainerVariants} initial="hidden" animate="visible" className="md:hidden space-y-2.5">
             {filteredFactures.map((facture) => {
               const s = statusConfig[facture.status || 'draft'] || statusConfig.draft;
@@ -276,21 +322,23 @@ export default function FacturesPage() {
                   <SwipeableCard
                     onDelete={() => handleDelete(facture.id)}
                     onMarkPaid={facture.status !== 'paid' ? () => handleMarkPaid(facture.id) : undefined}
+                    onLongPress={() => handleLongPress(facture)}
                   >
                     <Link href={`/invoices/${facture.id}`} className="block p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">{clientName}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{clientName}</p>
                           <p className="text-xs text-slate-500 mt-0.5 font-mono">{facture.number || '—'}</p>
                         </div>
-                        <p className="text-base font-bold text-white flex-shrink-0">{amount}</p>
+                        <p className="text-base font-bold text-gray-900 dark:text-white flex-shrink-0">{amount}</p>
                       </div>
 
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                           {s.label}
                         </span>
+                        <PdpStatusBadge status={facture.pdp_status} transmittedAt={facture.pdp_transmitted_at} compact />
                         <div className="flex items-center gap-2">
                           {date && <span className="text-xs text-slate-500">{date}</span>}
                           {(facture.status === 'sent' || facture.status === 'overdue') && (
@@ -312,6 +360,13 @@ export default function FacturesPage() {
           </motion.div>
         </>
       )}
+
+      {/* Long Press Preview Sheet */}
+      <InvoicePreviewSheet
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        invoice={previewInvoice}
+      />
     </div>
   );
 }

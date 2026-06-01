@@ -108,6 +108,55 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'customer.subscription.paused': {
+        const sub = event.data.object as Stripe.Subscription;
+        await supabase.from('profiles')
+          .update({
+            subscription_tier: 'free',
+            is_trial_active: false,
+          })
+          .eq('stripe_subscription_id', sub.id);
+
+        // Notify user their trial has ended
+        const { data: profile } = await supabase.from('profiles')
+          .select('id')
+          .eq('stripe_subscription_id', sub.id)
+          .single();
+
+        if (profile) {
+          await supabase.from('notifications').insert({
+            user_id: profile.id,
+            type: 'system',
+            title: 'Essai terminé',
+            body: 'Votre période d\'essai est terminée. Ajoutez un moyen de paiement pour continuer à utiliser Factu.me sans limitation.',
+            link: '/settings',
+            read: false,
+          }).select();
+        }
+        break;
+      }
+
+      case 'customer.subscription.trial_will_end': {
+        // Fires 3 days before trial ends — nudge user to add payment method
+        const sub = event.data.object as Stripe.Subscription;
+        const { data: profile } = await supabase.from('profiles')
+          .select('id')
+          .eq('stripe_subscription_id', sub.id)
+          .single();
+
+        if (profile) {
+          await supabase.from('notifications').insert({
+            user_id: profile.id,
+            type: 'system',
+            title: 'Votre essai se termine bientôt',
+            body: 'Plus que 3 jours d\'essai gratuit. Ajoutez votre carte pour garder accès à toutes les fonctionnalités.',
+            link: '/settings',
+            read: false,
+          }).select();
+        }
+        break;
+      }
+
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
         await supabase.from('profiles')

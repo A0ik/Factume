@@ -142,20 +142,20 @@ function MobileClientCard({
         <motion.div
           variants={staggerItem}
           whileTap={{ scale: 0.98 }}
-          className="bg-slate-800/50 border border-white/5 rounded-2xl p-5 cursor-pointer active:bg-slate-800/70 transition-colors"
+          className="bg-gray-100 border border-gray-200 rounded-2xl p-5 cursor-pointer active:bg-gray-100/70 transition-colors"
         >
           {/* Top: avatar + name + delete */}
           <div className="flex items-start gap-3.5 mb-3">
             <div
               className={cn(
-                'w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                'w-11 h-11 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0',
                 color,
               )}
             >
               {getInitials(client.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold truncate">{client.name}</p>
+              <p className="text-gray-900 dark:text-white font-semibold truncate">{client.name}</p>
               {client.city && (
                 <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                   <MapPin size={10} className="flex-shrink-0" />
@@ -195,9 +195,9 @@ function MobileClientCard({
 
           {/* Stats row */}
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-700/50 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-200 text-xs">
               <FileText size={12} className="text-slate-400" />
-              <span className="text-white font-medium">{stats.count}</span>
+              <span className="text-gray-900 dark:text-white font-medium">{stats.count}</span>
               <span className="text-slate-400">facture{stats.count !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-xs">
@@ -211,7 +211,7 @@ function MobileClientCard({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -263,20 +263,20 @@ function DesktopClientCardGrid({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: idx * 0.04, ease: EASE }}
           whileHover={{ y: -2 }}
-          className="group bg-slate-900 border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-white/10 transition-colors"
+          className="group bg-white border border-gray-200 rounded-2xl p-5 cursor-pointer hover:border-gray-300 transition-colors"
         >
           {/* Header */}
           <div className="flex items-start gap-3.5 mb-4">
             <div
               className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                'w-12 h-12 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0',
                 color,
               )}
             >
               {getInitials(client.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-semibold truncate group-hover:text-emerald-400 transition-colors">
+              <h3 className="text-gray-900 dark:text-white font-semibold truncate group-hover:text-emerald-400 transition-colors">
                 {client.name}
               </h3>
               {client.email && (
@@ -305,8 +305,8 @@ function DesktopClientCardGrid({
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="text-center p-2.5 rounded-xl bg-slate-800/60">
-              <p className="text-white font-bold">{stats.count}</p>
+            <div className="text-center p-2.5 rounded-xl bg-gray-100/60">
+              <p className="text-gray-900 dark:text-white font-bold">{stats.count}</p>
               <p className="text-[10px] text-slate-400">Facture{stats.count !== 1 ? 's' : ''}</p>
             </div>
             <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
@@ -327,7 +327,7 @@ function DesktopClientCardGrid({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -378,7 +378,7 @@ function DesktopClientRow({
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: idx * 0.03, ease: EASE }}
-        className="hover:bg-white/[0.02] cursor-pointer transition-colors group border-b border-white/5 last:border-b-0"
+        className="hover:bg-gray-100 cursor-pointer transition-colors group border-b border-gray-200 last:border-b-0"
         onClick={() => router.push(`/clients/${client.id}`)}
       >
         {/* Client */}
@@ -386,14 +386,14 @@ function DesktopClientRow({
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0',
+                'w-10 h-10 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0',
                 color,
               )}
             >
               {getInitials(client.name)}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{client.name}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{client.name}</p>
               {client.city && (
                 <p className="text-xs text-slate-400 flex items-center gap-1">
                   <MapPin size={9} />
@@ -455,7 +455,7 @@ function DesktopClientRow({
             >
               <Trash2 size={14} />
             </button>
-            <ChevronRight size={16} className="text-slate-600 group-hover:text-emerald-400 transition-colors" />
+            <ChevronRight size={16} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
           </div>
         </td>
       </motion.tr>
@@ -618,7 +618,7 @@ export default function ClientsPage() {
           {/* ─── Header ─── */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-white">Clients</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Clients</h2>
               <p className="text-sm text-slate-400 mt-1">
                 {clients.length} client{clients.length !== 1 ? 's' : ''} enregistre{clients.length !== 1 ? 's' : ''}{' '}
                 &middot; {activeClients.length} actif{activeClients.length !== 1 ? 's' : ''}
@@ -630,7 +630,7 @@ export default function ClientsPage() {
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={handleExport}
-                  className="flex items-center gap-2 text-slate-300 hover:text-white bg-slate-800/50 border border-white/5 px-4 py-2.5 rounded-xl text-sm font-medium hover:border-white/10 transition-colors"
+                  className="flex items-center gap-2 text-slate-300 hover:text-gray-900 bg-gray-100 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 transition-colors"
                 >
                   <Download size={15} />
                   <span className="hidden sm:inline">Export</span>
@@ -639,7 +639,7 @@ export default function ClientsPage() {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowImportModal(true)}
-                className="flex items-center gap-2 bg-slate-800/50 border border-white/5 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:border-white/10 transition-colors"
+                className="flex items-center gap-2 bg-gray-100 border border-gray-200 text-slate-300 hover:text-gray-900 px-4 py-2.5 rounded-xl text-sm font-medium hover:border-gray-300 transition-colors"
               >
                 <Sparkles size={15} />
                 <span className="hidden sm:inline">Import IA</span>
@@ -684,7 +684,7 @@ export default function ClientsPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: i * 0.06, ease: EASE }}
-                  className="bg-slate-900 border border-white/5 rounded-2xl p-5"
+                  className="bg-white border border-gray-200 rounded-2xl p-5"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2.5 rounded-xl bg-emerald-500/10">
@@ -692,7 +692,7 @@ export default function ClientsPage() {
                     </div>
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{s.title}</p>
                   </div>
-                  <p className="text-2xl font-bold text-white">{s.value}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
                   <p className="text-xs text-slate-500 mt-1">{s.sub}</p>
                 </motion.div>
               ))}
@@ -708,12 +708,12 @@ export default function ClientsPage() {
                 placeholder="Rechercher par nom, email ou ville..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors"
+                className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-200 text-slate-400 hover:text-slate-300 transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -721,14 +721,14 @@ export default function ClientsPage() {
             </div>
 
             {/* View toggle - desktop only */}
-            <div className="hidden md:flex rounded-xl overflow-hidden bg-slate-800/50 border border-white/5 p-1">
+            <div className="hidden md:flex rounded-xl overflow-hidden bg-gray-100 border border-gray-200 p-1">
               <button
                 onClick={() => setViewMode('grid')}
                 className={cn(
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
                   viewMode === 'grid'
                     ? 'bg-emerald-500 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+                    : 'text-slate-400 hover:text-gray-900 hover:bg-gray-200',
                 )}
               >
                 <Grid3X3 size={15} />
@@ -740,7 +740,7 @@ export default function ClientsPage() {
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
                   viewMode === 'list'
                     ? 'bg-emerald-500 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+                    : 'text-slate-400 hover:text-gray-900 hover:bg-gray-200',
                 )}
               >
                 <List size={15} />
@@ -761,10 +761,10 @@ export default function ClientsPage() {
                 transition={{ duration: 0.3, ease: EASE }}
                 className="text-center py-16 px-4"
               >
-                <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-5">
+                <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-5">
                   <Users size={28} className="text-slate-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   {search ? 'Aucun client trouve' : 'Votre carnet de clients vous attend'}
                 </h3>
                 <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
@@ -803,7 +803,7 @@ export default function ClientsPage() {
                     variants={staggerItem}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowModal(true)}
-                    className="w-full bg-slate-800/50 border border-white/5 border-dashed rounded-2xl p-5 flex items-center justify-center gap-3 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
+                    className="w-full bg-gray-100 border border-gray-200 border-dashed rounded-2xl p-5 flex items-center justify-center gap-3 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                       <Plus size={20} className="text-emerald-400" />
@@ -840,7 +840,7 @@ export default function ClientsPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setShowModal(true)}
-                      className="group h-full rounded-2xl border border-dashed border-white/10 hover:border-emerald-500/30 p-6 transition-colors flex flex-col items-center justify-center gap-3 min-h-[220px]"
+                      className="group h-full rounded-2xl border border-dashed border-gray-300 hover:border-emerald-500/30 p-6 transition-colors flex flex-col items-center justify-center gap-3 min-h-[220px]"
                     >
                       <div className="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                         <Plus size={24} className="text-emerald-400" />
@@ -863,11 +863,11 @@ export default function ClientsPage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3, ease: EASE }}
-                    className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden"
+                    className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden"
                   >
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/5">
+                        <tr className="border-b border-gray-200">
                           <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
                             Client
                           </th>

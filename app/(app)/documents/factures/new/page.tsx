@@ -18,12 +18,13 @@ import {
   RefreshCw, ChevronUp, ChevronDown, Sparkles, Calendar as CalendarIcon,
   User, AlignLeft, Receipt, AlertCircle, CheckCircle2,
   ArrowLeft, ShoppingCart, Truck, Banknote, Wand2, Percent, X,
-  Send, Loader2, ArrowRight, Package, Search,
+  Send, Loader2, ArrowRight, Package, Search, Eye,
 } from 'lucide-react';
 
 import { toast } from 'sonner';
 import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-recording';
 import InvoiceMobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
+import { useToast } from '@/components/ui/SuccessToast';
 
 const VAT_RATES = [
   { value: '0',   label: '0% — Exonéré' },
@@ -53,6 +54,7 @@ export default function NewFacturePage() {
   const { profile } = useAuthStore();
   const { clients, createInvoice } = useDataStore();
   const sub = useSubscription();
+  const { showToast } = useToast();
 
   // Type fixé à invoice pour cette page
   const docType: DocumentType = 'invoice';
@@ -420,8 +422,12 @@ export default function NewFacturePage() {
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
       ]);
 
-      // Succès - rediriger vers la facture
-      toast.success('Document créé avec succès !', { id: 'invoice-created' });
+      // Succès - magnifique toast + redirection
+      showToast({
+        icon: 'success',
+        title: 'Facture créée avec succès ! ✅',
+        subtitle: clientName ? `Pour ${clientName}` : undefined,
+      });
       setTimeout(() => {
         router.push(`/invoices/${newInvoice.id}`);
       }, 100);
@@ -478,7 +484,7 @@ export default function NewFacturePage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="flex gap-1.5 bg-gray-100 dark:bg-slate-800 p-1 rounded-xl w-full sm:w-auto"
+        className="flex gap-1.5 bg-gray-100 dark:bg-gray-100 p-1 rounded-xl w-full sm:w-auto"
       >
         <motion.button
           whileHover={{ scale: 1.02 }}
@@ -519,7 +525,7 @@ export default function NewFacturePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-6 sm:p-8 text-center space-y-5 shadow-sm"
+            className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-6 sm:p-8 text-center space-y-5 shadow-sm"
           >
             {!sub.canUseVoice && (
               <motion.button
@@ -558,7 +564,7 @@ export default function NewFacturePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-sm"
+            className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-6 sm:p-8 space-y-4 shadow-sm"
           >
             {!sub.canUseVoice && (
               <motion.button
@@ -589,7 +595,7 @@ export default function NewFacturePage() {
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-sm resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-400 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 text-sm resize-none bg-white dark:bg-gray-100 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 dark:focus:ring-blue-500 dark:focus:border-blue-400 transition-all"
                 placeholder="Décrivez votre facture en langage naturel..."
                 onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) handleAiGenerate(); }}
               />
@@ -722,8 +728,8 @@ export default function NewFacturePage() {
               )}
 
               {/* Client section */}
-              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm" style={{ overflow: 'visible', position: 'relative', zIndex: showSuggestions && suggestions.length > 0 ? 10 : 'auto' }}>
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
+              <div className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm" style={{ overflow: 'visible', position: 'relative', zIndex: showSuggestions && suggestions.length > 0 ? 10 : 'auto' }}>
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
                   <User size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Client</h3>
                 </div>
@@ -740,7 +746,7 @@ export default function NewFacturePage() {
                       <motion.div
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden"
+                        className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-100 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden"
                       >
                         {suggestions.slice(0, 5).map((c) => (
                           <button
@@ -837,8 +843,8 @@ export default function NewFacturePage() {
               </div>
 
               {/* Dates section */}
-              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
+              <div className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
                   <CalendarIcon size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Dates</h3>
                 </div>
@@ -850,7 +856,7 @@ export default function NewFacturePage() {
                         type="date"
                         value={issueDate}
                         onChange={(e) => setIssueDate(e.target.value)}
-                        className="bg-gray-50 dark:bg-slate-800 cursor-pointer"
+                        className="bg-gray-50 dark:bg-gray-100 cursor-pointer"
                       />
                       {showCalendar && (
                         <div className="absolute top-full right-0 z-30 mt-1">
@@ -878,8 +884,8 @@ export default function NewFacturePage() {
               </div>
 
               {/* Items section */}
-              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
+              <div className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
                   <AlignLeft size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Prestations</h3>
                   <span className="ml-auto text-[11px] text-gray-300 dark:text-gray-600 font-medium">{items.length} ligne{items.length !== 1 ? 's' : ''}</span>
@@ -891,7 +897,7 @@ export default function NewFacturePage() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.03 }}
-                      className="group relative p-3 sm:p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-500/20 dark:hover:border-blue-500/30 transition-colors"
+                      className="group relative p-3 sm:p-4 bg-gray-50 dark:bg-gray-100/50 rounded-xl border border-gray-100 dark:border-white/5 hover:border-blue-500/20 dark:hover:border-blue-500/30 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2 sm:mb-2.5">
                         <div className="flex items-center gap-2">
@@ -988,7 +994,7 @@ export default function NewFacturePage() {
                             value={(item as any).discount_percent ?? ''}
                             onChange={(e) => updateItem(item.id, 'discount_percent', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
                             placeholder="Remise %"
-                            className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-xs text-center bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-green-500/20"
+                            className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-xs text-center bg-white dark:bg-gray-100 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-green-500/20"
                           />
                           <span className="text-xs text-gray-400">%</span>
                           <span className="text-xs font-semibold text-green-600 dark:text-green-400">
@@ -1043,8 +1049,8 @@ export default function NewFacturePage() {
               </div>
 
               {/* Notes section */}
-              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50">
+              <div className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
                   <AlignLeft size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Notes & conditions</h3>
                 </div>
@@ -1078,7 +1084,7 @@ export default function NewFacturePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-4 shadow-sm"
+                  className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-4 shadow-sm"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <Percent size={15} className="text-gray-400 dark:text-gray-500" />
@@ -1093,7 +1099,7 @@ export default function NewFacturePage() {
                       value={discountPercent || ''}
                       onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
                       placeholder="0"
-                      className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-center font-bold bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                      className="w-24 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-center font-bold bg-white dark:bg-gray-100 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                     />
                     <span className="text-sm text-gray-500 dark:text-gray-400">%</span>
                     {discountPercent > 0 && (
@@ -1118,7 +1124,7 @@ export default function NewFacturePage() {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => setDiscountPercent(p)}
-                          className="text-xs px-2 py-1 rounded-lg font-semibold transition-colors bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
+                          className="text-xs px-2 py-1 rounded-lg font-semibold transition-colors bg-gray-100 dark:bg-gray-100 text-gray-500 dark:text-gray-400 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 hover:text-blue-600 dark:hover:text-blue-400"
                         >
                           {p}%
                         </motion.button>
@@ -1193,7 +1199,7 @@ export default function NewFacturePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-4 space-y-2.5 shadow-sm"
+                  className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 p-4 space-y-2.5 shadow-sm"
                 >
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400 dark:text-gray-500">Type</span>
@@ -1261,6 +1267,24 @@ export default function NewFacturePage() {
         onSave={handleSave}
         saving={saving}
         isEdit={false}
+        onPaymentLink={() => {
+          // Will be connected to payment link generation
+          toast.info('Fonctionnalité lien de paiement — bientôt disponible');
+        }}
+        actions={[
+          {
+            icon: Eye,
+            label: 'Prévisualiser',
+            onClick: () => toast.info('Aperçu bientôt disponible'),
+            description: 'Voir la facture avant envoi',
+          },
+          {
+            icon: Send,
+            label: 'Envoyer par email',
+            onClick: () => toast.info('Envoi bientôt disponible'),
+            description: 'Envoyer directement au client',
+          },
+        ]}
       />
 
       {/* Product Catalog Modal */}
@@ -1364,7 +1388,7 @@ export default function NewFacturePage() {
                               </p>
                             )}
                             <div className="flex items-center gap-3 text-xs text-gray-400">
-                              <span className="px-2 py-1 bg-white dark:bg-slate-800 rounded-lg">
+                              <span className="px-2 py-1 bg-white dark:bg-gray-100 rounded-lg">
                                 {product.unit}
                               </span>
                               <span>TVA {product.vat_rate}%</span>

@@ -57,7 +57,7 @@ export default function RegisterPage() {
         }
       }
 
-      router.push('/onboarding/language');
+      router.push('/onboarding/quick');
     } catch (err: any) {
       if (err.message === 'CONFIRM_EMAIL') setConfirmEmail(true);
       else setError(err.message || 'Erreur lors de la création du compte');

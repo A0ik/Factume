@@ -260,7 +260,7 @@ export default function InvoicesPage() {
           {/* Header */}
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">Documents</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Documents</h1>
               <p className="text-sm text-slate-500 mt-1">{invoices.length} document{invoices.length !== 1 ? 's' : ''}</p>
             </div>
             <div className="flex items-center gap-2">
@@ -268,7 +268,7 @@ export default function InvoicesPage() {
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={handleExport}
-                  className="hidden md:flex items-center gap-1.5 text-slate-400 hover:text-white border border-white/10 px-4 py-2 rounded-xl text-sm font-medium hover:border-white/20 hover:bg-white/5 transition-all"
+                  className="hidden md:flex items-center gap-1.5 text-slate-400 hover:text-gray-900 border border-gray-300 px-4 py-2 rounded-xl text-sm font-medium hover:border-white/20 hover:bg-gray-100 transition-all"
                 >
                   <Download size={15} />
                   <span>Export</span>
@@ -278,7 +278,7 @@ export default function InvoicesPage() {
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={handleExport}
-                  className="md:hidden flex items-center justify-center w-10 h-10 text-slate-400 hover:text-white border border-white/10 rounded-xl hover:border-white/20 hover:bg-white/5 transition-all"
+                  className="md:hidden flex items-center justify-center w-10 h-10 text-slate-400 hover:text-gray-900 border border-gray-300 rounded-xl hover:border-white/20 hover:bg-gray-100 transition-all"
                 >
                   <Download size={16} />
                 </motion.button>
@@ -334,27 +334,27 @@ export default function InvoicesPage() {
               transition={{ delay: 0.05, ease: EASE }}
               className="flex flex-wrap gap-2 md:gap-3"
             >
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-full px-3.5 py-2">
+              <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3.5 py-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="text-xs text-slate-400">Encaissé</span>
-                <span className="text-sm font-semibold text-white">{formatCurrency(totalRevenue)}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</span>
               </div>
-              <div className="flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-full px-3.5 py-2">
+              <div className="flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3.5 py-2">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
                 <span className="text-xs text-slate-400">En attente</span>
-                <span className="text-sm font-semibold text-white">{formatCurrency(pendingAmount)}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(pendingAmount)}</span>
               </div>
               {overdueAmount > 0 && (
-                <div className="flex items-center gap-2 bg-slate-800/50 border border-red-500/20 rounded-full px-3.5 py-2">
+                <div className="flex items-center gap-2 bg-gray-100 border border-red-500/20 rounded-full px-3.5 py-2">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-xs text-slate-400">En retard</span>
                   <span className="text-sm font-semibold text-red-400">{formatCurrency(overdueAmount)}</span>
                 </div>
               )}
-              <div className="hidden md:flex items-center gap-2 bg-slate-800/50 border border-white/5 rounded-full px-3.5 py-2">
+              <div className="hidden md:flex items-center gap-2 bg-gray-100 border border-gray-200 rounded-full px-3.5 py-2">
                 <span className="w-2 h-2 rounded-full bg-slate-500" />
                 <span className="text-xs text-slate-400">Total</span>
-                <span className="text-sm font-semibold text-white">{invoices.length}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{invoices.length}</span>
               </div>
             </motion.div>
           )}
@@ -364,7 +364,7 @@ export default function InvoicesPage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08, ...SPRING }}
-            className="sticky top-14 z-20 -mx-5 px-5 py-2 md:py-0 md:static md:z-auto md:-mx-0 md:px-0 bg-slate-950/80 md:bg-transparent backdrop-blur-2xl md:backdrop-blur-none border-b border-white/[0.04] md:border-0"
+            className="sticky top-14 z-20 -mx-5 px-5 py-2 md:py-0 md:static md:z-auto md:-mx-0 md:px-0 bg-background/80 md:bg-transparent backdrop-blur-2xl md:backdrop-blur-none border-b border-gray-200 md:border-0"
           >
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {STATUS_OPTS.map((s) => (
@@ -376,7 +376,7 @@ export default function InvoicesPage() {
                   className={cn(
                     'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all',
                     statusFilter === s.value
-                      ? 'bg-white/15 text-white'
+                      ? 'bg-white/15 text-gray-900 dark:text-white'
                       : 'text-slate-500 hover:text-slate-300',
                   )}
                 >
@@ -402,7 +402,7 @@ export default function InvoicesPage() {
                   placeholder="Rechercher par numéro ou client..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-white/15 focus:ring-1 focus:ring-white/10 transition-all"
+                  className="w-full bg-gray-100 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:border-white/15 focus:ring-1 focus:ring-white/10 transition-all"
                 />
               </div>
               <motion.button
@@ -411,8 +411,8 @@ export default function InvoicesPage() {
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all border',
                   showFilters
-                    ? 'bg-white/10 text-white border-white/15'
-                    : 'bg-slate-800/50 text-slate-400 border-white/5 hover:border-white/10 hover:text-slate-300',
+                    ? 'bg-gray-100 text-gray-900 dark:text-white border-white/15'
+                    : 'bg-gray-100 text-slate-400 border-gray-200 hover:border-gray-300 hover:text-slate-300',
                 )}
               >
                 <SlidersHorizontal size={15} />
@@ -421,7 +421,7 @@ export default function InvoicesPage() {
               <motion.div whileTap={{ scale: 0.97 }}>
                 <Link
                   href="/invoices/new?type=quote"
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-dashed border-white/10 text-slate-500 hover:text-slate-300 hover:border-white/15 text-sm font-medium transition-all"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-dashed border-gray-300 text-slate-500 hover:text-slate-300 hover:border-white/15 text-sm font-medium transition-all"
                 >
                   + Devis
                 </Link>
@@ -438,7 +438,7 @@ export default function InvoicesPage() {
                   transition={{ duration: 0.2, ease: EASE }}
                   className="overflow-hidden"
                 >
-                  <div className="flex flex-wrap gap-1.5 p-3 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div className="flex flex-wrap gap-1.5 p-3 bg-gray-100 border border-gray-200 rounded-xl">
                     {TYPE_OPTS.map((t) => (
                       <button
                         key={t.value}
@@ -447,7 +447,7 @@ export default function InvoicesPage() {
                           'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                           typeFilter === t.value
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                            : 'text-slate-500 hover:text-slate-300 border border-transparent hover:border-white/10',
+                            : 'text-slate-500 hover:text-slate-300 border border-transparent hover:border-gray-300',
                         )}
                       >
                         {t.label}
@@ -467,8 +467,8 @@ export default function InvoicesPage() {
               transition={{ delay: 0.15, ease: EASE }}
               className="text-center py-20 px-4"
             >
-              <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-5">
-                <FileText size={28} className="text-slate-600" />
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-5">
+                <FileText size={28} className="text-gray-400" />
               </div>
               <p className="font-semibold text-slate-400 text-base mb-1">
                 {search || statusFilter || typeFilter ? 'Aucun résultat trouvé' : 'Prêt à envoyer votre première facture ?'}
@@ -488,7 +488,7 @@ export default function InvoicesPage() {
                   </Link>
                   <Link
                     href="/invoices/new?type=quote"
-                    className="inline-flex items-center gap-1.5 bg-slate-800/50 border border-white/5 text-slate-300 text-sm font-medium px-4 py-2.5 rounded-xl hover:border-white/10 transition-all"
+                    className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 text-slate-300 text-sm font-medium px-4 py-2.5 rounded-xl hover:border-gray-300 transition-all"
                   >
                     Créer un devis
                   </Link>
@@ -539,7 +539,7 @@ export default function InvoicesPage() {
 
                             {/* Client name — the WHO */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-[15px] text-white font-semibold truncate leading-tight">
+                              <p className="text-[15px] text-gray-900 dark:text-white font-semibold truncate leading-tight">
                                 {inv.client?.name || inv.client_name_override || 'Sans client'}
                               </p>
                               <p className="text-[12px] text-slate-500 mt-0.5 font-mono">
@@ -551,7 +551,7 @@ export default function InvoicesPage() {
                             <div className="text-right flex-shrink-0">
                               <p className={cn(
                                 'text-[15px] font-bold tabular-nums',
-                                isPaid ? 'text-emerald-400' : isOverdue ? 'text-red-400' : 'text-white',
+                                isPaid ? 'text-emerald-400' : isOverdue ? 'text-red-400' : 'text-gray-900 dark:text-white',
                               )}>
                                 {formatCurrency(inv.total)}
                               </p>
@@ -574,7 +574,7 @@ export default function InvoicesPage() {
                     className="flex items-center justify-between pt-2 px-1"
                   >
                     <p className="text-xs text-slate-500">{filtered.length} documents</p>
-                    <p className="text-sm font-semibold text-white tabular-nums">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
                       {formatCurrency(filtered.reduce((s, i) => s + i.total, 0))}
                     </p>
                   </motion.div>
@@ -583,11 +583,11 @@ export default function InvoicesPage() {
 
               {/* Desktop table */}
               <div className="hidden md:block">
-                <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/5 bg-white/[0.02]">
+                        <tr className="border-b border-gray-200 bg-white/[0.02]">
                           <th className="px-4 py-3 w-10">
                             <input
                               type="checkbox"
@@ -607,7 +607,7 @@ export default function InvoicesPage() {
                           <th className="px-4 py-3" />
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody className="divide-y divide-gray-200">
                         {filtered.map((inv, index) => {
                           const isOverdue = inv.status === 'overdue';
                           const isPaid = inv.status === 'paid';
@@ -619,7 +619,7 @@ export default function InvoicesPage() {
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: index * 0.02, ease: EASE }}
                               className={cn(
-                                'hover:bg-white/[0.03] cursor-pointer transition-colors group',
+                                'hover:bg-gray-100 cursor-pointer transition-colors group',
                                 isSelected && 'bg-emerald-500/5 hover:bg-emerald-500/8',
                               )}
                               onClick={() => router.push(`/invoices/${inv.id}`)}
@@ -644,8 +644,8 @@ export default function InvoicesPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <p className="text-sm font-medium text-white truncate max-w-[160px]">
-                                  {inv.client?.name || inv.client_name_override || <span className="text-slate-600 italic">Sans client</span>}
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[160px]">
+                                  {inv.client?.name || inv.client_name_override || <span className="text-gray-400 italic">Sans client</span>}
                                 </p>
                               </td>
                               <td className="px-4 py-3.5 text-sm text-slate-400">{formatDateShort(inv.issue_date)}</td>
@@ -655,7 +655,7 @@ export default function InvoicesPage() {
                                 </span>
                               </td>
                               <td className="px-4 py-3.5 text-right">
-                                <p className={cn('text-sm font-bold', isPaid ? 'text-emerald-400' : isOverdue ? 'text-red-400' : 'text-white')}>
+                                <p className={cn('text-sm font-bold', isPaid ? 'text-emerald-400' : isOverdue ? 'text-red-400' : 'text-gray-900 dark:text-white')}>
                                   {formatCurrency(inv.total)}
                                 </p>
                                 <p className="text-[11px] text-slate-500">HT {formatCurrency(inv.subtotal)}</p>
@@ -689,7 +689,7 @@ export default function InvoicesPage() {
                                       whileHover={{ scale: 1.1 }}
                                       whileTap={{ scale: 0.9 }}
                                       onClick={(e) => { e.stopPropagation(); router.push('/paywall'); }}
-                                      className="p-1.5 rounded-lg hover:bg-white/5 text-slate-600 hover:text-slate-400 transition-all opacity-0 group-hover:opacity-100"
+                                      className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-slate-400 transition-all opacity-0 group-hover:opacity-100"
                                       title="Modifier (Plan payant)"
                                     >
                                       <Lock size={14} />
@@ -698,7 +698,7 @@ export default function InvoicesPage() {
                                   <motion.div whileHover={{ x: 0.5 }}>
                                     <ChevronRight
                                       size={15}
-                                      className="text-slate-600 opacity-0 group-hover:opacity-100 transition-all ml-auto"
+                                      className="text-gray-400 opacity-0 group-hover:opacity-100 transition-all ml-auto"
                                     />
                                   </motion.div>
                                 </div>
@@ -711,9 +711,9 @@ export default function InvoicesPage() {
 
                     {/* Table footer */}
                     {filtered.length > 1 && (
-                      <div className="border-t border-white/5 px-5 py-3 flex items-center justify-between bg-white/[0.02]">
+                      <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between bg-white/[0.02]">
                         <p className="text-xs text-slate-500">{filtered.length} document{filtered.length !== 1 ? 's' : ''}</p>
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
                           Total : {formatCurrency(filtered.reduce((s, i) => s + i.total, 0))}
                         </p>
                       </div>
@@ -734,7 +734,7 @@ export default function InvoicesPage() {
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4"
               >
-                <div className="flex items-center gap-2 bg-slate-800 text-white rounded-2xl px-4 py-3 border border-white/10 backdrop-blur-sm">
+                <div className="flex items-center gap-2 bg-gray-100 text-gray-900 dark:text-white rounded-2xl px-4 py-3 border border-gray-300 backdrop-blur-sm">
                   <span className="text-sm font-semibold whitespace-nowrap mr-1">
                     {selectedIds.size} sélectionné{selectedIds.size !== 1 ? 's' : ''}
                   </span>
@@ -757,7 +757,7 @@ export default function InvoicesPage() {
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       onClick={handleBulkExportCSV}
-                      className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1.5 bg-gray-100 hover:bg-white/15 text-gray-900 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                     >
                       <Download size={13} />
                       Exporter CSV
@@ -776,7 +776,7 @@ export default function InvoicesPage() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={handleBulkDelete}
-                        className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-gray-900 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         <Trash2 size={13} />
                         Supprimer
@@ -786,7 +786,7 @@ export default function InvoicesPage() {
                       <motion.div whileTap={{ scale: 0.95 }}>
                         <Link
                           href="/paywall"
-                          className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                          className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-gray-900 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                         >
                           <Lock size={13} />
                           Débloquer la suppression
@@ -798,7 +798,7 @@ export default function InvoicesPage() {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={clearSelection}
-                    className="flex items-center gap-1 text-white/40 hover:text-white text-xs font-medium px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap ml-1"
+                    className="flex items-center gap-1 text-gray-900 dark:text-white/40 hover:text-gray-900 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap ml-1"
                     title="Désélectionner"
                   >
                     <X size={14} />

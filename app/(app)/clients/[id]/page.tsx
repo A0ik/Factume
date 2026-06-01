@@ -16,6 +16,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { Pencil, Trash2, FileText, Plus, Tag, MessageSquare, X, Globe, Copy, Check, Star, TrendingUp, Clock, Camera, ArrowLeft, Mail, Phone, MapPin, Building2, FileCheck, AlertCircle, Receipt, ShoppingBag, Truck } from 'lucide-react';
 import DocPickerModal from '@/components/clients/DocPickerModal';
 import type { ClientNote } from '@/types';
+import MobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -294,7 +295,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   if (!client) return (
     <div className="text-center py-20">
-      <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-4">
         <AlertCircle size={32} className="text-slate-500" />
       </div>
       <p className="text-slate-400 font-medium">Client introuvable</p>
@@ -310,18 +311,18 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const overdueCount = clientInvoices.filter((i) => i.status === 'overdue').length;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-24 md:pb-8">
+    <div className="space-y-6 max-w-4xl mx-auto pb-28 md:pb-8">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ ease }} className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
             href="/clients"
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-all"
+            className="hidden md:flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900 hover:border-gray-300 transition-all"
           >
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">{client.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{client.name}</h1>
             <p className="text-sm text-slate-500 mt-0.5">Fiche client</p>
           </div>
         </div>
@@ -341,7 +342,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       {/* Mobile back button */}
       <Link
         href="/clients"
-        className="md:hidden inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+        className="md:hidden inline-flex items-center gap-2 text-sm text-slate-400 hover:text-gray-900 transition-colors"
       >
         <ArrowLeft size={16} /> Retour
       </Link>
@@ -351,20 +352,20 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ease }}
-        className="bg-slate-800/30 border border-white/5 rounded-2xl p-5"
+        className="bg-gray-50 border border-gray-200 rounded-2xl p-5"
       >
         <div className="flex items-start gap-5">
           {/* Logo / avatar */}
           <div className="relative group flex-shrink-0">
             {client.logo_url ? (
-              <img src={client.logo_url} alt={`Logo ${client.name}`} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-white/5 group-hover:scale-105 transition-transform duration-300" />
+              <img src={client.logo_url} alt={`Logo ${client.name}`} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-gray-200 group-hover:scale-105 transition-transform duration-300" />
             ) : (
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl md:text-2xl font-bold group-hover:scale-105 transition-transform duration-300">
                 {getInitials(client.name)}
               </div>
             )}
             <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-            <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg bg-slate-800 border border-white/10 text-slate-400 flex items-center justify-center hover:text-white hover:border-white/20 transition-colors disabled:opacity-50" title="Modifier le logo">
+            <button onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg bg-gray-100 border border-gray-300 text-slate-400 flex items-center justify-center hover:text-gray-900 hover:border-white/20 transition-colors disabled:opacity-50" title="Modifier le logo">
               {uploadingLogo ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : <Camera size={12} />}
             </button>
           </div>
@@ -372,7 +373,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           {/* Contact details */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-lg font-semibold text-white truncate">{client.name}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{client.name}</h2>
               {scoreData.clientScore !== null && (
                 <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full border ${scoreData.clientScore >= 80 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : scoreData.clientScore >= 60 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                   {scoreData.clientScore}
@@ -410,9 +411,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-white/5">
+        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-gray-200">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">{clientInvoices.length}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{clientInvoices.length}</p>
             <p className="text-xs text-slate-500">Factures</p>
           </div>
           <div className="text-center">
@@ -443,10 +444,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </AnimatePresence>
 
       {/* Tags */}
-      <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-3">
           <Tag size={16} className="text-slate-500" />
-          <h3 className="font-semibold text-white text-sm">Tags</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Tags</h3>
         </div>
         <div className="flex flex-wrap gap-2 mb-3">
           {clientTags.length === 0 && (
@@ -472,7 +473,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(tagInput); } }}
             placeholder="Nouveau tag... (Entree pour ajouter)"
-            className="flex-1 px-4 py-2.5 text-sm bg-slate-800/50 border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all text-white placeholder-slate-500"
+            className="flex-1 px-4 py-2.5 text-sm bg-gray-100 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all text-gray-900 dark:text-white placeholder-slate-500"
           />
           <button onClick={() => handleAddTag(tagInput)} disabled={!tagInput.trim() || savingTags} className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             <Plus size={16} />
@@ -491,7 +492,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent'
+                  : 'text-slate-400 hover:text-gray-900 hover:bg-gray-100 border border-transparent'
               }`}
             >
               <tab.icon size={16} />
@@ -506,35 +507,35 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {/* Invoices tab */}
             {activeTab === 'invoices' && (
               <motion.div key="invoices" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
-                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                    <h3 className="font-semibold text-white">Factures</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Factures</h3>
                     <button onClick={() => setShowNewDocument(true)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors">
                       <Plus size={14} />Nouveau
                     </button>
                   </div>
                   {clientInvoices.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <Receipt size={28} className="text-slate-500" />
                       </div>
                       <p className="text-sm text-slate-400">Aucune facture pour ce client</p>
                       <button onClick={() => setShowNewDocument(true)} className="mt-3 text-sm text-emerald-400 font-medium hover:text-emerald-300 transition-colors">Creer une facture</button>
                     </div>
                   ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-gray-200">
                       {clientInvoices.map((inv, idx) => (
                         <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }}>
-                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-800/30 transition-colors group">
+                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
                               <p className="text-xs text-slate-500">{formatDateShort(inv.issue_date)}</p>
                             </div>
                             <div className="text-right flex-shrink-0 space-y-1">
-                              <p className="text-sm font-semibold text-white">{formatCurrency(inv.total)}</p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</p>
                               <StatusBadge status={inv.status} />
                             </div>
-                            <ArrowLeft size={14} className="text-slate-600 group-hover:text-emerald-400 rotate-180 transition-colors" />
+                            <ArrowLeft size={14} className="text-gray-400 group-hover:text-emerald-400 rotate-180 transition-colors" />
                           </Link>
                         </motion.div>
                       ))}
@@ -547,27 +548,27 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {/* Expenses tab */}
             {activeTab === 'expenses' && (
               <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
-                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                    <h3 className="font-semibold text-white">Depenses</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Depenses</h3>
                   </div>
                   {clientExpenses.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <ShoppingBag size={28} className="text-slate-500" />
                       </div>
                       <p className="text-sm text-slate-400">Aucune depense pour ce client</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-gray-200">
                       {clientExpenses.map((exp: any, idx: number) => (
-                        <motion.div key={exp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }} className="px-5 py-3.5 hover:bg-slate-800/30 transition-colors">
+                        <motion.div key={exp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }} className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-white">{exp.description || exp.category || 'Depense'}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{exp.description || exp.category || 'Depense'}</p>
                               <p className="text-xs text-slate-500">{formatDateShort(exp.date || exp.created_at)}</p>
                             </div>
-                            <p className="text-sm font-semibold text-white">{formatCurrency(exp.amount || 0)}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(exp.amount || 0)}</p>
                           </div>
                         </motion.div>
                       ))}
@@ -580,33 +581,33 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {/* Documents tab */}
             {activeTab === 'documents' && (
               <motion.div key="documents" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
-                <div className="bg-slate-800/30 border border-white/5 rounded-2xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                    <h3 className="font-semibold text-white">Documents</h3>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Documents</h3>
                     <button onClick={() => setShowNewDocument(true)} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors">
                       <Plus size={14} />Nouveau
                     </button>
                   </div>
                   {clientInvoices.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <FileText size={28} className="text-slate-500" />
                       </div>
                       <p className="text-sm text-slate-400">Aucun document pour ce client</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-gray-200">
                       {clientInvoices.map((inv, idx) => (
                         <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }}>
-                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-800/30 transition-colors group">
+                          <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-emerald-400 transition-colors">{inv.number}</p>
                               <p className="text-xs text-slate-500">{formatDateShort(inv.issue_date)}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="text-sm font-semibold text-white">{formatCurrency(inv.total)}</p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</p>
                             </div>
-                            <ArrowLeft size={14} className="text-slate-600 group-hover:text-emerald-400 rotate-180 transition-colors" />
+                            <ArrowLeft size={14} className="text-gray-400 group-hover:text-emerald-400 rotate-180 transition-colors" />
                           </Link>
                         </motion.div>
                       ))}
@@ -621,11 +622,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <motion.div key="health" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }} className="space-y-4">
                 {/* Score card */}
                 {scoreData.clientScore !== null ? (
-                  <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Star size={18} className={scoreData.scoreColor} />
-                        <h3 className="font-semibold text-white">Score de confiance</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">Score de confiance</h3>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-3xl font-bold ${scoreData.scoreColor}`}>{scoreData.clientScore}</span>
@@ -634,27 +635,27 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                         }`}>{scoreData.scoreLabel}</span>
                       </div>
                     </div>
-                    <div className="relative h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
                       <motion.div initial={{ width: 0 }} animate={{ width: `${scoreData.clientScore}%` }} transition={{ duration: 0.8, ease }} className={`absolute inset-y-0 left-0 rounded-full ${scoreData.scoreBarBg}`} />
                     </div>
                     <div className="flex gap-6 mt-4 text-xs text-slate-400">
                       {scoreData.avgPaymentDays !== null && (
                         <span className="flex items-center gap-1.5">
                           <Clock size={13} className="text-slate-500" />
-                          Paiement moyen : <strong className="text-white">{Math.round(scoreData.avgPaymentDays)}j apres echeance</strong>
+                          Paiement moyen : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.avgPaymentDays)}j apres echeance</strong>
                         </span>
                       )}
                       {scoreData.paymentRate !== null && (
                         <span className="flex items-center gap-1.5">
                           <TrendingUp size={13} className="text-slate-500" />
-                          Taux de paiement : <strong className="text-white">{Math.round(scoreData.paymentRate)}%</strong>
+                          Taux de paiement : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.paymentRate)}%</strong>
                         </span>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-8 text-center">
-                    <div className="w-14 h-14 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+                    <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                       <Star size={28} className="text-slate-500" />
                     </div>
                     <p className="text-sm text-slate-400">Pas assez de donnees pour calculer le score</p>
@@ -662,10 +663,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 )}
 
                 {/* Notes section */}
-                <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <MessageSquare size={16} className="text-slate-500" />
-                    <h3 className="font-semibold text-white">Notes & suivi</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Notes & suivi</h3>
                   </div>
 
                   <div className="space-y-3 mb-5">
@@ -674,7 +675,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       onChange={(e) => setNoteInput(e.target.value)}
                       placeholder="Ajouter une note ou un suivi..."
                       rows={3}
-                      className="w-full px-4 py-3 text-sm bg-slate-800/50 border border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all resize-none text-white placeholder-slate-500"
+                      className="w-full px-4 py-3 text-sm bg-gray-100 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all resize-none text-gray-900 dark:text-white placeholder-slate-500"
                     />
                     <Button onClick={handleAddNote} loading={addingNote} disabled={!noteInput.trim()} size="sm" icon={<Plus size={16} />}>
                       Ajouter une note
@@ -687,7 +688,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                   ) : notes.length === 0 ? (
                     <div className="text-center py-8">
-                      <div className="w-12 h-12 rounded-xl bg-slate-800/50 border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <MessageSquare size={24} className="text-slate-500" />
                       </div>
                       <p className="text-sm text-slate-400">Aucune note pour ce client</p>
@@ -696,7 +697,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     <div className="space-y-3">
                       <AnimatePresence>
                         {notes.map((note, idx) => (
-                          <motion.div key={note.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ delay: idx * 0.04, ease }} className="group relative bg-slate-800/50 border border-white/5 rounded-xl p-4">
+                          <motion.div key={note.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ delay: idx * 0.04, ease }} className="group relative bg-gray-100 border border-gray-200 rounded-xl p-4">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-[11px] font-medium text-slate-500">
                                 {new Date(note.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} {new Date(note.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -719,19 +720,19 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Mobile floating action bar */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden z-30 bg-slate-900/95 backdrop-blur-lg border-t border-white/5 px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 md:hidden z-30 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <button onClick={() => router.push('/clients')} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => router.push('/clients')} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-gray-900 transition-colors">
             <ArrowLeft size={16} />Retour
           </button>
           <div className="flex gap-2">
-            <button onClick={handleGeneratePortal} disabled={portalLoading} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/20 transition-all disabled:opacity-50" title="Portail client">
+            <button onClick={handleGeneratePortal} disabled={portalLoading} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/20 transition-all disabled:opacity-50" title="Portail client">
               {portalLoading ? <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : portalCopied ? <Check size={16} className="text-emerald-400" /> : <Globe size={16} />}
             </button>
-            <button onClick={() => setShowEdit(true)} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white hover:border-white/10 transition-all" title="Modifier">
+            <button onClick={() => setShowEdit(true)} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900 hover:border-gray-300 transition-all" title="Modifier">
               <Pencil size={16} />
             </button>
-            <button onClick={() => setShowDelete(true)} className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-400 hover:text-red-400 hover:border-red-500/20 transition-all" title="Supprimer">
+            <button onClick={() => setShowDelete(true)} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-red-400 hover:border-red-500/20 transition-all" title="Supprimer">
               <Trash2 size={16} />
             </button>
           </div>
@@ -764,7 +765,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Delete modal */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Supprimer ce client">
-        <p className="text-slate-400 mb-4">Etes-vous sur de vouloir supprimer <strong className="text-white">{client.name}</strong> ? Cette action est irreversible.</p>
+        <p className="text-slate-400 mb-4">Etes-vous sur de vouloir supprimer <strong className="text-gray-900 dark:text-white">{client.name}</strong> ? Cette action est irreversible.</p>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => setShowDelete(false)}>Annuler</Button>
           <Button variant="danger" className="flex-1" onClick={handleDelete}>Supprimer</Button>
@@ -773,6 +774,31 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       {/* New document modal */}
       <DocPickerModal open={showNewDocument} onClose={() => setShowNewDocument(false)} clientId={id} clientName={client.name} />
+
+      {/* Mobile Floating Action Bar */}
+      <MobileActionBar
+        mode="custom"
+        mainAction={{
+          icon: Pencil,
+          label: 'Modifier',
+          onClick: () => setShowEdit(true),
+        }}
+        actions={[
+          {
+            icon: Globe,
+            label: portalCopied ? 'Lien copié !' : 'Lien portail',
+            onClick: handleGeneratePortal,
+            description: 'Générer un lien d\'accès client',
+          },
+          {
+            icon: Trash2,
+            label: 'Supprimer',
+            onClick: () => setShowDelete(true),
+            description: 'Supprimer ce client',
+            variant: 'danger',
+          },
+        ]}
+      />
     </div>
   );
 }

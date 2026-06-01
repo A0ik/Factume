@@ -113,12 +113,12 @@ export default function CommandesPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Bons de commande</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Bons de commande</h1>
             <p className="mt-1 text-sm text-slate-500">Gérez tous vos bons de commande clients</p>
           </div>
           <Link
             href="/documents/commandes/new"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-xl transition-colors"
           >
             <Plus size={16} />
             Nouvelle commande
@@ -142,11 +142,11 @@ export default function CommandesPage() {
           ].map((s) => (
             <div
               key={s.label}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-white/5 rounded-lg whitespace-nowrap shrink-0"
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg whitespace-nowrap shrink-0"
             >
               <span className={`w-2 h-2 rounded-full ${s.dot}`} />
               <span className="text-xs text-slate-400">{s.label}</span>
-              <span className="text-xs font-semibold text-white">{s.value}</span>
+              <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.value}</span>
             </div>
           ))}
         </motion.div>
@@ -166,7 +166,7 @@ export default function CommandesPage() {
               placeholder="Rechercher par numéro, client..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-white/5 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all text-sm"
             />
           </div>
 
@@ -178,7 +178,7 @@ export default function CommandesPage() {
                 onClick={() => setStatusFilter(tab.value)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-colors ${
                   statusFilter === tab.value
-                    ? 'bg-white/15 text-white'
+                    ? 'bg-white/15 text-gray-900 dark:text-white'
                     : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -194,13 +194,13 @@ export default function CommandesPage() {
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ease, duration: 0.3 }}
-            className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-white/5 rounded-xl mb-6"
+            className="flex items-center justify-between px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl mb-6"
           >
-            <span className="text-sm text-white font-medium">
+            <span className="text-sm text-gray-900 dark:text-white font-medium">
               {selectedCommandes.size} commande{selectedCommandes.size > 1 ? 's' : ''} sélectionnée{selectedCommandes.size > 1 ? 's' : ''}
             </span>
             <div className="flex items-center gap-2">
-              <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+              <button className="p-2 text-slate-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                 <Download size={16} />
               </button>
               <button className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
@@ -227,7 +227,7 @@ export default function CommandesPage() {
                     <div className="p-5">
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0 flex-1 mr-3">
-                          <p className="text-white font-semibold truncate">
+                          <p className="text-gray-900 dark:text-white font-semibold truncate">
                             {commande.client?.name || commande.client_name_override || 'Client'}
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5">
@@ -238,7 +238,7 @@ export default function CommandesPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="text-white font-bold">
+                          <span className="text-gray-900 dark:text-white font-bold">
                             {(commande.total || 0).toFixed(2)}€
                           </span>
                           <span className="text-xs text-slate-500">
@@ -248,13 +248,13 @@ export default function CommandesPage() {
                         <div className="flex items-center gap-1">
                           <Link
                             href={`/invoices/${commande.id}`}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                           >
                             <Eye size={16} />
                           </Link>
                           <Link
                             href={`/invoices/${commande.id}/edit`}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                           >
                             <Edit size={16} />
                           </Link>
@@ -273,18 +273,18 @@ export default function CommandesPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ease, duration: 0.5, delay: 0.15 }}
-          className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden"
+          className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden"
         >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/5">
+                <tr className="border-b border-gray-200">
                   <th className="px-5 py-3.5 text-left w-10">
                     <input
                       type="checkbox"
                       checked={selectedCommandes.size === filteredCommandes.length && filteredCommandes.length > 0}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-white/10 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 focus:ring-offset-0"
+                      className="w-4 h-4 rounded border-gray-300 bg-gray-100 text-emerald-500 focus:ring-emerald-500/50 focus:ring-offset-0"
                     />
                   </th>
                   <th className="px-5 py-3.5 text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider">
@@ -310,7 +310,7 @@ export default function CommandesPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-gray-200">
                 {filteredCommandes.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-5 py-16 text-center">
@@ -321,18 +321,18 @@ export default function CommandesPage() {
                   filteredCommandes.map((commande) => (
                     <tr
                       key={commande.id}
-                      className="hover:bg-white/[0.02] transition-colors"
+                      className="hover:bg-gray-100 transition-colors"
                     >
                       <td className="px-5 py-3.5">
                         <input
                           type="checkbox"
                           checked={selectedCommandes.has(commande.id)}
                           onChange={() => handleSelectOne(commande.id)}
-                          className="w-4 h-4 rounded border-white/10 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 focus:ring-offset-0"
+                          className="w-4 h-4 rounded border-gray-300 bg-gray-100 text-emerald-500 focus:ring-emerald-500/50 focus:ring-offset-0"
                         />
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {commande.number || `CMD-${commande.id?.slice(0, 8)}`}
                         </span>
                       </td>
@@ -348,24 +348,24 @@ export default function CommandesPage() {
                       <td className="px-5 py-3.5">
                         <StatusDot status={commande.status} />
                       </td>
-                      <td className="px-5 py-3.5 text-right text-sm font-semibold text-white">
+                      <td className="px-5 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
                         {(commande.total || 0).toFixed(2)}€
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-center gap-0.5">
                           <Link
                             href={`/invoices/${commande.id}`}
-                            className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                           >
                             <Eye size={15} />
                           </Link>
                           <Link
                             href={`/invoices/${commande.id}/edit`}
-                            className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                           >
                             <Edit size={15} />
                           </Link>
-                          <button className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                          <button className="p-1.5 text-slate-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
                             <Copy size={15} />
                           </button>
                         </div>
@@ -385,14 +385,14 @@ export default function CommandesPage() {
 function EmptyState({ inline }: { inline?: boolean }) {
   return (
     <div className={inline ? 'py-8' : 'flex flex-col items-center justify-center py-20'}>
-      <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mb-4">
+      <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
         <ShoppingBag size={24} className="text-slate-500" />
       </div>
       <p className="text-sm text-slate-400 mb-1">Aucune commande trouvée</p>
-      <p className="text-xs text-slate-600 mb-4">Créez votre premier bon de commande pour commencer</p>
+      <p className="text-xs text-gray-400 mb-4">Créez votre premier bon de commande pour commencer</p>
       <Link
         href="/documents/commandes/new"
-        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"
       >
         <Plus size={14} />
         Nouvelle commande

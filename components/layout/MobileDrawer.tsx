@@ -174,7 +174,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
         ? 'Créez d\'abord votre cabinet'
         : `Disponible avec ${lockTier === 'pro' ? 'Pro' : 'Business'}`;
       return (
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70" title={tooltip}>
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-70" title={tooltip}>
           <Icon size={16} strokeWidth={1.8} />
           <span className="flex-1">{label}</span>
           <Lock size={12} className="text-gray-400" />
@@ -204,9 +204,9 @@ export default function MobileDrawer({ open, onClose }: Props) {
     if (section.id === 'cabinet' && !(sub.isBusiness || sub.isTrialActive)) {
       return (
         <div className="space-y-0.5">
-          <button onClick={() => toggleSection(section.id)} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-300 dark:text-gray-600 hover:bg-gray-100/50 dark:hover:bg-white/5 transition-all">
+          <button onClick={() => toggleSection(section.id)} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-white/5 transition-all">
             <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex-shrink-0">
-              <SectionIcon size={17} className="text-gray-300 dark:text-gray-600" />
+              <SectionIcon size={17} className="text-gray-500 dark:text-gray-400" />
             </span>
             <span className="flex-1 text-left font-semibold">{section.label}</span>
             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 uppercase tracking-wide">BUSINESS</span>

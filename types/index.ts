@@ -191,6 +191,13 @@ export interface Invoice {
   client_siret?: string;
   client_vat_number?: string;
   payment_terms_id?: string;
+  // Transmission électronique (Super PDP)
+  pdp_transmission_id?: string;
+  pdp_status?: 'not_transmitted' | 'transmitting' | 'transmitted' | 'pending_retry' | 'failed';
+  pdp_last_error?: string;
+  pdp_transmitted_at?: string;
+  pdp_retry_count?: number;
+  pdp_next_retry_at?: string;
 }
 
 export interface ParsedVoiceInvoice {

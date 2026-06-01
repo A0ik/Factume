@@ -38,16 +38,16 @@ export default function BottomSheet({ open, onClose, children, title }: BottomSh
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="absolute left-0 right-0 bottom-0 bg-slate-900 border-t border-white/10 rounded-t-3xl pt-6 px-6 pb-10 h-[85vh] flex flex-col overflow-hidden"
+            className="absolute left-0 right-0 bottom-0 bg-card border-t border-border rounded-t-3xl pt-6 px-6 pb-10 h-[85vh] flex flex-col overflow-hidden"
             style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom, 2.5rem))' }}
           >
             {/* Header */}
             {title && (
               <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                <h3 className="text-2xl font-semibold text-white tracking-tight">{title}</h3>
+                <h3 className="text-2xl font-semibold text-foreground tracking-tight">{title}</h3>
                 <button
                   onClick={onClose}
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/15 transition-all active:scale-90"
+                  className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all active:scale-90"
                 >
                   <X size={18} />
                 </button>

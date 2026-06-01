@@ -177,7 +177,7 @@ export default function Sidebar() {
         ? 'Créez d\'abord votre cabinet'
         : `Disponible avec ${lockTier === 'pro' ? 'Pro' : 'Business'}`;
       return (
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-70 group" title={tooltip}>
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-70 group" title={tooltip}>
           <Icon size={14} strokeWidth={1.8} />
           <span className="flex-1">{label}</span>
           <Lock size={11} className="text-gray-400" />
@@ -210,10 +210,10 @@ export default function Sidebar() {
       return (
         <div className="space-y-0.5">
           <button onClick={() => toggleSection(section.id)} className={cn(
-            'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-gray-300 dark:text-gray-600 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5',
+            'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5',
           )}>
             <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
-              <SectionIcon size={15} className="text-gray-300 dark:text-gray-600" />
+              <SectionIcon size={15} className="text-gray-500 dark:text-gray-400" />
             </span>
             <span className="flex-1 text-left font-medium">{section.label}</span>
             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 uppercase tracking-wide">BUSINESS</span>

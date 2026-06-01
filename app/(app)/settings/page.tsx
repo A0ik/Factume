@@ -569,7 +569,7 @@ export default function SettingsPage() {
       {/* Logo */}
       <div className="flex items-center gap-4">
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 border border-white/5 overflow-hidden flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
             {profile?.logo_url ? (
               <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
@@ -582,7 +582,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
           >
             {uploading ? (
               <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -690,14 +690,14 @@ export default function SettingsPage() {
             type="button"
             onClick={() => { if (!profile?.custom_template_html) set('template_id', t.id); }}
             className={`relative p-3 rounded-xl border text-center transition-all duration-300 ${
-              profile?.custom_template_html ? 'opacity-40 cursor-not-allowed border-white/5 bg-slate-800/20'
+              profile?.custom_template_html ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-100/20'
               : form.template_id === t.id
                 ? 'border-emerald-500/50 bg-emerald-500/10'
-                : 'border-white/5 bg-slate-800/20 hover:border-white/10'
+                : 'border-gray-200 bg-gray-100/20 hover:border-gray-300'
             }`}
             style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
           >
-            <div className="w-full h-14 rounded-lg bg-slate-700/30 mb-2 overflow-hidden flex flex-col border border-white/5">
+            <div className="w-full h-14 rounded-lg bg-gray-200 mb-2 overflow-hidden flex flex-col border border-gray-200">
               <div style={{ backgroundColor: t.headerColor }} className={`${t.headerH} w-full`} />
               <div className="flex-1 p-1.5 space-y-1">
                 <div className="bg-slate-600/40 h-1.5 rounded-full w-2/3" />
@@ -705,7 +705,7 @@ export default function SettingsPage() {
                 <div className="bg-slate-600/20 h-1 rounded-full w-4/5" />
               </div>
             </div>
-            <p className="text-xs font-bold text-white">{t.name}</p>
+            <p className="text-xs font-bold text-gray-900 dark:text-white">{t.name}</p>
             <p className="text-[10px] text-slate-500">{t.desc}</p>
             {form.template_id === t.id && !profile?.custom_template_html && (
               <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
@@ -717,10 +717,10 @@ export default function SettingsPage() {
       </div>
 
       {/* AI Template Upload */}
-      <div className="pt-4 border-t border-white/5">
+      <div className="pt-4 border-t border-gray-200">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={14} className={sub.canUseCustomTemplate ? 'text-emerald-400' : 'text-slate-600'} />
-          <h4 className="text-sm font-bold text-white">Importer un template avec l'IA</h4>
+          <Sparkles size={14} className={sub.canUseCustomTemplate ? 'text-emerald-400' : 'text-gray-400'} />
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Importer un template avec l'IA</h4>
           {!sub.canUseCustomTemplate && (
             <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">PRO</span>
           )}
@@ -731,7 +731,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div
               onClick={() => templateFileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-white/10 p-4 text-center transition-all cursor-pointer hover:border-emerald-500/30 hover:bg-emerald-500/5"
+              className="rounded-xl border-2 border-dashed border-gray-300 p-4 text-center transition-all cursor-pointer hover:border-emerald-500/30 hover:bg-emerald-500/5"
             >
               <input ref={templateFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleAnalyzeTemplate} />
               {analyzingTemplate ? (
@@ -743,7 +743,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col items-center gap-2">
                   <Upload size={20} className="text-slate-500" />
                   <p className="text-xs font-semibold text-slate-400">Glissez ou <span className="text-emerald-400">parcourez</span></p>
-                  <p className="text-[10px] text-slate-600">PNG, JPG, PDF</p>
+                  <p className="text-[10px] text-gray-400">PNG, JPG, PDF</p>
                 </div>
               )}
             </div>
@@ -761,7 +761,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowTemplatePreview(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-xs font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors"
                   >
                     <Eye size={13} /> Aperçu
                   </button>
@@ -790,7 +790,7 @@ export default function SettingsPage() {
             )}
           </div>
         ) : (
-          <div className="p-3 bg-slate-800/30 rounded-xl border border-white/5 text-center">
+          <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
             <p className="text-xs text-slate-500">Disponible avec le plan Pro</p>
             <button onClick={() => router.push('/paywall')} className="mt-2 text-xs text-emerald-400 font-bold hover:text-emerald-300 transition-colors">Voir les offres →</button>
           </div>
@@ -861,7 +861,7 @@ export default function SettingsPage() {
               { label: 'Virement direct', desc: 'Les fonds vont sur votre Stripe' },
               { label: 'Mise à jour auto', desc: 'Facture passée en "Payée"' },
             ].map((f) => (
-              <div key={f.label} className="p-3 bg-slate-800/30 rounded-xl border border-white/5">
+              <div key={f.label} className="p-3 bg-gray-50 rounded-xl border border-gray-200">
                 <p className="text-xs font-bold text-slate-300">{f.label}</p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{f.desc}</p>
               </div>
@@ -871,7 +871,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleConnectStripe}
             disabled={stripeConnectLoading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#635BFF] text-white text-sm font-bold hover:bg-[#4F46E5] transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#635BFF] text-gray-900 dark:text-white text-sm font-bold hover:bg-[#4F46E5] transition-colors disabled:opacity-50"
           >
             {stripeConnectLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -894,7 +894,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => setShowSumupTutorial(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-slate-300 hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-medium text-slate-400 hover:text-slate-300 hover:bg-gray-100 transition-colors"
         >
           <HelpCircle size={12} />
           Aide
@@ -960,7 +960,7 @@ export default function SettingsPage() {
               { label: 'Terminal', desc: 'En personne', icon: Smartphone },
               { label: 'Auto', desc: 'Statut mis à jour', icon: RefreshCw },
             ].map((f) => (
-              <div key={f.label} className="p-2.5 bg-slate-800/30 rounded-lg border border-white/5">
+              <div key={f.label} className="p-2.5 bg-gray-50 rounded-lg border border-gray-200">
                 <f.icon size={16} className="text-slate-500 mx-auto mb-1" />
                 <p className="text-[10px] font-semibold text-slate-300">{f.label}</p>
                 <p className="text-[9px] text-slate-500">{f.desc}</p>
@@ -1000,7 +1000,7 @@ export default function SettingsPage() {
             <PenTool size={18} className="text-blue-400" />
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-bold text-white mb-1">À quoi sert la signature électronique ?</h4>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">À quoi sert la signature électronique ?</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
               Votre signature manuscrite sera <strong className="text-slate-300">ajoutée automatiquement en bas de tous vos documents PDF</strong>. Cela donne un aspect professionnel et authentique à vos documents.
             </p>
@@ -1012,12 +1012,12 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start gap-4">
-        <div className="w-full sm:w-48 h-24 rounded-xl border-2 border-dashed border-white/10 bg-slate-800/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-full sm:w-48 h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
           {profile?.signature_url ? (
             <img src={profile.signature_url} alt="Signature" className="max-w-full max-h-full object-contain p-2" />
           ) : (
             <div className="text-center">
-              <PenTool size={20} className="text-slate-600 mx-auto mb-1" />
+              <PenTool size={20} className="text-gray-400 mx-auto mb-1" />
               <p className="text-xs text-slate-500">Aucune signature</p>
             </div>
           )}
@@ -1027,7 +1027,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => sigFileRef.current?.click()}
             disabled={uploadingSig}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
           >
             {uploadingSig ? (
               <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -1059,11 +1059,11 @@ export default function SettingsPage() {
       <Select label="Langue" value={form.language} onChange={(e) => set('language', e.target.value)} options={LANG_OPTS} />
 
       {/* Keyboard shortcuts */}
-      <div className="flex items-center justify-between py-3 px-4 bg-slate-800/30 rounded-xl border border-white/5">
+      <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
         <div className="flex items-center gap-3">
           <Keyboard size={18} className="text-slate-400" />
           <div>
-            <label className="text-sm font-semibold text-white block">Raccourcis clavier</label>
+            <label className="text-sm font-semibold text-gray-900 dark:text-white block">Raccourcis clavier</label>
             <p className="text-xs text-slate-500 mt-0.5">
               {require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
                 ? 'Désactivés — Utilisez le bouton ? pour réactiver'
@@ -1105,10 +1105,10 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setAccentOpen(true)}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/10 bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-300 bg-gray-100 hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <div
-              className="w-6 h-6 rounded-full border border-white/10"
+              className="w-6 h-6 rounded-full border border-gray-300"
               style={{ backgroundColor: form.accent_color }}
             />
             <span className="text-sm font-medium text-slate-300">{form.accent_color}</span>
@@ -1118,9 +1118,9 @@ export default function SettingsPage() {
         </div>
 
         <Dialog open={accentOpen} onOpenChange={setAccentOpen}>
-          <DialogContent className="sm:max-w-md bg-slate-900 border border-white/10">
+          <DialogContent className="sm:max-w-md bg-white border border-gray-300">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-white">
+              <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
                 <Palette className="h-5 w-5" />
                 Choisir la couleur accent
               </DialogTitle>
@@ -1155,7 +1155,7 @@ export default function SettingsPage() {
                       type="color"
                       value={form.accent_color}
                       onChange={(e) => set('accent_color', e.target.value)}
-                      className="h-10 w-10 cursor-pointer rounded-md border border-white/10 bg-transparent p-0"
+                      className="h-10 w-10 cursor-pointer rounded-md border border-gray-300 bg-transparent p-0"
                     />
                     <input
                       type="text"
@@ -1166,12 +1166,12 @@ export default function SettingsPage() {
                         }
                       }}
                       placeholder="#000000"
-                      className="flex-1 px-3 py-2 text-sm border border-white/10 bg-slate-800/50 text-white rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 bg-gray-100 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50"
                     />
                   </div>
                 </div>
                 <div
-                  className="rounded-xl border border-white/10 p-4"
+                  className="rounded-xl border border-gray-300 p-4"
                   style={{ backgroundColor: form.accent_color + '20' }}
                 >
                   <p className="text-sm font-medium" style={{ color: form.accent_color }}>
@@ -1207,18 +1207,18 @@ export default function SettingsPage() {
       </div>
 
       {webhooks.length === 0 ? (
-        <div className="text-center py-8 rounded-xl border border-dashed border-white/10">
-          <Globe size={22} className="text-slate-600 mx-auto mb-2" />
+        <div className="text-center py-8 rounded-xl border border-dashed border-gray-300">
+          <Globe size={22} className="text-gray-400 mx-auto mb-2" />
           <p className="text-sm text-slate-400">Aucun webhook configuré</p>
-          <p className="text-xs text-slate-600 mt-1">Ajoutez une URL pour recevoir des notifications</p>
+          <p className="text-xs text-gray-400 mt-1">Ajoutez une URL pour recevoir des notifications</p>
         </div>
       ) : (
         <div className="space-y-2">
           {webhooks.map((wh) => (
-            <div key={wh.id} className="flex items-start gap-3 p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+            <div key={wh.id} className="flex items-start gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-semibold text-white truncate">{wh.url}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{wh.url}</p>
                   <span className={`flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                     wh.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'
                   }`}>
@@ -1244,7 +1244,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleDeleteWebhook(wh.id)}
                   disabled={deletingWebhookId === wh.id}
-                  className="text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                  className="text-gray-400 hover:text-red-400 transition-colors disabled:opacity-40"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -1261,7 +1261,7 @@ export default function SettingsPage() {
       {/* Subscription info */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-bold text-white">Mon abonnement</h4>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Mon abonnement</h4>
         </div>
         <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
           sub.tier === 'business' ? 'bg-purple-500/20 text-purple-400' :
@@ -1290,27 +1290,27 @@ export default function SettingsPage() {
       {/* Active subscription management */}
       {!sub.isFree && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+          <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-emerald-500/15 flex items-center justify-center">
                 <CreditCard size={16} className="text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Abonnement actif</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">Abonnement actif</p>
                 <p className="text-xs text-slate-500">Gérez votre facturation et vos méthodes de paiement</p>
               </div>
             </div>
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
             >
               {portalLoading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /> : <ArrowUpRight size={14} />}
               Gérer
             </button>
           </div>
 
-          <div className="flex items-start justify-between gap-4 p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+          <div className="flex items-start justify-between gap-4 p-3.5 bg-gray-50 rounded-xl border border-gray-200">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-red-500/15 flex items-center justify-center">
                 <XCircle size={16} className="text-red-400" />
@@ -1340,14 +1340,14 @@ export default function SettingsPage() {
 
       {/* Team management - Business */}
       {sub.isBusiness && (
-        <div className="flex items-center justify-between p-3.5 bg-slate-800/30 rounded-xl border border-white/5">
+        <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center">
               <Users size={16} className="text-purple-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-white">Équipe</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Équipe</p>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/20">BUSINESS</span>
               </div>
               <p className="text-xs text-slate-500">Invitez des collaborateurs et attribuez des rôles</p>
@@ -1355,7 +1355,7 @@ export default function SettingsPage() {
           </div>
           <Link
             href="/settings/team"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-white transition-colors flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors flex-shrink-0"
           >
             <ArrowUpRight size={14} />
             Gérer
@@ -1368,7 +1368,7 @@ export default function SettingsPage() {
         <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/15">
           <div className="flex items-center gap-2 mb-2">
             <Zap size={16} className="text-emerald-400" />
-            <h4 className="text-sm font-bold text-white">Parrainage</h4>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Parrainage</h4>
           </div>
           <p className="text-xs text-slate-400 mb-3">
             Parrainez un ami et gagnez 1 mois gratuit pour chaque inscription !
@@ -1384,15 +1384,15 @@ export default function SettingsPage() {
       )}
 
       {/* Accounting export */}
-      <div className="pt-4 border-t border-white/5">
-        <h4 className="text-sm font-bold text-white mb-2">Export comptabilité</h4>
+      <div className="pt-4 border-t border-gray-200">
+        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Export comptabilité</h4>
         <p className="text-xs text-slate-400 mb-3">Exportez vos écritures comptables au format FEC pour votre expert-comptable.</p>
         <div className="flex gap-2 flex-wrap">
           {[new Date().getFullYear(), new Date().getFullYear() - 1].map((year) => (
             <a
               key={year}
               href={`/api/export/fec?year=${year}`}
-              className="flex items-center gap-2 border border-white/10 text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold hover:border-white/20 hover:text-white transition-colors"
+              className="flex items-center gap-2 border border-gray-300 text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold hover:border-white/20 hover:text-gray-900 transition-colors"
             >
               <Download size={14} />
               FEC {year}
@@ -1402,7 +1402,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Account actions */}
-      <div className="pt-4 border-t border-white/5 space-y-4">
+      <div className="pt-4 border-t border-gray-200 space-y-4">
         {/* Logout */}
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -1412,7 +1412,7 @@ export default function SettingsPage() {
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 text-sm font-semibold text-slate-400 hover:border-white/20 hover:text-white transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-400 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             {loggingOut ? (
               <>
@@ -1497,7 +1497,7 @@ export default function SettingsPage() {
         <div className="min-h-screen">
           {/* Page header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold tracking-tight text-white">Paramètres</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Paramètres</h2>
             {!sub.isFree && (
               <div className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-full">
                 <Crown size={14} className="text-emerald-400" />
@@ -1515,7 +1515,7 @@ export default function SettingsPage() {
             >
               <Crown size={22} className="text-amber-300 flex-shrink-0" />
               <div>
-                <p className="font-bold text-white">Passer à Solo ou Pro</p>
+                <p className="font-bold text-gray-900 dark:text-white">Passer à Solo ou Pro</p>
                 <p className="text-sm text-emerald-100/80">Factures illimitées, dictée vocale, templates...</p>
               </div>
             </button>
@@ -1533,7 +1533,7 @@ export default function SettingsPage() {
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       activeTab === tab.key
                         ? 'bg-emerald-500/15 text-emerald-400'
-                        : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-gray-100'
                     }`}
                     style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
                   >
@@ -1554,7 +1554,7 @@ export default function SettingsPage() {
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                       activeTab === tab.key
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-slate-800/30 text-slate-400 border border-white/5 hover:text-slate-300'
+                        : 'bg-gray-50 text-slate-400 border border-gray-200 hover:text-slate-300'
                     }`}
                     style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
                   >
@@ -1569,7 +1569,7 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0">
               <form onSubmit={handleSave} className="space-y-4">
                 {/* Active section card */}
-                <div className="bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                   <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
                     {sectionLabels[activeTab]}
                   </h3>
@@ -1588,7 +1588,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="w-full py-3 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition-all duration-300 disabled:opacity-50"
+                      className="w-full py-3 px-6 rounded-xl bg-emerald-500 text-white font-semibold transition-all duration-300 disabled:opacity-50"
                       style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
                     >
                       {saving ? (
@@ -1626,7 +1626,7 @@ export default function SettingsPage() {
                   value={webhookForm.url}
                   onChange={(e) => setWebhookForm((p) => ({ ...p, url: e.target.value }))}
                   placeholder="https://votre-serveur.com/webhook"
-                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
                 />
               </div>
               <div>
@@ -1638,9 +1638,9 @@ export default function SettingsPage() {
                         type="checkbox"
                         checked={webhookForm.events.includes(ev.value)}
                         onChange={() => handleToggleWebhookEvent(ev.value)}
-                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/30"
+                        className="w-4 h-4 rounded border-slate-600 bg-gray-100 text-emerald-500 focus:ring-emerald-500/30"
                       />
-                      <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{ev.label}</span>
+                      <span className="text-sm text-slate-300 group-hover:text-gray-900 transition-colors">{ev.label}</span>
                       <span className="text-[11px] text-slate-500 font-mono">{ev.value}</span>
                     </label>
                   ))}
@@ -1655,7 +1655,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowWebhookModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                 >
                   Annuler
                 </button>
@@ -1684,7 +1684,7 @@ export default function SettingsPage() {
           >
             {analyzedTemplateHtml && (
               <div className="space-y-3">
-                <div className="bg-slate-800/50 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
+                <div className="bg-gray-100 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
                   <iframe
                     srcDoc={buildPreviewHtml(analyzedTemplateHtml)}
                     className="w-full border-0"
@@ -1696,7 +1696,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowTemplatePreview(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                   >
                     Fermer
                   </button>
@@ -1748,7 +1748,7 @@ export default function SettingsPage() {
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   placeholder="SUPPRIMER"
-                  className="w-full px-3 py-2.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all"
                 />
               </div>
 
@@ -1756,7 +1756,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
-                  className="flex-1 py-2.5 rounded-xl bg-white/10 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                 >
                   Annuler
                 </button>

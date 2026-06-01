@@ -40,7 +40,7 @@ function CallbackHandler() {
           onboarding_done: false,
           created_at: new Date().toISOString(),
         });
-        router.push('/onboarding/language');
+        router.push('/onboarding/quick');
       } else {
         router.push('/dashboard');
       }

@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       customer: customerId,
       items: [{ price: priceId }],
       trial_period_days: 7,
-      trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+      trial_settings: { end_behavior: { missing_payment_method: 'pause' } },
       payment_settings: { save_default_payment_method: 'on_subscription' },
       metadata: {
         userId,

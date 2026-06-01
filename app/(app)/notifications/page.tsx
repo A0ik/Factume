@@ -45,7 +45,7 @@ function NotifItem({ notif, onRead }: { notif: Notification; onRead: (id: string
     <div
       className={cn(
         'flex items-start gap-4 px-5 py-4 transition-colors cursor-pointer group',
-        !notif.read ? 'bg-emerald-500/[0.03]' : 'hover:bg-white/[0.02]',
+        !notif.read ? 'bg-emerald-500/[0.03]' : 'hover:bg-gray-100',
       )}
       onClick={() => { if (!notif.read) onRead(notif.id); }}
     >
@@ -55,7 +55,7 @@ function NotifItem({ notif, onRead }: { notif: Notification; onRead: (id: string
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className={cn('text-sm font-semibold leading-snug', !notif.read ? 'text-white' : 'text-slate-400')}>
+          <p className={cn('text-sm font-semibold leading-snug', !notif.read ? 'text-gray-900 dark:text-white' : 'text-slate-400')}>
             {notif.title}
           </p>
           {!notif.read && (
@@ -66,7 +66,7 @@ function NotifItem({ notif, onRead }: { notif: Notification; onRead: (id: string
           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{notif.body}</p>
         )}
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-[10px] text-slate-600 flex items-center gap-1">
+          <span className="text-[10px] text-gray-400 flex items-center gap-1">
             <Clock size={9} />
             {formatRelative(notif.created_at)}
           </span>
@@ -80,7 +80,7 @@ function NotifItem({ notif, onRead }: { notif: Notification; onRead: (id: string
         <Link
           href={notif.link}
           onClick={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-white/5 text-slate-600 hover:text-emerald-400 transition-all mt-0.5"
+          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-400 transition-all mt-0.5"
         >
           <ChevronRight size={14} />
         </Link>
@@ -100,7 +100,7 @@ function NotifCard({ notif, onRead, index }: { notif: Notification; onRead: (id:
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease, delay: Math.min(index * 0.04, 0.4) }}
       className={cn(
-        'bg-slate-800/50 border border-white/5 rounded-2xl p-5',
+        'bg-gray-100 border border-gray-200 rounded-2xl p-5',
         !notif.read && 'border-emerald-500/10',
       )}
       onClick={() => { if (!notif.read) onRead(notif.id); }}
@@ -111,7 +111,7 @@ function NotifCard({ notif, onRead, index }: { notif: Notification; onRead: (id:
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className={cn('text-sm font-semibold leading-snug', !notif.read ? 'text-white' : 'text-slate-400')}>
+            <p className={cn('text-sm font-semibold leading-snug', !notif.read ? 'text-gray-900 dark:text-white' : 'text-slate-400')}>
               {notif.title}
             </p>
             {!notif.read && (
@@ -122,7 +122,7 @@ function NotifCard({ notif, onRead, index }: { notif: Notification; onRead: (id:
             <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-3">{notif.body}</p>
           )}
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] text-slate-600 flex items-center gap-1">
+            <span className="text-[10px] text-gray-400 flex items-center gap-1">
               <Clock size={9} />
               {formatRelative(notif.created_at)}
             </span>
@@ -135,7 +135,7 @@ function NotifCard({ notif, onRead, index }: { notif: Notification; onRead: (id:
           <Link
             href={notif.link}
             onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-white/5 text-slate-600 hover:text-emerald-400 transition-all"
+            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-400 transition-all"
           >
             <ChevronRight size={14} />
           </Link>
@@ -260,7 +260,7 @@ export default function NotificationsPage() {
             ? 'bg-red-500/5 border-red-500/20'
             : pushStatus === 'subscribing'
             ? 'bg-blue-500/5 border-blue-500/20'
-            : 'bg-slate-800/50 border-white/5'
+            : 'bg-gray-100 border-gray-200'
         )}>
           <div className={cn(
             'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
@@ -268,7 +268,7 @@ export default function NotificationsPage() {
               ? 'bg-emerald-500/10'
               : pushStatus === 'denied'
               ? 'bg-red-500/10'
-              : 'bg-slate-800'
+              : 'bg-gray-100'
           )}>
             <BellRing size={16} className={
               pushStatus === 'subscribed'
@@ -279,7 +279,7 @@ export default function NotificationsPage() {
             } />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Notifications push</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications push</p>
             {pushStatus === 'subscribed' && (
               <p className="text-xs text-emerald-400 mt-0.5 font-semibold">Notifications activées</p>
             )}
@@ -314,7 +314,7 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Notifications</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Notifications</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {unreadCount > 0
               ? `${unreadCount} non lue${unreadCount !== 1 ? 's' : ''}`
@@ -335,10 +335,10 @@ export default function NotificationsPage() {
       {notifications.length === 0 ? (
         /* Empty state */
         <div className="py-16 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/5 flex items-center justify-center mx-auto mb-4">
-            <Bell size={28} className="text-slate-600" />
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-4">
+            <Bell size={28} className="text-gray-400" />
           </div>
-          <p className="font-semibold text-white text-sm">Aucune notification</p>
+          <p className="font-semibold text-gray-900 dark:text-white text-sm">Aucune notification</p>
           <p className="text-xs text-slate-500 mt-1">Vous recevrez des alertes sur vos factures et l&apos;activité du workspace</p>
         </div>
       ) : (
@@ -346,9 +346,9 @@ export default function NotificationsPage() {
           {/* Desktop sections */}
           <div className="hidden md:block space-y-3">
             {today.length > 0 && (
-              <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-200">
                 <div className="px-5 py-3">
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Aujourd&apos;hui</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aujourd&apos;hui</p>
                 </div>
                 {today.map((n) => (
                   <NotifItem key={n.id} notif={n} onRead={markRead} />
@@ -357,9 +357,9 @@ export default function NotificationsPage() {
             )}
 
             {older.length > 0 && (
-              <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-200">
                 <div className="px-5 py-3">
-                  <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Plus ancien</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Plus ancien</p>
                 </div>
                 {older.map((n) => (
                   <NotifItem key={n.id} notif={n} onRead={markRead} />
@@ -372,7 +372,7 @@ export default function NotificationsPage() {
           <div className="md:hidden space-y-3">
             {today.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider px-1">Aujourd&apos;hui</p>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">Aujourd&apos;hui</p>
                 {today.map((n, i) => (
                   <NotifCard key={n.id} notif={n} onRead={markRead} index={i} />
                 ))}
@@ -381,7 +381,7 @@ export default function NotificationsPage() {
 
             {older.length > 0 && (
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider px-1">Plus ancien</p>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">Plus ancien</p>
                 {older.map((n, i) => (
                   <NotifCard key={n.id} notif={n} onRead={markRead} index={i} />
                 ))}
@@ -393,12 +393,12 @@ export default function NotificationsPage() {
 
       {/* Tips */}
       {pushStatus === 'unsupported' && (
-        <div className="bg-slate-800/50 border border-white/5 rounded-xl p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center flex-shrink-0">
+        <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
             <Zap size={14} className="text-amber-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Notifications push non disponibles</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications push non disponibles</p>
             <p className="text-xs text-slate-500 mt-0.5">
               Votre navigateur ne supporte pas les notifications push. Utilisez Chrome, Firefox ou Edge pour cette fonctionnalité.
             </p>

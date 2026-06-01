@@ -130,8 +130,8 @@ export default function DevisPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-3xl font-bold tracking-tight text-white">Devis</h1>
-          <Link href="/documents/devis/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-xl transition-colors active:scale-95">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Devis</h1>
+          <Link href="/documents/devis/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-500 hover:bg-purple-400 text-gray-900 dark:text-white font-semibold rounded-xl transition-colors active:scale-95">
             <Plus size={18} /> <span className="hidden sm:inline">Nouveau</span>
           </Link>
         </div>
@@ -145,10 +145,10 @@ export default function DevisPage() {
           { label: 'Envoyés', value: stats.sent, dot: 'bg-blue-500' },
           ...(stats.expired > 0 ? [{ label: 'Expirés', value: stats.expired, dot: 'bg-orange-500' }] : []),
         ].map(({ label, value, dot }) => (
-          <div key={label} className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/50 border border-white/5 rounded-xl flex-shrink-0">
+          <div key={label} className="flex items-center gap-2 px-3.5 py-2 bg-gray-100 border border-gray-200 rounded-xl flex-shrink-0">
             <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
             <span className="text-xs text-slate-400">{label}</span>
-            <span className="text-xs font-bold text-white">{value}</span>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">{value}</span>
           </div>
         ))}
       </motion.div>
@@ -162,7 +162,7 @@ export default function DevisPage() {
             placeholder="Rechercher un devis..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-12 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-all"
+            className="w-full pl-10 pr-12 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-all"
           />
           <button onClick={() => setShowFilters(!showFilters)} className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${showFilters ? 'bg-purple-500/20 text-purple-400' : 'text-slate-500 hover:text-slate-300'}`}>
             <SlidersHorizontal size={16} />
@@ -177,11 +177,11 @@ export default function DevisPage() {
             key={key}
             onClick={() => setStatusFilter(key)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              statusFilter === key ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+              statusFilter === key ? 'bg-white/15 text-gray-900 dark:text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-gray-100'
             }`}
           >
             {label}
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${statusFilter === key ? 'bg-white/10' : 'bg-white/5'}`}>{count}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${statusFilter === key ? 'bg-gray-100' : 'bg-gray-50'}`}>{count}</span>
           </button>
         ))}
       </motion.div>
@@ -189,22 +189,22 @@ export default function DevisPage() {
       {/* List */}
       {filteredDevis.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-          <div className="w-14 h-14 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FileCheck className="text-slate-600" size={28} />
+          <div className="w-14 h-14 bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FileCheck className="text-gray-400" size={28} />
           </div>
           <p className="text-sm text-slate-400">Aucun devis</p>
-          <p className="text-xs text-slate-600 mt-1 mb-5">Créez votre premier devis</p>
-          <Link href="/documents/devis/new" className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-400 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
+          <p className="text-xs text-gray-400 mt-1 mb-5">Créez votre premier devis</p>
+          <Link href="/documents/devis/new" className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-400 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
             <Plus size={16} /> Créer
           </Link>
         </motion.div>
       ) : (
         <>
           {/* Desktop table */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/5">
+                <tr className="border-b border-gray-200">
                   <th className="px-5 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Numéro</th>
                   <th className="px-5 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client</th>
                   <th className="px-5 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date</th>
@@ -213,19 +213,19 @@ export default function DevisPage() {
                   <th className="px-5 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-gray-200">
                 {filteredDevis.map((devi) => {
                   const s = statusConfig[devi.status] || statusConfig.draft;
                   return (
-                    <tr key={devi.id} className="hover:bg-white/[0.03] transition-colors">
+                    <tr key={devi.id} className="hover:bg-gray-100 transition-colors">
                       <td className="px-5 py-3"><Link href={`/invoices/${devi.id}`} className="text-sm font-semibold text-purple-400 hover:underline">{devi.number || `DEV-${devi.id?.slice(0, 8)}`}</Link></td>
                       <td className="px-5 py-3 text-sm text-slate-300">{devi.client?.name || devi.client_name_override || ''}</td>
                       <td className="px-5 py-3 text-sm text-slate-500">{devi.issue_date ? new Date(devi.issue_date).toLocaleDateString('fr-FR') : '-'}</td>
                       <td className="px-5 py-3"><span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}><div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />{s.label}</span></td>
-                      <td className="px-5 py-3 text-right text-sm font-bold text-white">{(devi.total || 0).toFixed(2)}€</td>
+                      <td className="px-5 py-3 text-right text-sm font-bold text-gray-900 dark:text-white">{(devi.total || 0).toFixed(2)}€</td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <Link href={`/invoices/${devi.id}`} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors"><FileCheck size={16} /></Link>
+                          <Link href={`/invoices/${devi.id}`} className="p-2 rounded-lg text-slate-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"><FileCheck size={16} /></Link>
                           <button onClick={() => handleSendEmail(devi)} className="p-2 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"><Send size={16} /></button>
                           <button onClick={() => handleRequestSignature(devi)} className={`p-2 rounded-lg transition-colors ${sub.isFree ? 'text-slate-700' : 'text-slate-500 hover:text-blue-400 hover:bg-blue-500/10'}`}><PenTool size={16} /></button>
                         </div>
@@ -261,12 +261,12 @@ export default function DevisPage() {
                     <Link href={`/invoices/${devi.id}`} className="block p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-white truncate">{clientName}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{clientName}</p>
                           <p className="text-xs text-slate-500 mt-0.5 font-mono">{devi.number || `DEV-${devi.id?.slice(0, 8)}`}</p>
                         </div>
-                        <p className="text-base font-bold text-white flex-shrink-0">{amount} €</p>
+                        <p className="text-base font-bold text-gray-900 dark:text-white flex-shrink-0">{amount} €</p>
                       </div>
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${s.color}`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />{s.label}
                         </span>
@@ -289,21 +289,21 @@ export default function DevisPage() {
       <BottomSheet open={emailModalOpen} onClose={() => { setEmailModalOpen(false); setSelectedQuote(null); }} title="Envoyer par e-mail">
         {selectedQuote && (
           <>
-            <div className="flex items-center gap-3 mb-5 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-center gap-3 mb-5 p-3 bg-gray-50 rounded-xl">
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                 <Send className="text-emerald-400" size={18} />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white">Devis n° {selectedQuote.number || `DEV-${selectedQuote.id?.slice(0, 8)}`}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">Devis n° {selectedQuote.number || `DEV-${selectedQuote.id?.slice(0, 8)}`}</p>
                 <p className="text-xs text-slate-500">{(selectedQuote.total || 0).toFixed(2)} €</p>
               </div>
             </div>
             <div className="mb-6">
               <label className="block text-xs font-semibold text-slate-400 mb-2">Adresse e-mail</label>
-              <input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="client@exemple.com" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all" />
+              <input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="client@exemple.com" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all" />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setEmailModalOpen(false); setSelectedQuote(null); }} disabled={sendingEmail} className="flex-1 px-4 py-3 bg-white/10 text-slate-300 rounded-xl font-semibold transition-colors disabled:opacity-40 hover:bg-white/15">Annuler</button>
+              <button onClick={() => { setEmailModalOpen(false); setSelectedQuote(null); }} disabled={sendingEmail} className="flex-1 px-4 py-3 bg-gray-100 text-slate-300 rounded-xl font-semibold transition-colors disabled:opacity-40 hover:bg-white/15">Annuler</button>
               <button onClick={confirmSendEmail} disabled={sendingEmail || !emailAddress.trim()} className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-emerald-400">
                 {sendingEmail ? <><Loader2 size={16} className="animate-spin" />Envoi...</> : <><Send size={16} />Envoyer</>}
               </button>
@@ -316,19 +316,19 @@ export default function DevisPage() {
       <BottomSheet open={signModalOpen} onClose={() => { setSignModalOpen(false); setSelectedQuote(null); setEmailAddress(''); }} title="Demander la signature">
         {selectedQuote && (
           <>
-            <div className="p-3 bg-white/5 rounded-xl mb-5">
+            <div className="p-3 bg-gray-50 rounded-xl mb-5">
               <p className="text-xs text-slate-500">Client</p>
-              <p className="text-sm font-semibold text-white">{selectedQuote.client?.name || selectedQuote.client_name_override || '-'}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedQuote.client?.name || selectedQuote.client_name_override || '-'}</p>
             </div>
             <div className="mb-5">
               <label className="block text-xs font-semibold text-slate-400 mb-2">Adresse e-mail</label>
-              <input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="client@exemple.com" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all" />
+              <input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="client@exemple.com" className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all" />
             </div>
             <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-6">
               <p className="text-xs text-blue-300">Un email sera envoyé au client avec un lien sécurisé pour signer ce devis.</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { setSignModalOpen(false); setSelectedQuote(null); setEmailAddress(''); }} disabled={signing} className="flex-1 px-4 py-3 bg-white/10 text-slate-300 rounded-xl font-semibold transition-colors disabled:opacity-40 hover:bg-white/15">Annuler</button>
+              <button onClick={() => { setSignModalOpen(false); setSelectedQuote(null); setEmailAddress(''); }} disabled={signing} className="flex-1 px-4 py-3 bg-gray-100 text-slate-300 rounded-xl font-semibold transition-colors disabled:opacity-40 hover:bg-white/15">Annuler</button>
               <button onClick={confirmRequestSignature} disabled={signing || !emailAddress.trim()} className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-xl font-semibold transition-colors disabled:opacity-40 flex items-center justify-center gap-2 hover:bg-blue-400">
                 {signing ? <><Loader2 size={16} className="animate-spin" />Envoi...</> : <><Mail size={16} />Envoyer</>}
               </button>

@@ -28,12 +28,22 @@ export async function POST(req: NextRequest) {
 
     const tier = profile?.subscription_tier || 'free';
     const isFree = tier === 'free' && !profile?.is_trial_active;
+    const isTrial = tier === 'trial' || profile?.is_trial_active === true;
     const currentMonth = new Date().toISOString().slice(0, 7);
     const monthlyCount = profile?.invoice_month === currentMonth ? (profile?.monthly_invoice_count || 0) : 0;
 
-    if (isFree && monthlyCount >= 5) {
+    // Free tier: 3 invoices/month (aligned with RPC increment_invoice_count)
+    if (isFree && monthlyCount >= 3) {
       return NextResponse.json(
         { error: 'Limite atteinte. Passez au plan Solo pour créer des factures illimitées.', code: 'FREE_LIMIT' },
+        { status: 403 }
+      );
+    }
+
+    // Trial tier: 15 invoices/month (generous but prevents abuse)
+    if (isTrial && !isFree && monthlyCount >= 15) {
+      return NextResponse.json(
+        { error: 'Limite d\'essai atteinte pour ce mois. Passez au plan Solo pour des factures illimitées.', code: 'TRIAL_LIMIT' },
         { status: 403 }
       );
     }

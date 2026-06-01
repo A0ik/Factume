@@ -25,6 +25,8 @@ import PaymentLinkSuccessModal from '@/components/ui/PaymentLinkSuccessModal';
 import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton';
 import { isFacturXEligible } from '@/lib/facturx';
 import { motion, AnimatePresence } from 'framer-motion';
+import MobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
+import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
 
 const ease: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 
@@ -41,7 +43,7 @@ function getDocListPath(type: string): string {
 }
 
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: string; dotColor: string; icon: any }> = {
-  draft:     { label: 'Brouillon',   color: 'text-slate-400',    bg: 'bg-slate-800/50',     dotColor: 'bg-slate-500',    icon: FileText },
+  draft:     { label: 'Brouillon',   color: 'text-slate-400',    bg: 'bg-gray-100',     dotColor: 'bg-slate-500',    icon: FileText },
   sent:      { label: 'Envoyée',     color: 'text-blue-400',     bg: 'bg-blue-500/10',      dotColor: 'bg-blue-400',     icon: Send },
   paid:      { label: 'Payée',       color: 'text-emerald-400',  bg: 'bg-emerald-500/10',   dotColor: 'bg-emerald-400',  icon: CheckCircle },
   overdue:   { label: 'En retard',   color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: AlertTriangle },
@@ -50,7 +52,7 @@ const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: s
   cancelled: { label: 'Annulé',      color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: X },
   refunded:  { label: 'Remboursé',   color: 'text-orange-400',   bg: 'bg-orange-500/10',    dotColor: 'bg-orange-400',   icon: X },
   rejected:  { label: 'Rejeté',      color: 'text-red-400',      bg: 'bg-red-500/10',       dotColor: 'bg-red-400',      icon: X },
-  expired:   { label: 'Expiré',      color: 'text-slate-400',    bg: 'bg-slate-800/50',     dotColor: 'bg-slate-500',    icon: AlertTriangle },
+  expired:   { label: 'Expiré',      color: 'text-slate-400',    bg: 'bg-gray-100',     dotColor: 'bg-slate-500',    icon: AlertTriangle },
   pending:   { label: 'En attente',  color: 'text-yellow-400',   bg: 'bg-yellow-500/10',    dotColor: 'bg-yellow-400',   icon: AlertTriangle },
   partial:   { label: 'Partiel',     color: 'text-blue-400',     bg: 'bg-blue-500/10',      dotColor: 'bg-blue-400',     icon: CheckCircle },
   delivered: { label: 'Livré',       color: 'text-emerald-400',  bg: 'bg-emerald-500/10',   dotColor: 'bg-emerald-400',  icon: CheckCircle },
@@ -169,6 +171,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) throw new Error(data.error);
       if (invoice.status === 'draft') await updateInvoiceStatus(id, 'sent');
       toast.success(`Facture envoyée à ${email} !`);
+      // Notification e-invoicing PDP
+      if (data.pdpTransmission?.transmitted) {
+        toast.success("Facture envoyée et transmise à l'État ✅", { duration: 6000 });
+      } else if (data.pdpTransmission && !data.pdpTransmission.transmitted) {
+        toast.info("Facture envoyée. Transmission électronique en cours...", { duration: 4000 });
+      }
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'envoi.");
       throw e;
@@ -347,21 +355,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     <div className="max-w-5xl mx-auto pb-32 lg:pb-0">
 
       {/* ========== HEADER ========== */}
-      <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-md border-b border-white/5">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-gray-200">
         <div className="px-4 py-3 lg:px-6 lg:py-4">
           {/* Back + menu row */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => router.push(getDocListPath(invoice.document_type))}
-                className="p-2 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-400 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft size={18} />
               </button>
               {/* Desktop: show number inline */}
               <div className="hidden lg:flex items-center gap-2">
                 <DocIcon size={16} className={docCfg.color} />
-                <h1 className="text-lg font-bold text-white">{invoice.number}</h1>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">{invoice.number}</h1>
               </div>
             </div>
 
@@ -382,7 +390,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
                 <button
                   onClick={() => router.push(`/invoices/${id}/edit`)}
-                  className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors"
+                  className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors"
                 >
                   <Edit2 size={15} />
                   Modifier
@@ -393,7 +401,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
-                  className="p-2 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                  className="p-2 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-400 hover:text-gray-900 transition-colors"
                 >
                   <MoreVertical size={16} />
                 </button>
@@ -406,7 +414,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
                         transition={{ duration: 0.15, ease }}
-                        className="absolute right-0 top-full mt-2 bg-slate-900 border border-white/10 rounded-2xl z-40 w-56 overflow-hidden"
+                        className="absolute right-0 top-full mt-2 bg-white border border-gray-300 rounded-2xl z-40 w-56 overflow-hidden"
                       >
                         {invoice.status !== 'paid' && (
                           <button
@@ -430,12 +438,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                         )}
                         <button
                           onClick={() => { setShowMenu(false); handleDuplicate(); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-gray-100 transition-colors"
                         >
                           <Copy size={16} />
                           Dupliquer
                         </button>
-                        <div className="h-px bg-white/5 mx-4" />
+                        <div className="h-px bg-gray-50 mx-4" />
                         {invoice.document_type === 'invoice' && canUseFacturX && (
                           <FacturXButton
                             invoiceId={invoice.id}
@@ -444,7 +452,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                             warnings={facturXWarnings}
                           />
                         )}
-                        <div className="h-px bg-white/5 mx-4" />
+                        <div className="h-px bg-gray-50 mx-4" />
                         <button
                           onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
@@ -468,7 +476,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-bold text-white truncate">{clientName}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{clientName}</h1>
                 <p className="text-sm text-slate-500 font-mono mt-0.5">{invoice.number}</p>
               </div>
               <span className={cn(
@@ -478,6 +486,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 <span className={cn('w-1.5 h-1.5 rounded-full', status.dotColor)} />
                 {status.label}
               </span>
+              <PdpStatusBadge status={invoice.pdp_status} transmittedAt={invoice.pdp_transmitted_at} />
             </div>
           </motion.div>
         </div>
@@ -521,7 +530,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <button
                 onClick={() => { setIsReminder(true); setShowEmailModal(true); }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold hover:bg-red-400 transition-colors flex-shrink-0"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500 text-gray-900 dark:text-white text-xs font-semibold hover:bg-red-400 transition-colors flex-shrink-0"
               >
                 <Mail size={13} />
                 Relancer
@@ -538,29 +547,29 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         <div className="lg:col-span-2 space-y-4">
 
           {/* Invoice header card */}
-          <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/5 bg-slate-800/30 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <DocIcon size={15} className={docCfg.color} />
                 <span className="text-sm font-semibold text-slate-300">{docCfg.label}</span>
               </div>
-              <span className="text-sm font-bold text-white">{invoice.number}</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-white">{invoice.number}</span>
             </div>
             <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-5">
               <div>
                 <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Client</p>
-                <p className="text-sm font-semibold text-white">{clientName}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{clientName}</p>
                 {clientEmail && <p className="text-xs text-slate-500 mt-0.5">{clientEmail}</p>}
                 {invoice.client?.address && <p className="text-xs text-slate-500 mt-0.5">{invoice.client.address}</p>}
               </div>
               <div>
                 <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Date d'émission</p>
-                <p className="text-sm font-semibold text-white">{fmtDate(invoice.issue_date)}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{fmtDate(invoice.issue_date)}</p>
               </div>
               {invoice.due_date && (
                 <div>
                   <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Échéance</p>
-                  <p className={cn('text-sm font-semibold', invoice.status === 'overdue' ? 'text-red-400' : 'text-white')}>
+                  <p className={cn('text-sm font-semibold', invoice.status === 'overdue' ? 'text-red-400' : 'text-gray-900 dark:text-white')}>
                     {fmtDate(invoice.due_date)}
                   </p>
                 </div>
@@ -579,14 +588,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, ease, delay: i * 0.04 }}
-                className="bg-slate-800/30 border border-white/5 rounded-xl p-4"
+                className="bg-gray-50 border border-gray-200 rounded-xl p-4"
               >
-                <p className="text-sm text-white leading-snug">{item.description || '—'}</p>
+                <p className="text-sm text-gray-900 dark:text-white leading-snug">{item.description || '—'}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-slate-500">
                     {item.quantity} x {formatCurrency(item.unit_price)} &middot; TVA {item.vat_rate}%
                   </span>
-                  <span className="text-sm font-semibold text-white tabular-nums">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
                     {formatCurrency(item.quantity * item.unit_price)}
                   </span>
                 </div>
@@ -595,14 +604,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Line items - DESKTOP (table) */}
-          <div className="hidden lg:block bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/5 bg-slate-800/30">
+          <div className="hidden lg:block bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-200 bg-gray-50">
               <h3 className="text-sm font-semibold text-slate-300">Prestations</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
+                  <tr className="border-b border-gray-200">
                     <th className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-2.5">Description</th>
                     <th className="text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2.5 w-16">Qté</th>
                     <th className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2.5 w-28">Prix HT</th>
@@ -610,14 +619,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                     <th className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 py-2.5 w-28">Total HT</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-gray-200">
                   {invoice.items.map((item, i) => (
-                    <tr key={item.id || i} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-5 py-3.5 text-sm text-white">{item.description || '—'}</td>
+                    <tr key={item.id || i} className="hover:bg-gray-100 transition-colors">
+                      <td className="px-5 py-3.5 text-sm text-gray-900 dark:text-white">{item.description || '—'}</td>
                       <td className="px-3 py-3.5 text-sm text-slate-400 text-center">{item.quantity}</td>
                       <td className="px-3 py-3.5 text-sm text-slate-300 text-right tabular-nums">{formatCurrency(item.unit_price)}</td>
                       <td className="px-3 py-3.5 text-xs text-slate-500 text-right">{item.vat_rate}%</td>
-                      <td className="px-5 py-3.5 text-sm font-semibold text-white text-right tabular-nums">
+                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-900 dark:text-white text-right tabular-nums">
                         {formatCurrency(item.quantity * item.unit_price)}
                       </td>
                     </tr>
@@ -628,7 +637,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Totals - MOBILE */}
-          <div className="lg:hidden bg-slate-800/30 border border-white/5 rounded-2xl p-5">
+          <div className="lg:hidden bg-gray-50 border border-gray-200 rounded-2xl p-5">
             <div className="space-y-2.5">
               <div className="flex justify-between text-sm text-slate-400">
                 <span>Sous-total HT</span>
@@ -644,18 +653,18 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <span className="font-semibold tabular-nums">-{formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="h-px bg-white/10 my-1" />
+              <div className="h-px bg-gray-100 my-1" />
               <div className="flex justify-between items-center">
                 <span className="text-sm font-bold text-slate-200">Total TTC</span>
-                <span className="text-2xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(invoice.total)}</span>
               </div>
             </div>
           </div>
 
           {/* Totals - DESKTOP (inside table card) */}
           <div className="hidden lg:block">
-            <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden">
-              <div className="border-t border-white/5 px-5 py-4">
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+              <div className="border-t border-gray-200 px-5 py-4">
                 <div className="ml-auto max-w-xs space-y-2">
                   <div className="flex justify-between text-sm text-slate-400">
                     <span>Sous-total HT</span>
@@ -671,10 +680,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                       <span className="font-semibold tabular-nums">-{formatCurrency(discountAmount)}</span>
                     </div>
                   )}
-                  <div className="h-px bg-white/10" />
+                  <div className="h-px bg-gray-100" />
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-slate-200">Total TTC</span>
-                    <span className="text-2xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</span>
+                    <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(invoice.total)}</span>
                   </div>
                 </div>
               </div>
@@ -683,7 +692,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Notes */}
           {invoice.notes && (
-            <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5">
               <h3 className="text-sm font-semibold text-slate-300 mb-2">Notes</h3>
               <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap">{invoice.notes}</p>
             </div>
@@ -693,22 +702,23 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         {/* RIGHT / SIDEBAR (desktop only) */}
         <div className="hidden lg:block space-y-4">
           {/* Total card */}
-          <div className="bg-slate-900 border border-white/5 rounded-2xl p-5 text-center">
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 text-center">
             <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Montant total</p>
-            <p className="text-4xl font-bold text-white tabular-nums">{formatCurrency(invoice.total)}</p>
+            <p className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(invoice.total)}</p>
             <div className={cn('inline-flex items-center gap-1.5 mt-3 text-xs font-semibold px-3 py-1.5 rounded-full', status.bg, status.color)}>
               <span className={cn('w-1.5 h-1.5 rounded-full', status.dotColor)} />
               {status.label}
             </div>
+            <PdpStatusBadge status={invoice.pdp_status} transmittedAt={invoice.pdp_transmitted_at} className="mt-2" />
           </div>
 
           {/* Quick actions */}
-          <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 space-y-2">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2">
             <h3 className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-3">Actions rapides</h3>
 
             <button
               onClick={() => setShowPdfPreview(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-300 text-sm font-semibold transition-colors"
             >
               <Eye size={16} className="text-purple-400" />
               Prévisualiser le PDF
@@ -716,7 +726,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
             <button
               onClick={handleSendClick}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-300 text-sm font-semibold transition-colors"
             >
               <Mail size={16} className="text-blue-400" />
               Envoyer par e-mail
@@ -725,7 +735,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             {invoice.document_type === 'invoice' && invoice.status !== 'paid' && (
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-300 text-sm font-semibold transition-colors"
               >
                 <CreditCard size={16} className="text-emerald-400" />
                 Créer un lien de paiement
@@ -734,7 +744,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
             <button
               onClick={handleDownloadPdf}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-300 text-sm font-semibold transition-colors"
             >
               <Download size={16} className="text-slate-400" />
               Télécharger en PDF
@@ -744,7 +754,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={handleMarkPaid}
                 disabled={statusLoading}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {statusLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Marquer comme payée
@@ -764,18 +774,18 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Factur-X section */}
           {invoice.document_type === 'invoice' && (
-            <div className="rounded-2xl border border-white/5 bg-slate-900 overflow-hidden">
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
               <button
                 onClick={() => setShowFacturXDetails(!showFacturXDetails)}
-                className="w-full flex items-center justify-between gap-3 p-4 hover:bg-white/[0.02] transition-colors text-left"
+                className="w-full flex items-center justify-between gap-3 p-4 hover:bg-gray-100 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-slate-800/50 border border-white/5">
+                  <div className="p-2 rounded-xl bg-gray-100 border border-gray-200">
                     <FileText size={16} className="text-blue-400" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-white">Factur-X</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Factur-X</h3>
                       {canUseFacturX && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                           Actif
@@ -805,7 +815,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                     transition={{ duration: 0.2, ease }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 pt-2 border-t border-white/5 space-y-3">
+                    <div className="px-4 pb-4 pt-2 border-t border-gray-200 space-y-3">
                       <p className="text-xs text-slate-400 leading-relaxed">
                         Format de facture électronique conforme aux obligations légales françaises.
                         Intègre les données XML structurées directement dans le PDF.
@@ -845,30 +855,70 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
+          {/* PDP Transmission Status */}
+          {invoice.pdp_status && invoice.pdp_status !== 'not_transmitted' && (
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">E-invoicing</h3>
+                      <PdpStatusBadge status={invoice.pdp_status} transmittedAt={invoice.pdp_transmitted_at} />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Transmission via PDP agréée (Super PDP)
+                    </p>
+                  </div>
+                </div>
+                {invoice.pdp_transmission_id && (
+                  <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">ID de transmission</p>
+                    <p className="text-xs font-mono text-slate-400 truncate">{invoice.pdp_transmission_id}</p>
+                  </div>
+                )}
+                {invoice.pdp_status === 'failed' && invoice.pdp_last_error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <p className="text-xs text-red-500 font-medium">Erreur : {invoice.pdp_last_error}</p>
+                  </div>
+                )}
+                {invoice.pdp_status === 'pending_retry' && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p className="text-xs text-amber-600">Nouvelle tentative de transmission programmée...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Metadata */}
-          <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 space-y-3">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
             <h3 className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Informations</h3>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center gap-2 text-slate-400">
-                <Hash size={14} className="text-slate-600" />
+                <Hash size={14} className="text-gray-400" />
                 <span className="text-xs">Numéro :</span>
                 <span className="font-semibold text-slate-200 ml-auto">{invoice.number}</span>
               </div>
               <div className="flex items-center gap-2 text-slate-400">
-                <Calendar size={14} className="text-slate-600" />
+                <Calendar size={14} className="text-gray-400" />
                 <span className="text-xs">Créée le :</span>
                 <span className="font-semibold text-slate-200 ml-auto">{fmtDate(invoice.created_at)}</span>
               </div>
               {invoice.sent_at && (
                 <div className="flex items-center gap-2 text-slate-400">
-                  <Send size={14} className="text-slate-600" />
+                  <Send size={14} className="text-gray-400" />
                   <span className="text-xs">Envoyée le :</span>
                   <span className="font-semibold text-slate-200 ml-auto">{fmtDate(invoice.sent_at)}</span>
                 </div>
               )}
               {invoice.client?.siret && (
                 <div className="flex items-center gap-2 text-slate-400">
-                  <Building2 size={14} className="text-slate-600" />
+                  <Building2 size={14} className="text-gray-400" />
                   <span className="text-xs">SIRET :</span>
                   <span className="font-semibold text-slate-200 ml-auto">{invoice.client.siret}</span>
                 </div>
@@ -879,35 +929,53 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* ========== FLOATING ACTION BAR (MOBILE) ========== */}
-      <div className="fixed bottom-[72px] left-0 right-0 z-40 lg:hidden">
-        <div className="bg-slate-950/95 backdrop-blur-md border-t border-white/5 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSendClick}
-              className="flex-1 flex items-center justify-center gap-2 min-h-[48px] bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors"
-            >
-              <Send size={16} />
-              Envoyer
-            </button>
-            <button
-              onClick={handleDownloadPdf}
-              className="flex items-center justify-center min-h-[48px] px-4 bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 rounded-xl font-semibold text-sm transition-colors"
-            >
-              <Download size={16} />
-              PDF
-            </button>
-            {!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) && (
-              <button
-                onClick={() => router.push(`/invoices/${id}/edit`)}
-                className="flex items-center justify-center min-h-[48px] px-4 bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 text-slate-300 rounded-xl font-semibold text-sm transition-colors"
-              >
-                <Edit2 size={16} />
-                Modifier
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <MobileActionBar
+        mode="custom"
+        mainAction={{
+          icon: Send,
+          label: 'Envoyer',
+          onClick: handleSendClick,
+          variant: 'primary',
+        }}
+        actions={[
+          {
+            icon: Eye,
+            label: 'Prévisualiser le PDF',
+            onClick: () => setShowPdfPreview(true),
+            description: 'Aperçu du document',
+          },
+          ...(invoice.document_type === 'invoice' && invoice.status !== 'paid' ? [{
+            icon: CreditCard,
+            label: 'Lien de paiement',
+            onClick: () => setShowPaymentModal(true),
+            description: 'Créer un lien Stripe',
+          }] : []),
+          ...(invoice.status !== 'paid' ? [{
+            icon: CheckCircle,
+            label: 'Marquer comme payée',
+            onClick: handleMarkPaid,
+            description: 'Enregistrer le paiement',
+          }] : []),
+          {
+            icon: Download,
+            label: 'Télécharger PDF',
+            onClick: handleDownloadPdf,
+            description: 'Exporter en PDF',
+          },
+          ...(!(invoice.document_type === 'quote' && invoice.status === 'accepted' && invoice.signed_at) ? [{
+            icon: Edit2,
+            label: 'Modifier',
+            onClick: () => router.push(`/invoices/${id}/edit`),
+            description: 'Modifier la facture',
+          }] : []),
+          ...(invoice.document_type === 'invoice' ? [{
+            icon: FileText,
+            label: 'Factur-X',
+            onClick: () => setShowFacturXDetails(true),
+            description: 'Facture électronique conforme',
+          }] : []),
+        ]}
+      />
 
       {/* ========== MODALS ========== */}
 
@@ -985,26 +1053,26 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               transition={{ duration: 0.25, ease }}
-              className="bg-slate-900 border-t lg:border border-white/10 rounded-t-3xl lg:rounded-2xl w-full lg:max-w-sm p-6 space-y-4 lg:shadow-2xl"
+              className="bg-white border-t lg:border border-gray-300 rounded-t-3xl lg:rounded-2xl w-full lg:max-w-sm p-6 space-y-4 lg:shadow-2xl"
             >
               <div className="text-center">
                 <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <Trash2 size={22} className="text-red-400" />
                 </div>
-                <h2 className="text-lg font-bold text-white">Supprimer la facture ?</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Supprimer la facture ?</h2>
                 <p className="text-sm text-slate-400 mt-1">Cette action est irréversible. La facture <strong className="text-slate-200">{invoice.number}</strong> sera définitivement supprimée.</p>
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800/50 border border-white/5 text-slate-300 text-sm font-semibold hover:bg-slate-700/50 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-300 text-sm font-semibold hover:bg-gray-200 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-gray-900 dark:text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-50"
                 >
                   {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                   Supprimer

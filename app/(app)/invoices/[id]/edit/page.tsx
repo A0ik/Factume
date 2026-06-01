@@ -17,10 +17,11 @@ import {
   RefreshCw, ChevronUp, ChevronDown, Sparkles, Calendar as CalendarIcon,
   User, AlignLeft, Receipt, AlertCircle, CheckCircle2,
   ArrowLeft, ShoppingCart, Truck, Banknote, Wand2, Percent,
-  Save, X as XIcon, Lock,
+  Save, X as XIcon, Lock, Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import MobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
 
 function getDocListPath(type: string): string {
   const map: Record<string, string> = {
@@ -475,7 +476,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="max-w-4xl space-y-5 pb-28 lg:pb-0">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
@@ -1065,7 +1066,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Totals card */}
-              <div className="bg-gray-950 rounded-2xl text-white overflow-hidden shadow-xl">
+              <div className="bg-background rounded-2xl text-white overflow-hidden shadow-xl">
                 <div className="px-5 py-4 border-b border-white/8">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Recapitulatif</p>
                   <p className="text-2xl font-black mt-1 tabular-nums">{formatCurrency(total)}</p>
@@ -1142,12 +1143,12 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 </div>
               )}
 
-              {/* CTA */}
+              {/* CTA — desktop only */}
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className={cn(
-                  'w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all shadow-lg',
+                  'hidden lg:flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all shadow-lg',
                   'bg-primary text-white hover:bg-primary-dark shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]',
                   saving && 'cursor-not-allowed'
                 )}
@@ -1168,6 +1169,21 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       )}
+
+      {/* Mobile Floating Action Bar */}
+      <MobileActionBar
+        onSave={handleSave}
+        saving={saving}
+        isEdit={true}
+        actions={[
+          {
+            icon: Eye,
+            label: 'Prévisualiser',
+            onClick: () => router.push(`/invoices/${id}`),
+            description: 'Voir la facture',
+          },
+        ]}
+      />
     </div>
   );
 }

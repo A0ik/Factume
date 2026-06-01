@@ -20,6 +20,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
+import { ToastProvider } from '@/components/ui/SuccessToast';
 
 /** Titre contextuel de la page pour la top bar mobile */
 function getPageTitle(pathname: string): string {
@@ -88,7 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   return (
-    <>
+    <ToastProvider>
       <meta name="robots" content="noindex, nofollow" />
       <Toaster position="top-right" richColors closeButton />
       <ServiceWorkerRegistration />
@@ -168,6 +169,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile drawer */}
         {!pathname.startsWith('/cabinet') && <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
       </div>
-    </>
+    </ToastProvider>
   );
 }

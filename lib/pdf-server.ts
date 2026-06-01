@@ -610,6 +610,10 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     if (profile?.legal_status === 'auto-entrepreneur') { defaultLegalParts.push("Dispense d'immatriculation au RCS et au RM"); defaultLegalParts.push('TVA non applicable, art. 293 B du CGI'); }
     if (invoice.document_type === 'invoice' || invoice.document_type === 'deposit') defaultLegalParts.push('Penalites de retard : 3x taux legal - Indemnite forfaitaire pour frais de recouvrement : 40 EUR (art. L.441-6 c. com.)');
     defaultLegalParts.push("Conformement a l'article L.441-9 du Code de commerce, la facture est emise en double exemplaire.");
+    // Mention legale e-invoicing obligatoire (reforme francaise 2026)
+    if (['invoice', 'credit_note', 'deposit'].includes(invoice.document_type)) {
+      defaultLegalParts.push('Facture electronique conformement a la loi francaise 2026 - Format Factur-X (EN 16931) - Transmise via PDP agreee');
+    }
     const legalText = profile?.legal_mention || defaultLegalParts.join(' - ');
     if (legalText && y > minY + 30) {
       needPage();

@@ -137,8 +137,8 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
         <div className="flex items-center justify-between max-w-7xl mx-auto gap-4">
           {/* Invoice info / inline edit */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-gray-900 dark:text-white" />
             </div>
 
             {editing ? (
@@ -146,7 +146,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
                 <input
                   value={editVendor}
                   onChange={e => setEditVendor(e.target.value)}
-                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-40 focus:outline-none focus:ring-1 focus:ring-white/40"
+                  className="bg-gray-100 text-gray-900 dark:text-white rounded-lg px-2 py-1 text-sm w-40 focus:outline-none focus:ring-1 focus:ring-white/40"
                   placeholder="Fournisseur"
                 />
                 <input
@@ -154,26 +154,26 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
                   onChange={e => setEditAmount(e.target.value)}
                   type="number"
                   step="0.01"
-                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-white/40"
+                  className="bg-gray-100 text-gray-900 dark:text-white rounded-lg px-2 py-1 text-sm w-28 focus:outline-none focus:ring-1 focus:ring-white/40"
                   placeholder="Montant"
                 />
                 <input
                   value={editDate}
                   onChange={e => setEditDate(e.target.value)}
                   type="date"
-                  className="bg-white/10 text-white rounded-lg px-2 py-1 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-white/40"
+                  className="bg-gray-100 text-gray-900 dark:text-white rounded-lg px-2 py-1 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-white/40"
                 />
               </div>
             ) : (
               <div className="min-w-0">
-                <h3 className="text-white font-bold text-base truncate">{expense.vendor}</h3>
-                <div className="flex items-center gap-2 text-white/60 text-xs flex-wrap">
+                <h3 className="text-gray-900 dark:text-white font-bold text-base truncate">{expense.vendor}</h3>
+                <div className="flex items-center gap-2 text-gray-900 dark:text-white/60 text-xs flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar size={12} />
                     {new Date(expense.date).toLocaleDateString('fr-FR')}
                   </span>
                   <span>•</span>
-                  <span className="font-semibold text-white">{formatCurrency(expense.amount)}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(expense.amount)}</span>
                   {expense.invoice_number && <><span>•</span><span>{expense.invoice_number}</span></>}
                   {expense.ocr_confidence && (
                     <>
@@ -192,36 +192,36 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
           {/* Actions */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Zoom */}
-            <button onClick={handleZoomOut} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Zoom -">
+            <button onClick={handleZoomOut} className="p-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200" title="Zoom -">
               <ZoomOut size={18} />
             </button>
-            <button onClick={handleResetZoom} className="px-2.5 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 font-mono text-xs min-w-[3rem] text-center">
+            <button onClick={handleResetZoom} className="px-2.5 py-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200 font-mono text-xs min-w-[3rem] text-center">
               {Math.round(zoom * 100)}%
             </button>
-            <button onClick={handleZoomIn} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Zoom +">
+            <button onClick={handleZoomIn} className="p-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200" title="Zoom +">
               <ZoomIn size={18} />
             </button>
 
-            <div className="w-px h-6 bg-white/20 mx-1" />
+            <div className="w-px h-6 bg-gray-200 mx-1" />
 
             {/* Rotate */}
-            <button onClick={handleRotate} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Pivoter">
+            <button onClick={handleRotate} className="p-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200" title="Pivoter">
               <RotateCw size={18} />
             </button>
 
             {/* Download */}
-            <button onClick={handleDownload} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20" title="Télécharger">
+            <button onClick={handleDownload} className="p-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200" title="Télécharger">
               <Download size={18} />
             </button>
 
-            <div className="w-px h-6 bg-white/20 mx-1" />
+            <div className="w-px h-6 bg-gray-200 mx-1" />
 
             {/* Edit inline */}
             {editing ? (
               <button
                 onClick={handleSaveEdits}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 bg-green-500 rounded-lg text-white hover:bg-green-600 text-xs font-semibold disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 py-2 bg-green-500 rounded-lg text-gray-900 dark:text-white hover:bg-green-600 text-xs font-semibold disabled:opacity-60"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Enregistrer
@@ -229,7 +229,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
             ) : (
               <button
                 onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 text-xs font-semibold"
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200 text-xs font-semibold"
                 title="Modifier"
               >
                 <Edit2 size={14} />
@@ -241,7 +241,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
             <button
               onClick={handleReanalyze}
               disabled={reanalyzing || !expense.receipt_url}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/80 rounded-lg text-white hover:bg-blue-500 text-xs font-semibold disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-500 text-white hover:bg-blue-500 text-xs font-semibold disabled:opacity-50"
               title="Re-analyser avec l'IA"
             >
               {reanalyzing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
@@ -249,7 +249,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
             </button>
 
             {/* Close */}
-            <button onClick={onClose} className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20 ml-1" title="Fermer">
+            <button onClick={onClose} className="p-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200 ml-1" title="Fermer">
               <X size={18} />
             </button>
           </div>
@@ -259,7 +259,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
       {/* ── Document viewer ── */}
       <div className="flex-1 flex items-center justify-center overflow-hidden p-4">
         {!expense.receipt_url ? (
-          <div className="flex flex-col items-center gap-3 text-white/50">
+          <div className="flex flex-col items-center gap-3 text-gray-900 dark:text-white/50">
             <FileText size={64} />
             <p className="text-sm">Aucune image associée à cette facture</p>
           </div>
@@ -267,14 +267,14 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="w-16 h-16 text-red-400" />
             <div>
-              <p className="text-white font-semibold">Impossible de charger la facture</p>
-              <p className="text-white/50 text-sm mt-1">L'image a peut-être été supprimée du stockage</p>
+              <p className="text-gray-900 dark:text-white font-semibold">Impossible de charger la facture</p>
+              <p className="text-gray-900 dark:text-white/50 text-sm mt-1">L'image a peut-être été supprimée du stockage</p>
             </div>
             <a
               href={expense.receipt_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 text-sm"
+              className="px-4 py-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200 text-sm"
             >
               Ouvrir dans un nouvel onglet
             </a>
@@ -285,7 +285,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             src={expense.receipt_url}
-            className="w-full h-full rounded-lg border border-white/10"
+            className="w-full h-full rounded-lg border border-gray-300"
             style={{
               transform: `scale(${zoom}) rotate(${rotation}deg)`,
               transition: 'transform 0.3s ease',
@@ -324,9 +324,9 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
           className="flex-shrink-0 bg-gradient-to-t from-black to-transparent px-4 py-3"
         >
           <div className="max-w-7xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-              <p className="text-white text-sm truncate">
-                <span className="font-semibold text-white/70">Description :</span> {expense.description}
+            <div className="bg-gray-100 backdrop-blur-sm rounded-xl px-4 py-2">
+              <p className="text-gray-900 dark:text-white text-sm truncate">
+                <span className="font-semibold text-gray-900 dark:text-white/70">Description :</span> {expense.description}
               </p>
             </div>
           </div>

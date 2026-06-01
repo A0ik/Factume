@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
         .eq('id', data.user.id)
         .single();
       if (!profile?.onboarding_done) {
-        redirectPath = '/onboarding/language';
+        redirectPath = '/onboarding/quick';
       }
     }
 

@@ -69,7 +69,7 @@ export default function ContractsPage() {
           <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <Crown className="w-10 h-10 text-amber-400" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white mb-3">Fonctionnalite Pro</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">Fonctionnalite Pro</h2>
           <p className="text-slate-400 mb-6">
             Les contrats de travail avec signatures electroniques sont disponibles avec les abonnements Pro et Business.
           </p>
@@ -77,7 +77,7 @@ export default function ContractsPage() {
             <Link href="/paywall" className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors">
               Voir les offres
             </Link>
-            <Link href="/dashboard" className="px-6 py-3 bg-slate-800/50 border border-white/5 text-slate-300 rounded-xl font-semibold hover:bg-slate-700/50 transition-colors">
+            <Link href="/dashboard" className="px-6 py-3 bg-gray-100 border border-gray-200 text-slate-300 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
               Retour au tableau de bord
             </Link>
           </div>
@@ -202,20 +202,20 @@ export default function ContractsPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-white">Contrats</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Contrats</h2>
               <p className="text-slate-400 mt-1">Gerez vos contrats de travail conformes 2026</p>
             </div>
             <div className="flex gap-2">
-              <Link href="/contracts/reports" className="px-4 py-2.5 bg-slate-800/50 border border-white/5 text-slate-300 rounded-xl font-semibold hover:bg-slate-700/50 transition-colors flex items-center gap-2 text-sm">
+              <Link href="/contracts/reports" className="px-4 py-2.5 bg-gray-100 border border-gray-200 text-slate-300 rounded-xl font-semibold hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm">
                 <BarChart3 className="w-4 h-4" />Rapports
               </Link>
               <Link href="/contracts/new/cdi" className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors flex items-center gap-2 text-sm">
                 <Plus className="w-4 h-4" />CDI
               </Link>
-              <Link href="/contracts/new/cdd" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2 text-sm">
+              <Link href="/contracts/new/cdd" className="px-4 py-2.5 bg-blue-600 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2 text-sm">
                 <Plus className="w-4 h-4" />CDD
               </Link>
-              <Link href="/contracts/new/other" className="px-4 py-2.5 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-500 transition-colors flex items-center gap-2 text-sm">
+              <Link href="/contracts/new/other" className="px-4 py-2.5 bg-purple-600 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-purple-500 transition-colors flex items-center gap-2 text-sm">
                 <Plus className="w-4 h-4" />Autre
               </Link>
             </div>
@@ -235,14 +235,14 @@ export default function ContractsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, ease }}
-                  className="bg-slate-800/50 border border-white/5 rounded-2xl p-4"
+                  className="bg-gray-100 border border-gray-200 rounded-2xl p-4"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.bg}`}>
                       <stat.icon className={`w-5 h-5 ${stat.color}`} />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-white">{stat.value}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
                       <p className="text-xs text-slate-500">{stat.label}</p>
                     </div>
                   </div>
@@ -261,14 +261,14 @@ export default function ContractsPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Rechercher par nom, entreprise, numero..."
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 dark:text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all"
                 />
               </div>
               <div className="hidden sm:flex gap-2">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
                   {STATUS_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-slate-800/50 border border-white/5 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
+                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
                   {TYPE_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
@@ -283,7 +283,7 @@ export default function ContractsPage() {
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
                     statusFilter === f.value
                       ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white'
+                      : 'bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900'
                   }`}
                 >
                   {f.label}
@@ -300,7 +300,7 @@ export default function ContractsPage() {
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
                     typeFilter === f.value
                       ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white'
+                      : 'bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900'
                   }`}
                 >
                   {f.label}
@@ -312,17 +312,17 @@ export default function ContractsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-gray-900 flex items-center gap-1.5 transition-colors"
               >
                 <Filter className="w-3 h-3" />
                 Filtres avances
                 <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
               </button>
-              <span className="text-xs text-white/10">|</span>
+              <span className="text-xs text-gray-900 dark:text-white/10">|</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-slate-800/50 border border-white/5 text-slate-400 outline-none focus:ring-1 focus:ring-emerald-500/30"
+                className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 border border-gray-200 text-slate-400 outline-none focus:ring-1 focus:ring-emerald-500/30"
               >
                 <option value="date">Trier par date</option>
                 <option value="salary">Trier par salaire</option>
@@ -331,7 +331,7 @@ export default function ContractsPage() {
               </select>
               <button
                 onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
-                className="p-1.5 rounded-lg bg-slate-800/50 border border-white/5 hover:bg-slate-700/50 transition-colors"
+                className="p-1.5 rounded-lg bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors"
                 title={sortDir === 'asc' ? 'Croissant' : 'Decroissant'}
               >
                 <ArrowRight className={`w-3 h-3 text-slate-400 transition-transform ${sortDir === 'desc' ? 'rotate-90' : '-rotate-90'}`} />
@@ -348,7 +348,7 @@ export default function ContractsPage() {
                   transition={{ ease }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div className="p-4 bg-gray-100 border border-gray-200 rounded-xl">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>
                         <label className="text-xs text-slate-500 mb-1 block">Date debut (apres)</label>
@@ -356,7 +356,7 @@ export default function ContractsPage() {
                           type="date"
                           value={dateRangeStart}
                           onChange={(e) => setDateRangeStart(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 dark:text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
                         />
                       </div>
                       <div>
@@ -365,7 +365,7 @@ export default function ContractsPage() {
                           type="date"
                           value={dateRangeEnd}
                           onChange={(e) => setDateRangeEnd(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 dark:text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30"
                         />
                       </div>
                       <div>
@@ -375,7 +375,7 @@ export default function ContractsPage() {
                           value={salaryMin}
                           onChange={(e) => setSalaryMin(e.target.value)}
                           placeholder="Euros"
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 dark:text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
                         />
                       </div>
                       <div>
@@ -385,7 +385,7 @@ export default function ContractsPage() {
                           value={salaryMax}
                           onChange={(e) => setSalaryMax(e.target.value)}
                           placeholder="Euros"
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 dark:text-white text-sm outline-none focus:ring-1 focus:ring-emerald-500/30 placeholder-slate-600"
                         />
                       </div>
                     </div>
@@ -411,10 +411,10 @@ export default function ContractsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ ease }}
-                className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-auto z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-slate-800 border border-white/10 rounded-2xl"
+                className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-auto z-40 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-gray-100 border border-gray-300 rounded-2xl"
               >
                 <div className="flex items-center justify-between sm:justify-start gap-3 px-2">
-                  <span className="text-sm font-medium text-white whitespace-nowrap">{selectedIds.size} selectionne(s)</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{selectedIds.size} selectionne(s)</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={handleBulkDelete} className="px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors whitespace-nowrap">
@@ -432,7 +432,7 @@ export default function ContractsPage() {
                   <button onClick={handleBulkExportCSV} className="px-3 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-lg text-xs font-medium hover:bg-purple-500/20 transition-colors whitespace-nowrap">
                     <Copy className="w-3 h-3 inline mr-1" />CSV
                   </button>
-                  <button onClick={() => setSelectedIds(new Set())} className="px-3 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs font-medium hover:text-white transition-colors whitespace-nowrap">
+                  <button onClick={() => setSelectedIds(new Set())} className="px-3 py-2 bg-gray-200 text-slate-400 rounded-lg text-xs font-medium hover:text-gray-900 transition-colors whitespace-nowrap">
                     Annuler
                   </button>
                 </div>
@@ -450,16 +450,16 @@ export default function ContractsPage() {
           {/* Empty State */}
           {!loading && filtered.length === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ease }} className="text-center py-20">
-              <div className="w-16 h-16 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-slate-500" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">Aucun contrat</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aucun contrat</h2>
               <p className="text-slate-400 mb-6">Creez votre premier contrat de travail conforme 2026</p>
               <div className="flex justify-center gap-3">
                 <Link href="/contracts/new/cdi" className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-400 transition-colors flex items-center gap-2">
                   <Plus className="w-5 h-5" />CDI
                 </Link>
-                <Link href="/contracts/new/cdd" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2">
+                <Link href="/contracts/new/cdd" className="px-6 py-3 bg-blue-600 text-gray-900 dark:text-white rounded-xl font-semibold hover:bg-blue-500 transition-colors flex items-center gap-2">
                   <Plus className="w-5 h-5" />CDD
                 </Link>
               </div>
@@ -480,7 +480,7 @@ export default function ContractsPage() {
                     className="relative group"
                   >
                     <div className="absolute top-2 left-2 z-10">
-                      <div className="w-6 h-6 rounded-md bg-slate-900/90 flex items-center justify-center border border-white/5 group-hover:border-emerald-500/50 transition-colors">
+                      <div className="w-6 h-6 rounded-md bg-white/90 flex items-center justify-center border border-gray-200 group-hover:border-emerald-500/50 transition-colors">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(contract.id)}
@@ -510,7 +510,7 @@ export default function ContractsPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, ease }}
-                    className="bg-slate-800/50 border border-white/5 rounded-2xl p-4"
+                    className="bg-gray-100 border border-gray-200 rounded-2xl p-4"
                   >
                     {/* Checkbox + header row */}
                     <div className="flex items-start gap-3 mb-3">
@@ -545,7 +545,7 @@ export default function ContractsPage() {
                     {/* Employee name */}
                     <div className="flex items-center gap-2 mb-2 ml-7">
                       <User className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                      <span className="font-semibold text-white text-sm">{contract.employee_name}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white text-sm">{contract.employee_name}</span>
                     </div>
 
                     {/* Company & job title */}
@@ -566,7 +566,7 @@ export default function ContractsPage() {
                         <Calendar className="w-3.5 h-3.5" />
                         <span>{fmtDate(contract.start_date)}{contract.end_date ? ` -> ${fmtDate(contract.end_date)}` : ''}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm font-semibold text-white">
+                      <div className="flex items-center gap-1 text-sm font-semibold text-gray-900 dark:text-white">
                         <Euro className="w-3.5 h-3.5 text-emerald-400" />
                         {fmtMoney(contract.salary_amount)}{contract.salary_frequency === 'hourly' ? '/h' : contract.salary_frequency === 'monthly' ? '/mois' : ''}
                       </div>
@@ -587,7 +587,7 @@ export default function ContractsPage() {
                     })()}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-3 ml-7 border-t border-white/5">
+                    <div className="flex items-center gap-2 pt-3 ml-7 border-t border-gray-200">
                       <Link href={`/contracts/${contract.id}?type=${contract.contract_type}`} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-medium hover:bg-emerald-500/20 transition-colors">
                         <Eye className="w-3.5 h-3.5" />Voir
                       </Link>

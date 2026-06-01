@@ -444,7 +444,7 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
             Catalogue produits
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -458,7 +458,7 @@ export default function ProductsPage() {
               'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
               showFilters
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'bg-slate-800/50 border border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                : 'bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900 hover:border-gray-300'
             )}
           >
             <SlidersHorizontal size={16} />
@@ -479,11 +479,11 @@ export default function ProductsPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-white/5 rounded-full"
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full"
           >
             <span className={cn('w-1.5 h-1.5 rounded-full', s.dot)} />
             <span className="text-xs text-slate-500">{s.label}</span>
-            <span className="text-xs font-semibold text-white">{s.value}</span>
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">{s.value}</span>
           </div>
         ))}
       </div>
@@ -498,7 +498,7 @@ export default function ProductsPage() {
             transition={{ duration: 0.2, ease }}
             className="overflow-hidden"
           >
-            <div className="bg-slate-800/50 border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="bg-gray-100 border border-gray-200 rounded-2xl p-5 space-y-4">
               {/* Search */}
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -506,7 +506,7 @@ export default function ProductsPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Rechercher par nom, référence ou description..."
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                 />
               </div>
 
@@ -537,15 +537,15 @@ export default function ProductsPage() {
                       value={filterPrice.min}
                       onChange={(e) => setFilterPrice({ ...filterPrice, min: e.target.value })}
                       placeholder="Min"
-                      className="flex-1 px-3 py-2.5 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                      className="flex-1 px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                     />
-                    <span className="text-slate-600 self-center">-</span>
+                    <span className="text-gray-400 self-center">-</span>
                     <input
                       type="number"
                       value={filterPrice.max}
                       onChange={(e) => setFilterPrice({ ...filterPrice, max: e.target.value })}
                       placeholder="Max"
-                      className="flex-1 px-3 py-2.5 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                      className="flex-1 px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                     />
                   </div>
                 </div>
@@ -610,7 +610,7 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">
-            <span className="font-semibold text-white">{filteredAndSorted.length}</span> produit(s)
+            <span className="font-semibold text-gray-900 dark:text-white">{filteredAndSorted.length}</span> produit(s)
           </span>
           {selectedProducts.size > 0 && (
             <>
@@ -632,7 +632,7 @@ export default function ProductsPage() {
             onClick={() => setViewMode('grid')}
             className={cn(
               'p-2 rounded-xl transition-all',
-              viewMode === 'grid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800/50 border border-white/5 text-slate-500 hover:text-white'
+              viewMode === 'grid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-gray-100 border border-gray-200 text-slate-500 hover:text-gray-900'
             )}
           >
             <Grid3X3 size={18} />
@@ -641,7 +641,7 @@ export default function ProductsPage() {
             onClick={() => setViewMode('list')}
             className={cn(
               'p-2 rounded-xl transition-all',
-              viewMode === 'list' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800/50 border border-white/5 text-slate-500 hover:text-white'
+              viewMode === 'list' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-gray-100 border border-gray-200 text-slate-500 hover:text-gray-900'
             )}
           >
             <List size={18} />
@@ -660,10 +660,10 @@ export default function ProductsPage() {
       ) : filteredAndSorted.length === 0 ? (
         /* Empty state */
         <div className="py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/5 flex items-center justify-center mx-auto mb-4">
-            <Package size={28} className="text-slate-600" />
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-4">
+            <Package size={28} className="text-gray-400" />
           </div>
-          <h3 className="font-semibold text-white text-lg mb-2">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-2">
             {search || filterCat ? 'Aucun résultat' : 'Aucun produit'}
           </h3>
           <p className="text-sm text-slate-500 mb-6">
@@ -693,7 +693,7 @@ export default function ProductsPage() {
                 className={cn(
                   viewMode === 'grid'
                     ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                    : 'bg-slate-900 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5'
+                    : 'bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-200'
                 )}
               >
                 {filteredAndSorted.map((product, idx) => {
@@ -708,7 +708,7 @@ export default function ProductsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, ease, delay: Math.min(idx * 0.03, 0.3) }}
-                        className="bg-slate-800/50 border border-white/5 rounded-2xl overflow-hidden group hover:border-white/10 transition-colors"
+                        className="bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden group hover:border-gray-300 transition-colors"
                       >
                         <div className="relative p-5">
                           {/* Checkbox */}
@@ -716,7 +716,7 @@ export default function ProductsPage() {
                             onClick={() => toggleSelect(product.id)}
                             className={cn(
                               'absolute top-4 left-4 w-6 h-6 rounded-lg border flex items-center justify-center transition-all z-10',
-                              isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-white/10 hover:border-emerald-500/50'
+                              isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-500/50'
                             )}
                           >
                             {isSelected && <Check size={14} className="text-black" />}
@@ -736,7 +736,7 @@ export default function ProductsPage() {
                           {/* Content */}
                           <div className="space-y-2 mb-4">
                             <div className="flex items-start gap-2">
-                              <h3 className="font-semibold text-white text-sm leading-tight flex-1">{product.name}</h3>
+                              <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight flex-1">{product.name}</h3>
                               {!product.is_active && (
                                 <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">
                                   Inactif
@@ -744,7 +744,7 @@ export default function ProductsPage() {
                               )}
                             </div>
                             {product.reference && (
-                              <p className="text-[11px] text-slate-600 font-mono flex items-center gap-1">
+                              <p className="text-[11px] text-gray-400 font-mono flex items-center gap-1">
                                 <Hash size={10} />
                                 {product.reference}
                               </p>
@@ -755,32 +755,32 @@ export default function ProductsPage() {
                           </div>
 
                           {/* Price & Actions */}
-                          <div className="flex items-end justify-between pt-3 border-t border-white/5">
+                          <div className="flex items-end justify-between pt-3 border-t border-gray-200">
                             <div>
-                              <p className="text-xl font-bold text-white">
+                              <p className="text-xl font-bold text-gray-900 dark:text-white">
                                 {formatPrice(product.unit_price)}
                               </p>
-                              <p className="text-[11px] text-slate-600">
+                              <p className="text-[11px] text-gray-400">
                                 HT / {UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%
                               </p>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => openEdit(product)}
-                                className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                                className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"
                               >
                                 <Edit2 size={14} />
                               </button>
                               <button
                                 onClick={() => handleDuplicate(product)}
-                                className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400 transition-colors"
+                                className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"
                               >
                                 <Copy size={14} />
                               </button>
                               <button
                                 onClick={() => handleDelete(product.id)}
                                 disabled={deletingId === product.id}
-                                className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-red-400 transition-colors"
+                                className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -792,12 +792,12 @@ export default function ProductsPage() {
                   } else {
                     /* List view row */
                     return (
-                      <div key={product.id} className="flex items-center gap-4 p-4 group hover:bg-white/[0.02] transition-colors">
+                      <div key={product.id} className="flex items-center gap-4 p-4 group hover:bg-gray-100 transition-colors">
                         <button
                           onClick={() => toggleSelect(product.id)}
                           className={cn(
                             'w-6 h-6 rounded-lg border flex items-center justify-center transition-all flex-shrink-0',
-                            isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-white/10 hover:border-emerald-500/50'
+                            isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-500/50'
                           )}
                         >
                           {isSelected && <Check size={14} className="text-black" />}
@@ -809,13 +809,13 @@ export default function ProductsPage() {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white text-sm">{product.name}</h3>
+                            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{product.name}</h3>
                             {!product.is_active && (
                               <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold">Inactif</span>
                             )}
                           </div>
                           {product.reference && (
-                            <p className="text-[11px] text-slate-600 font-mono">#{product.reference}</p>
+                            <p className="text-[11px] text-gray-400 font-mono">#{product.reference}</p>
                           )}
                           {product.description && (
                             <p className="text-xs text-slate-500 line-clamp-1">{product.description}</p>
@@ -823,8 +823,8 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-white">{formatPrice(product.unit_price)}</p>
-                          <p className="text-[11px] text-slate-600">HT · TVA {product.vat_rate}%</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{formatPrice(product.unit_price)}</p>
+                          <p className="text-[11px] text-gray-400">HT · TVA {product.vat_rate}%</p>
                         </div>
 
                         <div className="flex items-center gap-1">
@@ -835,20 +835,20 @@ export default function ProductsPage() {
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEdit(product)}
-                            className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDuplicate(product)}
-                            className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"
                           >
                             <Copy size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(product.id)}
                             disabled={deletingId === product.id}
-                            className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-red-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -862,12 +862,12 @@ export default function ProductsPage() {
                 {viewMode === 'grid' && (
                   <button
                     onClick={openCreate}
-                    className="bg-slate-800/30 border border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group min-h-[220px]"
+                    className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group min-h-[220px]"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
-                      <Plus size={20} className="text-slate-600 group-hover:text-emerald-400 transition-colors" />
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 group-hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                      <Plus size={20} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
                     </div>
-                    <span className="text-sm font-semibold text-slate-600 group-hover:text-emerald-400 transition-colors">
+                    <span className="text-sm font-semibold text-gray-400 group-hover:text-emerald-400 transition-colors">
                       Ajouter un produit
                     </span>
                   </button>
@@ -888,7 +888,7 @@ export default function ProductsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease, delay: Math.min(idx * 0.04, 0.4) }}
-                  className="bg-slate-800/50 border border-white/5 rounded-2xl p-5"
+                  className="bg-gray-100 border border-gray-200 rounded-2xl p-5"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -896,9 +896,9 @@ export default function ProductsPage() {
                         <Icon size={18} className={cat.color} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white text-sm">{product.name}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{product.name}</h3>
                         {product.reference && (
-                          <p className="text-[11px] text-slate-600 font-mono">#{product.reference}</p>
+                          <p className="text-[11px] text-gray-400 font-mono">#{product.reference}</p>
                         )}
                       </div>
                     </div>
@@ -915,30 +915,30 @@ export default function ProductsPage() {
                     <p className="text-xs text-slate-500 line-clamp-2 mb-3">{product.description}</p>
                   )}
 
-                  <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <div>
-                      <p className="text-lg font-bold text-white">{formatPrice(product.unit_price)}</p>
-                      <p className="text-[11px] text-slate-600">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{formatPrice(product.unit_price)}</p>
+                      <p className="text-[11px] text-gray-400">
                         HT / {UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%
                       </p>
                     </div>
                     <div className="flex gap-1">
                       <button
                         onClick={() => openEdit(product)}
-                        className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                        className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"
                       >
                         <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleDuplicate(product)}
-                        className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400 transition-colors"
+                        className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"
                       >
                         <Copy size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(product.id)}
                         disabled={deletingId === product.id}
-                        className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-red-400 transition-colors"
+                        className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -951,10 +951,10 @@ export default function ProductsPage() {
             {/* Mobile add button */}
             <button
               onClick={openCreate}
-              className="w-full bg-slate-800/30 border border-dashed border-white/10 rounded-2xl p-4 flex items-center justify-center gap-2 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all"
+              className="w-full bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4 flex items-center justify-center gap-2 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all"
             >
-              <Plus size={16} className="text-slate-600" />
-              <span className="text-sm font-semibold text-slate-600">Ajouter un produit</span>
+              <Plus size={16} className="text-gray-400" />
+              <span className="text-sm font-semibold text-gray-400">Ajouter un produit</span>
             </button>
           </div>
         </>
@@ -975,12 +975,12 @@ export default function ProductsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease }}
-              className="bg-slate-900 rounded-2xl w-full max-w-lg overflow-hidden border border-white/5"
+              className="bg-white rounded-2xl w-full max-w-lg overflow-hidden border border-gray-200"
             >
               {/* Modal header */}
-              <div className="px-6 pt-6 pb-4 border-b border-white/5 flex items-center justify-between">
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">{editingId ? 'Modifier' : 'Nouveau produit'}</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingId ? 'Modifier' : 'Nouveau produit'}</h2>
                   <p className="text-sm text-slate-500 mt-0.5">Ajoutez-le directement à vos factures</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -992,7 +992,7 @@ export default function ProductsPage() {
                           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
                           mode === 'voice'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                            : 'bg-gray-100 text-slate-400 hover:text-gray-900'
                         )}
                       >
                         <Mic size={14} />
@@ -1004,7 +1004,7 @@ export default function ProductsPage() {
                           'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
                           mode === 'manual'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                            : 'bg-gray-100 text-slate-400 hover:text-gray-900'
                         )}
                       >
                         <FileText size={14} />
@@ -1012,7 +1012,7 @@ export default function ProductsPage() {
                       </button>
                     </>
                   )}
-                  <button onClick={() => setShowModal(false)} className="p-2 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                  <button onClick={() => setShowModal(false)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors">
                     <X size={20} />
                   </button>
                 </div>
@@ -1043,7 +1043,7 @@ export default function ProductsPage() {
                         )}
                       >
                         {recording ? (
-                          <MicOff size={24} className="text-white" />
+                          <MicOff size={24} className="text-gray-900 dark:text-white" />
                         ) : (
                           <Mic size={24} className="text-black" />
                         )}
@@ -1066,7 +1066,7 @@ export default function ProductsPage() {
                           : 'Cliquez pour commencer la dictée'}
                       </p>
                       {!recording && (
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-gray-400">
                           Ex: &ldquo;Site web vitrine 850 euros HT&rdquo;
                         </p>
                       )}
@@ -1076,7 +1076,7 @@ export default function ProductsPage() {
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="w-full text-left bg-slate-800/50 rounded-xl p-3 border border-white/5"
+                        className="w-full text-left bg-gray-100 rounded-xl p-3 border border-gray-200"
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <Sparkles size={12} className="text-emerald-400" />
@@ -1133,7 +1133,7 @@ export default function ProductsPage() {
                             'flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold border transition-all',
                             isSelected
                               ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                              : 'border-white/5 bg-slate-800/50 text-slate-400 hover:text-white hover:border-white/10'
+                              : 'border-gray-200 bg-gray-100 text-slate-400 hover:text-gray-900 hover:border-gray-300'
                           )}
                         >
                           <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', cat.bg)}>
@@ -1154,7 +1154,7 @@ export default function ProductsPage() {
                     value={form.name}
                     onChange={(e) => set('name', e.target.value)}
                     placeholder="Ex : Développement web, Formation..."
-                    className="w-full px-4 py-3 rounded-xl border border-white/5 bg-slate-800/50 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                   />
                 </div>
 
@@ -1162,12 +1162,12 @@ export default function ProductsPage() {
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Référence</label>
                   <div className="relative">
-                    <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                    <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       value={form.reference}
                       onChange={(e) => set('reference', e.target.value)}
                       placeholder="REF-001"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/5 bg-slate-800/50 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white font-mono placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                     />
                   </div>
                 </div>
@@ -1180,7 +1180,7 @@ export default function ProductsPage() {
                     onChange={(e) => set('description', e.target.value)}
                     placeholder="Description détaillée du produit ou service..."
                     rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-white/5 bg-slate-800/50 text-sm text-white placeholder-slate-500 resize-none focus:outline-none focus:border-emerald-500/30 transition-colors"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white placeholder-slate-500 resize-none focus:outline-none focus:border-emerald-500/30 transition-colors"
                   />
                 </div>
 
@@ -1189,7 +1189,7 @@ export default function ProductsPage() {
                   <div>
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Prix HT *</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-sm font-semibold">€</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">€</span>
                       <input
                         required
                         type="number"
@@ -1198,7 +1198,7 @@ export default function ProductsPage() {
                         value={form.unit_price}
                         onChange={(e) => set('unit_price', e.target.value)}
                         placeholder="0.00"
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-white/5 bg-slate-800/50 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors"
                       />
                     </div>
                   </div>
@@ -1229,7 +1229,7 @@ export default function ProductsPage() {
                           'flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all',
                           String(rate) === form.vat_rate
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                            : 'border-white/5 bg-slate-800/50 text-slate-400 hover:text-white'
+                            : 'border-gray-200 bg-gray-100 text-slate-400 hover:text-gray-900'
                         )}
                       >
                         {rate}%
@@ -1239,9 +1239,9 @@ export default function ProductsPage() {
                 </div>
 
                 {/* Active toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-gray-100 border border-gray-200 rounded-xl">
                   <div>
-                    <p className="text-sm font-semibold text-white">Produit actif</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Produit actif</p>
                     <p className="text-xs text-slate-500">Visible lors de la création de facture</p>
                   </div>
                   <button
@@ -1265,7 +1265,7 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-3 rounded-xl border border-white/5 bg-slate-800/50 text-sm font-semibold text-slate-400 hover:text-white hover:border-white/10 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm font-semibold text-slate-400 hover:text-gray-900 hover:border-gray-300 transition-colors"
                 >
                   Annuler
                 </button>
@@ -1303,7 +1303,7 @@ export default function ProductsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease }}
-              className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-white/5"
+              className="bg-white rounded-2xl w-full max-w-md overflow-hidden border border-gray-200"
             >
               <VoiceAssistant
                 onResult={(data) => {
