@@ -91,24 +91,24 @@ export default function EmailPreviewModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Mail size={20} className="text-primary" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-gray-900">
+              <h2 className="text-lg font-black text-gray-900 dark:text-white">
                 {isReminder ? 'Rappel par email' : 'Envoyer par email'}
               </h2>
-              <p className="text-xs text-gray-400">{docLabel} {invoice.number}</p>
+              <p className="text-xs text-gray-400 dark:text-slate-400">{docLabel} {invoice.number}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={sending || sent}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors disabled:opacity-50"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-400 transition-colors disabled:opacity-50"
           >
             <X size={18} />
           </button>
@@ -119,18 +119,18 @@ export default function EmailPreviewModal({
           {/* Invoice summary */}
           <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/10">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
                 <FileText size={22} className="text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-gray-900">{docLabel} {invoice.number}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{docLabel} {invoice.number}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   {invoice.client?.name || invoice.client_name_override || 'Client'} · {formatCurrency(invoice.total)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400">Émise le</p>
-                <p className="text-sm font-semibold text-gray-700">{fmtDate(invoice.issue_date)}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-400">Émise le</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-slate-200">{fmtDate(invoice.issue_date)}</p>
               </div>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function EmailPreviewModal({
           <div className="space-y-4">
             {/* Recipient */}
             <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1.5">
+              <label className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide block mb-1.5">
                 Destinataire
               </label>
               <input
@@ -147,13 +147,13 @@ export default function EmailPreviewModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@entreprise.com"
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                className="w-full rounded-xl border border-gray-200 dark:border-white/10 dark:bg-slate-800 dark:text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
               />
             </div>
 
             {/* Subject */}
             <div>
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1.5">
+              <label className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide block mb-1.5">
                 Objet
               </label>
               <input
@@ -161,14 +161,14 @@ export default function EmailPreviewModal({
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Objet de l'email"
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all font-medium"
+                className="w-full rounded-xl border border-gray-200 dark:border-white/10 dark:bg-slate-800 dark:text-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all font-medium"
               />
             </div>
 
             {/* Message */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                <label className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                   Message
                 </label>
                 <button
@@ -185,13 +185,13 @@ export default function EmailPreviewModal({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={6}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  className="w-full rounded-xl border border-gray-200 dark:border-white/10 dark:bg-slate-800 dark:text-white px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="Votre message..."
                 />
               ) : (
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-white/10 p-4">
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{message}</p>
+                    <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{message}</p>
                   </div>
                 </div>
               )}
@@ -199,7 +199,7 @@ export default function EmailPreviewModal({
           </div>
 
           {/* Email preview card */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+          <div className="border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
             <div className="bg-gradient-to-r from-primary to-primary-dark px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-white/20" />
@@ -212,7 +212,7 @@ export default function EmailPreviewModal({
 
             <div className="p-4 space-y-4">
               {/* Header */}
-              <div className="text-center pb-4 border-b border-gray-100">
+              <div className="text-center pb-4 border-b border-gray-100 dark:border-white/10">
                 <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider bg-primary inline-block px-2 py-1 rounded-md">
                   {docLabel}
                 </p>
@@ -221,42 +221,42 @@ export default function EmailPreviewModal({
               </div>
 
               {/* Greeting */}
-              <div className="text-sm text-gray-700 space-y-2">
+              <div className="text-sm text-gray-700 dark:text-slate-200 space-y-2">
                 <p>Bonjour <strong>{invoice.client?.name || invoice.client_name_override || 'Client'}</strong>,</p>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-slate-300">
                   {isReminder
                     ? <>Je me permets de revenir vers vous concernant la <strong>{docLabel.toLowerCase()} {invoice.number}</strong> restée impayée à ce jour.</>
                     : <>Veuillez trouver ci-joint votre {docLabel.toLowerCase()} pour <strong>{invoice.items?.[0]?.description || 'prestation'}</strong>.</>
                   }
                 </p>
-                <p className="text-gray-600">De la part de <strong>{senderName}</strong>.</p>
+                <p className="text-gray-600 dark:text-slate-300">De la part de <strong>{senderName}</strong>.</p>
               </div>
 
               {/* Items table preview */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden text-xs">
+              <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden text-xs">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
-                      <th className="text-left py-2 px-3 font-bold text-gray-600">Prestation</th>
-                      <th className="text-center py-2 px-2 font-bold text-gray-600">Qté</th>
-                      <th className="text-right py-2 px-2 font-bold text-gray-600">P.U. HT</th>
-                      <th className="text-right py-2 px-3 font-bold text-gray-600">Total HT</th>
+                      <th className="text-left py-2 px-3 font-bold text-gray-600 dark:text-slate-300">Prestation</th>
+                      <th className="text-center py-2 px-2 font-bold text-gray-600 dark:text-slate-300">Qté</th>
+                      <th className="text-right py-2 px-2 font-bold text-gray-600 dark:text-slate-300">P.U. HT</th>
+                      <th className="text-right py-2 px-3 font-bold text-gray-600 dark:text-slate-300">Total HT</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                     {invoice.items.slice(0, 3).map((item, i) => (
                       <tr key={i}>
-                        <td className="py-2 px-3 text-gray-700">{item.description}</td>
-                        <td className="py-2 px-2 text-center text-gray-500">{item.quantity}</td>
-                        <td className="py-2 px-2 text-right text-gray-600">{formatCurrency(item.unit_price)}</td>
-                        <td className="py-2 px-3 text-right font-semibold text-gray-900">
+                        <td className="py-2 px-3 text-gray-700 dark:text-slate-200">{item.description}</td>
+                        <td className="py-2 px-2 text-center text-gray-500 dark:text-slate-400">{item.quantity}</td>
+                        <td className="py-2 px-2 text-right text-gray-600 dark:text-slate-300">{formatCurrency(item.unit_price)}</td>
+                        <td className="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">
                           {formatCurrency(item.quantity * item.unit_price)}
                         </td>
                       </tr>
                     ))}
                     {invoice.items.length > 3 && (
                       <tr>
-                        <td colSpan={4} className="py-2 px-3 text-center text-gray-400 italic">
+                        <td colSpan={4} className="py-2 px-3 text-center text-gray-400 dark:text-slate-400 italic">
                           +{invoice.items.length - 3} autre(s) ligne(s)...
                         </td>
                       </tr>
@@ -267,11 +267,11 @@ export default function EmailPreviewModal({
 
               {/* Totals */}
               <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-600 dark:text-slate-300">
                   <span>Sous-total HT</span>
                   <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-600 dark:text-slate-300">
                   <span>TVA</span>
                   <span className="font-semibold">{formatCurrency(invoice.vat_amount)}</span>
                 </div>
@@ -281,8 +281,8 @@ export default function EmailPreviewModal({
                     <span className="font-semibold">-{formatCurrency(invoice.discount_amount ?? 0)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="font-bold text-gray-900">Total TTC</span>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-white/10">
+                  <span className="font-bold text-gray-900 dark:text-white">Total TTC</span>
                   <span className="text-lg font-black text-primary">{formatCurrency(invoice.total)}</span>
                 </div>
               </div>
@@ -297,16 +297,16 @@ export default function EmailPreviewModal({
 
               {/* Bank info */}
               {profile.iban && (
-                <div className="bg-gray-50 rounded-lg p-3 text-xs">
-                  <p className="font-bold text-gray-700 mb-1">Coordonnées bancaires</p>
-                  {profile.bank_name && <p className="text-gray-600">Banque: {profile.bank_name}</p>}
-                  <p className="text-gray-600">IBAN: {profile.iban}</p>
-                  {profile.bic && <p className="text-gray-600">BIC: {profile.bic}</p>}
+                <div className="bg-gray-50 dark:bg-slate-800 rounded-lg p-3 text-xs">
+                  <p className="font-bold text-gray-700 dark:text-slate-200 mb-1">Coordonnées bancaires</p>
+                  {profile.bank_name && <p className="text-gray-600 dark:text-slate-300">Banque: {profile.bank_name}</p>}
+                  <p className="text-gray-600 dark:text-slate-300">IBAN: {profile.iban}</p>
+                  {profile.bic && <p className="text-gray-600 dark:text-slate-300">BIC: {profile.bic}</p>}
                 </div>
               )}
 
               {/* Footer */}
-              <div className="text-center pt-3 border-t border-gray-100 text-xs text-gray-400">
+              <div className="text-center pt-3 border-t border-gray-100 dark:border-white/10 text-xs text-gray-400 dark:text-slate-400">
                 <p>Ce document vous est transmis par <strong>{senderName}</strong> via Factu.me</p>
                 {profile.siret && <p className="mt-1">SIRET: {profile.siret}</p>}
               </div>
@@ -315,11 +315,11 @@ export default function EmailPreviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-slate-800/50">
           <button
             onClick={onClose}
             disabled={sending || sent}
-            className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
           >
             Annuler
           </button>

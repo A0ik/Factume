@@ -23,15 +23,15 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
             href="https://me.sumup.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-[#1D9E75] hover:shadow-md transition-all group cursor-pointer"
+            className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10 rounded-xl hover:border-[#1D9E75] hover:shadow-md transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#1D9E75]/10 flex items-center justify-center">
                 <Globe size={18} className="text-[#1D9E75]" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">me.sumup.com</p>
-                <p className="text-xs text-gray-500">Portail marchand SumUp</p>
+                <p className="font-semibold text-gray-900 dark:text-white">me.sumup.com</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Portail marchand SumUp</p>
               </div>
             </div>
             <ExternalLink size={16} className="text-gray-400 group-hover:text-[#1D9E75] transition-colors" />
@@ -46,27 +46,27 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
       content: (
         <div className="space-y-4">
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-white/10">
               <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-bold">1</div>
               <div className="flex items-center gap-2">
                 <UserIcon size={16} className="text-gray-400" />
-                <span className="text-sm text-gray-600">Cliquez sur votre photo de profil</span>
+                <span className="text-sm text-gray-600 dark:text-slate-300">Cliquez sur votre photo de profil</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-[#1D9E75] shadow-sm">
+            <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border-2 border-[#1D9E75] shadow-sm">
               <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-bold">2</div>
               <div className="flex items-center gap-2">
                 <Settings size={16} className="text-[#1D9E75]" />
-                <span className="text-sm font-semibold text-gray-900">Sélectionnez "Paramètres"</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Sélectionnez "Paramètres"</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-white/10">
               <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-xs font-bold">3</div>
               <div className="flex items-center gap-2">
                 <Code size={16} className="text-gray-400" />
-                <span className="text-sm text-gray-600">Cherchez "API" ou "Développeurs"</span>
+                <span className="text-sm text-gray-600 dark:text-slate-300">Cherchez "API" ou "Développeurs"</span>
               </div>
             </div>
           </div>
@@ -89,23 +89,23 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
             </div>
           </div>
 
-          <div className="space-y-2 text-sm text-gray-700">
+          <div className="space-y-2 text-sm text-gray-700 dark:text-slate-200">
             <p className="font-semibold">Étapes de création :</p>
             <ol className="space-y-2 ml-4">
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-bold">1</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">1</span>
                 <span>Cliquez sur "Générer une nouvelle clé"</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-bold">2</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">2</span>
                 <span>Donnez un nom (ex: "Factu.me")</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-bold">3</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">3</span>
                 <span>Cochez "Paiements" pour les droits</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-bold">4</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">4</span>
                 <span>Générez et copiez la clé</span>
               </li>
             </ol>
@@ -129,16 +129,16 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
             </div>
           </div>
 
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Exemple de code marchand :</p>
-            <code className="block w-full p-3 bg-white border border-gray-300 rounded-lg text-sm font-mono text-gray-800">
+          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-white/10">
+            <p className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">Exemple de code marchand :</p>
+            <code className="block w-full p-3 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-mono text-gray-800 dark:text-slate-100">
               MCGKP3GE
             </code>
           </div>
 
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Exemple de clé API privée :</p>
-            <code className="block w-full p-3 bg-white border border-gray-300 rounded-lg text-xs font-mono text-gray-800 break-all">
+          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-white/10">
+            <p className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">Exemple de clé API privée :</p>
+            <code className="block w-full p-3 bg-white dark:bg-slate-900 border border-gray-300 dark:border-white/10 rounded-lg text-xs font-mono text-gray-800 dark:text-slate-100 break-all">
               sup_sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             </code>
           </div>
@@ -154,12 +154,12 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
           <div className="p-4 bg-gradient-to-r from-[#1D9E75]/10 to-green-500/10 border border-[#1D9E75]/20 rounded-xl">
             <div className="flex items-center gap-3 mb-3">
               <CheckCircle2 size={20} className="text-[#1D9E75]" />
-              <p className="font-bold text-gray-900">Prêt à connecter !</p>
+              <p className="font-bold text-gray-900 dark:text-white">Prêt à connecter !</p>
             </div>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-slate-200">
               Une fois vos identifiants récupérés, ouvrez les paramètres Factu.me, section "Paiement en ligne (SumUp)" et entrez :
             </p>
-            <ul className="text-sm text-gray-700 mt-3 space-y-2 ml-4">
+            <ul className="text-sm text-gray-700 dark:text-slate-200 mt-3 space-y-2 ml-4">
               <li className="flex items-start gap-2">
                 <span className="text-[#1D9E75] mt-0.5">•</span>
                 <span>Votre <strong>clé API privée</strong> (commence par sup_sk_)</span>
@@ -193,25 +193,25 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto"
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto"
             >
               {/* Header */}
-              <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-100 p-5 z-10">
+              <div className="sticky top-0 bg-white dark:bg-slate-900 rounded-t-2xl border-b border-gray-100 dark:border-white/10 p-5 z-10">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1D9E75] to-[#188A66] flex items-center justify-center shadow-lg">
                       <Key size={18} className="text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900">
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                         Connecter SumUp
                       </h2>
-                      <p className="text-xs text-gray-500">Guide étape par étape</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Guide étape par étape</p>
                     </div>
                   </div>
                   <button
                     onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                   >
                     <X size={18} className="text-gray-400" />
                   </button>
@@ -233,8 +233,8 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
                         {index + 1}
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-bold text-gray-900">{step.title}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">{step.description}</p>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{step.title}</h3>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{step.description}</p>
                       </div>
                     </div>
                     {step.content}
@@ -243,7 +243,7 @@ export function SumUpTutorialModal({ isOpen, onClose }: SumUpTutorialModalProps)
               </div>
 
               {/* Footer */}
-              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 rounded-b-2xl">
+              <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-white/10 p-4 rounded-b-2xl">
                 <div className="flex items-center justify-between">
                   <a
                     href="https://developer.sumup.com/docs/api"

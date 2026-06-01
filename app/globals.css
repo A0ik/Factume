@@ -78,7 +78,11 @@
     color: rgb(var(--foreground));
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    -moz-osx-font-smoothing: grayscale;
+    /* Theme transition — using a subtle ease for background, no jarring snap */
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Prevent overscroll bounce on body for app-like feel */
+    overscroll-behavior: none;
   }
 
   /* Premium scrollbar */
@@ -98,9 +102,19 @@
 .dark .bg-gray-50 { background-color: rgb(3 7 18) !important; }
 .dark .bg-gray-100 { background-color: rgb(15 23 42) !important; }
 .dark .bg-gray-200 { background-color: rgb(30 41 59) !important; }
+.dark .bg-gray-300 { background-color: rgb(51 65 85) !important; }
 .dark .bg-gray-900 { background-color: rgb(3 7 18) !important; }
 .dark .bg-slate-50 { background-color: rgb(15 23 42) !important; }
 .dark .bg-slate-100 { background-color: rgb(30 41 59) !important; }
+.dark .bg-slate-200 { background-color: rgb(51 65 85) !important; }
+
+/* Opacity-modified backgrounds — these use different CSS classes (e.g. bg-gray-50\/50) */
+.dark [class*="bg-gray-50\\/"] { background-color: rgba(15 23 42, 0.5) !important; }
+.dark [class*="bg-gray-100\\/"] { background-color: rgba(15 23 42, 0.5) !important; }
+.dark [class*="bg-gray-200\\/"] { background-color: rgba(30 41 59, 0.5) !important; }
+.dark [class*="bg-white\\/"] { background-color: rgba(15 23 42, 0.85) !important; }
+.dark [class*="bg-slate-50\\/"] { background-color: rgba(15 23 42, 0.5) !important; }
+.dark [class*="bg-slate-100\\/"] { background-color: rgba(30 41 59, 0.5) !important; }
 
 .dark .border-gray-100 { border-color: rgb(30 41 59) !important; }
 .dark .border-gray-200 { border-color: rgb(30 41 59) !important; }
@@ -188,6 +202,9 @@
 .dark .border-slate-200 { border-color: rgb(51 65 85) !important; }
 
 /* Text colors in dark mode */
+/* ═══ CRITICAL: text-black must NEVER survive in dark mode ═══ */
+.dark .text-black { color: rgb(248 250 252) !important; }
+
 .dark .text-slate-900 { color: rgb(248 250 252) !important; }
 .dark .text-slate-800 { color: rgb(241 245 249) !important; }
 .dark .text-slate-700 { color: rgb(226 232 240) !important; }
@@ -245,12 +262,22 @@
     scroll-behavior: smooth;
   }
 
-  /* Mobile card press effect */
+  /* Mobile card press effect — 2026 physics */
   .card-press {
-    transition: transform 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
   }
   .card-press:active {
     transform: scale(0.97);
+  }
+
+  /* Button press — slightly more aggressive deformation */
+  .btn-press {
+    transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1);
+    will-change: transform;
+  }
+  .btn-press:active {
+    transform: scale(0.95);
   }
 
   /* Prevent text selection on interactive elements */

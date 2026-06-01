@@ -113,15 +113,15 @@ export default function AvoirsPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Avoirs</h1>
-            <p className="mt-1 text-sm text-slate-500">Gérez toutes vos notes d&apos;avoir</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Notes de credit</h1>
+            <p className="mt-1 text-sm text-slate-500">Gez toutes vos notes de credit</p>
           </div>
           <Link
             href="/documents/avoirs/new"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 text-white text-sm font-medium rounded-xl transition-colors"
           >
             <Plus size={16} />
-            Nouvel avoir
+            Nouvelle note
           </Link>
         </motion.div>
 
@@ -197,7 +197,7 @@ export default function AvoirsPage() {
             className="flex items-center justify-between px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl mb-6"
           >
             <span className="text-sm text-gray-900 dark:text-white font-medium">
-              {selectedAvoirs.size} avoir{selectedAvoirs.size > 1 ? 's' : ''} sélectionné{selectedAvoirs.size > 1 ? 's' : ''}
+              {selectedAvoirs.size} note{selectedAvoirs.size > 1 ? 's' : ''} de credit selectionnee{selectedAvoirs.size > 1 ? 's' : ''}
             </span>
             <div className="flex items-center gap-2">
               <button className="p-2 text-slate-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
@@ -388,14 +388,14 @@ function EmptyState({ inline }: { inline?: boolean }) {
       <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
         <RefreshCw size={24} className="text-slate-500" />
       </div>
-      <p className="text-sm text-slate-400 mb-1">Aucun avoir trouvé</p>
-      <p className="text-xs text-gray-400 mb-4">Créez votre premier avoir pour commencer</p>
+      <p className="text-sm text-slate-400 mb-1">Aucune note de credit trouvee</p>
+      <p className="text-xs text-gray-400 mb-4">Creez votre premiere note de credit pour commencer</p>
       <Link
         href="/documents/avoirs/new"
         className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"
       >
         <Plus size={14} />
-        Nouvel avoir
+        Nouvelle note
       </Link>
     </div>
   );

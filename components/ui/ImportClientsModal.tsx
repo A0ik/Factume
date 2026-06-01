@@ -37,7 +37,7 @@ const FILE_TYPES = [
   { ext: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-50' },
   { ext: 'Image', icon: Image, color: 'text-blue-500 bg-blue-50' },
   { ext: 'Word', icon: FileText, color: 'text-blue-700 bg-blue-50' },
-  { ext: 'TXT', icon: File, color: 'text-gray-500 bg-gray-50' },
+  { ext: 'TXT', icon: File, color: 'text-gray-500 bg-gray-50 dark:bg-slate-800' },
 ];
 
 function getFileIcon(name: string) {
@@ -46,7 +46,7 @@ function getFileIcon(name: string) {
   if (['xlsx', 'xls', 'csv', 'ods'].includes(ext)) return { icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' };
   if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) return { icon: Image, color: 'text-blue-500', bg: 'bg-blue-50' };
   if (['doc', 'docx'].includes(ext)) return { icon: FileText, color: 'text-blue-700', bg: 'bg-blue-50' };
-  return { icon: File, color: 'text-gray-500', bg: 'bg-gray-50' };
+  return { icon: File, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-slate-800' };
 }
 
 function SiretBadge({ siret }: { siret: string | null }) {
@@ -99,9 +99,9 @@ function AnalyzingStep({ fileName }: { fileName: string }) {
         </div>
       </div>
 
-      <h3 className="text-lg font-bold text-gray-900 mb-1">Analyse IA en cours</h3>
-      <p className="text-sm text-gray-500 mb-4 max-w-xs">
-        GPT-4o analyse votre fichier <span className="font-semibold text-gray-700">{fileName}</span> pour détecter les entreprises
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Analyse IA en cours</h3>
+      <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 max-w-xs">
+        GPT-4o analyse votre fichier <span className="font-semibold text-gray-700 dark:text-slate-200">{fileName}</span> pour détecter les entreprises
       </p>
 
       <AnimatePresence mode="wait">
@@ -121,7 +121,7 @@ function AnalyzingStep({ fileName }: { fileName: string }) {
         </motion.div>
       </AnimatePresence>
 
-      <p className="text-xs text-gray-400 mt-3">{elapsed}s écoulée{elapsed > 1 ? 's' : ''} · arrêt automatique à 90s</p>
+      <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">{elapsed}s écoulée{elapsed > 1 ? 's' : ''} · arrêt automatique à 90s</p>
     </div>
   );
 }
@@ -288,34 +288,34 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+          className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
           style={{ maxHeight: '90vh' }}
         >
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-white/10 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
                 <Sparkles size={16} className="text-white" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900">Import IA de clients</h2>
-                <p className="text-xs text-gray-500">Dépose n'importe quel fichier — l'IA fait le reste</p>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">Import IA de clients</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Dépose n'importe quel fichier — l'IA fait le reste</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {(step === 'review' || step === 'done') && (
-                <button onClick={reset} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <button onClick={reset} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
                   <RefreshCw size={15} />
                 </button>
               )}
-              <button onClick={handleClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={handleClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
                 <X size={18} />
               </button>
             </div>
           </div>
 
           {/* Step indicator */}
-          <div className="px-6 py-2.5 flex items-center gap-2 bg-gray-50 border-b border-gray-100 flex-shrink-0">
+          <div className="px-6 py-2.5 flex items-center gap-2 bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-white/10 flex-shrink-0">
             {(['upload', 'analyzing', 'review', 'done'] as Step[]).map((s, i, arr) => {
               const currentIdx = arr.indexOf(step === 'importing' ? 'done' : step);
               return (
@@ -324,13 +324,13 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                   'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all',
                   step === s || (step === 'importing' && s === 'done') ? 'bg-primary text-white scale-110' :
                   currentIdx > i ? 'bg-green-500 text-white' :
-                  'bg-gray-200 text-gray-400'
+                  'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-slate-500'
                 )}>
                   {currentIdx > i ? <Check size={10} /> : i + 1}
                 </div>
                 <span className={cn(
                   'text-xs font-medium capitalize hidden sm:inline',
-                  step === s ? 'text-gray-900' : 'text-gray-400'
+                  step === s ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-500'
                 )}>
                   {s === 'upload' ? 'Fichier' : s === 'analyzing' ? 'Analyse' : s === 'review' ? 'Vérification' : 'Importé'}
                 </span>
@@ -357,7 +357,7 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                       'relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200',
                       isDragging ? 'border-primary bg-primary/5 scale-[1.01]' :
                       file ? 'border-green-400 bg-green-50' :
-                      'border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+                      'border-gray-200 dark:border-slate-600 hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-slate-800/50'
                     )}
                   >
                     <input
@@ -374,8 +374,8 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                           {(() => { const { icon: Icon, color } = getFileIcon(file.name); return <Icon size={26} className={color} />; })()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900">{file.name}</p>
-                          <p className="text-sm text-gray-400 mt-0.5">{(file.size / 1024).toFixed(0)} Ko · Cliquer pour changer</p>
+                          <p className="font-bold text-gray-900 dark:text-white">{file.name}</p>
+                          <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5">{(file.size / 1024).toFixed(0)} Ko · Cliquer pour changer</p>
                         </div>
                         <div className="flex items-center justify-center gap-1.5 text-green-600">
                           <Check size={15} />
@@ -384,12 +384,12 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto">
-                          <Upload size={24} className="text-gray-400" />
+                        <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
+                          <Upload size={24} className="text-gray-400 dark:text-slate-500" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-700">Dépose ton fichier ici</p>
-                          <p className="text-sm text-gray-400 mt-0.5">ou clique pour parcourir</p>
+                          <p className="font-semibold text-gray-700 dark:text-slate-200">Dépose ton fichier ici</p>
+                          <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5">ou clique pour parcourir</p>
                         </div>
                       </div>
                     )}
@@ -397,7 +397,7 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
 
                   {/* Supported formats */}
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Formats acceptés</p>
+                    <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-2">Formats acceptés</p>
                     <div className="flex flex-wrap gap-2">
                       {FILE_TYPES.map(({ ext, icon: Icon, color }) => (
                         <div key={ext} className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold', color)}>
@@ -448,14 +448,14 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
               {step === 'review' && result && (
                 <motion.div key="review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
                   {/* Summary bar */}
-                  <div className="px-6 py-3 bg-gradient-to-r from-primary/8 to-transparent border-b border-gray-100 flex items-center justify-between">
+                  <div className="px-6 py-3 bg-gradient-to-r from-primary/8 to-transparent border-b border-gray-100 dark:border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
                         <Building2 size={13} className="text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900">{result.companies.length} entreprise{result.companies.length > 1 ? 's' : ''} détectée{result.companies.length > 1 ? 's' : ''}</p>
-                        <p className="text-xs text-gray-500">{result.summary}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{result.companies.length} entreprise{result.companies.length > 1 ? 's' : ''} détectée{result.companies.length > 1 ? 's' : ''}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">{result.summary}</p>
                       </div>
                     </div>
                     <span className="text-xs font-bold text-primary">{selected.size} sélectionnée{selected.size > 1 ? 's' : ''}</span>
@@ -466,35 +466,35 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                       <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-3">
                         <AlertCircle size={22} className="text-amber-500" />
                       </div>
-                      <p className="font-bold text-gray-800">Aucune entreprise détectée</p>
-                      <p className="text-sm text-gray-400 mt-1">L'IA n'a pas trouvé de données exploitables dans ce fichier.</p>
+                      <p className="font-bold text-gray-800 dark:text-slate-100">Aucune entreprise détectée</p>
+                      <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">L'IA n'a pas trouvé de données exploitables dans ce fichier.</p>
                     </div>
                   ) : (
                     <div>
                       {/* Select all */}
-                      <div className="px-6 py-2.5 border-b border-gray-50 flex items-center justify-between">
+                      <div className="px-6 py-2.5 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
                         <button
                           onClick={toggleAll}
-                          className="flex items-center gap-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                          className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                           {selected.size === result.companies.length
                             ? <CheckSquare size={14} className="text-primary" />
-                            : <Square size={14} className="text-gray-400" />}
+                            : <Square size={14} className="text-gray-400 dark:text-slate-500" />}
                           {selected.size === result.companies.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                         </button>
-                        <span className="text-[11px] text-gray-400">Cliquez sur <Edit2 size={10} /> pour modifier</span>
+                        <span className="text-[11px] text-gray-400 dark:text-slate-500">Cliquez sur <Edit2 size={10} /> pour modifier</span>
                       </div>
 
                       {/* Company list */}
-                      <div className="divide-y divide-gray-50">
+                      <div className="divide-y divide-gray-50 dark:divide-white/5">
                         {result.companies.map((company, i) => (
-                          <div key={i} className={cn('px-6 py-3.5 transition-colors', selected.has(i) ? 'bg-white' : 'bg-gray-50/50')}>
+                          <div key={i} className={cn('px-6 py-3.5 transition-colors', selected.has(i) ? 'bg-white dark:bg-slate-900' : 'bg-gray-50/50 dark:bg-slate-800/30')}>
                             {editing === i ? (
                               /* Edit form */
                               <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-2">
                                   <div className="col-span-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Raison sociale *</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Raison sociale *</label>
                                     <input
                                       value={editForm.name || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
@@ -502,68 +502,68 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">SIRET</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">SIRET</label>
                                     <input
                                       value={editForm.siret || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, siret: e.target.value || null }))}
                                       placeholder="14 chiffres"
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">N° TVA</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">N° TVA</label>
                                     <input
                                       value={editForm.vat_number || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, vat_number: e.target.value || null }))}
                                       placeholder="FR12345678901"
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Email</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Email</label>
                                     <input
                                       value={editForm.email || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value || null }))}
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Téléphone</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Téléphone</label>
                                     <input
                                       value={editForm.phone || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value || null }))}
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div className="col-span-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Adresse</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Adresse</label>
                                     <input
                                       value={editForm.address || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value || null }))}
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">CP</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">CP</label>
                                     <input
                                       value={editForm.postal_code || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, postal_code: e.target.value || null }))}
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Ville</label>
+                                    <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide block mb-1">Ville</label>
                                     <input
                                       value={editForm.city || ''}
                                       onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value || null }))}
-                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                   </div>
                                 </div>
                                 <div className="flex gap-2 pt-1">
                                   <button
                                     onClick={() => setEditing(null)}
-                                    className="flex-1 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                                    className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                                   >
                                     Annuler
                                   </button>
@@ -584,12 +584,12 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                                 >
                                   {selected.has(i)
                                     ? <CheckSquare size={17} className="text-primary" />
-                                    : <Square size={17} className="text-gray-300" />}
+                                    : <Square size={17} className="text-gray-300 dark:text-slate-600" />}
                                 </button>
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-bold text-gray-900">{company.name}</p>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{company.name}</p>
                                     <SiretBadge siret={company.siret} />
                                     {company.vat_number && (
                                       <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 border border-purple-100 text-purple-700">
@@ -599,17 +599,17 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                                   </div>
                                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                                     {company.email && (
-                                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                                      <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
                                         <Mail size={10} />{company.email}
                                       </span>
                                     )}
                                     {company.phone && (
-                                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                                      <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
                                         <Phone size={10} />{company.phone}
                                       </span>
                                     )}
                                     {(company.city || company.postal_code) && (
-                                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                                      <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
                                         <MapPin size={10} />{[company.postal_code, company.city].filter(Boolean).join(' ')}
                                       </span>
                                     )}
@@ -619,7 +619,7 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                                 <div className="flex gap-1 flex-shrink-0">
                                   <button
                                     onClick={() => startEdit(i)}
-                                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-600 transition-colors"
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-300 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
                                   >
                                     <Edit2 size={13} />
                                   </button>
@@ -646,10 +646,10 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                   )}
 
                   {/* Import footer */}
-                  <div className="sticky bottom-0 px-6 py-4 bg-white border-t border-gray-100 flex gap-3">
+                  <div className="sticky bottom-0 px-6 py-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-white/10 flex gap-3">
                     <button
                       onClick={reset}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       <ArrowLeft size={14} />
                       Retour
@@ -672,15 +672,15 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Building2 size={26} className="text-primary" />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-2">Import en cours…</h3>
-                  <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white mb-2">Import en cours…</h3>
+                  <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-2 mb-2">
                     <motion.div
                       className="h-2 rounded-full bg-gradient-to-r from-primary to-primary-dark"
                       animate={{ width: `${importProgress}%` }}
                       transition={{ duration: 0.3 }}
                     />
                   </div>
-                  <p className="text-sm text-gray-400">{Math.round(importProgress)}%</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500">{Math.round(importProgress)}%</p>
                 </motion.div>
               )}
 
@@ -700,8 +700,8 @@ export function ImportClientsModal({ open, onClose, onImport }: Props) {
                   >
                     <Check size={36} className="text-green-500" strokeWidth={2.5} />
                   </motion.div>
-                  <h3 className="text-xl font-black text-gray-900 mb-1">Import réussi !</h3>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <h3 className="text-xl font-black text-gray-900 dark:text-white mb-1">Import réussi !</h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
                     {selected.size} client{selected.size > 1 ? 's' : ''} ajouté{selected.size > 1 ? 's' : ''} à votre carnet
                   </p>
                   <button

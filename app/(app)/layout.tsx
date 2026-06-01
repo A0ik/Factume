@@ -27,7 +27,7 @@ function getPageTitle(pathname: string): string {
   if (pathname === '/dashboard' || pathname === '/') return 'Accueil';
   if (pathname.startsWith('/documents/factures')) return 'Factures';
   if (pathname.startsWith('/documents/devis')) return 'Devis';
-  if (pathname.startsWith('/documents/avoirs')) return 'Avoirs';
+  if (pathname.startsWith('/documents/avoirs')) return 'Notes de credit';
   if (pathname.startsWith('/documents/commandes')) return 'Commandes';
   if (pathname.startsWith('/documents/livraisons')) return 'Livraisons';
   if (pathname.startsWith('/documents/acomptes')) return 'Acomptes';

@@ -5,26 +5,27 @@ import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 
 /**
- * MobileLayout — transitions entre pages
+ * MobileLayout — 2026 page transitions
  *
- * Utilise des springs (ressorts physiques) au lieu de ease-in-out
- * pour un feeling natif. La page arrive légèrement par le bas
- * avec un rebond subtil.
+ * Physics: spring with high stiffness (300) and moderate damping (28)
+ * for a snappy, iOS-like page transition feel.
+ * The page slides in subtly from below (y: 4px — very slight).
+ * Exit is a quick fade — no movement needed.
  *
- * LayoutGroup permet aux animations partagées (layoutId) de
- * fonctionner à travers les routes — c'est le "Magic Move".
+ * LayoutGroup enables shared layout animations (layoutId) across routes.
  */
+
 const pageVariants = {
-  initial: { opacity: 0, y: 6 },
+  initial: { opacity: 0, y: 4 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0 },
 };
 
 const pageTransition = {
   type: 'spring' as const,
-  damping: 30,
-  stiffness: 280,
-  mass: 0.8,
+  damping: 28,
+  stiffness: 300,
+  mass: 0.6,
 };
 
 interface MobileLayoutProps {

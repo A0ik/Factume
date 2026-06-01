@@ -87,7 +87,7 @@ const ProgressIndicator = ({
               animate={{ opacity: 1, width: '64px', scale: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 15, mass: 0.8 }}
               onClick={handleBack}
-              className="px-4 py-3 text-black flex items-center justify-center bg-gray-100 font-semibold rounded-full hover:bg-gray-50 transition-colors flex-1 w-16 text-sm"
+              className="px-4 py-3 text-gray-900 dark:text-white flex items-center justify-center bg-gray-100 dark:bg-slate-800 font-semibold rounded-full hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex-1 w-16 text-sm"
             >
               Retour
             </motion.button>
