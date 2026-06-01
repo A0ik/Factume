@@ -466,7 +466,7 @@ export default function ProductsPage() {
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
           >
             <Plus size={16} />
             Nouveau produit
@@ -672,7 +672,7 @@ export default function ProductsPage() {
           {!search && !filterCat && (
             <button
               onClick={openCreate}
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black px-6 py-3 rounded-xl text-sm font-semibold transition-all"
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all"
             >
               <Plus size={18} />
               Créer un produit
@@ -719,7 +719,7 @@ export default function ProductsPage() {
                               isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-500/50'
                             )}
                           >
-                            {isSelected && <Check size={14} className="text-black" />}
+                            {isSelected && <Check size={14} className="text-white" />}
                           </button>
 
                           {/* Category Badge */}
@@ -800,7 +800,7 @@ export default function ProductsPage() {
                             isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-500/50'
                           )}
                         >
-                          {isSelected && <Check size={14} className="text-black" />}
+                          {isSelected && <Check size={14} className="text-white" />}
                         </button>
 
                         <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', cat.bg)}>
@@ -1045,7 +1045,7 @@ export default function ProductsPage() {
                         {recording ? (
                           <MicOff size={24} className="text-gray-900 dark:text-white" />
                         ) : (
-                          <Mic size={24} className="text-black" />
+                          <Mic size={24} className="text-gray-900 dark:text-white" />
                         )}
                       </motion.button>
                     </div>
@@ -1272,10 +1272,10 @@ export default function ProductsPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold transition-all disabled:opacity-60"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-all disabled:opacity-60"
                 >
                   {saving ? (
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
                       <Check size={18} />

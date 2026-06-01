@@ -59,12 +59,12 @@ const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; bg: s
 };
 
 const DOC_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  invoice:        { label: 'Facture',           icon: Receipt,      color: 'text-emerald-400' },
-  quote:          { label: 'Devis',             icon: FileText,     color: 'text-blue-400' },
-  purchase_order: { label: 'Bon de commande',   icon: ShoppingCart, color: 'text-amber-400' },
-  delivery_note:  { label: 'Bon de livraison',  icon: Truck,        color: 'text-cyan-400' },
-  credit_note:    { label: 'Avoir',             icon: RefreshCw,    color: 'text-purple-400' },
-  deposit:        { label: "Facture d'acompte", icon: Banknote,     color: 'text-emerald-400' },
+  invoice:        { label: 'Facture',         icon: Receipt,      color: 'text-emerald-400' },
+  quote:          { label: 'Devis',           icon: FileText,     color: 'text-blue-400' },
+  purchase_order: { label: 'Commande',        icon: ShoppingCart, color: 'text-amber-400' },
+  delivery_note:  { label: 'Bon de livraison', icon: Truck,      color: 'text-cyan-400' },
+  credit_note:    { label: 'Note de credit',  icon: RefreshCw,    color: 'text-purple-400' },
+  deposit:        { label: 'Acompte',         icon: Banknote,     color: 'text-emerald-400' },
 };
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -468,7 +468,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* Mobile: Client name + status — Magic Move target */}
+          {/* Mobile: Client name + total + status -- Loi 7: Hierarchie Brutale */}
           <motion.div
             layoutId={`invoice-card-${invoice.id}`}
             transition={{ type: 'spring', damping: 25, stiffness: 200, mass: 0.8 }}
@@ -476,8 +476,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{clientName}</h1>
-                <p className="text-sm text-slate-500 font-mono mt-0.5">{invoice.number}</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">{clientName}</h1>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">{invoice.number}</p>
               </div>
               <span className={cn(
                 'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0',
@@ -487,6 +487,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 {status.label}
               </span>
               <PdpStatusBadge status={invoice.pdp_status} transmittedAt={invoice.pdp_transmitted_at} />
+            </div>
+            {/* Loi 7: Total amount -- most important info, displayed prominently */}
+            <div className="mt-2.5 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-gray-900 dark:text-white tabular-nums tracking-tight">
+                {formatCurrency(invoice.total)}
+              </span>
+              <span className="text-xs text-slate-400 font-medium">TTC</span>
             </div>
           </motion.div>
         </div>
@@ -928,37 +935,40 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* ========== FLOATING ACTION BAR (MOBILE) ========== */}
+      {/* ========== FLOATING ACTION BAR (MOBILE) -- Loi 1 + Loi 2 ========== */}
       <MobileActionBar
-        mode="custom"
-        mainAction={{
-          icon: Send,
-          label: 'Envoyer',
-          onClick: handleSendClick,
-          variant: 'primary',
-        }}
-        actions={[
+        primaryActions={[
           {
             icon: Eye,
-            label: 'Prévisualiser le PDF',
+            label: 'Apercu',
             onClick: () => setShowPdfPreview(true),
-            description: 'Aperçu du document',
+          },
+          {
+            icon: Send,
+            label: 'Envoyer',
+            onClick: handleSendClick,
+            variant: 'primary',
           },
           ...(invoice.document_type === 'invoice' && invoice.status !== 'paid' ? [{
             icon: CreditCard,
-            label: 'Lien de paiement',
+            label: 'Payer',
             onClick: () => setShowPaymentModal(true),
-            description: 'Créer un lien Stripe',
-          }] : []),
+          }] : [{
+            icon: Download,
+            label: 'PDF',
+            onClick: handleDownloadPdf,
+          }]),
+        ]}
+        secondaryActions={[
           ...(invoice.status !== 'paid' ? [{
             icon: CheckCircle,
-            label: 'Marquer comme payée',
+            label: 'Marquer payee',
             onClick: handleMarkPaid,
             description: 'Enregistrer le paiement',
           }] : []),
           {
             icon: Download,
-            label: 'Télécharger PDF',
+            label: 'Telecharger PDF',
             onClick: handleDownloadPdf,
             description: 'Exporter en PDF',
           },
@@ -966,14 +976,27 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             icon: Edit2,
             label: 'Modifier',
             onClick: () => router.push(`/invoices/${id}/edit`),
-            description: 'Modifier la facture',
+            description: 'Modifier le document',
           }] : []),
-          ...(invoice.document_type === 'invoice' ? [{
+          {
+            icon: Copy,
+            label: 'Dupliquer',
+            onClick: handleDuplicate,
+            description: 'Creer une copie',
+          },
+          ...(invoice.document_type === 'invoice' && canUseFacturX ? [{
             icon: FileText,
             label: 'Factur-X',
             onClick: () => setShowFacturXDetails(true),
-            description: 'Facture électronique conforme',
+            description: 'Facture electronique conforme',
           }] : []),
+          {
+            icon: Trash2,
+            label: 'Supprimer',
+            onClick: () => setShowDeleteConfirm(true),
+            description: 'Supprimer definitivement',
+            variant: 'danger' as const,
+          },
         ]}
       />
 

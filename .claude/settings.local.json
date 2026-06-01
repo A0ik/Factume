@@ -237,7 +237,8 @@
       "Bash(grep -A 30 \"CREATE TABLE.*cabinets\" supabase/migrations/033_cabinet_white_label.sql)",
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(node _temp_patch.js)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc --noEmit)"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

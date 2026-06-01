@@ -113,8 +113,8 @@ export default function CommandesPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Bons de commande</h1>
-            <p className="mt-1 text-sm text-slate-500">Gérez tous vos bons de commande clients</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Commandes</h1>
+            <p className="mt-1 text-sm text-slate-500">Gez tous vos bons de commande clients</p>
           </div>
           <Link
             href="/documents/commandes/new"
@@ -389,7 +389,7 @@ function EmptyState({ inline }: { inline?: boolean }) {
         <ShoppingBag size={24} className="text-slate-500" />
       </div>
       <p className="text-sm text-slate-400 mb-1">Aucune commande trouvée</p>
-      <p className="text-xs text-gray-400 mb-4">Créez votre premier bon de commande pour commencer</p>
+      <p className="text-xs text-gray-400 mb-4">Creez votre premiere commande pour commencer</p>
       <Link
         href="/documents/commandes/new"
         className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"

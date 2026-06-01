@@ -61,7 +61,7 @@ export function PaymentLinkSuccessModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="relative bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-8 text-center">
           <button
@@ -87,22 +87,22 @@ export function PaymentLinkSuccessModal({
         <div className="p-6 space-y-4">
           {/* Lien affiché */}
           <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+            <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-2">
               Lien de paiement
             </label>
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-white/10">
               <input
                 type="text"
                 value={paymentLinkUrl}
                 readOnly
-                className="flex-1 bg-transparent text-sm text-gray-700 outline-none truncate font-mono"
+                className="flex-1 bg-transparent text-sm text-gray-700 dark:text-slate-200 outline-none truncate font-mono"
               />
               <button
                 onClick={handleCopy}
                 className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
                   copied
                     ? 'bg-green-100 text-green-600'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                    : 'bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300'
                 }`}
               >
                 <Copy size={16} />
@@ -138,7 +138,7 @@ export function PaymentLinkSuccessModal({
 
             <button
               onClick={handleOpenLink}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
             >
               <ExternalLink size={18} />
               Ouvrir le lien
@@ -147,10 +147,10 @@ export function PaymentLinkSuccessModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-white/10">
           <button
             onClick={onClose}
-            className="w-full py-2.5 rounded-xl text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors"
+            className="w-full py-2.5 rounded-xl text-gray-500 dark:text-slate-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             Fermer
           </button>

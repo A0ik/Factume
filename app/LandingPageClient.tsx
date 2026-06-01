@@ -19,13 +19,16 @@ import { Marquee } from '@/components/ui/marquee';
 const ease = [0.16, 1, 0.3, 1] as const;
 const LC = 'max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32';
 
+/* ═══ 2026 PHYSICS — Spring config for Reveal animations ═══ */
+const springReveal = { type: 'spring' as const, stiffness: 280, damping: 24, mass: 0.8 };
+
 function R({ children, delay = 0, x = 0, y = 20, className }: { children: React.ReactNode; delay?: number; x?: number; y?: number; className?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, x, y }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.5, delay, ease }}
+      transition={{ ...springReveal, delay }}
       className={className}
     >
       {children}
@@ -160,7 +163,7 @@ export default function LandingPageClient() {
 
           <div className="flex items-center gap-3">
             <Link href="/login" className="hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-white transition-colors"><LogIn className="w-3.5 h-3.5" />Connexion</Link>
-            <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-4 py-2 rounded-full transition-colors duration-200 active:scale-[0.97]">
+            <Link href="/register" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-4 py-2 rounded-full transition-colors duration-200 ">
               Commencer gratuitement<ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white p-1">{menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
@@ -182,38 +185,42 @@ export default function LandingPageClient() {
       </nav>
 
       {/* ════════════ HERO — DARK ════════════ */}
-      <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
+      <section className="relative min-h-[100dvh] flex items-center overflow-hidden pt-20 pb-8">
         <div className="absolute inset-0 bg-slate-950">
           <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
         </div>
 
-        <div className={`relative z-10 ${LC} py-24 md:py-32 2xl:py-40 w-full`}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 2xl:gap-20 items-center">
-            <div className="lg:col-span-7 space-y-8 2xl:space-y-10">
+        <div className={`relative z-10 ${LC} py-16 md:py-24 2xl:py-40 w-full`}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 2xl:gap-20 items-center">
+            <div className="lg:col-span-7 space-y-6 sm:space-y-8 2xl:space-y-10">
               <R delay={0}>
                 <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-1.5 text-xs 2xl:text-sm font-medium text-slate-300">
                   <Mic className="w-3.5 h-3.5 text-emerald-400" />Dictée vocale + Paiement intégré
                 </div>
               </R>
               <R delay={0.08}>
-                <h1 className="text-5xl md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
+                <h1 className="text-[clamp(2rem,6vw,4rem)] md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.08]">
                   Votre facture électronique,<br />
                   <span className="text-emerald-400">dictée là,</span> c&apos;est encaissé.
                 </h1>
               </R>
               <R delay={0.16}>
-                <p className="text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-300 max-w-lg 2xl:max-w-xl">
+                <p className="text-base sm:text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-300 max-w-lg 2xl:max-w-xl">
                   Dites simplement ce que vous avez facturé, l&apos;IA s&apos;occupe du reste. Votre client paie en <span className="text-white font-medium">1 clic</span> via Stripe ou Sumup.
                 </p>
               </R>
               <R delay={0.24}>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/register" className="inline-flex items-center justify-center gap-2 font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-7 py-3.5 2xl:px-9 2xl:py-4 text-sm 2xl:text-base transition-colors duration-200 active:scale-[0.97]">
-                    Essayer gratuitement <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
-                  </Link>
-                  <Link href="/demo" className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-white px-7 py-3.5 2xl:px-9 2xl:py-4 rounded-full text-sm 2xl:text-base font-medium transition-colors duration-200 hover:bg-white/[0.04]">
-                    <Play className="w-4 h-4 text-emerald-400" />Voir la démo
-                  </Link>
+                  <motion.div whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                    <Link href="/register" className="inline-flex items-center justify-center gap-2 font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-7 py-3.5 2xl:px-9 2xl:py-4 text-sm 2xl:text-base transition-colors duration-200">
+                      Essayer gratuitement <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                    </Link>
+                  </motion.div>
+                  <motion.div whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                    <Link href="/demo" className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-white px-7 py-3.5 2xl:px-9 2xl:py-4 rounded-full text-sm 2xl:text-base font-medium transition-colors duration-200 hover:bg-white/[0.04]">
+                      <Play className="w-4 h-4 text-emerald-400" />Voir la démo
+                    </Link>
+                  </motion.div>
                 </div>
               </R>
               <R delay={0.32}>
@@ -232,9 +239,9 @@ export default function LandingPageClient() {
               </R>
             </div>
 
-            <div className="lg:col-span-5 flex justify-center">
+            <div className="lg:col-span-5 flex justify-center mt-4 lg:mt-0">
               <R delay={0.2} y={0} x={30}>
-                <div className="relative w-full max-w-[280px] md:max-w-[320px] 2xl:max-w-[380px]">
+                <div className="relative w-full max-w-[220px] sm:max-w-[280px] md:max-w-[320px] 2xl:max-w-[380px]">
                   <div style={{ filter: 'drop-shadow(0 40px 80px rgba(0,0,0,0.5)) drop-shadow(0 10px 30px rgba(0,0,0,0.3))' }}>
                     <Image src="/iphone-hero.png" alt="Factu.me — Application de facturation sur iPhone" width={500} height={1000} className="w-full h-auto object-contain" priority quality={95} />
                   </div>
@@ -570,10 +577,10 @@ export default function LandingPageClient() {
               <p className="text-base 2xl:text-lg text-slate-400">Sans engagement. Évoluez quand vous voulez.</p>
             </R>
             <div className="flex items-center justify-center gap-3 mt-8">
-              <button onClick={() => setBilling('monthly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'monthly' ? 'bg-white text-slate-950' : 'bg-slate-900 text-slate-400 hover:text-white')}>Mensuel</button>
-              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white')}>
+              <motion.button whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }} onClick={() => setBilling('monthly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'monthly' ? 'bg-white text-slate-950' : 'bg-slate-900 text-slate-400 hover:text-white')}>Mensuel</motion.button>
+              <motion.button whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }} onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white')}>
                 Annuel <span className="text-xs opacity-70">(-20%)</span>
-              </button>
+              </motion.button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 2xl:gap-7 max-w-5xl 2xl:max-w-6xl mx-auto items-start">
@@ -598,7 +605,7 @@ export default function LandingPageClient() {
                       <li key={j} className="flex items-center gap-2 text-sm 2xl:text-base"><Check className="w-4 h-4 2xl:w-5 2xl:h-5 text-emerald-500 flex-shrink-0" /><span className="text-slate-400">{f}</span></li>
                     ))}
                   </ul>
-                  <Link href={`/register?plan=${plan.name.toLowerCase()}&billing=${billing}`} className={cn('block text-center font-semibold py-3 2xl:py-3.5 rounded-xl text-sm 2xl:text-base transition-colors duration-200 active:scale-[0.97]', plan.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white' : 'bg-white/[0.05] hover:bg-white/[0.08] text-white border border-white/[0.08]')}>
+                  <Link href={`/register?plan=${plan.name.toLowerCase()}&billing=${billing}`} className={cn('block text-center font-semibold py-3 2xl:py-3.5 rounded-xl text-sm 2xl:text-base transition-colors duration-200 ', plan.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white' : 'bg-white/[0.05] hover:bg-white/[0.08] text-white border border-white/[0.08]')}>
                     Essai 7 jours gratuit
                   </Link>
                 </div>
@@ -643,9 +650,11 @@ export default function LandingPageClient() {
             </h2>
             <p className="text-lg 2xl:text-xl 2xl:leading-relaxed text-slate-400 mb-10 2xl:mb-12 max-w-lg 2xl:max-w-2xl mx-auto">Dictez. Encaissez. Gérez. Rejoignez 2 000+ entrepreneurs qui ont simplifié leur facturation.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/register" className="inline-flex items-center justify-center gap-2 font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-8 py-4 2xl:px-10 2xl:py-5 text-base 2xl:text-lg transition-colors duration-200 active:scale-[0.97]">
-                Commencer gratuitement <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
-              </Link>
+              <motion.div whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                <Link href="/register" className="inline-flex items-center justify-center gap-2 font-semibold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-8 py-4 2xl:px-10 2xl:py-5 text-base 2xl:text-lg transition-colors duration-200">
+                  Commencer gratuitement <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5" />
+                </Link>
+              </motion.div>
               <Link href="/login" className="inline-flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 text-white px-8 py-4 2xl:px-10 2xl:py-5 rounded-full text-base 2xl:text-lg font-medium transition-colors duration-200">
                 Se connecter
               </Link>

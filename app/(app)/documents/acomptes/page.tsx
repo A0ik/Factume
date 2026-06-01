@@ -113,8 +113,8 @@ export default function AcomptesPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Factures d&apos;acompte</h1>
-            <p className="mt-1 text-sm text-slate-500">Gérez toutes vos factures d&apos;acompte</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Acomptes</h1>
+            <p className="mt-1 text-sm text-slate-500">Gez tous vos acomptes</p>
           </div>
           <Link
             href="/documents/acomptes/new"
@@ -389,7 +389,7 @@ function EmptyState({ inline }: { inline?: boolean }) {
         <Percent size={24} className="text-slate-500" />
       </div>
       <p className="text-sm text-slate-400 mb-1">Aucun acompte trouvé</p>
-      <p className="text-xs text-gray-400 mb-4">Créez votre première facture d&apos;acompte pour commencer</p>
+      <p className="text-xs text-gray-400 mb-4">Creez votre premier acompte pour commencer</p>
       <Link
         href="/documents/acomptes/new"
         className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"

@@ -126,7 +126,7 @@ function HeroVisual() {
               <Check className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <div className="text-[9px] font-bold text-slate-800">Payée</div>
+              <div className="text-[9px] font-bold text-slate-800 dark:text-slate-100">Payée</div>
               <div className="text-[7px] text-green-500 font-semibold">via Stripe</div>
             </div>
           </div>

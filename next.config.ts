@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdf-parse', 'canvas', 'pdf-lib'],
+  serverExternalPackages: ['pdf-parse', 'canvas', 'pdf-lib', 'pdfjs-dist'],
 
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
         ...(Array.isArray(config.externals) ? config.externals : []),
         'pdf-parse',
         'canvas',
+        'pdfjs-dist',
       ];
     }
     return config;
