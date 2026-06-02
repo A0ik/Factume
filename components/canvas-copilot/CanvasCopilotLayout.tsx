@@ -7,11 +7,26 @@ import {
   Loader2, FileText, Undo2, Redo2, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
 import { useDocumentSessionStore } from './documentSessionStore';
 import { DOC_TYPE_CONFIGS } from './config/documentTypeConfig';
-import LivePdfCanvas from './Canvas/LivePdfCanvas';
+import PdfCanvasErrorBoundary from './Canvas/PdfCanvasErrorBoundary';
 import CopilotPanel from './Copilot/CopilotPanel';
 import DoubtPopover from './DoubtResolution/DoubtPopover';
+
+// Isolate @react-pdf/renderer behind a dynamic import (ssr: false) to prevent
+// CSP/WASM chunk evaluation errors from crashing the entire document creation page.
+// Falls back to a loading spinner, and the PdfCanvasErrorBoundary provides a
+// last-resort safety net if the component throws during rendering.
+const LivePdfCanvas = dynamic(() => import('./Canvas/LivePdfCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center h-full">
+      <div className="w-8 h-8 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-gray-400 mt-3">Chargement de l&apos;aperçu…</p>
+    </div>
+  ),
+});
 
 // ─── Layout Props ──────────────────────────────────────
 
@@ -153,7 +168,9 @@ export default function CanvasCopilotLayout({
       <div className="flex-1 flex overflow-hidden relative">
         {/* Desktop: Canvas (left 55%) */}
         <div className="hidden lg:flex lg:w-[55%] xl:w-[58%] border-r border-gray-200 dark:border-white/10">
-          <LivePdfCanvas profile={profile} className="w-full" />
+          <PdfCanvasErrorBoundary className="w-full">
+            <LivePdfCanvas profile={profile} className="w-full" />
+          </PdfCanvasErrorBoundary>
         </div>
 
         {/* Desktop: Copilot (right 45%) */}
@@ -225,7 +242,9 @@ export default function CanvasCopilotLayout({
                   exit={{ opacity: 0, x: -20 }}
                   className="h-full"
                 >
-                  <LivePdfCanvas profile={profile} className="h-full" />
+                  <PdfCanvasErrorBoundary className="h-full">
+                    <LivePdfCanvas profile={profile} className="h-full" />
+                  </PdfCanvasErrorBoundary>
                 </motion.div>
               ) : (
                 <motion.div

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, RefreshCw, ZoomIn, ZoomOut, Eye, FileWarning } from 'lucide-react';
 import { useDocumentSessionStore } from '../documentSessionStore';
-import { Invoice, InvoiceItem, Profile, Client } from '@/types';
+import { Invoice, InvoiceItem, Profile } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
 interface LivePdfCanvasProps {
@@ -14,16 +14,17 @@ interface LivePdfCanvasProps {
 
 /**
  * Live PDF Canvas — renders a real-time preview of the document
- * being created using @react-pdf/renderer.
+ * being created via a server-side API endpoint.
  *
- * Uses a 3-tier debounce strategy:
+ * Strategy:
  * 1. User edits mark canvas as "stale"
- * 2. After 500ms of inactivity, PDF regenerates
- * 3. Always shows last generated PDF while new one is rendering
+ * 2. After 500ms of inactivity, PDF regenerates via /api/pdf/preview
+ * 3. Server uses @react-pdf/renderer (no CSP restrictions)
+ * 4. Client displays the returned PDF in an iframe
  *
- * FALLBACK: If @react-pdf/renderer or WASM fails to load (CSP blocking,
- * unsupported browser, etc.), the canvas shows a graceful placeholder
- * instead of crashing the entire page.
+ * This approach works on ALL browsers (Chrome, Firefox, Safari, Edge)
+ * including iOS Safari, because the PDF generation happens server-side
+ * where there are no CSP 'unsafe-eval' restrictions.
  */
 export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -34,6 +35,8 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const [pdfEngineFailed, setPdfEngineFailed] = useState(false);
   const generatingRef = useRef(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
 
   // Subscribe to fields that affect the canvas
   const canvasData = useDocumentSessionStore((state) => ({
@@ -57,11 +60,9 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     dueDate: state.dueDate,
   }));
 
-  // clientId is tracked in canvasData above; clients fetched from dataStore in the page
-
   /**
    * Build a synthetic Invoice object from session state
-   * that PdfDocument can render
+   * that the server-side PdfDocument can render.
    */
   const syntheticInvoice = useMemo((): Invoice => {
     const d = canvasData;
@@ -97,27 +98,28 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   }, [canvasData, profile]);
 
   /**
-   * Generate PDF blob from the synthetic invoice.
-   * Wrapped in extra safety: if @react-pdf/renderer's WASM engine
-   * fails (CSP, browser support), we permanently disable the PDF
-   * engine and show a static placeholder instead.
+   * Generate PDF via server-side API.
+   * No @react-pdf/renderer import on the client — no CSP issues.
    */
   const generatePdf = useCallback(async () => {
-    if (generatingRef.current || !profile || pdfEngineFailed) return;
+    if (generatingRef.current || !profile || pdfEngineFailed || retryCountRef.current >= MAX_RETRIES) return;
     generatingRef.current = true;
     setIsGenerating(true);
     setError(null);
 
     try {
-      const { pdf } = await import('@react-pdf/renderer');
-      const { default: PdfDocument } = await import('@/components/pdf-document');
-
-      const element = React.createElement(PdfDocument, {
-        invoice: syntheticInvoice,
-        profile: profile || {} as Profile,
+      const res = await fetch('/api/pdf/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice: syntheticInvoice, profile }),
       });
 
-      const blob = await pdf(element as any).toBlob();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur serveur (${res.status})`);
+      }
+
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
 
       setPdfUrl((prev) => {
@@ -125,19 +127,13 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         return url;
       });
       setIsStale(false);
+      retryCountRef.current = 0;
     } catch (err: any) {
       console.error('[LivePdfCanvas] PDF generation error:', err);
 
-      // If the error is WASM/module-related, permanently disable the engine
-      const isWasmError =
-        err?.message?.includes('WebAssembly') ||
-        err?.message?.includes('import statement') ||
-        err?.message?.includes('WASM') ||
-        err?.name === 'CompileError' ||
-        err?.name === 'LinkError';
-
-      if (isWasmError) {
-        console.warn('[LivePdfCanvas] PDF engine permanently disabled — WASM not available');
+      retryCountRef.current += 1;
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.warn('[LivePdfCanvas] Max retries reached, disabling PDF engine');
         setPdfEngineFailed(true);
       }
 
