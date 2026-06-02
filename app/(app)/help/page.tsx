@@ -8,12 +8,13 @@ import {
   BookOpen, HelpCircle, ChevronRight, Send, Clock,
   Download, RefreshCw, Headphones, Ticket,
   MessageSquare, CheckCircle2, Loader2,
-  Landmark, ScanLine,
+  Landmark, ScanLine, Bot, Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { FAQSchema } from '@/components/seo/FAQSchema';
+import { InlineAIChat } from '@/components/support/AIChatWidget';
 
 interface FAQ {
   q: string;
@@ -422,6 +423,7 @@ export default function HelpPage() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   const filtered = CATEGORIES.map((cat) => ({
     ...cat,
@@ -654,6 +656,25 @@ export default function HelpPage() {
               <ChevronRight size={14} className={cn('text-gray-300 transition-all', showForm ? 'rotate-90 text-primary' : 'group-hover:text-primary group-hover:translate-x-0.5')} />
             </button>
 
+            <button
+              onClick={() => setShowAIChat(!showAIChat)}
+              className={cn(
+                'w-full flex items-center gap-3 rounded-2xl border p-4 transition-all group shadow-sm',
+                showAIChat
+                  ? 'border-purple-300 bg-purple-50'
+                  : 'border-gray-100 bg-white hover:border-purple-300 hover:shadow-md'
+              )}
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-100 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={17} className="text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="font-bold text-gray-900 text-sm">Assistant IA</p>
+                <p className="text-xs text-gray-400 mt-0.5">Posez votre question en direct</p>
+              </div>
+              <ChevronRight size={14} className={cn('text-gray-300 transition-all', showAIChat ? 'rotate-90 text-purple-500' : 'group-hover:text-purple-500 group-hover:translate-x-0.5')} />
+            </button>
+
             <div className="flex items-center gap-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/15 p-4 shadow-sm">
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <Zap size={17} className="text-primary" />
@@ -664,6 +685,32 @@ export default function HelpPage() {
               </div>
             </div>
           </div>
+
+          {/* AI Chat inline */}
+          <AnimatePresence>
+            {showAIChat && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="lg:col-span-1"
+              >
+                <div className="rounded-2xl border border-purple-200 bg-white overflow-hidden shadow-md">
+                  <div className="flex items-center justify-between bg-gradient-to-r from-primary to-purple-600 px-4 py-3 text-white">
+                    <div className="flex items-center gap-2">
+                      <Bot size={18} />
+                      <span className="font-semibold text-sm">Assistant Factu.me</span>
+                    </div>
+                    <button onClick={() => setShowAIChat(false)} className="rounded-full hover:bg-white/20 p-1 transition-colors">
+                      <ChevronDown size={16} />
+                    </button>
+                  </div>
+                  <InlineAIChat />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Contact form */}
           <AnimatePresence>

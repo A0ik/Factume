@@ -6,7 +6,7 @@ import Providers from '@/components/Providers';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import { GoogleAnalytics } from '@/components/seo/GoogleAnalytics';
 import { CookieConsent } from '@/components/legal/CookieConsent';
-import { AIChatWidget } from '@/components/support/AIChatWidget';
+
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -210,7 +210,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <OnboardingWizard />
         </Providers>
         <CookieConsent />
-        <AIChatWidget />
         <Analytics />
         <SpeedInsights />
       </body>
