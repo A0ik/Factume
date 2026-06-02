@@ -188,15 +188,20 @@ export async function transmitInvoice(
 
     const externalId = invoice.id; // Notre ID factu.me pour synchronisation
 
+    // Super PDP accepte XML brut ET multipart/form-data
+    // On essaie d'abord multipart (format recommandé), fallback XML brut
+    const formData = new FormData();
+    const xmlBlob = new Blob([ciiXml], { type: 'application/xml' });
+    formData.append('file', xmlBlob, 'factur-x.xml');
+
     const response = await fetch(`${BASE_URL}/invoices?external_id=${encodeURIComponent(externalId)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/xml',
         'Accept': 'application/json',
         'X-External-ID': externalId,
       },
-      body: ciiXml,
+      body: formData,
     });
 
     const duration = Date.now() - startTime;
