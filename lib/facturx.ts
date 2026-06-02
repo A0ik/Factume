@@ -284,34 +284,38 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
     <ram:ApplicableHeaderTradeAgreement>
       <ram:SellerTradeParty>
         <ram:Name>${sellerName}</ram:Name>
-        ${sellerSiret ? `<ram:ID schemeID="0002">${escapeXml(sellerSiret)}</ram:ID>` : ''}
-        ${sellerVat ? `<ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="VA">${escapeXml(sellerVat)}</ram:ID>
-        </ram:SpecifiedTaxRegistration>` : ''}
-        ${sellerEmail ? `<ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">${escapeXml(sellerEmail)}</ram:URIID>
-        </ram:URIUniversalCommunication>` : ''}
+        ${sellerSiret ? `<ram:SpecifiedLegalOrganization>
+          <ram:ID schemeID="0002">${escapeXml(sellerSiret)}</ram:ID>
+        </ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
           <ram:LineOne>${sellerLineOne}</ram:LineOne>
-          ${sellerPostcode ? `<ram:PostcodeCode>${sellerPostcode}</ram:PostcodeCode>` : ''}
           ${sellerCity ? `<ram:CityName>${sellerCity}</ram:CityName>` : ''}
           <ram:CountryID>${sellerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
+        ${sellerEmail ? `<ram:URIUniversalCommunication>
+          <ram:URIID schemeID="EM">${escapeXml(sellerEmail)}</ram:URIID>
+        </ram:URIUniversalCommunication>` : ''}
+        ${sellerVat ? `<ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">${escapeXml(sellerVat)}</ram:ID>
+        </ram:SpecifiedTaxRegistration>` : ''}
       </ram:SellerTradeParty>
 
       <ram:BuyerTradeParty>
         <ram:Name>${buyerName}</ram:Name>
-        ${buyerSiret ? `<ram:ID schemeID="0002">${escapeXml(buyerSiret)}</ram:ID>` : ''}
-        ${buyerVat ? `<ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="VA">${escapeXml(buyerVat)}</ram:ID>
-        </ram:SpecifiedTaxRegistration>` : ''}
+        ${buyerSiret ? `<ram:SpecifiedLegalOrganization>
+          <ram:ID schemeID="0002">${escapeXml(buyerSiret)}</ram:ID>
+        </ram:SpecifiedLegalOrganization>` : ''}
+        <ram:PostalTradeAddress>
+          <ram:LineOne>${buyerLineOne}</ram:LineOne>
+          ${buyerCity ? `<ram:CityName>${buyerCity}</ram:CityName>` : ''}
+          <ram:CountryID>${buyerCountry}</ram:CountryID>
+        </ram:PostalTradeAddress>
         ${buyerEmail ? `<ram:URIUniversalCommunication>
           <ram:URIID schemeID="EM">${escapeXml(buyerEmail)}</ram:URIID>
         </ram:URIUniversalCommunication>` : ''}
-        <ram:PostalTradeAddress>
-          <ram:LineOne>${buyerLineOne}</ram:LineOne>
-          ${buyerPostcode ? `<ram:PostcodeCode>${buyerPostcode}</ram:PostcodeCode>` : ''}
-          ${buyerCity ? `<ram:CityName>${buyerCity}</ram:CityName>` : ''}
+        ${buyerVat ? `<ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">${escapeXml(buyerVat)}</ram:ID>
+        </ram:SpecifiedTaxRegistration>` : ''}
           <ram:CountryID>${buyerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
       </ram:BuyerTradeParty>
