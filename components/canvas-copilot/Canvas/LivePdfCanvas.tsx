@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, RefreshCw, ZoomIn, ZoomOut, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, ZoomIn, ZoomOut, Eye, FileWarning } from 'lucide-react';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { Invoice, InvoiceItem, Profile, Client } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -20,6 +20,10 @@ interface LivePdfCanvasProps {
  * 1. User edits mark canvas as "stale"
  * 2. After 500ms of inactivity, PDF regenerates
  * 3. Always shows last generated PDF while new one is rendering
+ *
+ * FALLBACK: If @react-pdf/renderer or WASM fails to load (CSP blocking,
+ * unsupported browser, etc.), the canvas shows a graceful placeholder
+ * instead of crashing the entire page.
  */
 export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -27,6 +31,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [pdfEngineFailed, setPdfEngineFailed] = useState(false);
   const generatingRef = useRef(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -92,10 +97,13 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   }, [canvasData, profile]);
 
   /**
-   * Generate PDF blob from the synthetic invoice
+   * Generate PDF blob from the synthetic invoice.
+   * Wrapped in extra safety: if @react-pdf/renderer's WASM engine
+   * fails (CSP, browser support), we permanently disable the PDF
+   * engine and show a static placeholder instead.
    */
   const generatePdf = useCallback(async () => {
-    if (generatingRef.current || !profile) return;
+    if (generatingRef.current || !profile || pdfEngineFailed) return;
     generatingRef.current = true;
     setIsGenerating(true);
     setError(null);
@@ -119,15 +127,30 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       setIsStale(false);
     } catch (err: any) {
       console.error('[LivePdfCanvas] PDF generation error:', err);
+
+      // If the error is WASM/module-related, permanently disable the engine
+      const isWasmError =
+        err?.message?.includes('WebAssembly') ||
+        err?.message?.includes('import statement') ||
+        err?.message?.includes('WASM') ||
+        err?.name === 'CompileError' ||
+        err?.name === 'LinkError';
+
+      if (isWasmError) {
+        console.warn('[LivePdfCanvas] PDF engine permanently disabled — WASM not available');
+        setPdfEngineFailed(true);
+      }
+
       setError('Erreur de prévisualisation');
     } finally {
       generatingRef.current = false;
       setIsGenerating(false);
     }
-  }, [syntheticInvoice, profile]);
+  }, [syntheticInvoice, profile, pdfEngineFailed]);
 
   // Debounce: regenerate PDF after 500ms of inactivity
   useEffect(() => {
+    if (pdfEngineFailed) return;
     setIsStale(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -138,17 +161,32 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [syntheticInvoice]);
+  }, [syntheticInvoice, pdfEngineFailed]);
 
   // Initial render
   useEffect(() => {
-    if (profile && !pdfUrl) {
+    if (profile && !pdfUrl && !pdfEngineFailed) {
       generatePdf();
     }
     return () => {
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── PDF Engine disabled fallback ──────────────────────
+  const renderPdfEngineFallback = () => (
+    <div className="flex flex-col items-center justify-center h-full text-center px-8">
+      <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+        <FileWarning size={24} className="text-amber-500" />
+      </div>
+      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+        Aperçu indisponible
+      </p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[240px]">
+        Le moteur PDF n&apos;a pas pu se charger. Votre document sera toujours créé correctement.
+      </p>
+    </div>
+  );
 
   return (
     <div className={`relative flex flex-col h-full bg-gray-100 dark:bg-slate-900 ${className || ''}`}>
@@ -163,7 +201,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         <div className="flex items-center gap-1">
           {/* Stale indicator */}
           <AnimatePresence>
-            {isStale && (
+            {isStale && !pdfEngineFailed && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -176,26 +214,32 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             )}
           </AnimatePresence>
 
-          {/* Zoom controls */}
-          <button
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <span className="text-[10px] text-gray-400 font-mono w-8 text-center">{Math.round(zoom * 100)}%</span>
-          <button
-            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-          >
-            <ZoomIn size={14} />
-          </button>
+          {/* Zoom controls — hidden when engine is disabled */}
+          {!pdfEngineFailed && (
+            <>
+              <button
+                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+              >
+                <ZoomOut size={14} />
+              </button>
+              <span className="text-[10px] text-gray-400 font-mono w-8 text-center">{Math.round(zoom * 100)}%</span>
+              <button
+                onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+              >
+                <ZoomIn size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* PDF Display */}
       <div className="flex-1 overflow-auto flex items-start justify-center p-4">
-        {error ? (
+        {pdfEngineFailed ? (
+          renderPdfEngineFallback()
+        ) : error ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-3">
               <RefreshCw size={20} className="text-red-400" />
@@ -223,7 +267,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         ) : (
           <div className="flex flex-col items-center justify-center h-full">
             <Loader2 size={32} className="text-gray-300 dark:text-gray-600 animate-spin" />
-            <p className="text-sm text-gray-400 mt-3">Génération de l'aperçu...</p>
+            <p className="text-sm text-gray-400 mt-3">Génération de l&apos;aperçu...</p>
           </div>
         )}
       </div>
@@ -257,6 +301,3 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     </div>
   );
 }
-
-// Need React for createElement
-import React from 'react';

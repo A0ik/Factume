@@ -238,11 +238,7 @@
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(node _temp_patch.js)",
       "Bash(grep -E \"\\\\.ts$\")",
-<<<<<<< HEAD
       "mcp__supabase__search_docs"
-=======
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc --noEmit)"
->>>>>>> a5a79862535ab18b9a99382f445c35ab92768fb6
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

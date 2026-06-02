@@ -184,11 +184,24 @@ function takeSnapshot(state: DocumentSessionState): Snapshot {
 
 // ─── Initial State ─────────────────────────────────────
 
-const today = new Date().toISOString().split('T')[0];
+/**
+ * SSR-safe deterministic defaults.
+ *
+ * NOTE: `new Date()` at module scope would produce different values on the
+ * server vs. client (different timezones or clock skew), causing a hydration
+ * mismatch in Next.js 15 + React 19.  Instead we use a fixed placeholder
+ * that is replaced on the client during the first `init()` call — which
+ * happens inside a useEffect (client-only), so there's no mismatch.
+ *
+ * Similarly, `generateId()` is non-deterministic.  We use a fixed sentinel
+ * and regenerate on first `init()`.
+ */
+const SAFE_DATE = '1970-01-01';
+const SAFE_ID = '__initial__';
 
 const initialState = {
   documentType: 'invoice' as DocumentType,
-  sessionId: generateId(),
+  sessionId: SAFE_ID,
 
   clientId: null,
   clientName: '',
@@ -202,11 +215,11 @@ const initialState = {
   clientType: null,
 
   items: [
-    { id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 },
+    { id: SAFE_ID, description: '', quantity: 1, unit_price: 0, vat_rate: 20 },
   ] as Omit<InvoiceItem, 'total'>[],
   notes: '',
   discountPercent: 0,
-  issueDate: today,
+  issueDate: SAFE_DATE,
   paymentDays: 30,
   paymentTermId: 'days30',
 
@@ -249,17 +262,24 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       history.past.push(takeSnapshot(state));
     }
 
-    const computed = computeFromItems(initialState.items, 0);
+    // Use real client-side values for items (not SSR-safe placeholders)
+    const realToday = new Date().toISOString().split('T')[0];
+    const realItems = [
+      { id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 },
+    ] as Omit<InvoiceItem, 'total'>[];
+    const computed = computeFromItems(realItems, 0);
+
     set({
       ...initialState,
+      items: realItems,
       documentType: docType,
       sessionId: generateId(),
       clientId: params?.clientId || null,
       clientName: params?.clientName || '',
       linkedInvoiceId: params?.linkedInvoiceId || null,
-      issueDate: new Date().toISOString().split('T')[0],
+      issueDate: realToday,
       ...computed,
-      dueDate: computeDueDate(new Date().toISOString().split('T')[0], 30),
+      dueDate: computeDueDate(realToday, 30),
       canUndo: false,
       canRedo: false,
     });
@@ -582,6 +602,9 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     history.future = [];
     set({
       ...initialState,
+      items: [
+        { id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 },
+      ] as Omit<InvoiceItem, 'total'>[],
       sessionId: generateId(),
       issueDate: new Date().toISOString().split('T')[0],
     });
