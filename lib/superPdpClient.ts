@@ -24,7 +24,7 @@ function getClientId(): string {
 }
 
 function getClientSecret(): string {
-  const secret = process.env.SUPER_PDP_CLIENT_SECRET;
+  const secret = process.env.SUPER_PDP_CLIENT_SECRET || process.env.SUPER_PDP_SECRET_ID;
   if (!secret) throw new Error('SUPER_PDP_CLIENT_SECRET manquant dans les variables d\'environnement');
   return secret;
 }

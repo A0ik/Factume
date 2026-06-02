@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
 
     try {
       // Vérifier si la transmission PDP est activée et éligible
-      const hasPdpCredentials = process.env.SUPER_PDP_CLIENT_ID && process.env.SUPER_PDP_CLIENT_SECRET;
+      const hasPdpCredentials = process.env.SUPER_PDP_CLIENT_ID && (process.env.SUPER_PDP_CLIENT_SECRET || process.env.SUPER_PDP_SECRET_ID);
       const isEligibleDocType = ['invoice', 'credit_note', 'deposit'].includes(invoice.document_type);
       const tier = profile?.subscription_tier || 'free';
       const hasPdpAccess = profile?.is_trial_active || tier === 'pro' || tier === 'business';

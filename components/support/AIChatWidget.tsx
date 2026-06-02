@@ -244,7 +244,7 @@ function ChatPanel({
               </div>
             </div>
           );
-        )}
+        })}
 
         {isStreaming &&
           messages[messages.length - 1]?.content === '' && (
