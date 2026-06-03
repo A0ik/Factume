@@ -60,6 +60,12 @@ export default function DashboardPage() {
     setGreeting(h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir');
   }, []);
 
+  // Refresh invoice data when dashboard mounts/focuses
+  // This ensures CA card and stats are always up-to-date on mobile
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
+
   const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
   // --- Calcul du montant "À encaisser" (envoyées + en retard) ---

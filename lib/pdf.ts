@@ -58,15 +58,30 @@ export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | nu
     try {
       const { generateQrDataUrl } = await import('./qr-generate');
       (invoice as any).qr_data_url = await generateQrDataUrl(paymentUrl);
-    } catch {
+    } catch (qrErr) {
       // QR generation failed, continue without it
+      console.warn('[pdf] QR pre-generation failed, continuing without QR:', (qrErr as Error).message);
     }
   }
 
-  const { renderToBuffer } = await import('@react-pdf/renderer');
-  const { PdfDocument } = await import('@/components/pdf-document');
-  const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
-  return renderToBuffer(element as any);
+  try {
+    const { renderToBuffer } = await import('@react-pdf/renderer');
+    const { PdfDocument } = await import('@/components/pdf-document');
+    const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
+    return await renderToBuffer(element as any);
+  } catch (reactPdfErr) {
+    console.error('[pdf] @react-pdf/renderer failed, falling back to pdf-lib:', (reactPdfErr as Error).message);
+
+    // Fallback: use pdf-lib based generation
+    try {
+      const { generateInvoicePdfBuffer } = await import('./pdf-server');
+      const buffer = await generateInvoicePdfBuffer(invoice, profile);
+      return new Uint8Array(buffer);
+    } catch (fallbackErr) {
+      console.error('[pdf] pdf-lib fallback also failed:', (fallbackErr as Error).message);
+      throw reactPdfErr;
+    }
+  }
 }
 
 import React from 'react';

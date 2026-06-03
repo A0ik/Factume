@@ -6,7 +6,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 // FIX BUG-TRANS-01/02/03: Transitions complètes conformes Code de commerce
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ['sent', 'cancelled', 'pending'],
+  draft: ['sent', 'cancelled', 'pending', 'paid'],
   pending: ['sent', 'cancelled', 'expired'],
   sent: ['paid', 'cancelled', 'overdue', 'refused'],
   overdue: ['paid', 'cancelled'],
