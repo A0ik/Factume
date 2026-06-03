@@ -4,41 +4,114 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, RefreshCw, ZoomIn, ZoomOut, Eye, FileWarning } from 'lucide-react';
 import { useDocumentSessionStore } from '../documentSessionStore';
-import { Invoice, InvoiceItem, Profile } from '@/types';
+import { Invoice, Profile } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+
+// ─── PDF.js lazy loader ──────────────────────────────────
+// Lazy-imported to avoid SSR bundling issues (component is ssr: false).
+// The worker is served from /public for zero-CDN-dependency reliability.
+
+type PdfjsModule = typeof import('pdfjs-dist');
+
+let _pdfjs: PdfjsModule | null = null;
+let _pdfjsPromise: Promise<PdfjsModule> | null = null;
+
+async function getPdfjs(): Promise<PdfjsModule> {
+  if (_pdfjs) return _pdfjs;
+  if (_pdfjsPromise) return _pdfjsPromise;
+
+  _pdfjsPromise = import('pdfjs-dist').then((mod) => {
+    // Worker served from /public — copied at build time via postinstall
+    mod.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+    _pdfjs = mod;
+    return mod;
+  });
+
+  return _pdfjsPromise;
+}
+
+// ─── Props ───────────────────────────────────────────────
 
 interface LivePdfCanvasProps {
   profile: Profile | null;
   className?: string;
 }
 
+// ─── Skeleton Loader ─────────────────────────────────────
+
+function PdfSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full w-full p-4">
+      <div className="w-full max-w-[595px] aspect-[210/297] bg-white dark:bg-slate-800 rounded-lg shadow-xl overflow-hidden">
+        <div className="p-8 space-y-4 animate-pulse">
+          {/* Header block */}
+          <div className="flex justify-between">
+            <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
+            <div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-1/6" />
+          </div>
+          {/* Client info */}
+          <div className="mt-6 space-y-2">
+            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/3" />
+            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/2" />
+            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-2/5" />
+          </div>
+          {/* Table lines */}
+          <div className="mt-6 space-y-2">
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-5/6" />
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-4/6" />
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-3/4" />
+          </div>
+          {/* Total */}
+          <div className="mt-6 flex justify-end">
+            <div className="h-5 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 animate-pulse">
+        Génération de l&apos;aperçu...
+      </p>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────
+
 /**
  * Live PDF Canvas — renders a real-time preview of the document
- * being created via a server-side API endpoint.
+ * being created via pdfjs-dist on an HTML5 <canvas>.
  *
- * Strategy:
- * 1. User edits mark canvas as "stale"
- * 2. After 500ms of inactivity, PDF regenerates via /api/pdf/preview
- * 3. Server uses @react-pdf/renderer (no CSP restrictions)
- * 4. Client displays the returned PDF in an iframe
+ * Flow:
+ * 1. User edits → canvas marked "stale"
+ * 2. After 600ms debounce → POST /api/pdf/preview → ArrayBuffer
+ * 3. pdfjs-dist renders page 1 to <canvas> (HiDPI-aware)
+ * 4. ResizeObserver keeps canvas responsive
  *
- * This approach works on ALL browsers (Chrome, Firefox, Safari, Edge)
- * including iOS Safari, because the PDF generation happens server-side
- * where there are no CSP 'unsafe-eval' restrictions.
+ * NO iframe, NO embed, NO object — pure canvas rendering.
+ * Works on ALL browsers (Chrome, Firefox, Safari, Edge, iOS Safari, Android Chrome).
  */
 export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  // ─── Refs ────────────────────────────────────────────────
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const generatingRef = useRef(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const renderTaskRef = useRef<any>(null);
+
+  // ─── State ───────────────────────────────────────────────
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRendering, setIsRendering] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [pdfEngineFailed, setPdfEngineFailed] = useState(false);
-  const generatingRef = useRef(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCountRef = useRef(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(595); // A4 @72dp
+
   const MAX_RETRIES = 5;
 
-  // Subscribe to fields that affect the canvas
+  // ─── Subscribe to store fields ───────────────────────────
   const canvasData = useDocumentSessionStore((state) => ({
     documentType: state.documentType,
     items: state.items,
@@ -61,10 +134,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     templateId: state.templateId,
   }));
 
-  /**
-   * Build a synthetic Invoice object from session state
-   * that the server-side PdfDocument can render.
-   */
+  // ─── Synthetic Invoice from store ────────────────────────
   const syntheticInvoice = useMemo((): Invoice => {
     const d = canvasData;
     return {
@@ -98,12 +168,25 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     } as Invoice;
   }, [canvasData, profile]);
 
-  /**
-   * Generate PDF via server-side API.
-   * No @react-pdf/renderer import on the client — no CSP issues.
-   */
+  // ─── Responsive container width via ResizeObserver ───────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width - 32; // minus padding
+        if (width > 50) setContainerWidth(width);
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // ─── Generate PDF via server-side API ────────────────────
   const generatePdf = useCallback(async () => {
-    if (generatingRef.current || !profile || pdfEngineFailed || retryCountRef.current >= MAX_RETRIES) return;
+    if (generatingRef.current || !profile) return;
     generatingRef.current = true;
     setIsGenerating(true);
     setError(null);
@@ -112,7 +195,10 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       const res = await fetch('/api/pdf/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice: syntheticInvoice, profile: { ...profile, template_id: canvasData.templateId } }),
+        body: JSON.stringify({
+          invoice: syntheticInvoice,
+          profile: { ...profile, template_id: canvasData.templateId },
+        }),
       });
 
       if (!res.ok) {
@@ -120,79 +206,135 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         throw new Error(data.error || `Erreur serveur (${res.status})`);
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      setPdfUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
+      const arrayBuffer = await res.arrayBuffer();
+      setPdfData(arrayBuffer);
       setIsStale(false);
-      retryCountRef.current = 0;
+      setRetryCount(0);
     } catch (err: any) {
       console.error('[LivePdfCanvas] PDF generation error:', err);
-
-      retryCountRef.current += 1;
-      if (retryCountRef.current >= MAX_RETRIES) {
-        console.warn('[LivePdfCanvas] Max retries reached, disabling PDF engine');
-        setPdfEngineFailed(true);
-      }
-
+      setRetryCount((prev) => {
+        const next = prev + 1;
+        return next;
+      });
       setError('Erreur de prévisualisation');
     } finally {
       generatingRef.current = false;
       setIsGenerating(false);
     }
-  }, [syntheticInvoice, profile, pdfEngineFailed]);
+  }, [syntheticInvoice, profile, canvasData.templateId]);
 
-  // Debounce: regenerate PDF after 500ms of inactivity
+  // ─── Render PDF to <canvas> via pdfjs-dist ───────────────
+  useEffect(() => {
+    if (!pdfData) return;
+
+    let cancelled = false;
+    setIsRendering(true);
+
+    const renderToCanvas = async () => {
+      try {
+        const pdfjsLib = await getPdfjs();
+        if (cancelled) return;
+
+        // Cancel any in-progress render
+        if (renderTaskRef.current) {
+          try { renderTaskRef.current.cancel(); } catch { /* already cancelled */ }
+          renderTaskRef.current = null;
+        }
+
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfData) });
+        const pdf = await loadingTask.promise;
+        if (cancelled) return;
+
+        const page = await pdf.getPage(1);
+        if (cancelled) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        // Scale page to fit container width
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = (containerWidth * zoom) / baseViewport.width;
+        const viewport = page.getViewport({ scale });
+
+        // HiDPI / Retina support
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const renderTask = page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+        });
+        renderTaskRef.current = renderTask;
+
+        await renderTask.promise;
+        renderTaskRef.current = null;
+        if (!cancelled) setIsRendering(false);
+      } catch (err: any) {
+        // RenderingCancelledException is normal — a newer render superseded this one
+        if (err?.name === 'RenderingCancelledException') return;
+        console.error('[LivePdfCanvas] Canvas render error:', err);
+        if (!cancelled) {
+          setError('Erreur de rendu PDF');
+          setIsRendering(false);
+        }
+      }
+    };
+
+    renderToCanvas();
+
+    return () => {
+      cancelled = true;
+      if (renderTaskRef.current) {
+        try { renderTaskRef.current.cancel(); } catch { /* ignore */ }
+        renderTaskRef.current = null;
+      }
+    };
+  }, [pdfData, containerWidth, zoom]);
+
+  // ─── Debounce: regenerate PDF after 600ms of inactivity ──
   useEffect(() => {
     setIsStale(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      // Reset engine failed state on each new attempt — give it a fresh chance
-      if (pdfEngineFailed) {
-        setPdfEngineFailed(false);
-        retryCountRef.current = 0;
-      }
       generatePdf();
     }, 600);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [syntheticInvoice]);
+  }, [syntheticInvoice]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initial render
+  // ─── Initial render ──────────────────────────────────────
   useEffect(() => {
-    if (profile && !pdfUrl) {
-      retryCountRef.current = 0;
+    if (profile && !pdfData) {
+      setRetryCount(0);
       generatePdf();
     }
-    return () => {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── PDF Engine disabled fallback ──────────────────────
-  const renderPdfEngineFallback = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center px-8">
-      <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
-        <FileWarning size={24} className="text-amber-500" />
-      </div>
-      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-        Aperçu indisponible
-      </p>
-      <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[240px]">
-        Le moteur PDF n&apos;a pas pu se charger. Votre document sera toujours créé correctement.
-      </p>
-    </div>
-  );
+  // ─── Retry handler ───────────────────────────────────────
+  const handleRetry = useCallback(() => {
+    setRetryCount(0);
+    setError(null);
+    // Reset lazy-loaded pdfjs module to force fresh init
+    _pdfjs = null;
+    _pdfjsPromise = null;
+    generatePdf();
+  }, [generatePdf]);
 
+  // ─── Render ──────────────────────────────────────────────
   return (
     <div className={`relative flex flex-col h-full bg-gray-100 dark:bg-slate-900 ${className || ''}`}>
-      {/* Canvas Toolbar */}
+      {/* ─── Toolbar ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-white/10">
         <div className="flex items-center gap-2">
           <Eye size={14} className="text-gray-400" />
@@ -203,7 +345,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         <div className="flex items-center gap-1">
           {/* Stale indicator */}
           <AnimatePresence>
-            {isStale && !pdfEngineFailed && (
+            {isStale && !error && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -216,65 +358,79 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             )}
           </AnimatePresence>
 
-          {/* Zoom controls — hidden when engine is disabled */}
-          {!pdfEngineFailed && (
-            <>
-              <button
-                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-              >
-                <ZoomOut size={14} />
-              </button>
-              <span className="text-[10px] text-gray-400 font-mono w-8 text-center">{Math.round(zoom * 100)}%</span>
-              <button
-                onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-              >
-                <ZoomIn size={14} />
-              </button>
-            </>
-          )}
+          {/* Zoom controls */}
+          <button
+            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            aria-label="Zoom arrière"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <span className="text-[10px] text-gray-400 font-mono w-8 text-center">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+            aria-label="Zoom avant"
+          >
+            <ZoomIn size={14} />
+          </button>
         </div>
       </div>
 
-      {/* PDF Display */}
-      <div className="flex-1 overflow-auto flex items-start justify-center p-4">
-        {pdfEngineFailed ? (
-          renderPdfEngineFallback()
-        ) : error ? (
+      {/* ─── Canvas Area ─────────────────────────────────────── */}
+      <div ref={containerRef} className="flex-1 overflow-auto flex items-start justify-center p-4">
+        {error ? (
+          /* ── Error state with retry ── */
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-3">
-              <RefreshCw size={20} className="text-red-400" />
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+              <FileWarning size={24} className="text-amber-500" />
             </div>
-            <p className="text-sm text-red-500">{error}</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Aperçu indisponible
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[260px] mb-4">
+              {retryCount >= MAX_RETRIES
+                ? 'Plusieurs tentatives ont échoué. Vérifiez votre connexion et réessayez.'
+                : 'Le serveur n\'a pas pu générer l\'aperçu. Réessayez.'}
+            </p>
             <button
-              onClick={generatePdf}
-              className="mt-3 text-xs text-blue-500 hover:text-blue-600 font-semibold"
+              onClick={handleRetry}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-semibold transition-colors"
             >
+              <RefreshCw size={14} />
               Réessayer
             </button>
           </div>
-        ) : pdfUrl ? (
-          <div
-            style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-            className="transition-transform duration-200"
-          >
-            <iframe
-              src={pdfUrl}
-              className="w-[595px] h-[842px] bg-white shadow-2xl rounded-lg"
-              title="Aperçu du document"
-              style={{ border: 'none' }}
+        ) : pdfData ? (
+          /* ── PDF rendered on canvas ── */
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              className="bg-white shadow-2xl rounded-lg"
             />
+            {/* Rendering overlay spinner */}
+            <AnimatePresence>
+              {isRendering && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 rounded-lg flex items-center justify-center backdrop-blur-[2px]"
+                >
+                  <Loader2 size={20} className="text-gray-400 animate-spin" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 size={32} className="text-gray-300 dark:text-gray-600 animate-spin" />
-            <p className="text-sm text-gray-400 mt-3">Génération de l&apos;aperçu...</p>
-          </div>
+          /* ── Skeleton loader ── */
+          <PdfSkeleton />
         )}
       </div>
 
-      {/* Quick Stats Bar */}
+      {/* ─── Quick Stats Bar ─────────────────────────────────── */}
       <div className="px-4 py-2 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="text-center">
@@ -286,7 +442,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
           <div className="text-center">
             <p className="text-[10px] text-gray-400 uppercase">Lignes</p>
             <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {canvasData.items.filter(i => i.description || i.unit_price > 0).length}
+              {canvasData.items.filter((i) => i.description || i.unit_price > 0).length}
             </p>
           </div>
         </div>
