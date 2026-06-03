@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -9,6 +9,7 @@ import { useDocumentSessionStore } from '@/components/canvas-copilot/documentSes
 import CanvasCopilotLayout from '@/components/canvas-copilot/CanvasCopilotLayout';
 import { DOC_TYPE_CONFIGS } from '@/components/canvas-copilot/config/documentTypeConfig';
 import { DocumentType } from '@/types';
+import ClientTypeModal from '@/components/invoices/ClientTypeModal';
 import { toast } from 'sonner';
 
 const VALID_TYPES: DocumentType[] = [
@@ -29,6 +30,7 @@ export default function CreateDocumentContent() {
 
   const session = useDocumentSessionStore();
   const savingRef = useRef(false);
+  const [showClientTypeModal, setShowClientTypeModal] = useState(false);
 
   // ─── Parse URL params ──────────────────────────────
   const docType = (searchParams.get('type') || 'invoice') as DocumentType;
@@ -73,16 +75,6 @@ export default function CreateDocumentContent() {
   const handleSave = useCallback(async () => {
     if (savingRef.current) return;
 
-    // Check client type (B2B/B2C) — required for PDP compliance
-    if (!session.clientType) {
-      // For now, default to B2B if we have a SIRET, B2C otherwise
-      if (session.clientSiret) {
-        session.updateField('clientType', 'b2b');
-      } else if (session.clientName) {
-        session.updateField('clientType', 'b2c');
-      }
-    }
-
     // Validation
     if (!session.clientName && !session.items[0]?.description) {
       session.setError('Renseignez au moins un client ou une prestation.');
@@ -94,6 +86,19 @@ export default function CreateDocumentContent() {
     }
     if (!profile?.id) {
       session.setError('Profil introuvable. Veuillez vous reconnecter.');
+      return;
+    }
+
+    // Check client type (B2B/B2C) — required for PDP compliance
+    if (!session.clientType) {
+      setShowClientTypeModal(true);
+      return;
+    }
+
+    // BUG 3: SIRET required for B2B invoices
+    if (session.clientType === 'b2b' && !session.clientSiret?.trim()) {
+      session.setError('Le SIRET du client est obligatoire pour une facture B2B (entreprise).');
+      toast.error('SIRET client requis pour le B2B');
       return;
     }
 
@@ -122,6 +127,7 @@ export default function CreateDocumentContent() {
             client_postal_code: session.clientId ? undefined : session.clientPostalCode || undefined,
             client_siret: session.clientId ? undefined : session.clientSiret || undefined,
             client_vat_number: session.clientId ? undefined : session.clientVatNumber || undefined,
+            client_type: session.clientType,
             linked_invoice_id: session.linkedInvoiceId || undefined,
           },
           profile,
@@ -134,7 +140,7 @@ export default function CreateDocumentContent() {
 
       // Success
       const config = DOC_TYPE_CONFIGS[effectiveType];
-      toast.success(`${config.shortLabel} créé${effectiveType === 'invoice' ? 'e' : ''} avec succès ! ✅`, {
+      toast.success(`${config.shortLabel} créé${effectiveType === 'invoice' ? 'e' : ''} avec succès !`, {
         description: session.clientName ? `Pour ${session.clientName}` : undefined,
       });
 
@@ -159,6 +165,12 @@ export default function CreateDocumentContent() {
       session.setSaving(false);
     }
   }, [session, effectiveType, profile, createInvoice, router]);
+
+  // ─── Client type selection handler ──────────────────
+  const handleClientTypeSelect = useCallback((type: 'b2b' | 'b2c') => {
+    session.updateField('clientType', type);
+    setShowClientTypeModal(false);
+  }, [session]);
 
   // ─── Navigation handlers ───────────────────────────
   const handleBack = useCallback(() => {
@@ -188,12 +200,19 @@ export default function CreateDocumentContent() {
   }
 
   return (
-    <CanvasCopilotLayout
-      profile={profile}
-      isPro={sub.canUseVoice}
-      onPaywall={handlePaywall}
-      onSave={handleSave}
-      onBack={handleBack}
-    />
+    <>
+      <ClientTypeModal
+        open={showClientTypeModal}
+        onSelect={handleClientTypeSelect}
+        clientName={session.clientName || undefined}
+      />
+      <CanvasCopilotLayout
+        profile={profile}
+        isPro={sub.canUseVoice}
+        onPaywall={handlePaywall}
+        onSave={handleSave}
+        onBack={handleBack}
+      />
+    </>
   );
 }

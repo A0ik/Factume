@@ -26,7 +26,7 @@ import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
  */
 const tabs = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
-  { href: '/documents/factures', icon: FileText, label: 'Factures' },
+  { href: '/documents/factures', icon: FileText, label: 'Documents' },
   { href: '/clients', icon: Users, label: 'Clients' },
   { href: '/settings', icon: UserCircle, label: 'Compte' },
 ];

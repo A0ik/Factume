@@ -20,7 +20,7 @@ const CHECKS: HealthCheck[] = [
     id: 'duplicate_invoices',
     label: 'Factures en doublon',
     weight: 15,
-    icon: '📄',
+    icon: '',
     check: async (admin, userId) => {
       const { data } = await admin
         .from('invoices')
@@ -49,7 +49,7 @@ const CHECKS: HealthCheck[] = [
     id: 'duplicate_expenses',
     label: 'Dépenses en doublon',
     weight: 10,
-    icon: '💰',
+    icon: '',
     check: async (admin, userId) => {
       const { data } = await admin
         .from('expenses')
@@ -77,7 +77,7 @@ const CHECKS: HealthCheck[] = [
     id: 'uncategorized_expenses',
     label: 'Dépenses non catégorisées',
     weight: 10,
-    icon: '🏷️',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('expenses')
@@ -101,7 +101,7 @@ const CHECKS: HealthCheck[] = [
     id: 'vat_consistency',
     label: 'Cohérence TVA',
     weight: 15,
-    icon: '🧮',
+    icon: '',
     check: async (admin, userId) => {
       const { data: expenses } = await admin
         .from('expenses')
@@ -132,7 +132,7 @@ const CHECKS: HealthCheck[] = [
     id: 'unreconciled_transactions',
     label: 'Transactions non rapprochées',
     weight: 15,
-    icon: '🏦',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('bank_transactions')
@@ -156,7 +156,7 @@ const CHECKS: HealthCheck[] = [
     id: 'overdue_invoices',
     label: 'Factures en retard',
     weight: 10,
-    icon: '⚠️',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('invoices')
@@ -182,7 +182,7 @@ const CHECKS: HealthCheck[] = [
     id: 'missing_client_info',
     label: 'Infos clients manquantes',
     weight: 10,
-    icon: '👤',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('clients')
@@ -213,7 +213,7 @@ const CHECKS: HealthCheck[] = [
     id: 'expenses_without_receipts',
     label: 'Dépenses sans justificatif',
     weight: 5,
-    icon: '🧾',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('expenses')
@@ -237,7 +237,7 @@ const CHECKS: HealthCheck[] = [
     id: 'supplier_consistency',
     label: 'Cohérence fournisseurs',
     weight: 5,
-    icon: '🏭',
+    icon: '',
     check: async (admin, userId) => {
       const { data } = await admin
         .from('expenses')
@@ -270,7 +270,7 @@ const CHECKS: HealthCheck[] = [
     id: 'accounting_completeness',
     label: 'Complétude comptable',
     weight: 5,
-    icon: '📊',
+    icon: '',
     check: async (admin, userId) => {
       const { count: total } = await admin
         .from('expenses')

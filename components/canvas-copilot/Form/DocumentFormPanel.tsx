@@ -1,0 +1,635 @@
+'use client';
+
+import { useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Mic, Plus, Trash2, ChevronDown, ChevronUp,
+  Building2, User, Search, Percent, FileText,
+  CalendarDays, MessageSquare, GripVertical, Eye,
+  ShoppingCart, Truck, CreditCard, Receipt,
+  Clock, AlertCircle, CheckCircle2, Sparkles, X,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useDocumentSessionStore } from '../documentSessionStore';
+import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
+
+const springFast = { type: 'spring' as const, damping: 25, stiffness: 400 };
+const springSmooth = { type: 'spring' as const, damping: 28, stiffness: 300 };
+
+// ─── Section Wrapper with Micro Button ──────────────────
+
+interface SectionProps {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  onVoiceClick?: () => void;
+  isPro?: boolean;
+  defaultOpen?: boolean;
+  badge?: React.ReactNode;
+}
+
+function FormSection({ title, icon, children, onVoiceClick, isPro, defaultOpen = true, badge }: SectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springFast}
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+    >
+      {/* Section header */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+          {icon}
+        </div>
+        <span className="flex-1 text-left text-sm font-semibold text-gray-900 dark:text-white">{title}</span>
+        {badge}
+        {onVoiceClick && (
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={(e) => { e.stopPropagation(); onVoiceClick(); }}
+            className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
+            title="Dicter cette section"
+          >
+            <Mic size={14} strokeWidth={2.5} />
+          </motion.button>
+        )}
+        <motion.div
+          animate={{ rotate: open ? 0 : -90 }}
+          transition={springFast}
+        >
+          <ChevronDown size={16} className="text-gray-400" />
+        </motion.div>
+      </button>
+
+      {/* Section content */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={springSmooth}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-1">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Input Field ────────────────────────────────────────
+
+interface InputProps {
+  label: string;
+  value: string | number;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  icon?: React.ReactNode;
+  required?: boolean;
+  suffix?: string;
+  className?: string;
+  inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url';
+  autoFocus?: boolean;
+}
+
+function FormInput({ label, value, onChange, placeholder, type = 'text', icon, required, suffix, className, inputMode, autoFocus }: InputProps) {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <motion.div
+      animate={{ scale: focused ? 1.01 : 1 }}
+      transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+      className={cn('space-y-1.5', className)}
+    >
+      <label className={cn(
+        'text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 transition-colors duration-200',
+        focused ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300',
+      )}>
+        {icon}
+        {label}
+        {required && <span className="text-red-400">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          type={type}
+          inputMode={inputMode}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          required={required}
+          autoFocus={autoFocus}
+          className={cn(
+            'w-full px-3 py-2.5 rounded-xl border text-sm transition-all duration-200',
+            focused
+              ? 'border-emerald-400 dark:border-emerald-500 bg-white dark:bg-white/[0.06] ring-2 ring-emerald-500/20 shadow-sm'
+              : 'border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04]',
+            'text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none',
+          )}
+        />
+        {suffix && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">
+            {suffix}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────
+
+interface DocumentFormPanelProps {
+  profile: any;
+  isPro: boolean;
+  onPaywall: () => void;
+  onVoiceRecord?: (section: string) => void;
+  /** Show the AI copilot overlay */
+  onShowCopilot?: () => void;
+}
+
+export default function DocumentFormPanel({
+  profile,
+  isPro,
+  onPaywall,
+  onVoiceRecord,
+  onShowCopilot,
+}: DocumentFormPanelProps) {
+  const store = useDocumentSessionStore();
+  const {
+    documentType,
+    clientName,
+    clientEmail,
+    clientPhone,
+    clientAddress,
+    clientCity,
+    clientPostalCode,
+    clientSiret,
+    clientVatNumber,
+    clientType,
+    items,
+    notes,
+    discountPercent,
+    issueDate,
+    paymentDays,
+    subtotal,
+    vatAmount,
+    globalDiscountAmount,
+    total,
+    updateField,
+    updateItem,
+    addItem,
+    removeItem,
+  } = store;
+
+  const config = DOC_TYPE_CONFIGS[documentType];
+  const [showClientTypeModal, setShowClientTypeModal] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // ─── Voice handler ──────────────────────────────────
+  const handleVoice = useCallback((section: string) => {
+    if (!isPro) {
+      onPaywall();
+      return;
+    }
+    onVoiceRecord?.(section);
+  }, [isPro, onPaywall, onVoiceRecord]);
+
+  // ─── Line item helpers ──────────────────────────────
+  const formatPrice = (val: number) => {
+    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+  };
+
+  const lineTotal = (item: typeof items[0]) => {
+    return item.quantity * item.unit_price;
+  };
+
+  // ─── Client Type Badge ──────────────────────────────
+  const clientTypeBadge = clientType ? (
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className={cn(
+        'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
+        clientType === 'b2b'
+          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+          : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      )}
+    >
+      {clientType === 'b2b' ? <Building2 size={10} /> : <User size={10} />}
+      {clientType === 'b2b' ? 'B2B' : 'B2C'}
+    </motion.div>
+  ) : null;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* ─── Scrollable Form Content ──────────────────── */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-32 lg:pb-4 space-y-4 scroll-momentum">
+
+        {/* ═══════════ CLIENT SECTION ═══════════ */}
+        <FormSection
+          title="Client"
+          icon={<User size={14} className="text-blue-500" />}
+          onVoiceClick={() => handleVoice('client')}
+          isPro={isPro}
+          badge={clientTypeBadge}
+          defaultOpen={true}
+        >
+          {/* Client type selector */}
+          <div className="flex gap-2 mb-3">
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => updateField('clientType', 'b2b')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all border',
+                clientType === 'b2b'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-gray-50 dark:bg-white/[0.04] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-gray-300',
+              )}
+            >
+              <Building2 size={14} />
+              Entreprise
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => updateField('clientType', 'b2c')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all border',
+                clientType === 'b2c'
+                  ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
+                  : 'bg-gray-50 dark:bg-white/[0.04] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-gray-300',
+              )}
+            >
+              <User size={14} />
+              Particulier
+            </motion.button>
+          </div>
+
+          <div className="space-y-3">
+            <FormInput
+              label="Nom du client"
+              value={clientName}
+              onChange={(v) => updateField('clientName', v)}
+              placeholder="Nom ou raison sociale"
+              required
+              autoFocus
+              icon={<Search size={10} className="text-gray-400" />}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormInput
+                label="Email"
+                value={clientEmail}
+                onChange={(v) => updateField('clientEmail', v)}
+                placeholder="email@example.com"
+                type="email"
+                inputMode="email"
+              />
+              <FormInput
+                label="Telephone"
+                value={clientPhone}
+                onChange={(v) => updateField('clientPhone', v)}
+                placeholder="06 12 34 56 78"
+                type="tel"
+                inputMode="tel"
+              />
+            </div>
+
+            {/* SIRET — B2B only, or optional for B2C */}
+            <AnimatePresence>
+              {clientType === 'b2b' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={springSmooth}
+                >
+                  <div className="space-y-3">
+                    <FormInput
+                      label="SIRET"
+                      value={clientSiret}
+                      onChange={(v) => updateField('clientSiret', v)}
+                      placeholder="123 456 789 01234"
+                      required={clientType === 'b2b'}
+                      icon={<Building2 size={10} className="text-emerald-500" />}
+                    />
+                    <FormInput
+                      label="N° TVA"
+                      value={clientVatNumber}
+                      onChange={(v) => updateField('clientVatNumber', v)}
+                      placeholder="FR 12 345678901"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Advanced address — progressive disclosure */}
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen(!advancedOpen)}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              <ChevronDown size={12} className={cn('transition-transform', advancedOpen && 'rotate-180')} />
+              Adresse et details
+            </button>
+
+            <AnimatePresence>
+              {advancedOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={springSmooth}
+                  className="space-y-3"
+                >
+                  <FormInput
+                    label="Adresse"
+                    value={clientAddress}
+                    onChange={(v) => updateField('clientAddress', v)}
+                    placeholder="Numero et rue"
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormInput
+                      label="Code postal"
+                      value={clientPostalCode}
+                      onChange={(v) => updateField('clientPostalCode', v)}
+                      placeholder="75001"
+                      inputMode="numeric"
+                    />
+                    <FormInput
+                      label="Ville"
+                      value={clientCity}
+                      onChange={(v) => updateField('clientCity', v)}
+                      placeholder="Paris"
+                      className="col-span-2"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* B2B compliance indicator */}
+            {clientType === 'b2b' && clientSiret && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
+              >
+                <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+                  Facturation electronique PDP activee pour ce client B2B
+                </span>
+              </motion.div>
+            )}
+          </div>
+        </FormSection>
+
+        {/* ═══════════ LINE ITEMS SECTION ═══════════ */}
+        <FormSection
+          title="Lignes"
+          icon={<Receipt size={14} className="text-emerald-500" />}
+          onVoiceClick={() => handleVoice('items')}
+          isPro={isPro}
+          badge={
+            <span className="text-[10px] font-bold text-gray-400">
+              {items.length} ligne{items.length > 1 ? 's' : ''}
+            </span>
+          }
+          defaultOpen={true}
+        >
+          <div className="space-y-3">
+            {items.map((item, idx) => (
+              <motion.div
+                key={item.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20, height: 0 }}
+                transition={springFast}
+                className="relative bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] p-3 space-y-2.5"
+              >
+                {/* Line number + description */}
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600 mt-3 flex-shrink-0 w-4">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1">
+                    <FormInput
+                      label="Description"
+                      value={item.description}
+                      onChange={(v) => updateItem(item.id, 'description', v)}
+                      placeholder="Prestation ou produit"
+                    />
+                  </div>
+                  {items.length > 1 && (
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => removeItem(item.id)}
+                      className="mt-6 w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
+                      title="Supprimer cette ligne"
+                    >
+                      <Trash2 size={13} />
+                    </motion.button>
+                  )}
+                </div>
+
+                {/* Qty, Price, TVA */}
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                  <FormInput
+                    label="Qte"
+                    value={item.quantity || ''}
+                    onChange={(v) => updateItem(item.id, 'quantity', v)}
+                    placeholder="1"
+                    inputMode="numeric"
+                  />
+                  <FormInput
+                    label="Prix unit. HT"
+                    value={item.unit_price || ''}
+                    onChange={(v) => updateItem(item.id, 'unit_price', v)}
+                    placeholder="0.00"
+                    inputMode="numeric"
+                    suffix="EUR"
+                  />
+                  <div className="space-y-1.5 pb-[1px]">
+                    <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
+                      <Percent size={9} className="text-gray-400" />
+                      TVA
+                    </label>
+                    <select
+                      value={item.vat_rate}
+                      onChange={(e) => updateItem(item.id, 'vat_rate', e.target.value)}
+                      className="w-[72px] px-2 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value={0}>0%</option>
+                      <option value={5.5}>5.5%</option>
+                      <option value={10}>10%</option>
+                      <option value={20}>20%</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Line total */}
+                {item.unit_price > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex justify-end"
+                  >
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      {formatPrice(lineTotal(item))} EUR HT
+                    </span>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+
+            {/* Add line button */}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => addItem()}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all text-sm font-medium"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              Ajouter une ligne
+            </motion.button>
+          </div>
+        </FormSection>
+
+        {/* ═══════════ TOTALS SECTION ═══════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springFast, delay: 0.1 }}
+          className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+        >
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+              <Receipt size={14} className="text-emerald-500" />
+            </div>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">Totaux</span>
+          </div>
+
+          <div className="px-4 pb-4 space-y-2">
+            {/* Subtotal */}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Sous-total HT</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(subtotal)} EUR</span>
+            </div>
+
+            {/* Discount */}
+            {discountPercent > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="flex justify-between text-sm"
+              >
+                <span className="text-orange-500">Remise ({discountPercent}%)</span>
+                <span className="font-medium text-orange-500">-{formatPrice(globalDiscountAmount)} EUR</span>
+              </motion.div>
+            )}
+
+            {/* VAT */}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">TVA</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(vatAmount)} EUR</span>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 dark:border-white/[0.06]" />
+
+            {/* Total TTC */}
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold text-gray-900 dark:text-white">Total TTC</span>
+              <motion.span
+                key={total}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={springFast}
+                className="text-lg font-bold text-emerald-600 dark:text-emerald-400"
+              >
+                {formatPrice(total)} EUR
+              </motion.span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ═══════════ OPTIONS SECTION ═══════════ */}
+        <FormSection
+          title="Options"
+          icon={<CalendarDays size={14} className="text-purple-500" />}
+          onVoiceClick={() => handleVoice('options')}
+          isPro={isPro}
+          defaultOpen={false}
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <FormInput
+                label="Date d'emission"
+                value={issueDate}
+                onChange={(v) => updateField('issueDate', v)}
+                type="date"
+                icon={<CalendarDays size={10} className="text-gray-400" />}
+              />
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
+                  <Clock size={9} className="text-gray-400" />
+                  Delai paiement
+                </label>
+                <select
+                  value={paymentDays}
+                  onChange={(e) => updateField('paymentDays', parseInt(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all appearance-none cursor-pointer"
+                >
+                  <option value={0}>A reception</option>
+                  <option value={15}>15 jours</option>
+                  <option value={30}>30 jours</option>
+                  <option value={45}>45 jours</option>
+                  <option value={60}>60 jours</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
+                <MessageSquare size={9} className="text-gray-400" />
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => updateField('notes', e.target.value)}
+                placeholder="Conditions, remarques..."
+                rows={2}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 dark:focus:border-emerald-500 transition-all resize-none"
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        {/* ─── AI Copilot Toggle ──────────────────── */}
+        {onShowCopilot && (
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onShowCopilot}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-500/10 dark:hover:to-indigo-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
+          >
+            <Sparkles size={14} />
+            Mode Copilot IA
+          </motion.button>
+        )}
+      </div>
+    </div>
+  );
+}

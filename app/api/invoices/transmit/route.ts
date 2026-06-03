@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', invoiceId);
 
-      console.log('[transmit] ✅ Facture', invoice.number, 'transmise avec succès. ID:', result.superPdpId);
+      console.log('[transmit] Facture', invoice.number, 'transmise avec succès. ID:', result.superPdpId);
 
       return NextResponse.json({
         success: true,
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
         .update(updateData)
         .eq('id', invoiceId);
 
-      console.error('[transmit] ❌ Échec transmission facture', invoice.number, ':', result.error);
+      console.error('[transmit] Échec transmission facture', invoice.number, ':', result.error);
 
       return NextResponse.json({
         success: false,

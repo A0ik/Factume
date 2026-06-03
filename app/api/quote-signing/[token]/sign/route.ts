@@ -264,7 +264,7 @@ export async function POST(
               await resend.emails.send({
                 from: `${senderName} <${senderEmail}>`,
                 to: [userEmail],
-                subject: `✅ Devis signé — ${updatedQuote.number} par ${sanitizedSignerName}`,
+                subject: `Devis signé — ${updatedQuote.number} par ${sanitizedSignerName}`,
                 html: htmlContent,
                 attachments: attachment.length > 0 ? attachment : undefined,
               });

@@ -25,15 +25,10 @@ import { ToastProvider } from '@/components/ui/SuccessToast';
 /** Titre contextuel de la page pour la top bar mobile */
 function getPageTitle(pathname: string): string {
   if (pathname === '/dashboard' || pathname === '/') return 'Accueil';
-  if (pathname.startsWith('/documents/factures')) return 'Factures';
-  if (pathname.startsWith('/documents/devis')) return 'Devis';
-  if (pathname.startsWith('/documents/avoirs')) return 'Notes de credit';
-  if (pathname.startsWith('/documents/commandes')) return 'Commandes';
-  if (pathname.startsWith('/documents/livraisons')) return 'Livraisons';
-  if (pathname.startsWith('/documents/acomptes')) return 'Acomptes';
-  if (pathname.startsWith('/clients')) return 'Clients';
-  if (pathname.startsWith('/invoices/new')) return 'Nouveau document';
+  if (pathname.startsWith('/documents')) return 'Documents';
+  if (pathname.startsWith('/invoices/new') || pathname.startsWith('/documents/create')) return 'Nouveau document';
   if (pathname.startsWith('/invoices/')) return 'Document';
+  if (pathname.startsWith('/clients')) return 'Clients';
   if (pathname.startsWith('/settings')) return 'Paramètres';
   if (pathname.startsWith('/contracts')) return 'Contrats';
   if (pathname.startsWith('/expenses')) return 'Dépenses';

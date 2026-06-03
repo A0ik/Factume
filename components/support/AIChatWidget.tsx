@@ -305,7 +305,7 @@ export function InlineAIChat() {
     {
       id: generateId(),
       role: 'assistant',
-      content: "Salut ! 👋 Je suis l'assistant Factu.me. Comment puis-je t'aider ?",
+      content: "Salut ! Je suis l'assistant Factu.me. Comment puis-je t'aider ?",
     },
   ]);
   const [input, setInput] = useState('');
@@ -532,7 +532,7 @@ export function AIChatWidget() {
     {
       id: generateId(),
       role: 'assistant',
-      content: "Salut ! 👋 Je suis l'assistant Factu.me. Comment puis-je t'aider ?",
+      content: "Salut ! Je suis l'assistant Factu.me. Comment puis-je t'aider ?",
     },
   ]);
   const [input, setInput] = useState('');

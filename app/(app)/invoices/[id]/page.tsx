@@ -173,7 +173,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       toast.success(`Facture envoyée à ${email} !`);
       // Notification e-invoicing PDP
       if (data.pdpTransmission?.transmitted) {
-        toast.success("Facture envoyée et transmise à l'État ✅", { duration: 6000 });
+        toast.success("Facture envoyée et transmise à l'État", { duration: 6000 });
       } else if (data.pdpTransmission && !data.pdpTransmission.transmitted) {
         toast.info("Facture envoyée. Transmission électronique en cours...", { duration: 4000 });
       }

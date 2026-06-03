@@ -134,7 +134,7 @@ export async function sendContractExpirationEmail(
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
       <div style="background: #1D9E75; padding: 20px 24px; border-radius: 8px 8px 0 0;">
-        <h2 style="color: #fff; margin: 0; font-size: 18px;">📄 Contrats qui expirent</h2>
+        <h2 style="color: #fff; margin: 0; font-size: 18px;">Contrats qui expirent</h2>
         <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 13px;">${profile.company_name || ''}</p>
       </div>
       <div style="background: #fff; padding: 24px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">

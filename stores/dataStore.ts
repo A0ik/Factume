@@ -160,6 +160,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           prefix,
           linked_invoice_id: formData.linked_invoice_id || null,
           idempotency_id: finalIdempotencyId,
+          client_type: formData.client_type || null,
         }),
       });
 
@@ -211,6 +212,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             p_prefix: prefix,
             p_linked_invoice_id: formData.linked_invoice_id || null,
             p_idempotency_id: finalIdempotencyId,
+            p_client_type: formData.client_type || null,
           });
 
         if (rpcError || !invoiceId) {

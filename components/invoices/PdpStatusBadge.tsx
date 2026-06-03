@@ -75,7 +75,7 @@ export function PdpStatusBadge({ status, transmittedAt, className = '', compact 
       title={transmittedAt ? `Transmise le ${new Date(transmittedAt).toLocaleString('fr-FR')}` : undefined}
     >
       <Icon size={11} className={status === 'transmitting' || status === 'pending_retry' ? 'animate-pulse' : ''} />
-      {status === 'transmitted' ? '✅ E-invoicing' : config.label}
+      {status === 'transmitted' ? 'E-invoicing' : config.label}
     </span>
   );
 }

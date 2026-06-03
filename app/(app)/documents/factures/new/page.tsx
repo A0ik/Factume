@@ -450,7 +450,7 @@ export default function NewFacturePage() {
       // Succès - magnifique toast + redirection
       showToast({
         icon: 'success',
-        title: 'Facture créée avec succès ! ✅',
+        title: 'Facture créée avec succès !',
         subtitle: clientName ? `Pour ${clientName}` : undefined,
       });
       setTimeout(() => {

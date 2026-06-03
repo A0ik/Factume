@@ -6,7 +6,7 @@ import { CheckCircle, X, CreditCard } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
    SuccessToast — Magnifique toast animé par le bas
-   Style iOS natif, carte avec icône ✅
+   Style iOS natif, carte avec icône de succès
    Apparaît par le bas, remonte doucement, disparaît après 3s
    ═══════════════════════════════════════════════════════════ */
 

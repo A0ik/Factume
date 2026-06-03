@@ -148,12 +148,12 @@ RÈGLES ABSOLUES :
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
 - summary doit être en français, court et précis
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
+INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
 Ne signale QUE si l'information a 2+ interprétations très différentes (ex: "deux" vs "douze") ou est inaudible.
 Si tu es raisonnablement confiant → "uncertain_fields": []
 Exemple de signal légitime :
 
-⚠️ CALCUL JOURNALIER - MODIFICATION :
+CALCUL JOURNALIER - MODIFICATION :
 - "X jours à Y€/jour" → quantity = X, unit_price = Y
 - "X jours à Y€ par jour" → quantity = X, unit_price = Y
 - "X days at Y€/day" → quantity = X, unit_price = Y (après conversion devise)
@@ -204,7 +204,7 @@ Format JSON attendu:
   ]
 }
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
+INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
 Ne signale un champ QUE si l'information est réellement ambiguë ou inaudible.
 NE PAS signaler si tu es raisonnablement confiant (même si tu n'es pas à 100%).
 Signale UNIQUEMENT dans ces cas :
@@ -244,7 +244,7 @@ RÈGLES POUR LES MONTANTS :
 - CORRECT: unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
 - FAUX: unit_price: 400 / 1.10
 
-⚠️ CALCUL JOURNALIER CRITIQUE - À APPLIQUER EN PRIORITÉ :
+CALCUL JOURNALIER CRITIQUE - À APPLIQUER EN PRIORITÉ :
 - "X jours à Y€/jour" ou "X jours à Y€ par jour" → quantity = X, unit_price = Y
 - "X days at Y€/day" ou "X days at Y€ per day" → quantity = X, unit_price = Y
 - "X jours de travail à Y€ journalier" → quantity = X, unit_price = Y
@@ -255,12 +255,12 @@ RÈGLES POUR LES MONTANTS :
 - TOUJOURS interpréter le nombre de jours/semaines comme quantity
 - Si un prix total est donné sans précision "par jour", diviser par le nombre de jours
 
-⚠️ MONTANTS FORFAITAIRES :
+MONTANTS FORFAITAIRES :
 - "pour 3000€" / "un forfait de X€" → quantity: 1, unit_price: X (le montant total)
 - "le projet coûte X€" → quantity: 1, unit_price: X
 - Si ni "/jour" ni "par jour" ni "/mois" mentionné → forfait (quantity = 1)
 
-⚠️ MONTANTS MENSUELS :
+MONTANTS MENSUELS :
 - "X€ par mois" / "X€/mois" / "mensuel" → quantity: 1, unit_price: X, description inclut "(mensuel)"
 
 EXEMPLES DE CALCUL JOURNALIER :

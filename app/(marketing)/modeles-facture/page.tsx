@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { FileText, ArrowRight, Zap, Search } from 'lucide-react';
+import { FileText, ArrowRight, Zap, Search, Wrench, Laptop, Scale, Stethoscope, ShoppingCart } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { professions } from '@/lib/seo-data';
 
@@ -18,11 +18,11 @@ export const metadata: Metadata = {
 };
 
 const secteurs = [
-  { key: 'artisan', label: 'Artisans du BTP', icon: '🔧' },
-  { key: 'freelance', label: 'Freelances & Indépendants', icon: '💻' },
-  { key: 'service', label: 'Services professionnels', icon: '⚖️' },
-  { key: 'sante', label: 'Santé & Bien-être', icon: '🏥' },
-  { key: 'commerce', label: 'Commerce', icon: '🛒' },
+  { key: 'artisan', label: 'Artisans du BTP', icon: Wrench },
+  { key: 'freelance', label: 'Freelances & Indépendants', icon: Laptop },
+  { key: 'service', label: 'Services professionnels', icon: Scale },
+  { key: 'sante', label: 'Santé & Bien-être', icon: Stethoscope },
+  { key: 'commerce', label: 'Commerce', icon: ShoppingCart },
 ];
 
 export default function ModelesFactureHub() {
@@ -44,14 +44,14 @@ export default function ModelesFactureHub() {
       </section>
 
       {/* Sections par secteur */}
-      {secteurs.map(({ key, label, icon }) => {
+      {secteurs.map(({ key, label, icon: Icon }) => {
         const profs = professions.filter(p => p.secteur === key);
         if (profs.length === 0) return null;
         return (
           <section key={key} className="py-12 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-8">
-                <span className="mr-3">{icon}</span>{label}
+                <span className="mr-3"><Icon size={20} className="inline text-purple-600" /></span>{label}
               </h2>
               <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {profs.map((prof) => (

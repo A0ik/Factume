@@ -76,14 +76,14 @@ function validate() {
 
   // Log results
   if (missingVars.length > 0) {
-    console.error('\n❌ CRITICAL: Missing required environment variables:');
+    console.error('\nCRITICAL: Missing required environment variables:');
     missingVars.forEach(v => console.error(`   - ${v}`));
     console.error('\nPlease add these variables to your .env file.\n');
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
   if (warnings.length > 0) {
-    console.warn('\n⚠️  Warning: Optional environment variables not set:');
+    console.warn('\nWarning: Optional environment variables not set:');
     warnings.forEach(w => console.warn(`   - ${w}`));
     console.warn('\nThese are optional but may limit functionality.\n');
   }

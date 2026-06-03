@@ -162,7 +162,7 @@ export default function DashboardPage() {
 
               <div className="relative">
                 {/* Greeting */}
-                <p className="text-emerald-200/80 text-sm font-medium">{greeting} 👋</p>
+                <p className="text-emerald-200/80 text-sm font-medium">{greeting}</p>
 
                 {/* The BIG number */}
                 <div className="mt-3 mb-1">

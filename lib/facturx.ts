@@ -640,7 +640,14 @@ export function isFacturXEligible(
   }
 
   const buyerSiret = invoice.client_siret?.trim() || invoice.client?.siret?.trim();
+  const invoiceClientType = (invoice as any).client_type || (invoice as any).client?.client_type;
+
   if (!buyerSiret) {
+    // For B2B invoices, missing buyer SIRET makes it ineligible
+    if (invoiceClientType === 'b2b') {
+      return { eligible: false, reason: 'SIRET du client obligatoire pour une facture B2B (entreprise)' };
+    }
+    // For B2C or unknown, it's just a warning
     warnings.push('SIRET du client manquant');
   }
 

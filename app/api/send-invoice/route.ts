@@ -266,50 +266,56 @@ export async function POST(req: NextRequest) {
       const hasPdpAccess = profile?.is_trial_active || tier === 'pro' || tier === 'business';
 
       if (hasPdpCredentials && isEligibleDocType && hasPdpAccess) {
-        const eligibility = isFacturXEligible(invoice, profile || {});
-
-        if (eligibility.eligible) {
-          console.log('[send-invoice] Transmission Super PDP en cours pour', invoice.number, '...');
-
-          // Transmettre à Super PDP (ne bloque pas la réponse en cas d'erreur)
-          const result = await transmitInvoice(invoice, profile || {});
-
-          if (result.success) {
-            // Sauvegarder l'ID de transmission en base
-            await supabase
-              .from('invoices')
-              .update({
-                pdp_transmission_id: result.superPdpId,
-                pdp_status: 'transmitted',
-                pdp_transmitted_at: new Date().toISOString(),
-                pdp_last_error: null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', invoiceId);
-
-            pdpResult = { transmitted: true, superPdpId: result.superPdpId };
-            console.log('[send-invoice] ✅ Facture transmise légalement. ID PDP:', result.superPdpId);
-
-          } else {
-            // Erreur de transmission — on loggue mais on ne bloque pas l'envoi email
-            const retryable = isRetryableError(result);
-            await supabase
-              .from('invoices')
-              .update({
-                pdp_status: retryable ? 'pending_retry' : 'failed',
-                pdp_last_error: result.error,
-                pdp_retry_count: 1,
-                pdp_next_retry_at: retryable ? new Date(Date.now() + 10 * 60 * 1000).toISOString() : null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', invoiceId);
-
-            pdpResult = { transmitted: false, error: result.error };
-            console.warn('[send-invoice] ⚠️ Transmission PDP échouée:', result.error, retryable ? '(retry programmé)' : '(définitif)');
-          }
+        // BUG 6: Skip PDP transmission for B2C invoices
+        const invoiceClientType = invoice.client_type || invoice.client?.client_type;
+        if (invoiceClientType === 'b2c') {
+          console.log('[send-invoice] Facture B2C — transmission PDP ignorée');
         } else {
-          console.log('[send-invoice] Facture non éligible Factur-X:', eligibility.reason);
-        }
+          const eligibility = isFacturXEligible(invoice, profile || {});
+
+          if (eligibility.eligible) {
+            console.log('[send-invoice] Transmission Super PDP en cours pour', invoice.number, '...');
+
+            // Transmettre à Super PDP (ne bloque pas la réponse en cas d'erreur)
+            const result = await transmitInvoice(invoice, profile || {});
+
+            if (result.success) {
+              // Sauvegarder l'ID de transmission en base
+              await supabase
+                .from('invoices')
+                .update({
+                  pdp_transmission_id: result.superPdpId,
+                  pdp_status: 'transmitted',
+                  pdp_transmitted_at: new Date().toISOString(),
+                  pdp_last_error: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', invoiceId);
+
+              pdpResult = { transmitted: true, superPdpId: result.superPdpId };
+              console.log('[send-invoice] Facture transmise légalement. ID PDP:', result.superPdpId);
+
+            } else {
+              // Erreur de transmission — on loggue mais on ne bloque pas l'envoi email
+              const retryable = isRetryableError(result);
+              await supabase
+                .from('invoices')
+                .update({
+                  pdp_status: retryable ? 'pending_retry' : 'failed',
+                  pdp_last_error: result.error,
+                  pdp_retry_count: 1,
+                  pdp_next_retry_at: retryable ? new Date(Date.now() + 10 * 60 * 1000).toISOString() : null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', invoiceId);
+
+              pdpResult = { transmitted: false, error: result.error };
+              console.warn('[send-invoice] Transmission PDP échouée:', result.error, retryable ? '(retry programmé)' : '(définitif)');
+            }
+          } else {
+            console.log('[send-invoice] Facture non éligible Factur-X:', eligibility.reason);
+          }
+        } // end B2B-only PDP branch
       }
     } catch (pdpError: any) {
       // Ne JAMAIS bloquer l'envoi email pour une erreur PDP

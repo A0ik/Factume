@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
             .eq('id', inv.id);
 
           updatedCount++;
-          console.log('[pdp-sync] 📝 Facture', inv.number, 'mise à jour:',
+          console.log('[pdp-sync] Facture', inv.number, 'mise à jour:',
             newInvoiceStatus ? `status→${newInvoiceStatus}` : '',
             newPdpStatus ? `pdp→${newPdpStatus}` : ''
               .trim() || 'metadata only');

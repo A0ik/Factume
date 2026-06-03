@@ -190,6 +190,7 @@ export interface Invoice {
   client_postal_code?: string;
   client_siret?: string;
   client_vat_number?: string;
+  client_type?: 'b2b' | 'b2c';
   payment_terms_id?: string;
   // Transmission électronique (Super PDP)
   pdp_transmission_id?: string;
@@ -253,6 +254,7 @@ export interface InvoiceFormData {
   client_postal_code?: string;
   client_siret?: string;
   client_vat_number?: string;
+  client_type?: 'b2b' | 'b2c';
 }
 
 export interface Appointment {

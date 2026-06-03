@@ -143,6 +143,17 @@ export async function transmitInvoice(
   const startTime = Date.now();
 
   try {
+    // ── 0. Vérification B2C — pas de transmission PDP requise ───────────
+    const invoiceClientType = (invoice as any).client_type || (invoice as any).client?.client_type;
+    if (invoiceClientType === 'b2c') {
+      console.log('[SuperPDP] Facture B2C — transmission PDP non requise');
+      return {
+        success: false,
+        error: 'Facture B2C — transmission PDP non requise pour les particuliers',
+        errorCode: 'B2C_NOT_REQUIRED',
+      };
+    }
+
     // ── 1. Vérification d'éligibilité ────────────────────────────────────
     const eligibility = isFacturXEligible(invoice, profile);
     if (!eligibility.eligible) {
@@ -285,7 +296,7 @@ export async function transmitInvoice(
       console.warn('[SuperPDP] Réponse OK mais pas d\'ID:', JSON.stringify(result));
     }
 
-    console.log('[SuperPDP] ✅ Facture', invoice.number, 'transmise avec succès. ID:', superPdpId);
+    console.log('[SuperPDP] Facture', invoice.number, 'transmise avec succès. ID:', superPdpId);
 
     return {
       success: true,

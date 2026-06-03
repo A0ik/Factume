@@ -74,7 +74,7 @@ Retourne UNIQUEMENT du JSON valide (pas de markdown, pas de commentaires):
   "uncertain_fields": []
 }
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+INCERTITUDE — CHAMPS uncertain_fields :
 Signale un champ UNIQUEMENT si l'information extraite est ambiguë, illisible ou incertaine.
 - Le nom du vendor est partiellement illisible ou pourrait s'écrire de plusieurs façons
 - Un montant est flou ou partiellement visible

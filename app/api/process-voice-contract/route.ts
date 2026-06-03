@@ -108,7 +108,7 @@ Format attendu (null si non mentionné) :
   ]
 }
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+INCERTITUDE — CHAMPS uncertain_fields :
 Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
 Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
 - Si le prénom/nom entendu pourrait s'écrire de plusieurs façons (ex: "Mamadou" vs "Mahamadou", "Dupon" vs "Dupont")
@@ -171,7 +171,7 @@ Format attendu (null si non mentionné) :
   ]
 }
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+INCERTITUDE — CHAMPS uncertain_fields :
 Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
 Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
 Si aucun doute réel → "uncertain_fields": []`,
@@ -201,7 +201,7 @@ Format attendu (null si non mentionné) :
   ]
 }
 
-⚠️ INCERTITUDE — CHAMPS uncertain_fields :
+INCERTITUDE — CHAMPS uncertain_fields :
 Signale un champ UNIQUEMENT si l'information est réellement ambiguë ou inaudible.
 Signale PARTICULIÈREMENT les prénoms et noms propres si l'orthographe est incertaine.
 Si aucun doute réel → "uncertain_fields": []

@@ -4,24 +4,24 @@ export function getIntegrationProvider(provider: string): { name: string; icon: 
   const providers: Record<string, { name: string; icon: string; color: string; description: string }> = {
     pennylane: {
       name: 'Pennylane',
-      icon: '📊',
+      icon: '',
       color: 'bg-blue-500',
       description: 'Logiciel de comptabilité en ligne',
     },
     sage: {
       name: 'Sage',
-      icon: '🏢',
+      icon: '',
       color: 'bg-green-600',
       description: 'Solution de gestion comptable',
     },
     bridge: {
       name: 'Bridge',
-      icon: '🏦',
+      icon: '',
       color: 'bg-indigo-500',
       description: 'Agrégateur bancaire (flux automatiques)',
     },
   };
-  return providers[provider] || { name: provider, icon: '🔗', color: 'bg-gray-500', description: '' };
+  return providers[provider] || { name: provider, icon: '', color: 'bg-gray-500', description: '' };
 }
 
 export function getStatusColor(status: string): string {

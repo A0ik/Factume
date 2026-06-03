@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 import { LEGAL_STATUSES } from '@/lib/utils';
-import { Check, ChevronDown, Building2, Zap, ArrowRight } from 'lucide-react';
+import { Check, ChevronDown, Building2, Zap, ArrowRight, Lock } from 'lucide-react';
 import Image from 'next/image';
 
 /* ── Quick searchable dropdown ── */
@@ -353,7 +353,7 @@ export default function QuickOnboardingPage() {
 
         {/* Bottom trust signal */}
         <p className="text-center text-[10px] text-gray-600 mt-4">
-          🔒 {lang === 'fr' ? 'Vos données sont sécurisées et hébergées en France' : 'Your data is secure and hosted in France'}
+          <Lock size={12} className="inline mr-1" /> {lang === 'fr' ? 'Vos données sont sécurisées et hébergées en France' : 'Your data is secure and hosted in France'}
         </p>
       </div>
     </div>

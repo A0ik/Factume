@@ -909,7 +909,7 @@ function generateArticles(data: ContractTemplateData): string {
   // ── ARTICLE : Non-concurrence (si activée) ───────────────
   if (data.nonCompeteClause && !['stage', 'freelance'].includes(type)) {
     A("Clause de non-concurrence", `
-      <p><strong>⚠️ CLAUSE AVEC INDEMNITÉ COMPENSATOIRE OBLIGATOIRE</strong></p>
+      <p><strong>CLAUSE AVEC INDEMNITÉ COMPENSATOIRE OBLIGATOIRE</strong></p>
       <p>En contrepartie du paiement d'une indemnité compensatrice mensuelle égale à
       <strong>${data.nonCompeteCompensation ? fmtMoney(data.nonCompeteCompensation) : '___________'} brut</strong>
       versée pendant la durée d'application de la clause, ${fullName} s'interdit,

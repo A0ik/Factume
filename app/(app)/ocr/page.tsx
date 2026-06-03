@@ -195,7 +195,7 @@ type DextTab = 'all' | 'processing' | 'to_review' | 'ready' | 'processed';
 function getDextStatus(file: ScannedFile): 'processing' | 'to_review' | 'ready' | 'error' {
   if (file.status === 'error') return 'error';
   if (file.status !== 'complete') return 'processing';
-  // ✅ WORKFLOW DEXT: TOUS les documents scannés vont dans "À vérifier"
+  // WORKFLOW DEXT: TOUS les documents scannés vont dans "À vérifier"
   // Seuls les documents explicitement marqués comme "ready" vont dans "Prêts"
   return 'to_review';
 }
@@ -543,11 +543,11 @@ export default function OCRPage() {
     needsManualReview: boolean;
   } | null> => {
     if (file.type !== 'application/pdf') {
-      debugLog(`📄 Fichier non-PDF détecté: ${file.name} (${file.type})`);
+      debugLog(`Fichier non-PDF détecté: ${file.name} (${file.type})`);
       return null;
     }
 
-    debugLog(`📑 PDF détecté: ${file.name}, détection des segments...`);
+    debugLog(`PDF détecté: ${file.name}, détection des segments...`);
 
     try {
       const formData = new FormData();
@@ -560,7 +560,7 @@ export default function OCRPage() {
 
       if (response.ok) {
         const data = await response.json();
-        debugLog(`✅ Segments détectés: ${data.segments?.length || 0}, pages: ${data.totalPages}`);
+        debugLog(`Segments détectés: ${data.segments?.length || 0}, pages: ${data.totalPages}`);
         return {
           isPdf: true,
           pageCount: data.totalPages || 0,
@@ -569,10 +569,10 @@ export default function OCRPage() {
         };
       }
 
-      debugWarn(`⚠️ Échec détection: ${response.status}`);
+      debugWarn(`Échec détection: ${response.status}`);
       return { isPdf: true, pageCount: 0, segments: [], needsManualReview: false };
     } catch (error) {
-      debugError(`❌ Erreur détection PDF:`, error);
+      debugError(`Erreur détection PDF:`, error);
       return { isPdf: true, pageCount: 0, segments: [], needsManualReview: false };
     }
   }, []);
@@ -625,22 +625,22 @@ export default function OCRPage() {
       if (detection && detection.isPdf && detection.pageCount > 1) {
         updateFile(scannedFile.id, { status: 'analyzing', progress: 30 });
 
-        console.log(`[OCR DEBUG] 🔍 PDF multipage détecté: ${detection.pageCount} pages dans "${scannedFile.file.name}"`);
+        console.log(`[OCR DEBUG] PDF multipage détecté: ${detection.pageCount} pages dans "${scannedFile.file.name}"`);
 
         const detectData = detection;
 
-        console.log(`[OCR DEBUG] ✅ Segments détectés: ${detectData.segments.length}`);
+        console.log(`[OCR DEBUG] Segments détectés: ${detectData.segments.length}`);
         detectData.segments.forEach((seg, i) => {
           console.log(`[OCR DEBUG]    Segment ${i + 1}: pages ${seg.startPage}-${seg.endPage}, vendor: ${seg.vendor || 'N/A'}`);
         });
 
-        // ⚠️ Validation: Si aucun segment détecté, traiter comme PDF simple
+        // Validation: Si aucun segment détecté, traiter comme PDF simple
         if (detectData.segments.length === 0) {
-          console.warn(`[OCR DEBUG] ⚠️ Aucun segment détecté pour "${scannedFile.file.name}"`);
+          console.warn(`[OCR DEBUG] Aucun segment détecté pour "${scannedFile.file.name}"`);
           // Fall through to single-page processing
         } else if (detectData.segments.length === 1 && detectData.segments[0].startPage === 1 && detectData.segments[0].endPage === detection.pageCount) {
           // Single invoice spanning all pages - treat as one file
-          console.log(`[OCR DEBUG] 📄 PDF contient une seule facture sur ${detection.pageCount} pages`);
+          console.log(`[OCR DEBUG] PDF contient une seule facture sur ${detection.pageCount} pages`);
           // Fall through to single-page processing below
         } else {
           // Multiple invoices detected - show segment verification UI
@@ -896,7 +896,7 @@ export default function OCRPage() {
     }
   }, [files, processFile]);
 
-  // ✅ NOUVEAU: Traiter les segments après correction manuelle
+  // NOUVEAU: Traiter les segments après correction manuelle
   // ---------- Verify expense (mark as reviewed) ----------
   const verifyExpense = useCallback(async (scannedFile: ScannedFile) => {
     if (!scannedFile.result?.expense?.id) {

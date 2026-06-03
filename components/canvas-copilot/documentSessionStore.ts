@@ -498,7 +498,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
 
     get().addMessage({
       role: 'system',
-      content: '✅ Confirmation prise en compte.',
+      content: 'Confirmation prise en compte.',
     });
   },
 

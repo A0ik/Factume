@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         </td></tr>
         <!-- Body -->
         <tr><td style="padding:40px">
-          <h2 style="margin:0 0 8px;font-size:22px;font-weight:900;color:#111827">Vous avez été invité 🎉</h2>
+          <h2 style="margin:0 0 8px;font-size:22px;font-weight:900;color:#111827">Vous avez été invité</h2>
           <p style="margin:0 0 24px;color:#6b7280;font-size:15px;line-height:1.6">
             <strong style="color:#111">${inviterName}</strong> vous invite à rejoindre le workspace <strong style="color:#111">${sanitizedWorkspaceName}</strong> en tant que <strong style="color:#1D9E75">${ROLE_LABELS[role] || role}</strong>.
           </p>

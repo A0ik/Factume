@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Car, UtensilsCrossed, Bed, Laptop, Paperclip, ShoppingCart, Smartphone, Shield, HardDrive, Map, Package } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 
@@ -15,10 +15,10 @@ interface Expense {
   description?: string;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  transport: '🚗', meals: '🍽️', accommodation: '🏨', equipment: '💻',
-  office: '📎', shopping: '🛒', telecom: '📱', insurance: '🛡️',
-  software: '💾', mileage: '🗺️', other: '📦',
+const CATEGORY_ICONS: Record<string, any> = {
+  transport: Car, meals: UtensilsCrossed, accommodation: Bed, equipment: Laptop,
+  office: Paperclip, shopping: ShoppingCart, telecom: Smartphone, insurance: Shield,
+  software: HardDrive, mileage: Map, other: Package,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ export default function CabinetClientExpensesPage({ params }: { params: Promise<
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {topCategories.map(([cat, amount]) => (
                 <div key={cat} className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 text-center">
-                  <span className="text-2xl block mb-1">{CATEGORY_ICONS[cat] ?? '📦'}</span>
+                  <span className="text-2xl block mb-1">{(() => { const Icon = CATEGORY_ICONS[cat] ?? Package; return <Icon size={20} className="text-gray-500 mx-auto" />; })()}</span>
                   <p className="text-xs text-gray-400 font-medium">{CATEGORY_LABELS[cat] ?? cat}</p>
                   <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{formatCurrency(amount)}</p>
                 </div>
@@ -105,7 +105,7 @@ export default function CabinetClientExpensesPage({ params }: { params: Promise<
           <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
             {expenses.map((exp) => (
               <div key={exp.id} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                <span className="text-xl flex-shrink-0">{CATEGORY_ICONS[exp.category ?? ''] ?? '📦'}</span>
+                <span className="text-xl flex-shrink-0">{(() => { const Icon = CATEGORY_ICONS[exp.category ?? ''] ?? Package; return <Icon size={20} className="text-gray-500" />; })()}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                     {exp.vendor || exp.label || 'Dépense'}

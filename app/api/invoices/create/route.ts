@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const {
       client_id, client_name_override, document_type, issue_date, due_date,
       items, subtotal, vat_amount, discount_percent, discount_amount, total,
-      notes, prefix, linked_invoice_id, idempotency_id
+      notes, prefix, linked_invoice_id, idempotency_id, client_type
     } = body;
 
     // FIX GAP-6: Validation serveur de la date d'émission (anti-antidatage)
@@ -203,6 +203,7 @@ export async function POST(req: NextRequest) {
         p_prefix: prefix || 'FACT',
         p_linked_invoice_id: linked_invoice_id || null,
         p_idempotency_id: idempotency_id || crypto.randomUUID(),
+        p_client_type: client_type || null,
       });
 
     if (rpcError || !invoiceId) {

@@ -227,7 +227,7 @@ export default function CopilotPanel({ profile, isPro, onPaywall }: CopilotPanel
       );
     } catch (err: any) {
       useDocumentSessionStore.getState().updateLastAssistantMessage(
-        `❌ ${err.message || 'Erreur lors de la génération.'}`,
+        `Erreur : ${err.message || 'Erreur lors de la génération.'}`,
       );
     } finally {
       setStreaming(false);
@@ -241,7 +241,7 @@ export default function CopilotPanel({ profile, isPro, onPaywall }: CopilotPanel
   }, [applyAIParsedResult, setProcessingVoice]);
 
   const handleVoiceError = useCallback((error: string) => {
-    addMessage({ role: 'system', content: `❌ ${error}` });
+    addMessage({ role: 'system', content: `Erreur : ${error}` });
     setProcessingVoice(false);
     setIsRecording(false);
   }, [addMessage, setProcessingVoice]);
@@ -254,7 +254,7 @@ export default function CopilotPanel({ profile, isPro, onPaywall }: CopilotPanel
     setIsRecording(prev => !prev);
     if (!isRecording) {
       setProcessingVoice(true);
-      addMessage({ role: 'system', content: '🎤 Écoute en cours...' });
+      addMessage({ role: 'system', content: 'Écoute en cours...' });
     }
   }, [isPro, isRecording, addMessage, setProcessingVoice, onPaywall]);
 
@@ -393,7 +393,7 @@ export default function CopilotPanel({ profile, isPro, onPaywall }: CopilotPanel
 
         {/* Hint */}
         <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1.5 text-center">
-          Entrée pour envoyer · Shift+Entrée pour un retour à la ligne · 🎤 pour dicter
+          Entrée pour envoyer · Shift+Entrée pour un retour à la ligne · <Mic size={10} className="inline" /> pour dicter
         </p>
       </div>
     </div>

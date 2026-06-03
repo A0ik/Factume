@@ -134,7 +134,7 @@ export default function FacturesPage() {
       if (!res.ok) throw new Error();
       showToast({
         icon: 'success',
-        title: 'Facture marquée payée ✅',
+        title: 'Facture marquée payée',
         subtitle: 'Le statut a été mis à jour',
       });
       fetchInvoices();

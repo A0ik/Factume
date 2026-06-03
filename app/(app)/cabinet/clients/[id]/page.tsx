@@ -5,6 +5,8 @@ import {
   ArrowLeft, FileText, Receipt, Shield, Loader2, RefreshCw,
   CheckCircle2, Clock, AlertTriangle, XCircle, TrendingUp,
   Euro, Building2, Mail, Info, RefreshCcw,
+  Car, UtensilsCrossed, Bed, Laptop, Paperclip, ShoppingCart,
+  Smartphone, HardDrive, Map, Package, Check, X as XIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -68,12 +70,13 @@ function DocTypeBadge({ type }: { type?: string }) {
 }
 
 function CategoryIcon({ category }: { category?: string }) {
-  const icons: Record<string, string> = {
-    transport: '🚗', meals: '🍽️', accommodation: '🏨', equipment: '💻',
-    office: '📎', shopping: '🛒', telecom: '📱', insurance: '🛡️',
-    software: '💾', mileage: '🗺️', other: '📦',
+  const iconMap: Record<string, any> = {
+    transport: Car, meals: UtensilsCrossed, accommodation: Bed, equipment: Laptop,
+    office: Paperclip, shopping: ShoppingCart, telecom: Smartphone, insurance: Shield,
+    software: HardDrive, mileage: Map, other: Package,
   };
-  return <span className="text-base">{icons[category ?? ''] ?? '📦'}</span>;
+  const Icon = iconMap[category ?? ''] ?? Package;
+  return <Icon size={16} className="text-gray-500" />;
 }
 
 export default function CabinetClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -380,7 +383,7 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
                           'text-sm font-semibold mt-0.5',
                           scan.score >= 80 ? 'text-emerald-600' : scan.score >= 50 ? 'text-amber-600' : 'text-red-600'
                         )}>
-                          {scan.score >= 80 ? '✓ Bonne santé financière' : scan.score >= 50 ? '⚠ Des améliorations possibles' : '✗ Attention requise'}
+                          {scan.score >= 80 ? <><Check size={14} className="inline mr-1" />Bonne santé financière</> : scan.score >= 50 ? <><AlertTriangle size={14} className="inline mr-1" />Des améliorations possibles</> : <><XIcon size={14} className="inline mr-1" />Attention requise</>}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">Dernière analyse à l'instant</p>
                       </div>

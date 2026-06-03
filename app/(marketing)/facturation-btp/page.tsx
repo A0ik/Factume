@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { CheckCircle2, Zap, FileText, Hammer, Euro, Shield, Clock, Building2, Truck, MessageSquare, BarChart3 } from 'lucide-react';
+import { CheckCircle2, Zap, FileText, Hammer, Euro, Shield, Clock, Building2, Truck, MessageSquare, BarChart3, XCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
@@ -265,25 +265,38 @@ export default function BTPPage() {
                 </thead>
                 <tbody>
                   {[
-                    ['Conformité légale auto', '❌', '✅', '✅'],
-                    ['Mentions TVA automatiques', '❌', '✅', '✅'],
-                    ['Dictée vocale IA', '❌', '✅', '❌'],
-                    ['Factures de situation', '⚠️', '✅', '✅'],
-                    ['OCR scan factures', '❌', '✅', '✅'],
-                    ['Paiement en ligne', '❌', '✅', '✅'],
-                    ['Factur-X 2026', '❌', '✅', '⚠️'],
-                    ['Relances automatiques', '❌', '✅', '✅'],
-                    ['CRM intégré', '❌', '✅', '❌'],
-                    ['Contrats de travail', '❌', '✅', '❌'],
-                    ['Prix/mois', 'Gratuit', '14,99€', '25-35€'],
-                  ].map(([feature, excel, factume, other], i) => (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      <td className="p-3 font-medium">{feature}</td>
-                      <td className="p-3 text-center">{excel}</td>
-                      <td className="p-3 text-center bg-orange-50 font-medium">{factume}</td>
-                      <td className="p-3 text-center">{other}</td>
-                    </tr>
-                  ))}
+                    ['Conformité légale auto', false, true, true],
+                    ['Mentions TVA automatiques', false, true, true],
+                    ['Dictée vocale IA', false, true, false],
+                    ['Factures de situation', 'partial', true, true],
+                    ['OCR scan factures', false, true, true],
+                    ['Paiement en ligne', false, true, true],
+                    ['Factur-X 2026', false, true, 'partial'],
+                    ['Relances automatiques', false, true, true],
+                    ['CRM intégré', false, true, false],
+                    ['Contrats de travail', false, true, false],
+                  ].map(([feature, excel, factume, other], i) => {
+                    const renderCell = (val: boolean | string) => {
+                      if (val === true) return <CheckCircle size={16} className="text-emerald-500 inline" />;
+                      if (val === false) return <XCircle size={16} className="text-red-400 inline" />;
+                      if (val === 'partial') return <AlertTriangle size={16} className="text-amber-500 inline" />;
+                      return val;
+                    };
+                    return (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                        <td className="p-3 font-medium">{feature as string}</td>
+                        <td className="p-3 text-center">{renderCell(excel as boolean | string)}</td>
+                        <td className="p-3 text-center bg-orange-50 font-medium">{renderCell(factume as boolean | string)}</td>
+                        <td className="p-3 text-center">{renderCell(other as boolean | string)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-white">
+                    <td className="p-3 font-medium">Prix/mois</td>
+                    <td className="p-3 text-center">Gratuit</td>
+                    <td className="p-3 text-center bg-orange-50 font-medium">14,99€</td>
+                    <td className="p-3 text-center">25-35€</td>
+                  </tr>
                 </tbody>
               </table>
             </div>

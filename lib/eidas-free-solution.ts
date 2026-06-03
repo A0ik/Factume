@@ -82,7 +82,7 @@ async function generateSelfSignedCertificate(signerEmail: string) {
     validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     publicKey: 'demo_public_key',
     fingerprint: 'demo_fingerprint',
-    warning: '⚠️ CERTIFICAT AUTO-SIGNÉ - NON VALIDE LÉGALEMENT - Utiliser un TQT certifié eIDAS pour la production'
+    warning: 'CERTIFICAT AUTO-SIGNÉ - NON VALIDE LÉGALEMENT - Utiliser un TQT certifié eIDAS pour la production'
   };
 }
 
@@ -229,7 +229,7 @@ export function getEidasLegalInfo() {
           'Horodatage certifié',
           'Intégrité du document (hash)'
         ],
-        freeSolution: '✅ Oui, implémenté gratuitement dans Factu.me'
+        freeSolution: 'Oui, implémenté gratuitement dans Factu.me'
       },
 
       qualified: {
@@ -243,7 +243,7 @@ export function getEidasLegalInfo() {
           'Dispositif sécurisé de création de signature',
           'Tiers de Confiance Qualifié (TQT) certifié eIDAS'
         ],
-        freeSolution: "❌ NON - La loi EUROPEENNE oblige à utiliser un TQT certifié (payant)",
+        freeSolution: "NON - La loi EUROPEENNE oblige à utiliser un TQT certifié (payant)",
         whyNotFree: 'La certification eIDAS coûte plusieurs milliers d\'euros par an au TQT',
         minimumCost: '1-3€ par signature (Universign) ou abonnements à partir de 10€/mois'
       }
@@ -296,19 +296,19 @@ export function getEidasLegalInfo() {
         useCase: 'B2B standard (factures, contrats)',
         level: 'advanced',
         reason: 'Le niveau Avancé est SUFFISANT pour la grande majorité des transactions B2B',
-        solution: '✅ Utiliser la solution gratuite de Factu.me'
+        solution: 'Utiliser la solution gratuite de Factu.me'
       },
       {
         useCase: 'Contrats importants, B2C',
         level: 'qualified',
         reason: 'Pour une valeur juridique équivalente à la signature manuscrite',
-        solution: '👉 Choisir un TQT abordable (Universign ou Yousign)'
+        solution: 'Choisir un TQT abordable (Universign ou Yousign)'
       },
       {
         useCase: 'Administration européenne',
         level: 'qualified',
         reason: 'Obligatoire pour certaines démarches administratives',
-        solution: '👉 Vérifier les exigences spécifiques de l\'administration'
+        solution: 'Vérifier les exigences spécifiques de l\'administration'
       }
     ]
   };

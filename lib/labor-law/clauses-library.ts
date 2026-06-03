@@ -114,7 +114,7 @@ L'employeur peut renoncer à l'application de cette clause par décision notifi�
       'Article L1227-3 du Code du travail',
       'Cass. Soc. 10 juillet 2002, n° 00-45.135'
     ],
-    notes: '⚠️ OBLIGATOIRE: L\'indemnité compensatoire est OBLIGATOIRE. Sans indemnité, la clause est NULLE. Montant recommandé: 30-50% du salaire pour cadres, 15-30% pour non-cadres.'
+    notes: 'OBLIGATOIRE: L\'indemnité compensatoire est OBLIGATOIRE. Sans indemnité, la clause est NULLE. Montant recommandé: 30-50% du salaire pour cadres, 15-30% pour non-cadres.'
   },
 
   // ============== CONFIDENTIALITÉ ==============

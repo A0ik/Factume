@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
             .eq('id', inv.id);
 
           successCount++;
-          console.log('[pdp-retry] ✅ Facture', inv.number, 'retransmise avec succès');
+          console.log('[pdp-retry] Facture', inv.number, 'retransmise avec succès');
 
         } else {
           const retryable = isRetryableError(result);
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
               .eq('id', inv.id);
 
             failCount++;
-            console.warn('[pdp-retry] ⚠️ Facture', inv.number, 'retry', retryCount, '/', maxRetries);
+            console.warn('[pdp-retry] Facture', inv.number, 'retry', retryCount, '/', maxRetries);
 
           } else {
             // Échec définitif
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
               .eq('id', inv.id);
 
             exhaustedCount++;
-            console.error('[pdp-retry] ❌ Facture', inv.number, 'échec définitif après', retryCount, 'tentatives');
+            console.error('[pdp-retry] Facture', inv.number, 'échec définitif après', retryCount, 'tentatives');
           }
         }
 
