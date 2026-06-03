@@ -52,6 +52,17 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
  * Same component used for email attachments → identical rendering.
  */
 export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
+  // Pre-generate QR code data URL for payment links
+  const paymentUrl = (invoice as any).payment_link || (invoice as any).stripe_payment_url;
+  if (paymentUrl) {
+    try {
+      const { generateQrDataUrl } = await import('./qr-generate');
+      (invoice as any).qr_data_url = await generateQrDataUrl(paymentUrl);
+    } catch {
+      // QR generation failed, continue without it
+    }
+  }
+
   const { renderToBuffer } = await import('@react-pdf/renderer');
   const { PdfDocument } = await import('@/components/pdf-document');
   const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
@@ -70,24 +81,42 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
     return;
   }
 
+  const filename = `${invoice.number.replace(/\//g, '-')}.pdf`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const cleanupDelay = isIOS ? 5000 : 150;
+
   try {
     const { pdf } = await import('@react-pdf/renderer');
     const { PdfDocument } = await import('@/components/pdf-document');
     const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
     const blob = await pdf(element as any).toBlob();
 
+    // Try native share on iOS first
+    if (isIOS && navigator.share && typeof navigator.share === 'function') {
+      try {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return;
+        }
+      } catch (shareErr: any) {
+        // User cancelled share or share failed — fall through to download
+        if (shareErr?.name === 'AbortError') return;
+      }
+    }
+
+    // Standard Blob download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+    a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }, 100);
+    }, cleanupDelay);
   } catch {
     // Fallback: download via server-side endpoint
     try {
@@ -97,20 +126,22 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
         const serverUrl = URL.createObjectURL(serverBlob);
         const a = document.createElement('a');
         a.href = serverUrl;
-        a.download = `${invoice.number.replace(/\//g, '-')}.pdf`;
+        a.download = filename;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
           document.body.removeChild(a);
           URL.revokeObjectURL(serverUrl);
-        }, 100);
+        }, cleanupDelay);
       } else {
         throw new Error('Server PDF generation failed');
       }
     } catch {
-      // Last resort: open server PDF in new tab
-      window.open(`/api/download/pdf/${invoice.id}`, '_blank');
+      // Last resort for non-iOS: open in new tab
+      if (!isIOS) {
+        window.open(`/api/download/pdf/${invoice.id}`, '_blank');
+      }
     }
   }
 }

@@ -1,0 +1,136 @@
+'use client';
+
+import { useState, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Send, Loader2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useDocumentSessionStore } from '../documentSessionStore';
+import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
+
+interface SmartTextBarProps {
+  profile: any;
+  isPro: boolean;
+  onPaywall: () => void;
+  className?: string;
+}
+
+/**
+ * SmartTextBar — Minimal text input for AI invoice generation.
+ * No chat, no message history. One input, one result.
+ */
+export default function SmartTextBar({ profile, isPro, onPaywall, className }: SmartTextBarProps) {
+  const [text, setText] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    documentType,
+    isStreaming,
+    items,
+    applyAIParsedResult,
+    setStreaming,
+  } = useDocumentSessionStore();
+
+  const config = DOC_TYPE_CONFIGS[documentType];
+
+  const handleSubmit = useCallback(async () => {
+    const prompt = text.trim();
+    if (!prompt || isStreaming) return;
+
+    if (!isPro) {
+      onPaywall();
+      return;
+    }
+
+    setText('');
+    setStreaming(true);
+
+    try {
+      const hasContent = items.some(i => i.description || i.unit_price > 0);
+      const res = await fetch('/api/ai/generate-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: hasContent ? `MODIFICATION DE ${config.aiPromptPrefix}:\n${prompt}` : prompt,
+          sector: profile?.sector,
+          isEdit: hasContent,
+          existingItems: hasContent ? items : undefined,
+          document_type: documentType,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur IA');
+
+      applyAIParsedResult(data.parsed, 'ai');
+    } catch (err: any) {
+      // Silently fail — the user can retry
+      console.error('[SmartTextBar] Error:', err.message);
+    } finally {
+      setStreaming(false);
+    }
+  }, [text, isStreaming, isPro, items, documentType, profile, config, applyAIParsedResult, setStreaming, onPaywall]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      {/* AI sparkle indicator */}
+      <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex-shrink-0">
+        {isStreaming ? (
+          <Loader2 size={13} className="text-blue-500 animate-spin" />
+        ) : (
+          <Sparkles size={13} className="text-blue-400" />
+        )}
+      </div>
+
+      {/* Text input */}
+      <input
+        ref={inputRef}
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={
+          isStreaming
+            ? 'Traitement en cours...'
+            : 'Decrivez votre document...'
+        }
+        disabled={isStreaming}
+        className={cn(
+          'flex-1 px-3 py-2 rounded-xl border text-sm transition-all',
+          'bg-gray-50 dark:bg-white/[0.04]',
+          'border-gray-200 dark:border-white/[0.08]',
+          'text-gray-900 dark:text-white',
+          'placeholder:text-gray-400 dark:placeholder:text-gray-500',
+          'focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 dark:focus:border-emerald-500',
+          isStreaming && 'opacity-60 cursor-not-allowed',
+        )}
+      />
+
+      {/* Send button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleSubmit}
+        disabled={!text.trim() || isStreaming}
+        className={cn(
+          'flex items-center justify-center w-9 h-9 rounded-xl transition-all flex-shrink-0',
+          text.trim() && !isStreaming
+            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/20'
+            : 'bg-gray-100 dark:bg-slate-800 text-gray-400 cursor-not-allowed',
+        )}
+      >
+        {isStreaming ? (
+          <Loader2 size={15} className="animate-spin" />
+        ) : (
+          <Send size={15} />
+        )}
+      </motion.button>
+    </div>
+  );
+}

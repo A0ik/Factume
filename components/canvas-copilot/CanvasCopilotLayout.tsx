@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Eye, Save,
   Loader2, Undo2, Redo2,
-  X, MessageSquare, FileText, Mic,
+  X, FileText, Mic,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useDocumentSessionStore } from './documentSessionStore';
 import { DOC_TYPE_CONFIGS } from './config/documentTypeConfig';
 import PdfCanvasErrorBoundary from './Canvas/PdfCanvasErrorBoundary';
-import CopilotPanel from './Copilot/CopilotPanel';
 import DocumentFormPanel from './Form/DocumentFormPanel';
-import DoubtPopover from './DoubtResolution/DoubtPopover';
+import VoiceOneShot from './Voice/VoiceOneShot';
+import SmartTextBar from './Voice/SmartTextBar';
 
 // Dynamic PDF canvas — SSR disabled for CSP/WASM safety
 const LivePdfCanvas = dynamic(() => import('./Canvas/LivePdfCanvas'), {
@@ -36,8 +36,6 @@ interface CanvasCopilotLayoutProps {
   onSave: () => void;
   onBack: () => void;
 }
-
-const springTransition = { type: 'spring' as const, damping: 25, stiffness: 300 };
 
 export default function CanvasCopilotLayout({
   profile,
@@ -67,14 +65,6 @@ export default function CanvasCopilotLayout({
 
   // ─── Mobile State ──────────────────────────────────
   const [showMobilePreview, setShowMobilePreview] = useState(false);
-  const [showCopilotOverlay, setShowCopilotOverlay] = useState(false);
-  const [voiceSection, setVoiceSection] = useState<string | null>(null);
-
-  // ─── Voice handler ─────────────────────────────────
-  const handleVoiceRecord = useCallback((section: string) => {
-    setVoiceSection(section);
-    setShowCopilotOverlay(true);
-  }, []);
 
   // ─── Desktop: 2-column layout ──────────────────────
   // Left: PDF Canvas (~45%) | Right: Structured Form (~55%)
@@ -197,74 +187,65 @@ export default function CanvasCopilotLayout({
           </PdfCanvasErrorBoundary>
         </div>
 
-        {/* Right: Structured Form */}
+        {/* Right: Structured Form + Voice/Text Bar */}
         <div className="hidden lg:flex lg:w-[55%]">
           <div className="w-full flex flex-col">
-            {/* Doubt resolution */}
-            <AnimatePresence>
-              {pendingDoubts.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="px-4 pt-4 overflow-y-auto max-h-[40%]"
-                >
-                  <DoubtPopover
-                    doubts={pendingDoubts}
-                    onResolve={resolveDoubts}
-                    onDismiss={dismissDoubts}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* The structured form */}
+            {/* The structured form — doubts are now rendered inline */}
             <div className="flex-1 overflow-hidden">
               <DocumentFormPanel
                 profile={profile}
                 isPro={isPro}
                 onPaywall={onPaywall}
-                onVoiceRecord={handleVoiceRecord}
-                onShowCopilot={() => setShowCopilotOverlay(true)}
               />
+            </div>
+
+            {/* ─── Voice + Text Bar (desktop) ──────────── */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                <SmartTextBar
+                  profile={profile}
+                  isPro={isPro}
+                  onPaywall={onPaywall}
+                  className="flex-1"
+                />
+                <VoiceOneShot
+                  sector={profile?.sector}
+                />
+              </div>
             </div>
           </div>
         </div>
 
         {/* ─── MOBILE: Full-screen form + floating preview ─── */}
         <div className="lg:hidden flex-1 flex flex-col relative">
-          {/* Doubts on mobile */}
-          <AnimatePresence>
-            {pendingDoubts.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="px-3 pt-3 overflow-y-auto max-h-[35%]"
-              >
-                <DoubtPopover
-                  doubts={pendingDoubts}
-                  onResolve={resolveDoubts}
-                  onDismiss={dismissDoubts}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form fills the entire mobile screen */}
+          {/* Form fills the entire mobile screen — doubts rendered inline */}
           <div className="flex-1 overflow-hidden">
             <DocumentFormPanel
               profile={profile}
               isPro={isPro}
               onPaywall={onPaywall}
-              onVoiceRecord={handleVoiceRecord}
-              onShowCopilot={() => setShowCopilotOverlay(true)}
             />
           </div>
 
           {/* ─── Sticky Bottom Action Bar (thumb zone) ─── */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 dark:to-transparent pt-8">
-            <div className="flex gap-2">
+          <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 dark:to-transparent pt-8">
+            {/* Voice + Text Bar (mobile) */}
+            <div className="px-3 pb-2">
+              <div className="flex items-center gap-2">
+                <SmartTextBar
+                  profile={profile}
+                  isPro={isPro}
+                  onPaywall={onPaywall}
+                  className="flex-1"
+                />
+                <VoiceOneShot
+                  sector={profile?.sector}
+                />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 px-3 pb-3">
               {/* Preview button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -350,53 +331,6 @@ export default function CanvasCopilotLayout({
           </AnimatePresence>
         </div>
       </div>
-
-      {/* ═══════════ COPILOT OVERLAY (optional) ═══════════ */}
-      <AnimatePresence>
-        {showCopilotOverlay && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowCopilotOverlay(false)}
-          >
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 top-0 bottom-0 w-full sm:w-[420px] bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-white/10"
-            >
-              {/* Copilot header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10">
-                <div className="flex items-center gap-2">
-                  <MessageSquare size={16} className="text-blue-500" />
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Copilot IA</h3>
-                  {voiceSection && (
-                    <span className="text-[10px] font-medium text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                      Section: {voiceSection}
-                    </span>
-                  )}
-                </div>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => { setShowCopilotOverlay(false); setVoiceSection(null); }}
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500"
-                >
-                  <X size={16} />
-                </motion.button>
-              </div>
-
-              {/* Copilot panel */}
-              <div className="h-[calc(100%-52px)]">
-                <CopilotPanel profile={profile} isPro={isPro} onPaywall={onPaywall} />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -495,9 +495,10 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     needPage();
     y -= 8;
 
-    // Fetch QR code image for the payment URL (works for both Stripe & SumUp)
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&data=${encodeURIComponent(paymentUrl)}`;
-    const qrImage = await fetchAndEmbedImage(pdfDoc, qrApiUrl);
+    // Generate QR code locally instead of relying on external API
+    const { generateQrBuffer } = await import('./qr-generate');
+    const qrBuffer = await generateQrBuffer(paymentUrl);
+    const qrImage = qrBuffer ? await pdfDoc.embedPng(qrBuffer) : null;
     const boxH = qrImage ? 70 : 48;
     page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
 

@@ -22,11 +22,14 @@ const LONG_PRESS_MOVE_TOLERANCE = 10;
 /**
  * SwipeableCard — iOS-native feel with drag gestures
  *
- * - Swipe LEFT → reveals red Delete action (trash icon on LEFT edge)
+ * - Swipe LEFT  → reveals red Delete action (trash icon on LEFT edge)
  * - Swipe RIGHT → reveals green Mark as Paid action (check icon on RIGHT edge)
- * - Long Press → triggers onLongPress callback for Bottom Sheet preview
+ * - Long Press  → triggers onLongPress callback for Bottom Sheet preview
  * - Elastic physics with smooth spring-back on cancel
  * - Card animates off-screen BEFORE triggering action
+ *
+ * IMPORTANT: Children should use `onClick` for navigation (not <Link>/<a>)
+ * because anchor tags capture touch events and block drag gestures on mobile.
  */
 export default function SwipeableCard({
   children,
@@ -42,6 +45,8 @@ export default function SwipeableCard({
   const touchStartPos = useRef({ x: 0, y: 0 });
   const isSwiping = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const wasDraggedRef = useRef(false);
+  const dragStartTime = useRef(0);
 
   // Opacity for action backgrounds — smooth 0→1 mapping
   const deleteOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
@@ -80,6 +85,11 @@ export default function SwipeableCard({
     const velocity = info.velocity.x;
     const offset = info.offset.x;
 
+    // Mark that a drag occurred (even small ones) to prevent child click events
+    if (Math.abs(offset) > 5) {
+      wasDraggedRef.current = true;
+    }
+
     // Velocity-based detection: fast flick counts even if distance is short
     const exceededThreshold = offset < -SWIPE_THRESHOLD || (offset < -30 && velocity < -500);
     const exceededThresholdRight = offset > SWIPE_THRESHOLD || (offset > 30 && velocity > 500);
@@ -92,6 +102,11 @@ export default function SwipeableCard({
       // Smooth spring back to origin
       springBack();
     }
+
+    // Reset wasDragged after a short delay so next tap works
+    setTimeout(() => {
+      wasDraggedRef.current = false;
+    }, 100);
   }, [onDelete, onMarkPaid, animateOffScreen, springBack]);
 
   // Long press detection
@@ -146,8 +161,19 @@ export default function SwipeableCard({
     }
   }, [children, x, springBack]);
 
+  // Prevent child click events when the card was just dragged
+  const handleChildClick = useCallback((e: React.MouseEvent) => {
+    if (wasDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      wasDraggedRef.current = false;
+    }
+  }, []);
+
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl ${className}`}
+      onClickCapture={handleChildClick}
+    >
       {/* LEFT action background (delete) — RED, revealed when swiping LEFT */}
       {onDelete && (
         <motion.div
@@ -179,7 +205,7 @@ export default function SwipeableCard({
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <CheckCircle size={20} className="text-white" />
             </div>
-            <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Payée</span>
+            <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Payee</span>
           </motion.div>
         </motion.div>
       )}
@@ -192,11 +218,13 @@ export default function SwipeableCard({
         dragElastic={{ left: 0.08, right: 0.08 }}
         onDragStart={() => {
           isSwiping.current = true;
+          wasDraggedRef.current = true;
+          dragStartTime.current = Date.now();
           cancelLongPress();
         }}
         onDragEnd={handleDragEnd}
-        style={{ x }}
-        className="relative bg-card border border-border rounded-2xl cursor-grab active:cursor-grabbing touch-pan-y"
+        style={{ x, touchAction: 'pan-y' }}
+        className="relative bg-card border border-border rounded-2xl cursor-grab active:cursor-grabbing"
         animate={isPressed && !longPressTriggered ? { scale: 0.97 } : { scale: 1 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         // Long press event handlers

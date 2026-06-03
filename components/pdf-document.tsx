@@ -455,7 +455,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
               <Text style={{ fontSize: 10, fontFamily: bold, color: '#111827' }}>Payer {f(invoice.total)} en ligne</Text>
             </View>
             <Image
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(paymentUrl)}`}
+              src={(invoice as any).qr_data_url || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(paymentUrl)}`}
               style={{ width: 56, height: 56, borderRadius: 4 }}
             />
           </View>

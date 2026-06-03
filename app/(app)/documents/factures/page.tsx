@@ -7,6 +7,7 @@ import {
   Send, Loader2, Bell, SlidersHorizontal, RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
@@ -39,6 +40,7 @@ const listItemVariants = {
 export default function FacturesPage() {
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
+  const router = useRouter();
   const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -324,7 +326,10 @@ export default function FacturesPage() {
                     onMarkPaid={facture.status !== 'paid' ? () => handleMarkPaid(facture.id) : undefined}
                     onLongPress={() => handleLongPress(facture)}
                   >
-                    <Link href={`/invoices/${facture.id}`} className="block p-5">
+                    <div
+                      onClick={() => router.push(`/invoices/${facture.id}`)}
+                      className="block p-5 cursor-pointer"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{clientName}</p>
@@ -343,7 +348,7 @@ export default function FacturesPage() {
                           {date && <span className="text-xs text-slate-500">{date}</span>}
                           {(facture.status === 'sent' || facture.status === 'overdue') && (
                             <button
-                              onClick={(e) => { e.preventDefault(); handleSendReminder(facture.id); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendReminder(facture.id); }}
                               disabled={sendingReminder === facture.id}
                               className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40"
                             >
@@ -352,7 +357,7 @@ export default function FacturesPage() {
                           )}
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   </SwipeableCard>
                 </motion.div>
               );

@@ -6,23 +6,6 @@ import { generateId } from '@/lib/utils';
 
 // ─── Types ──────────────────────────────────────────────
 
-export interface CopilotMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system' | 'action';
-  content: string;
-  timestamp: number;
-  /** For action messages — what the AI changed */
-  action?: {
-    type: 'added' | 'modified' | 'removed' | 'replaced';
-    summary: string;
-    fields?: string[];
-  };
-  /** For doubt resolution messages */
-  doubts?: VoiceUncertainField[];
-  /** Streaming partial content */
-  isStreaming?: boolean;
-}
-
 export interface DocumentSessionState {
   // ─── Session Identity ────────────────────────────────
   documentType: DocumentType;
@@ -47,13 +30,13 @@ export interface DocumentSessionState {
   issueDate: string;
   paymentDays: number;
   paymentTermId: string;
+  templateId: number;
 
   // ─── Linked invoice (credit_note, deposit) ──────────
   linkedInvoiceId: string | null;
   depositPercent: number;
 
-  // ─── Copilot State ───────────────────────────────────
-  messages: CopilotMessage[];
+  // ─── AI Processing State ────────────────────────────
   isStreaming: boolean;
   isProcessingVoice: boolean;
 
@@ -65,10 +48,6 @@ export interface DocumentSessionState {
   saving: boolean;
   error: string;
   lastGenSource: 'voice' | 'ai' | null;
-  /** Sections revealed by progressive disclosure */
-  visibleSections: string[];
-  /** Active mobile tab: 'copilot' | 'canvas' */
-  mobileTab: 'copilot' | 'canvas';
 
   // ─── Computed (getters via selectors) ────────────────
   subtotal: number;
@@ -94,17 +73,11 @@ export interface DocumentSessionState {
   resolveDoubts: (corrections: Record<string, string | number>) => void;
   dismissDoubts: () => void;
 
-  // ─── Copilot Actions ─────────────────────────────────
-  addMessage: (message: Omit<CopilotMessage, 'id' | 'timestamp'>) => void;
-  updateLastAssistantMessage: (content: string) => void;
+  // ─── AI State ────────────────────────────────────────
   setStreaming: (value: boolean) => void;
   setProcessingVoice: (value: boolean) => void;
 
-  // ─── Progressive Disclosure ──────────────────────────
-  revealSection: (section: string) => void;
-
   // ─── UI ──────────────────────────────────────────────
-  setMobileTab: (tab: 'copilot' | 'canvas') => void;
   setSaving: (value: boolean) => void;
   setError: (value: string) => void;
 
@@ -130,7 +103,7 @@ const SNAP_FIELDS = [
   'clientId', 'clientName', 'clientEmail', 'clientPhone',
   'clientAddress', 'clientCity', 'clientPostalCode', 'clientSiret', 'clientVatNumber',
   'items', 'notes', 'discountPercent', 'issueDate', 'paymentDays', 'paymentTermId',
-  'linkedInvoiceId', 'depositPercent',
+  'linkedInvoiceId', 'depositPercent', 'templateId',
 ] as const;
 
 type SnapField = typeof SNAP_FIELDS[number];
@@ -222,11 +195,11 @@ const initialState = {
   issueDate: SAFE_DATE,
   paymentDays: 30,
   paymentTermId: 'days30',
+  templateId: 1,
 
   linkedInvoiceId: null,
   depositPercent: 0,
 
-  messages: [] as CopilotMessage[],
   isStreaming: false,
   isProcessingVoice: false,
 
@@ -236,8 +209,6 @@ const initialState = {
   saving: false,
   error: '',
   lastGenSource: null as 'voice' | 'ai' | null,
-  visibleSections: [] as string[],
-  mobileTab: 'copilot' as 'copilot' | 'canvas',
 
   subtotal: 0,
   vatAmount: 0,
@@ -425,19 +396,6 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
     });
 
-    // Add action message to copilot
-    if (parsed?.summary) {
-      get().addMessage({
-        role: 'action',
-        content: parsed.summary,
-        action: {
-          type: parsed.action || 'added',
-          summary: parsed.summary,
-          fields: Object.keys(updates).filter(k => k !== 'lastGenSource'),
-        },
-      });
-    }
-
     // Handle uncertain fields
     if (parsed?.uncertain_fields?.length > 0) {
       get().requestDoubtResolution(parsed.uncertain_fields, (corrections) => {
@@ -481,12 +439,6 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       pendingDoubts: doubts,
       doubtResolutionCallback: callback,
     });
-
-    get().addMessage({
-      role: 'system',
-      content: `J'ai un doute sur ${doubts.length} champ${doubts.length > 1 ? 's' : ''}. Pouvez-vous confirmer ?`,
-      doubts,
-    });
   },
 
   resolveDoubts: (corrections) => {
@@ -495,61 +447,19 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       doubtResolutionCallback(corrections);
     }
     set({ pendingDoubts: [], doubtResolutionCallback: null });
-
-    get().addMessage({
-      role: 'system',
-      content: 'Confirmation prise en compte.',
-    });
   },
 
   dismissDoubts: () => {
     set({ pendingDoubts: [], doubtResolutionCallback: null });
   },
 
-  // ─── Copilot Messages ────────────────────────────────
-
-  addMessage: (message) => {
-    set((state) => ({
-      messages: [
-        ...state.messages,
-        {
-          ...message,
-          id: generateId(),
-          timestamp: Date.now(),
-        },
-      ],
-    }));
-  },
-
-  updateLastAssistantMessage: (content) => {
-    set((state) => {
-      const msgs = [...state.messages];
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        if (msgs[i].role === 'assistant') {
-          msgs[i] = { ...msgs[i], content, isStreaming: false };
-          break;
-        }
-      }
-      return { messages: msgs };
-    });
-  },
+  // ─── AI State ─────────────────────────────────────────
 
   setStreaming: (value) => set({ isStreaming: value }),
   setProcessingVoice: (value) => set({ isProcessingVoice: value }),
 
-  // ─── Progressive Disclosure ──────────────────────────
-
-  revealSection: (section) => {
-    set((state) => ({
-      visibleSections: state.visibleSections.includes(section)
-        ? state.visibleSections
-        : [...state.visibleSections, section],
-    }));
-  },
-
   // ─── UI ──────────────────────────────────────────────
 
-  setMobileTab: (tab) => set({ mobileTab: tab }),
   setSaving: (value) => set({ saving: value }),
   setError: (value) => set({ error: value }),
 

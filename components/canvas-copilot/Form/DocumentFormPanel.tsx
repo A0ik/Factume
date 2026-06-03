@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mic, Plus, Trash2, ChevronDown, ChevronUp,
-  Building2, User, Search, Percent, FileText,
-  CalendarDays, MessageSquare, GripVertical, Eye,
-  ShoppingCart, Truck, CreditCard, Receipt,
-  Clock, AlertCircle, CheckCircle2, Sparkles, X,
+  Plus, Trash2, ChevronDown,
+  Building2, User, Search, Percent,
+  CalendarDays, MessageSquare,
+  Clock, CheckCircle2, Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CompanySearch } from '@/components/ui/CompanySearch';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
+import InlineDoubtCard from '../DoubtResolution/InlineDoubtCard';
+import TemplateSelector from './TemplateSelector';
 
 const springFast = { type: 'spring' as const, damping: 25, stiffness: 400 };
 const springSmooth = { type: 'spring' as const, damping: 28, stiffness: 300 };
@@ -22,13 +24,11 @@ interface SectionProps {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-  onVoiceClick?: () => void;
-  isPro?: boolean;
   defaultOpen?: boolean;
   badge?: React.ReactNode;
 }
 
-function FormSection({ title, icon, children, onVoiceClick, isPro, defaultOpen = true, badge }: SectionProps) {
+function FormSection({ title, icon, children, defaultOpen = true, badge }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -49,16 +49,6 @@ function FormSection({ title, icon, children, onVoiceClick, isPro, defaultOpen =
         </div>
         <span className="flex-1 text-left text-sm font-semibold text-gray-900 dark:text-white">{title}</span>
         {badge}
-        {onVoiceClick && (
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={(e) => { e.stopPropagation(); onVoiceClick(); }}
-            className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
-            title="Dicter cette section"
-          >
-            <Mic size={14} strokeWidth={2.5} />
-          </motion.button>
-        )}
         <motion.div
           animate={{ rotate: open ? 0 : -90 }}
           transition={springFast}
@@ -101,51 +91,67 @@ interface InputProps {
   className?: string;
   inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url';
   autoFocus?: boolean;
+  /** Field key for doubt resolution matching */
+  fieldKey?: string;
+  /** Ref map to register this field for doubt anchoring */
+  fieldRefMap?: React.MutableRefObject<Map<string, HTMLDivElement>>;
 }
 
-function FormInput({ label, value, onChange, placeholder, type = 'text', icon, required, suffix, className, inputMode, autoFocus }: InputProps) {
+function FormInput({ label, value, onChange, placeholder, type = 'text', icon, required, suffix, className, inputMode, autoFocus, fieldKey, fieldRefMap }: InputProps) {
   const [focused, setFocused] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Register this field's ref for doubt resolution anchoring
+  useEffect(() => {
+    if (fieldKey && fieldRefMap && wrapperRef.current) {
+      fieldRefMap.current.set(fieldKey, wrapperRef.current);
+    }
+  }, [fieldKey, fieldRefMap]);
 
   return (
-    <motion.div
-      animate={{ scale: focused ? 1.01 : 1 }}
-      transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+    <div
+      ref={wrapperRef}
       className={cn('space-y-1.5', className)}
     >
-      <label className={cn(
-        'text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 transition-colors duration-200',
-        focused ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300',
-      )}>
-        {icon}
-        {label}
-        {required && <span className="text-red-400">*</span>}
-      </label>
-      <div className="relative">
-        <input
-          type={type}
-          inputMode={inputMode}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={placeholder}
-          required={required}
-          autoFocus={autoFocus}
-          className={cn(
-            'w-full px-3 py-2.5 rounded-xl border text-sm transition-all duration-200',
-            focused
-              ? 'border-emerald-400 dark:border-emerald-500 bg-white dark:bg-white/[0.06] ring-2 ring-emerald-500/20 shadow-sm'
-              : 'border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04]',
-            'text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none',
+      <motion.div
+        animate={{ scale: focused ? 1.01 : 1 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+      >
+        <label className={cn(
+          'text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 transition-colors duration-200',
+          focused ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300',
+        )}>
+          {icon}
+          {label}
+          {required && <span className="text-red-400">*</span>}
+        </label>
+        <div className="relative">
+          <input
+            type={type}
+            inputMode={inputMode}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={placeholder}
+            required={required}
+            autoFocus={autoFocus}
+            className={cn(
+              'w-full px-3 py-2.5 rounded-xl border text-sm transition-all duration-200',
+              focused
+                ? 'border-emerald-400 dark:border-emerald-500 bg-white dark:bg-white/[0.06] ring-2 ring-emerald-500/20 shadow-sm'
+                : 'border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04]',
+              'text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none',
+            )}
+          />
+          {suffix && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">
+              {suffix}
+            </span>
           )}
-        />
-        {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">
-            {suffix}
-          </span>
-        )}
-      </div>
-    </motion.div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -155,17 +161,12 @@ interface DocumentFormPanelProps {
   profile: any;
   isPro: boolean;
   onPaywall: () => void;
-  onVoiceRecord?: (section: string) => void;
-  /** Show the AI copilot overlay */
-  onShowCopilot?: () => void;
 }
 
 export default function DocumentFormPanel({
   profile,
   isPro,
   onPaywall,
-  onVoiceRecord,
-  onShowCopilot,
 }: DocumentFormPanelProps) {
   const store = useDocumentSessionStore();
   const {
@@ -188,6 +189,10 @@ export default function DocumentFormPanel({
     vatAmount,
     globalDiscountAmount,
     total,
+    pendingDoubts,
+    resolveDoubts,
+    dismissDoubts,
+    templateId,
     updateField,
     updateItem,
     addItem,
@@ -198,14 +203,25 @@ export default function DocumentFormPanel({
   const [showClientTypeModal, setShowClientTypeModal] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // ─── Voice handler ──────────────────────────────────
-  const handleVoice = useCallback((section: string) => {
-    if (!isPro) {
-      onPaywall();
-      return;
-    }
-    onVoiceRecord?.(section);
-  }, [isPro, onPaywall, onVoiceRecord]);
+  // ─── Field Ref Map for Doubt Resolution ────────────
+  const fieldRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // ─── Doubt Resolution ──────────────────────────────
+  const handleDoubtConfirm = useCallback((doubt: typeof pendingDoubts[0], value: string | number) => {
+    const corrections: Record<string, string | number> = { [doubt.field]: value };
+    resolveDoubts(corrections);
+  }, [resolveDoubts]);
+
+  const handleDoubtCorrect = useCallback((doubt: typeof pendingDoubts[0], value: string | number) => {
+    const corrections: Record<string, string | number> = { [doubt.field]: value };
+    resolveDoubts(corrections);
+  }, [resolveDoubts]);
+
+  const handleDoubtDismiss = useCallback((doubt: typeof pendingDoubts[0]) => {
+    // Dismiss just this one doubt
+    const corrections: Record<string, string | number> = { [doubt.field]: doubt.current_value ?? '' };
+    resolveDoubts(corrections);
+  }, [resolveDoubts]);
 
   // ─── Line item helpers ──────────────────────────────
   const formatPrice = (val: number) => {
@@ -242,8 +258,6 @@ export default function DocumentFormPanel({
         <FormSection
           title="Client"
           icon={<User size={14} className="text-blue-500" />}
-          onVoiceClick={() => handleVoice('client')}
-          isPro={isPro}
           badge={clientTypeBadge}
           defaultOpen={true}
         >
@@ -278,14 +292,21 @@ export default function DocumentFormPanel({
           </div>
 
           <div className="space-y-3">
-            <FormInput
-              label="Nom du client"
+            <CompanySearch
               value={clientName}
               onChange={(v) => updateField('clientName', v)}
-              placeholder="Nom ou raison sociale"
+              onSelect={(company) => {
+                updateField('clientName', company.name);
+                updateField('clientSiret', company.siret);
+                updateField('clientVatNumber', company.vat_number);
+                updateField('clientAddress', company.address);
+                updateField('clientCity', company.city);
+                updateField('clientPostalCode', company.postal_code);
+                updateField('clientType', 'b2b');
+              }}
+              label="Nom du client"
+              placeholder="Nom, SIRET ou raison sociale"
               required
-              autoFocus
-              icon={<Search size={10} className="text-gray-400" />}
             />
 
             <div className="grid grid-cols-2 gap-3">
@@ -296,6 +317,8 @@ export default function DocumentFormPanel({
                 placeholder="email@example.com"
                 type="email"
                 inputMode="email"
+                fieldKey="client_email"
+                fieldRefMap={fieldRefMap}
               />
               <FormInput
                 label="Telephone"
@@ -304,6 +327,8 @@ export default function DocumentFormPanel({
                 placeholder="06 12 34 56 78"
                 type="tel"
                 inputMode="tel"
+                fieldKey="client_phone"
+                fieldRefMap={fieldRefMap}
               />
             </div>
 
@@ -324,12 +349,16 @@ export default function DocumentFormPanel({
                       placeholder="123 456 789 01234"
                       required={clientType === 'b2b'}
                       icon={<Building2 size={10} className="text-emerald-500" />}
+                      fieldKey="client_siret"
+                      fieldRefMap={fieldRefMap}
                     />
                     <FormInput
                       label="N° TVA"
                       value={clientVatNumber}
                       onChange={(v) => updateField('clientVatNumber', v)}
                       placeholder="FR 12 345678901"
+                      fieldKey="client_vat_number"
+                      fieldRefMap={fieldRefMap}
                     />
                   </div>
                 </motion.div>
@@ -401,8 +430,6 @@ export default function DocumentFormPanel({
         <FormSection
           title="Lignes"
           icon={<Receipt size={14} className="text-emerald-500" />}
-          onVoiceClick={() => handleVoice('items')}
-          isPro={isPro}
           badge={
             <span className="text-[10px] font-bold text-gray-400">
               {items.length} ligne{items.length > 1 ? 's' : ''}
@@ -432,6 +459,8 @@ export default function DocumentFormPanel({
                       value={item.description}
                       onChange={(v) => updateItem(item.id, 'description', v)}
                       placeholder="Prestation ou produit"
+                      fieldKey={`items[${idx}].description`}
+                      fieldRefMap={fieldRefMap}
                     />
                   </div>
                   {items.length > 1 && (
@@ -454,6 +483,8 @@ export default function DocumentFormPanel({
                     onChange={(v) => updateItem(item.id, 'quantity', v)}
                     placeholder="1"
                     inputMode="numeric"
+                    fieldKey={`items[${idx}].quantity`}
+                    fieldRefMap={fieldRefMap}
                   />
                   <FormInput
                     label="Prix unit. HT"
@@ -462,6 +493,8 @@ export default function DocumentFormPanel({
                     placeholder="0.00"
                     inputMode="numeric"
                     suffix="EUR"
+                    fieldKey={`items[${idx}].unit_price`}
+                    fieldRefMap={fieldRefMap}
                   />
                   <div className="space-y-1.5 pb-[1px]">
                     <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
@@ -570,11 +603,13 @@ export default function DocumentFormPanel({
         <FormSection
           title="Options"
           icon={<CalendarDays size={14} className="text-purple-500" />}
-          onVoiceClick={() => handleVoice('options')}
-          isPro={isPro}
           defaultOpen={false}
         >
           <div className="space-y-3">
+            <TemplateSelector
+              value={templateId}
+              onChange={(id) => updateField('templateId', id)}
+            />
             <div className="grid grid-cols-2 gap-3">
               <FormInput
                 label="Date d'emission"
@@ -617,19 +652,25 @@ export default function DocumentFormPanel({
             </div>
           </div>
         </FormSection>
-
-        {/* ─── AI Copilot Toggle ──────────────────── */}
-        {onShowCopilot && (
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onShowCopilot}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-500/10 dark:hover:to-indigo-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium transition-all"
-          >
-            <Sparkles size={14} />
-            Mode Copilot IA
-          </motion.button>
-        )}
       </div>
+
+      {/* ─── Inline Doubt Cards ────────────────────────── */}
+      <AnimatePresence>
+        {pendingDoubts.length > 0 && pendingDoubts.map((doubt) => {
+          const targetRef = { current: fieldRefMap.current.get(doubt.field) || null };
+          if (!targetRef.current) return null;
+          return (
+            <InlineDoubtCard
+              key={doubt.field}
+              doubt={doubt}
+              targetRef={targetRef as React.RefObject<HTMLElement>}
+              onConfirm={(val) => handleDoubtConfirm(doubt, val)}
+              onCorrect={(val) => handleDoubtCorrect(doubt, val)}
+              onDismiss={() => handleDoubtDismiss(doubt)}
+            />
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

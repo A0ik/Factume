@@ -58,6 +58,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     subtotal: state.subtotal,
     vatAmount: state.vatAmount,
     dueDate: state.dueDate,
+    templateId: state.templateId,
   }));
 
   /**
@@ -111,7 +112,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       const res = await fetch('/api/pdf/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoice: syntheticInvoice, profile }),
+        body: JSON.stringify({ invoice: syntheticInvoice, profile: { ...profile, template_id: canvasData.templateId } }),
       });
 
       if (!res.ok) {

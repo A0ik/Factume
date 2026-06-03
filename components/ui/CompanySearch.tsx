@@ -88,7 +88,7 @@ export function CompanySearch({ value, onChange, onSelect, label, placeholder, r
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="text-sm font-semibold text-gray-700 block mb-1.5">
+        <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 block mb-1.5">
           {label}
           {required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -101,21 +101,21 @@ export function CompanySearch({ value, onChange, onSelect, label, placeholder, r
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder || 'Rechercher par nom ou SIRET...'}
           required={required}
-          className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary pr-9"
+          className="w-full rounded-xl border border-gray-200 dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-white dark:placeholder:text-gray-500 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 pr-9"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
           {searching ? (
-            <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Search size={14} className="text-gray-400" />
+            <Search size={14} className="text-gray-400 dark:text-gray-500" />
           )}
         </div>
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-gray-50">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+        <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-gray-50 dark:border-white/5">
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               Résultats — Base SIRENE (données officielles)
             </p>
           </div>
@@ -124,13 +124,13 @@ export function CompanySearch({ value, onChange, onSelect, label, placeholder, r
               key={i}
               type="button"
               onClick={() => { onSelect(company); onChange(company.name); setOpen(false); }}
-              className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-50 dark:border-white/5 last:border-0"
             >
               <div className="flex items-start gap-2.5">
                 <Building2 size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{company.name}</p>
-                  <p className="text-xs text-gray-400 truncate">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{company.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
                     {company.siret && `SIRET ${company.siret}`}
                     {company.city && ` · ${company.postal_code} ${company.city}`}
                   </p>
