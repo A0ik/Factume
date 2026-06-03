@@ -48,8 +48,10 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
 }
 
 /**
- * Generate a real PDF buffer using @react-pdf/renderer.
- * Same component used for email attachments → identical rendering.
+ * Generate a real PDF buffer for preview and download.
+ *
+ * Strategy: pdf-lib first (reliable in serverless), @react-pdf/renderer as fallback.
+ * pdf-lib works everywhere (Vercel, Node, etc.) without CSP or WASM issues.
  */
 export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
   // Pre-generate QR code data URL for payment links
@@ -58,28 +60,28 @@ export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | nu
     try {
       const { generateQrDataUrl } = await import('./qr-generate');
       (invoice as any).qr_data_url = await generateQrDataUrl(paymentUrl);
-    } catch (qrErr) {
+    } catch {
       // QR generation failed, continue without it
-      console.warn('[pdf] QR pre-generation failed, continuing without QR:', (qrErr as Error).message);
     }
   }
 
+  // PRIMARY: pdf-lib — rock solid in serverless environments
   try {
-    const { renderToBuffer } = await import('@react-pdf/renderer');
-    const { PdfDocument } = await import('@/components/pdf-document');
-    const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
-    return await renderToBuffer(element as any);
-  } catch (reactPdfErr) {
-    console.error('[pdf] @react-pdf/renderer failed, falling back to pdf-lib:', (reactPdfErr as Error).message);
+    const { generateInvoicePdfBuffer } = await import('./pdf-server');
+    const buffer = await generateInvoicePdfBuffer(invoice, profile);
+    return new Uint8Array(buffer);
+  } catch (pdfLibErr) {
+    console.warn('[pdf] pdf-lib failed, trying @react-pdf/renderer:', (pdfLibErr as Error).message);
 
-    // Fallback: use pdf-lib based generation
+    // FALLBACK: @react-pdf/renderer
     try {
-      const { generateInvoicePdfBuffer } = await import('./pdf-server');
-      const buffer = await generateInvoicePdfBuffer(invoice, profile);
-      return new Uint8Array(buffer);
-    } catch (fallbackErr) {
-      console.error('[pdf] pdf-lib fallback also failed:', (fallbackErr as Error).message);
-      throw reactPdfErr;
+      const { renderToBuffer } = await import('@react-pdf/renderer');
+      const { PdfDocument } = await import('@/components/pdf-document');
+      const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
+      return await renderToBuffer(element as any);
+    } catch (reactPdfErr) {
+      console.error('[pdf] Both PDF engines failed. pdf-lib:', (pdfLibErr as Error).message, '| react-pdf:', (reactPdfErr as Error).message);
+      throw pdfLibErr;
     }
   }
 }

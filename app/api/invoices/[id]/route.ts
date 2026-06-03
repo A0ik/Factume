@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // ---------------------------------------------------------------------------
-// DELETE /api/invoices/[id] — Delete an invoice and all related records
+// DELETE /api/invoices/[id] — Delete an invoice (CASCADE handles related records)
 // ---------------------------------------------------------------------------
 
 export async function DELETE(
@@ -19,7 +19,7 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verify ownership and current status
+    // Verify ownership — single query, eq user_id as defense-in-depth
     const { data: existing } = await supabase
       .from('invoices')
       .select('user_id, status')
@@ -30,7 +30,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    // Only allow deletion of draft/cancelled invoices
+    // Only draft/cancelled can be deleted
     if (existing.status !== 'draft' && existing.status !== 'cancelled') {
       return NextResponse.json(
         { error: 'Seules les factures en brouillon ou annulees peuvent etre supprimees' },
@@ -38,33 +38,7 @@ export async function DELETE(
       );
     }
 
-    // Delete related records first (to satisfy foreign key constraints)
-    // Order matters — most dependent first
-    const relatedTables = [
-      'invoice_audit_trail',
-      'invoice_comments',
-      'invoice_tags',
-      'invoice_items',
-      'facturx_audit_logs',
-      'pdp_transmissions',
-      'partial_payments',
-      'client_portal_tokens',
-      'cabinet_reminders',
-    ];
-
-    for (const table of relatedTables) {
-      const { error: relErr } = await supabase
-        .from(table)
-        .delete()
-        .eq('invoice_id', id);
-
-      // Ignore "not found" errors — table may have no rows for this invoice
-      if (relErr && relErr.code !== 'PGRST116') {
-        console.warn(`[Invoices] Warning: failed to delete from ${table}:`, relErr.message);
-      }
-    }
-
-    // Now delete the invoice itself
+    // Delete — CASCADE on foreign keys handles all related tables automatically
     const { error } = await supabase
       .from('invoices')
       .delete()
@@ -76,12 +50,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Erreur lors de la suppression' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Document supprime avec succes',
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[Invoices] Unhandled DELETE error:', error);
+    console.error('[Invoices] DELETE error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

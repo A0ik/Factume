@@ -1,14 +1,14 @@
 'use client';
 
-import { motion, useMotionValue, useTransform, animate, PanInfo } from 'framer-motion';
-import { Trash2, CheckCircle } from 'lucide-react';
+import { motion, useMotionValue, useTransform, animate, PanInfo, AnimatePresence } from 'framer-motion';
+import { Trash2, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { ReactNode, useState, useRef, useCallback, useEffect } from 'react';
 
 interface SwipeableCardProps {
   children: ReactNode;
   onDelete?: () => void;
   onMarkPaid?: () => void;
-  /** Called when user long-presses the card — receives a summary for the quick-view sheet */
+  /** Called when user long-presses the card */
   onLongPress?: () => void;
   className?: string;
 }
@@ -20,16 +20,11 @@ const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE = 10;
 
 /**
- * SwipeableCard — iOS-native feel with drag gestures
+ * SwipeableCard — iOS feel with confirmation dialog
  *
- * - Swipe LEFT  → reveals red Delete action (trash icon on LEFT edge)
- * - Swipe RIGHT → reveals green Mark as Paid action (check icon on RIGHT edge)
- * - Long Press  → triggers onLongPress callback for Bottom Sheet preview
- * - Elastic physics with smooth spring-back on cancel
- * - Card animates off-screen BEFORE triggering action
- *
- * IMPORTANT: Children should use `onClick` for navigation (not <Link>/<a>)
- * because anchor tags capture touch events and block drag gestures on mobile.
+ * - Swipe LEFT  → shows confirmation popup → delete
+ * - Swipe RIGHT → marks as paid directly
+ * - Long Press  → triggers onLongPress callback
  */
 export default function SwipeableCard({
   children,
@@ -41,42 +36,20 @@ export default function SwipeableCard({
   const x = useMotionValue(0);
   const [isPressed, setIsPressed] = useState(false);
   const [longPressTriggered, setLongPressTriggered] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartPos = useRef({ x: 0, y: 0 });
   const isSwiping = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const wasDraggedRef = useRef(false);
-  const dragStartTime = useRef(0);
 
-  // Opacity for action backgrounds — smooth 0→1 mapping
   const deleteOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
   const paidOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
-
-  // Scale for icons — slight bounce feedback
   const deleteIconScale = useTransform(x, [-MAX_DRAG, -SWIPE_THRESHOLD, 0], [1.15, 1, 0.6]);
   const paidIconScale = useTransform(x, [0, SWIPE_THRESHOLD, MAX_DRAG], [0.6, 1, 1.15]);
 
-  // Progress for the drag — used for haptic-like visual intensity
-  const leftProgress = useTransform(x, [-MAX_DRAG, 0], [1, 0]);
-  const rightProgress = useTransform(x, [0, MAX_DRAG], [0, 1]);
-
   const springBack = useCallback(() => {
     animate(x, 0, SPRING_BACK);
-  }, [x]);
-
-  const animateOffScreen = useCallback((direction: 'left' | 'right', callback?: () => void) => {
-    const target = direction === 'left' ? -600 : 600;
-    const controls = animate(x, target, {
-      type: 'spring',
-      damping: 30,
-      stiffness: 300,
-      onComplete: () => {
-        callback?.();
-        // Reset position after action (parent will likely remove the card)
-        x.set(0);
-      },
-    });
-    return controls;
   }, [x]);
 
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
@@ -85,29 +58,37 @@ export default function SwipeableCard({
     const velocity = info.velocity.x;
     const offset = info.offset.x;
 
-    // Mark that a drag occurred (even small ones) to prevent child click events
     if (Math.abs(offset) > 5) {
       wasDraggedRef.current = true;
     }
 
-    // Velocity-based detection: fast flick counts even if distance is short
     const exceededThreshold = offset < -SWIPE_THRESHOLD || (offset < -30 && velocity < -500);
     const exceededThresholdRight = offset > SWIPE_THRESHOLD || (offset > 30 && velocity > 500);
 
     if (exceededThreshold && onDelete) {
-      animateOffScreen('left', onDelete);
+      // Show confirmation popup instead of deleting directly
+      springBack();
+      setShowConfirmDelete(true);
     } else if (exceededThresholdRight && onMarkPaid) {
-      animateOffScreen('right', onMarkPaid);
+      // Mark as paid directly (no confirmation needed)
+      const target = 600;
+      animate(x, target, {
+        type: 'spring',
+        damping: 30,
+        stiffness: 300,
+        onComplete: () => {
+          onMarkPaid();
+          x.set(0);
+        },
+      });
     } else {
-      // Smooth spring back to origin
       springBack();
     }
 
-    // Reset wasDragged after a short delay so next tap works
     setTimeout(() => {
       wasDraggedRef.current = false;
     }, 100);
-  }, [onDelete, onMarkPaid, animateOffScreen, springBack]);
+  }, [onDelete, onMarkPaid, springBack, x]);
 
   // Long press detection
   const startLongPress = useCallback((e: React.TouchEvent | React.MouseEvent) => {
@@ -146,14 +127,13 @@ export default function SwipeableCard({
     }
   }, [cancelLongPress]);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (longPressTimer.current) clearTimeout(longPressTimer.current);
     };
   }, []);
 
-  // Ensure card resets if parent re-renders
+  // Reset position when confirmation dialog appears/disappears
   useEffect(() => {
     const current = x.get();
     if (current !== 0 && !isSwiping.current) {
@@ -161,7 +141,6 @@ export default function SwipeableCard({
     }
   }, [children, x, springBack]);
 
-  // Prevent child click events when the card was just dragged
   const handleChildClick = useCallback((e: React.MouseEvent) => {
     if (wasDraggedRef.current) {
       e.preventDefault();
@@ -170,80 +149,129 @@ export default function SwipeableCard({
     }
   }, []);
 
+  const confirmDelete = useCallback(() => {
+    setShowConfirmDelete(false);
+    onDelete?.();
+  }, [onDelete]);
+
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${className}`}
-      onClickCapture={handleChildClick}
-    >
-      {/* LEFT action background (delete) — RED, revealed when swiping LEFT */}
-      {onDelete && (
-        <motion.div
-          style={{ opacity: deleteOpacity }}
-          className="absolute inset-0 bg-gradient-to-l from-red-500 to-red-600 flex items-center justify-start pl-5 rounded-2xl"
-        >
-          <motion.div
-            style={{ scale: deleteIconScale }}
-            className="flex flex-col items-center gap-1"
-          >
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <Trash2 size={20} className="text-white" />
-            </div>
-            <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Suppr.</span>
-          </motion.div>
-        </motion.div>
-      )}
-
-      {/* RIGHT action background (mark as paid) — GREEN, revealed when swiping RIGHT */}
-      {onMarkPaid && (
-        <motion.div
-          style={{ opacity: paidOpacity }}
-          className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-end pr-5 rounded-2xl"
-        >
-          <motion.div
-            style={{ scale: paidIconScale }}
-            className="flex flex-col items-center gap-1"
-          >
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <CheckCircle size={20} className="text-white" />
-            </div>
-            <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Payee</span>
-          </motion.div>
-        </motion.div>
-      )}
-
-      {/* Card content — draggable */}
-      <motion.div
-        ref={cardRef}
-        drag="x"
-        dragConstraints={{ left: onDelete ? -MAX_DRAG : 0, right: onMarkPaid ? MAX_DRAG : 0 }}
-        dragElastic={{ left: 0.08, right: 0.08 }}
-        onDragStart={() => {
-          isSwiping.current = true;
-          wasDraggedRef.current = true;
-          dragStartTime.current = Date.now();
-          cancelLongPress();
-        }}
-        onDragEnd={handleDragEnd}
-        style={{ x, touchAction: 'pan-y' }}
-        className="relative bg-card border border-border rounded-2xl cursor-grab active:cursor-grabbing"
-        animate={isPressed && !longPressTriggered ? { scale: 0.97 } : { scale: 1 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        // Long press event handlers
-        onTouchStart={(e) => {
-          setIsPressed(true);
-          startLongPress(e);
-        }}
-        onTouchMove={handleMove}
-        onTouchEnd={cancelLongPress}
-        onMouseDown={(e) => {
-          setIsPressed(true);
-          startLongPress(e);
-        }}
-        onMouseMove={handleMove}
-        onMouseUp={cancelLongPress}
-        onMouseLeave={cancelLongPress}
+    <>
+      <div className={`relative overflow-hidden rounded-2xl ${className}`}
+        onClickCapture={handleChildClick}
       >
-        {children}
-      </motion.div>
-    </div>
+        {/* LEFT action background (delete) */}
+        {onDelete && (
+          <motion.div
+            style={{ opacity: deleteOpacity }}
+            className="absolute inset-0 bg-gradient-to-l from-red-500 to-red-600 flex items-center justify-start pl-5 rounded-2xl"
+          >
+            <motion.div style={{ scale: deleteIconScale }} className="flex flex-col items-center gap-1">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Trash2 size={20} className="text-white" />
+              </div>
+              <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Suppr.</span>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* RIGHT action background (mark as paid) */}
+        {onMarkPaid && (
+          <motion.div
+            style={{ opacity: paidOpacity }}
+            className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-end pr-5 rounded-2xl"
+          >
+            <motion.div style={{ scale: paidIconScale }} className="flex flex-col items-center gap-1">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <CheckCircle size={20} className="text-white" />
+              </div>
+              <span className="text-[9px] font-bold text-white/90 uppercase tracking-wider">Payee</span>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Card content */}
+        <motion.div
+          ref={cardRef}
+          drag="x"
+          dragConstraints={{ left: onDelete ? -MAX_DRAG : 0, right: onMarkPaid ? MAX_DRAG : 0 }}
+          dragElastic={{ left: 0.08, right: 0.08 }}
+          onDragStart={() => {
+            isSwiping.current = true;
+            wasDraggedRef.current = true;
+            cancelLongPress();
+          }}
+          onDragEnd={handleDragEnd}
+          style={{ x, touchAction: 'pan-y' }}
+          className="relative bg-card border border-border rounded-2xl cursor-grab active:cursor-grabbing"
+          animate={isPressed && !longPressTriggered ? { scale: 0.97 } : { scale: 1 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          onTouchStart={(e) => { setIsPressed(true); startLongPress(e); }}
+          onTouchMove={handleMove}
+          onTouchEnd={cancelLongPress}
+          onMouseDown={(e) => { setIsPressed(true); startLongPress(e); }}
+          onMouseMove={handleMove}
+          onMouseUp={cancelLongPress}
+          onMouseLeave={cancelLongPress}
+        >
+          {children}
+        </motion.div>
+      </div>
+
+      {/* ═══ Confirmation Dialog ═══ */}
+      <AnimatePresence>
+        {showConfirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowConfirmDelete(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                    Supprimer ce document ?
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Cette action est irreversible.
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 px-5 py-4">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowConfirmDelete(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Annuler
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={confirmDelete}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Supprimer
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
