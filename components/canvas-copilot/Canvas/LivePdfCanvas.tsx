@@ -36,7 +36,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const generatingRef = useRef(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 5;
 
   // Subscribe to fields that affect the canvas
   const canvasData = useDocumentSessionStore((state) => ({
@@ -147,22 +147,27 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
 
   // Debounce: regenerate PDF after 500ms of inactivity
   useEffect(() => {
-    if (pdfEngineFailed) return;
     setIsStale(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
+      // Reset engine failed state on each new attempt — give it a fresh chance
+      if (pdfEngineFailed) {
+        setPdfEngineFailed(false);
+        retryCountRef.current = 0;
+      }
       generatePdf();
-    }, 500);
+    }, 600);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [syntheticInvoice, pdfEngineFailed]);
+  }, [syntheticInvoice]);
 
   // Initial render
   useEffect(() => {
-    if (profile && !pdfUrl && !pdfEngineFailed) {
+    if (profile && !pdfUrl) {
+      retryCountRef.current = 0;
       generatePdf();
     }
     return () => {
