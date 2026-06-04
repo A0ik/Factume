@@ -292,9 +292,9 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
           ${sellerCity ? `<ram:CityName>${sellerCity}</ram:CityName>` : ''}
           <ram:CountryID>${sellerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
-        ${sellerEmail ? `<ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">${escapeXml(sellerEmail)}</ram:URIID>
-        </ram:URIUniversalCommunication>` : ''}
+        <ram:URIUniversalCommunication>
+          <ram:URIID>${escapeXml(sellerSiret ? sellerSiret.substring(0, 9) : '')}</ram:URIID>
+        </ram:URIUniversalCommunication>
         ${sellerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(sellerVat)}</ram:ID>
         </ram:SpecifiedTaxRegistration>` : ''}
@@ -310,8 +310,8 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
           ${buyerCity ? `<ram:CityName>${buyerCity}</ram:CityName>` : ''}
           <ram:CountryID>${buyerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
-        ${buyerEmail ? `<ram:URIUniversalCommunication>
-          <ram:URIID schemeID="EM">${escapeXml(buyerEmail)}</ram:URIID>
+        ${buyerSiret ? `<ram:URIUniversalCommunication>
+          <ram:URIID>${escapeXml(buyerSiret.substring(0, 9))}</ram:URIID>
         </ram:URIUniversalCommunication>` : ''}
         ${buyerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(buyerVat)}</ram:ID>

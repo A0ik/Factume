@@ -443,15 +443,19 @@ export default function NewFacturePage() {
           client_postal_code: clientId ? undefined : clientPostalCode || undefined,
           client_siret: clientId ? undefined : clientSiret || undefined,
           client_vat_number: clientId ? undefined : clientVatNumber || undefined,
+          client_type: clientType || undefined,
         }, profile, currentIdempotencyId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
       ]);
 
-      // Succès - magnifique toast + redirection
+      // Succès - toast avec info e-invoicing si B2B
+      const isB2B = clientType === 'b2b';
       showToast({
         icon: 'success',
-        title: 'Facture créée avec succès !',
-        subtitle: clientName ? `Pour ${clientName}` : undefined,
+        title: isB2B ? 'Facture B2B créée et transmise !' : 'Facture créée avec succès !',
+        subtitle: isB2B
+          ? `${clientName ? clientName + ' • ' : ''}Transmission électronique en cours`
+          : clientName ? `Pour ${clientName}` : undefined,
       });
       setTimeout(() => {
         router.push(`/invoices/${newInvoice.id}`);

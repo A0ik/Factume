@@ -5,19 +5,40 @@ import { getInvoiceEvents } from '@/lib/superPdpClient';
 export const maxDuration = 60;
 
 /**
- * GET /api/cron/pdp-sync
+ * GET|POST /api/cron/pdp-sync
  *
- * Cron job appelé par Vercel Cron (toutes les 2 heures).
+ * Cron job appelé par Vercel Cron (journalier) ET pg_cron (toutes les 10 min).
  * Synchronise le statut des factures transmises via Super PDP
  * en interrogeant les événements de cycle de vie (CDAR).
  *
  * Super PDP n'a pas de webhooks → polling nécessaire.
  *
  * Sécurisé par CRON_SECRET.
+ *
+ * Codes de statut français (CDAR) :
+ *   fr:204 = Acceptation par le destinataire
+ *   fr:205 = Refus par le destinataire
+ *   fr:206 = Accord sur le montant à payer
+ *   fr:207 = Refus sur le montant à payer
+ *   fr:208 = Demande de copie
+ *   fr:209 = Suspension contentieuse
+ *   fr:210 = Rejet contentieux
+ *   fr:211 = Levée de suspension
+ *   fr:212 = Paiement (encaissée) — avec détails du montant
  */
 export async function GET(req: NextRequest) {
+  return handleSync(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleSync(req);
+}
+
+async function handleSync(req: NextRequest) {
   // ── Sécurité : vérifier le CRON_SECRET ─────────────────────────────────
-  const cronSecret = req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret');
+  const cronSecret = req.headers.get('x-cron-secret')
+    || req.headers.get('authorization')?.replace('Bearer ', '')
+    || req.nextUrl.searchParams.get('secret');
   if (cronSecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
@@ -68,58 +89,99 @@ export async function GET(req: NextRequest) {
 
         // Prendre le dernier événement (le plus récent)
         const latestEvent = eventsResult.events[eventsResult.events.length - 1];
-        const statusCode = latestEvent.statusCode?.toUpperCase();
+        const statusCode = latestEvent.statusCode?.toLowerCase() || '';
 
         // ── Mapper les statuts Super PDP → statuts factu.me ───────────────
+        // Les codes SuperPDP sont au format "fr:204" à "fr:212" pour la France.
+        // On garde aussi les codes anglais en fallback pour compatibilité future.
         let newInvoiceStatus: string | null = null;
         let newPdpStatus: string | null = null;
 
-        switch (statusCode) {
-          // Facture acceptée par le destinataire
-          case 'ACCEPTED':
-          case 'ACCEPTED_BY_RECEIVER':
+        // Normaliser : "FR:204" → "fr:204"
+        const code = statusCode.startsWith('fr:') ? statusCode : statusCode;
+
+        switch (code) {
+          // fr:204 = Acceptation par le destinataire
+          case 'fr:204':
+          case 'accepted':
+          case 'accepted_by_receiver':
             if (inv.status === 'sent') {
               newInvoiceStatus = 'accepted';
             }
             break;
 
-          // Facture refusée par le destinataire
-          case 'REFUSED':
-          case 'REJECTED_BY_RECEIVER':
+          // fr:205 = Refus par le destinataire
+          case 'fr:205':
+          case 'refused':
+          case 'rejected_by_receiver':
             if (inv.status === 'sent' || inv.status === 'accepted') {
               newInvoiceStatus = 'refused';
             }
             break;
 
-          // Paiement signalé via le réseau PDP
-          case 'PAID':
-          case 'PAYMENT_RECEIVED':
+          // fr:206 = Accord sur montant à payer (acceptation partielle)
+          case 'fr:206':
+            if (inv.status === 'sent') {
+              newInvoiceStatus = 'accepted';
+            }
+            break;
+
+          // fr:207 = Refus sur montant à payer
+          case 'fr:207':
+            if (inv.status === 'sent' || inv.status === 'accepted') {
+              newInvoiceStatus = 'refused';
+            }
+            break;
+
+          // fr:208 = Demande de copie (pas de changement de statut)
+          case 'fr:208':
+            console.log('[pdp-sync] Demande de copie pour facture', inv.number);
+            break;
+
+          // fr:209 = Suspension contentieuse
+          case 'fr:209':
+          case 'disputed':
+            console.log('[pdp-sync] Suspension contentieuse pour facture', inv.number);
+            // On ne change pas le statut automatiquement pour un litige
+            break;
+
+          // fr:210 = Rejet contentieux
+          case 'fr:210':
+            if (inv.status === 'sent' || inv.status === 'accepted') {
+              newInvoiceStatus = 'refused';
+            }
+            break;
+
+          // fr:211 = Levée de suspension
+          case 'fr:211':
+            console.log('[pdp-sync] Levée de suspension pour facture', inv.number);
+            break;
+
+          // fr:212 = Paiement (encaissée)
+          case 'fr:212':
+          case 'paid':
+          case 'payment_received':
             if (inv.status !== 'paid' && inv.status !== 'refunded') {
               newInvoiceStatus = 'paid';
             }
             break;
 
-          // Litige
-          case 'DISPUTED':
-            console.log('[pdp-sync] Litige signalé pour facture', inv.number);
-            // On ne change pas le statut automatiquement pour un litige
-            break;
-
           // Erreur technique côté PDP
-          case 'ERROR':
-          case 'TECHNICAL_REJECTION':
+          case 'error':
+          case 'technical_rejection':
             newPdpStatus = 'failed';
             break;
 
           default:
             // Statut non géré, on loggue mais on ne fait rien
-            console.log('[pdp-sync] Statut non géré:', statusCode, 'pour facture', inv.number);
+            console.log('[pdp-sync] Statut non géré:', code, 'pour facture', inv.number);
             break;
         }
 
         // ── Mettre à jour la DB si nécessaire ─────────────────────────────
         const updates: Record<string, any> = {
           updated_at: new Date().toISOString(),
+          einvoice_status_checked_at: new Date().toISOString(),
         };
 
         if (newInvoiceStatus) {
@@ -133,11 +195,11 @@ export async function GET(req: NextRequest) {
 
         if (newPdpStatus) {
           updates.pdp_status = newPdpStatus;
-          updates.pdp_last_error = latestEvent.description || `Statut PDP: ${statusCode}`;
+          updates.pdp_last_error = latestEvent.description || `Statut PDP: ${code}`;
         }
 
         // N'update que si on a des changements
-        if (Object.keys(updates).length > 1) { // > 1 car updated_at est toujours là
+        if (Object.keys(updates).length > 2) { // > 2 car updated_at + einvoice_status_checked_at toujours présents
           await admin
             .from('invoices')
             .update(updates)
@@ -155,12 +217,12 @@ export async function GET(req: NextRequest) {
             .insert({
               invoice_id: inv.id,
               user_id: inv.user_id,
-              action: `pdp_sync:${statusCode}`,
+              action: `pdp_sync:${code}`,
               from_status: inv.status,
               to_status: newInvoiceStatus || inv.status,
               metadata: {
                 superpdp_event_id: latestEvent.id,
-                superpdp_status_code: statusCode,
+                superpdp_status_code: code,
                 superpdp_description: latestEvent.description,
                 sync_source: 'pdp-sync-cron',
               },
@@ -170,7 +232,7 @@ export async function GET(req: NextRequest) {
           await admin
             .from('pdp_transmissions')
             .update({
-              status: statusCode,
+              status: code,
               acknowledged_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               validation_details: {

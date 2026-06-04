@@ -29,9 +29,11 @@ function getClientSecret(): string {
   return secret;
 }
 
-function isSandbox(): boolean {
-  return process.env.SUPER_PDP_SANDBOX === 'true';
-}
+/**
+ * NOTE: Le mode sandbox/production est déterminé par les identifiants OAuth2
+ * (client_id/client_secret), PAS par l'URL. Les 2 modes utilisent le même
+ * endpoint https://api.superpdp.tech. Cf. documentation SuperPDP §Introduction.
+ */
 
 // ── OAuth2 Token Management ───────────────────────────────────────────────────
 
@@ -195,24 +197,18 @@ export async function transmitInvoice(
     const token = await getAccessToken();
 
     // ── 4. Envoi à Super PDP ─────────────────────────────────────────────
+    // D'après la documentation officielle + quick_start.js :
+    // POST /v1.beta/invoices avec le XML brut en body (pas de FormData).
+    // Content-Type auto-détecté par l'API. Headers minimaux : Authorization.
     console.log('[SuperPDP] Transmission de la facture', invoice.number, '...');
 
-    const externalId = invoice.id; // Notre ID factu.me pour synchronisation
-
-    // Super PDP accepte XML brut ET multipart/form-data
-    // On essaie d'abord multipart (format recommandé), fallback XML brut
-    const formData = new FormData();
-    const xmlBlob = new Blob([ciiXml], { type: 'application/xml' });
-    formData.append('file', xmlBlob, 'factur-x.xml');
-
-    const response = await fetch(`${BASE_URL}/invoices?external_id=${encodeURIComponent(externalId)}`, {
+    const response = await fetch(`${BASE_URL}/invoices`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
-        'X-External-ID': externalId,
       },
-      body: formData,
+      body: ciiXml, // XML brut — cf. quick_start.js
     });
 
     const duration = Date.now() - startTime;

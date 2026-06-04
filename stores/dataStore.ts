@@ -177,6 +177,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       const data = result.invoice;
+      const pdpTransmission = result.pdpTransmission || null;
 
       (async () => {
         try {
@@ -184,6 +185,13 @@ export const useDataStore = create<DataState>((set, get) => ({
           if (freshProfile) useAuthStore.getState().setProfile(freshProfile);
         } catch {}
       })();
+
+      // Mettre à jour la facture avec les infos PDP si transmise
+      if (pdpTransmission?.transmitted && data) {
+        data.pdp_status = 'transmitted';
+        data.pdp_transmission_id = pdpTransmission.superPdpId;
+        data.pdp_transmitted_at = new Date().toISOString();
+      }
 
       set((s) => ({ invoices: [data, ...s.invoices] }));
       get().computeStats();

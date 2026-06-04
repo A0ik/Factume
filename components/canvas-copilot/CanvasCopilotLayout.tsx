@@ -1,31 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Eye, Save,
+  ArrowLeft, Save,
   Loader2, Undo2, Redo2,
-  X, FileText, Mic,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import dynamic from 'next/dynamic';
 import { useDocumentSessionStore } from './documentSessionStore';
 import { DOC_TYPE_CONFIGS } from './config/documentTypeConfig';
-import PdfCanvasErrorBoundary from './Canvas/PdfCanvasErrorBoundary';
 import DocumentFormPanel from './Form/DocumentFormPanel';
 import VoiceOneShot from './Voice/VoiceOneShot';
 import SmartTextBar from './Voice/SmartTextBar';
-
-// Dynamic PDF canvas — SSR disabled for CSP/WASM safety
-const LivePdfCanvas = dynamic(() => import('./Canvas/LivePdfCanvas'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex flex-col items-center justify-center h-full">
-      <div className="w-8 h-8 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Chargement de l&apos;aper&ccedil;u...</p>
-    </div>
-  ),
-});
 
 // ─── Layout Props ──────────────────────────────────────
 
@@ -48,26 +33,16 @@ export default function CanvasCopilotLayout({
     documentType,
     saving,
     error,
-    pendingDoubts,
-    resolveDoubts,
-    dismissDoubts,
     canUndo,
     canRedo,
     undo,
     redo,
     total,
-    clientName,
     items,
   } = useDocumentSessionStore();
 
   const config = DOC_TYPE_CONFIGS[documentType];
   const hasContent = items.some(i => i.description || i.unit_price > 0);
-
-  // ─── Mobile State ──────────────────────────────────
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
-
-  // ─── Desktop: 2-column layout ──────────────────────
-  // Left: PDF Canvas (~45%) | Right: Structured Form (~55%)
 
   // Negative margins break out of app layout py-5/px-5 padding
   // Mobile: 100dvh - top bar (3.5rem) - BottomTabBar (4rem) | Desktop: full viewport
@@ -179,20 +154,11 @@ export default function CanvasCopilotLayout({
       </AnimatePresence>
 
       {/* ═══════════ MAIN CONTENT ═══════════ */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* ─── DESKTOP: 2-column ──────────────────── */}
-        {/* Left: PDF Canvas */}
-        <div className="hidden lg:flex lg:w-[45%] border-r border-gray-200 dark:border-white/10">
-          <PdfCanvasErrorBoundary className="w-full">
-            <LivePdfCanvas profile={profile} className="w-full" />
-          </PdfCanvasErrorBoundary>
-        </div>
-
-        {/* Right: Structured Form + Voice/Text Bar */}
-        <div className="hidden lg:flex lg:w-[55%]">
+        {/* ─── DESKTOP: Full-width form + voice bar ─── */}
+        <div className="hidden lg:flex flex-1">
           <div className="w-full flex flex-col">
-            {/* The structured form — doubts are now rendered inline */}
             <div className="flex-1 overflow-y-auto">
               <DocumentFormPanel
                 profile={profile}
@@ -201,7 +167,7 @@ export default function CanvasCopilotLayout({
               />
             </div>
 
-            {/* ─── Voice + Text Bar (desktop) — always visible at bottom ─── */}
+            {/* Voice + Text Bar — always visible at bottom */}
             <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
                 <SmartTextBar
@@ -220,7 +186,6 @@ export default function CanvasCopilotLayout({
 
         {/* ─── MOBILE: Scrollable form + fixed bottom bar ─── */}
         <div className="lg:hidden flex-1 flex flex-col">
-          {/* Form fills available space and scrolls independently */}
           <div className="flex-1 overflow-y-auto">
             <DocumentFormPanel
               profile={profile}
@@ -229,9 +194,8 @@ export default function CanvasCopilotLayout({
             />
           </div>
 
-          {/* ─── Fixed Bottom Bar (always visible, never hidden) ─── */}
+          {/* Bottom Bar — always visible */}
           <div className="shrink-0 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
-            {/* Voice + Text Bar (mobile) */}
             <div className="px-3 pt-2">
               <div className="flex items-center gap-2">
                 <SmartTextBar
@@ -246,25 +210,14 @@ export default function CanvasCopilotLayout({
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2 px-3 py-2">
-              {/* Preview button */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMobilePreview(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-sm font-semibold transition-all min-w-[100px]"
-              >
-                <Eye size={16} />
-                Aper&ccedil;u
-              </motion.button>
-
-              {/* Create button — primary CTA */}
+            {/* Create button — full width */}
+            <div className="px-3 py-2">
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={onSave}
                 disabled={saving || !hasContent}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all',
+                  'w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all',
                   hasContent && !saving
                     ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg shadow-emerald-500/20`
                     : 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-not-allowed',
@@ -284,53 +237,6 @@ export default function CanvasCopilotLayout({
               </motion.button>
             </div>
           </div>
-
-          {/* ─── Mobile: Bottom Sheet for PDF Preview ─── */}
-          <AnimatePresence>
-            {showMobilePreview && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-                onClick={() => setShowMobilePreview(false)}
-              >
-                <motion.div
-                  initial={{ y: '100%' }}
-                  animate={{ y: 0 }}
-                  exit={{ y: '100%' }}
-                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden"
-                  style={{ height: '85vh' }}
-                >
-                  {/* Drag handle */}
-                  <div className="flex justify-center pt-3 pb-2">
-                    <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                  </div>
-
-                  {/* Preview header */}
-                  <div className="flex items-center justify-between px-4 pb-2">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Aper&ccedil;u PDF</h3>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowMobilePreview(false)}
-                      className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500"
-                    >
-                      <X size={16} />
-                    </motion.button>
-                  </div>
-
-                  {/* PDF Canvas in bottom sheet */}
-                  <div className="h-[calc(100%-60px)]">
-                    <PdfCanvasErrorBoundary className="h-full">
-                      <LivePdfCanvas profile={profile} className="h-full" />
-                    </PdfCanvasErrorBoundary>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </div>

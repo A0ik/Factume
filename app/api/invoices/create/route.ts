@@ -1,7 +1,8 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { calculateInvoiceTotals } from '@/lib/money';
+import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
 import type { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -232,7 +233,86 @@ export async function POST(req: NextRequest) {
       });
 
     console.log('[API /invoices/create] SUCCESS:', invoice.id);
-    return NextResponse.json({ invoice });
+
+    // ── Transmission automatique PDP pour les factures B2B ────────────────
+    // Si la facture est B2B et que les identifiants PDP sont configurés,
+    // on transmet automatiquement à SuperPDP en arrière-plan.
+    let pdpResult: { transmitted: boolean; superPdpId?: string; error?: string } | null = null;
+
+    if (client_type === 'b2b' && invoice.number) {
+      const hasPdpCredentials = process.env.SUPER_PDP_CLIENT_ID
+        && (process.env.SUPER_PDP_CLIENT_SECRET || process.env.SUPER_PDP_SECRET_ID);
+
+      if (hasPdpCredentials) {
+        const pdpTier = profile?.subscription_tier || 'free';
+        const hasPdpAccess = profile?.is_trial_active || pdpTier === 'pro' || pdpTier === 'business';
+
+        if (hasPdpAccess) {
+          try {
+            // Récupérer le profil complet pour la transmission
+            const admin = createAdminClient();
+            const { data: fullProfile } = await admin
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            if (fullProfile) {
+              console.log('[invoices/create] Transmission PDP automatique pour B2B facture', invoice.number);
+              const result = await transmitInvoice(invoice, fullProfile);
+
+              if (result.success) {
+                await admin
+                  .from('invoices')
+                  .update({
+                    pdp_transmission_id: result.superPdpId,
+                    pdp_status: 'transmitted',
+                    pdp_transmitted_at: new Date().toISOString(),
+                    pdp_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoice.id);
+
+                pdpResult = { transmitted: true, superPdpId: result.superPdpId };
+                console.log('[invoices/create] PDP transmis, ID:', result.superPdpId);
+              } else if (isRetryableError(result)) {
+                // Erreur transitoire → planifier un retry
+                await admin
+                  .from('invoices')
+                  .update({
+                    pdp_status: 'pending_retry',
+                    pdp_last_error: result.error,
+                    pdp_next_retry_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoice.id);
+
+                pdpResult = { transmitted: false, error: 'Transmission en attente de retry' };
+                console.warn('[invoices/create] PDP retry planifié:', result.error);
+              } else {
+                // Erreur non retryable
+                await admin
+                  .from('invoices')
+                  .update({
+                    pdp_status: 'failed',
+                    pdp_last_error: result.error,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoice.id);
+
+                pdpResult = { transmitted: false, error: result.error };
+                console.error('[invoices/create] PDP échoué:', result.error);
+              }
+            }
+          } catch (pdpError: any) {
+            console.error('[invoices/create] Erreur PDP:', pdpError.message);
+            pdpResult = { transmitted: false, error: pdpError.message };
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ invoice, pdpTransmission: pdpResult });
 
   } catch (error: any) {
     console.error('[API /invoices/create] Error:', error);

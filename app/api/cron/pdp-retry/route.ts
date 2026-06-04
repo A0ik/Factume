@@ -5,16 +5,26 @@ import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
 export const maxDuration = 60;
 
 /**
- * GET /api/cron/pdp-retry
+ * GET|POST /api/cron/pdp-retry
  *
- * Cron job appelé par Vercel Cron (toutes les 10 minutes).
+ * Cron job appelé par Vercel Cron (journalier) ET pg_cron (toutes les 10 min).
  * Retransmet les factures en échec temporaire (pending_retry).
  *
  * Sécurisé par CRON_SECRET.
  */
 export async function GET(req: NextRequest) {
+  return handleRetry(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handleRetry(req);
+}
+
+async function handleRetry(req: NextRequest) {
   // ── Sécurité : vérifier le CRON_SECRET ─────────────────────────────────
-  const cronSecret = req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret');
+  const cronSecret = req.headers.get('x-cron-secret')
+    || req.headers.get('authorization')?.replace('Bearer ', '')
+    || req.nextUrl.searchParams.get('secret');
   if (cronSecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
