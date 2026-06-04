@@ -45,11 +45,11 @@ function safe(str: unknown): string {
     .replace(/\u2013/g, '-').replace(/\u2014/g, '--')
     .replace(/[\u2018\u2019]/g, "'").replace(/[""]/g, '"')
     .replace(/\u2026/g, '...')
-    .replace(/\u20AC/g, '\x80')            // Euro glyph in WinAnsiEncoding
+    .replace(/\u20AC/g, 'EUR')             // Euro sign -> "EUR" (WinAnsiEncoding lacks byte 0x80)
     .replace(/\u0153/g, 'oe').replace(/\u0152/g, 'OE')  // ligatures
     .replace(/\u00AB/g, '<<').replace(/\u00BB/g, '>>')   // guillemets
     .replace(/\u2022/g, '-').replace(/\u2024/g, '.')     // bullet
-    .replace(/[^\x20-\x7E\x80-\xFF]/g, '?');   // replace unknown with ? instead of deleting
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');  // bytes 0x80-0x9F NOT in WinAnsiEncoding
 }
 
 // ── Drawing primitives ────────────────────────────────────────────────────────
