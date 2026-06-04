@@ -21,12 +21,10 @@ async function getPdfjs(): Promise<PdfjsModule> {
   if (_pdfjsPromise) return _pdfjsPromise;
 
   _pdfjsPromise = import('pdfjs-dist').then((mod) => {
-    // Worker served from /public — copied at build time via postinstall
     mod.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
     _pdfjs = mod;
     return mod;
   }).catch((err) => {
-    // Reset so next call can retry
     _pdfjsPromise = null;
     throw err;
   });
@@ -34,7 +32,6 @@ async function getPdfjs(): Promise<PdfjsModule> {
   return _pdfjsPromise;
 }
 
-/** Reset pdfjs module — used when retrying after a failure */
 function resetPdfjs() {
   _pdfjs = null;
   _pdfjsPromise = null;
@@ -54,18 +51,15 @@ function PdfSkeleton() {
     <div className="flex flex-col items-center justify-center h-full w-full p-4">
       <div className="w-full max-w-[595px] aspect-[210/297] bg-white dark:bg-slate-800 rounded-lg shadow-xl overflow-hidden">
         <div className="p-8 space-y-4 animate-pulse">
-          {/* Header block */}
           <div className="flex justify-between">
             <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
             <div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-1/6" />
           </div>
-          {/* Client info */}
           <div className="mt-6 space-y-2">
             <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/3" />
             <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/2" />
             <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-2/5" />
           </div>
-          {/* Table lines */}
           <div className="mt-6 space-y-2">
             <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
             <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-5/6" />
@@ -73,7 +67,6 @@ function PdfSkeleton() {
             <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
             <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-3/4" />
           </div>
-          {/* Total */}
           <div className="mt-6 flex justify-end">
             <div className="h-5 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
           </div>
@@ -89,17 +82,13 @@ function PdfSkeleton() {
 // ─── Main Component ──────────────────────────────────────
 
 /**
- * Live PDF Canvas — renders a real-time preview of the document
- * being created via pdfjs-dist on an HTML5 <canvas>.
+ * Live PDF Canvas — dual-strategy PDF preview.
  *
- * Flow:
- * 1. User edits → canvas marked "stale"
- * 2. After 600ms debounce → POST /api/pdf/preview → ArrayBuffer
- * 3. pdfjs-dist renders page 1 to <canvas> (HiDPI-aware)
- * 4. ResizeObserver keeps canvas responsive
+ * Strategy 1 (primary): pdfjs-dist renders on <canvas> (HiDPI, zoom controls).
+ * Strategy 2 (fallback): native <iframe> + blob URL (browser PDF engine).
  *
- * NO iframe, NO embed, NO object — pure canvas rendering.
- * Works on ALL browsers (Chrome, Firefox, Safari, Edge, iOS Safari, Android Chrome).
+ * If pdfjs-dist fails to load or render, the component automatically falls
+ * back to the iframe strategy which works on 100% of browsers.
  */
 export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps) {
   // ─── Refs ────────────────────────────────────────────────
@@ -109,6 +98,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTaskRef = useRef<any>(null);
   const mountedRef = useRef(true);
+  const blobUrlRef = useRef<string | null>(null);
 
   // ─── State ───────────────────────────────────────────────
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
@@ -118,9 +108,11 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const [zoom, setZoom] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(595); // A4 @72dp
+  const [containerWidth, setContainerWidth] = useState(595);
+  const [fallbackToIframe, setFallbackToIframe] = useState(false);
+  const [canvasFailed, setCanvasFailed] = useState(false);
 
-  const MAX_RETRIES = 5;
+  const MAX_RETRIES = 3;
 
   // ─── Mounted guard ───────────────────────────────────────
   useEffect(() => {
@@ -192,7 +184,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const width = entry.contentRect.width - 32; // minus padding
+        const width = entry.contentRect.width - 32;
         if (width > 50 && mountedRef.current) setContainerWidth(width);
       }
     });
@@ -200,6 +192,25 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  // ─── Blob URL management for iframe fallback ─────────────
+  useEffect(() => {
+    if (pdfData && fallbackToIframe) {
+      // Revoke previous blob URL
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+      }
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
+      blobUrlRef.current = URL.createObjectURL(blob);
+    }
+
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, [pdfData, fallbackToIframe]);
 
   // ─── Generate PDF via server-side API ────────────────────
   const generatePdf = useCallback(async () => {
@@ -224,7 +235,6 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       }
 
       const arrayBuffer = await res.arrayBuffer();
-
       if (!mountedRef.current) return;
 
       setPdfData(arrayBuffer);
@@ -243,7 +253,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
 
   // ─── Render PDF to <canvas> via pdfjs-dist ───────────────
   useEffect(() => {
-    if (!pdfData) return;
+    if (!pdfData || fallbackToIframe) return;
 
     let cancelled = false;
     setIsRendering(true);
@@ -253,7 +263,6 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         const pdfjsLib = await getPdfjs();
         if (cancelled || !mountedRef.current) return;
 
-        // Cancel any in-progress render
         if (renderTaskRef.current) {
           try { renderTaskRef.current.cancel(); } catch { /* already cancelled */ }
           renderTaskRef.current = null;
@@ -271,12 +280,10 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         const context = canvas.getContext('2d');
         if (!context) return;
 
-        // Scale page to fit container width
         const baseViewport = page.getViewport({ scale: 1 });
         const scale = (containerWidth * zoom) / baseViewport.width;
         const viewport = page.getViewport({ scale });
 
-        // HiDPI / Retina support
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
@@ -296,11 +303,12 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         renderTaskRef.current = null;
         if (!cancelled && mountedRef.current) setIsRendering(false);
       } catch (err: any) {
-        // RenderingCancelledException is normal — a newer render superseded this one
         if (err?.name === 'RenderingCancelledException') return;
-        console.error('[LivePdfCanvas] Canvas render error:', err?.message);
+        console.warn('[LivePdfCanvas] Canvas render failed, switching to iframe fallback:', err?.message);
         if (!cancelled && mountedRef.current) {
-          setError('Erreur de rendu PDF');
+          // Auto-switch to iframe fallback on canvas failure
+          setCanvasFailed(true);
+          setFallbackToIframe(true);
           setIsRendering(false);
         }
       }
@@ -315,7 +323,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         renderTaskRef.current = null;
       }
     };
-  }, [pdfData, containerWidth, zoom]);
+  }, [pdfData, containerWidth, zoom, fallbackToIframe]);
 
   // ─── Debounce: regenerate PDF after 600ms of inactivity ──
   useEffect(() => {
@@ -339,13 +347,16 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Cleanup on unmount ──────────────────────────────────
+  // ─── Cleanup ─────────────────────────────────────────────
   useEffect(() => {
     return () => {
       mountedRef.current = false;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (renderTaskRef.current) {
         try { renderTaskRef.current.cancel(); } catch { /* ignore */ }
+      }
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
       }
     };
   }, []);
@@ -354,6 +365,8 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const handleRetry = useCallback(() => {
     setRetryCount(0);
     setError(null);
+    setFallbackToIframe(false);
+    setCanvasFailed(false);
     resetPdfjs();
     generatePdf();
   }, [generatePdf]);
@@ -361,16 +374,18 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   // ─── Render ──────────────────────────────────────────────
   return (
     <div className={`relative flex flex-col h-full bg-gray-100 dark:bg-slate-900 ${className || ''}`}>
-      {/* ─── Toolbar ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-white/10">
+      {/* Toolbar */}
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-white/10">
         <div className="flex items-center gap-2">
           <Eye size={14} className="text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Aper&ccedil;u temps r&eacute;el
           </span>
+          {fallbackToIframe && (
+            <span className="text-[9px] text-blue-400 font-medium">(natif)</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
-          {/* Stale indicator */}
           <AnimatePresence>
             {isStale && !error && (
               <motion.div
@@ -385,31 +400,33 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             )}
           </AnimatePresence>
 
-          {/* Zoom controls */}
-          <button
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            aria-label="Zoom arri&egrave;re"
-          >
-            <ZoomOut size={14} />
-          </button>
-          <span className="text-[10px] text-gray-400 font-mono w-8 text-center">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button
-            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            aria-label="Zoom avant"
-          >
-            <ZoomIn size={14} />
-          </button>
+          {!fallbackToIframe && (
+            <>
+              <button
+                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+                aria-label="Zoom arri&egrave;re"
+              >
+                <ZoomOut size={14} />
+              </button>
+              <span className="text-[10px] text-gray-400 font-mono w-8 text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+                aria-label="Zoom avant"
+              >
+                <ZoomIn size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* ─── Canvas Area ─────────────────────────────────────── */}
+      {/* Canvas Area */}
       <div ref={containerRef} className="flex-1 overflow-auto flex items-start justify-center p-4">
         {error ? (
-          /* ── Error state with retry ── */
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
               <FileWarning size={24} className="text-amber-500" />
@@ -419,8 +436,8 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[260px] mb-4">
               {retryCount >= MAX_RETRIES
-                ? 'Plusieurs tentatives ont échoué. Vérifiez votre connexion et réessayez.'
-                : 'Le serveur n&apos;a pas pu générer l&apos;aperçu. Réessayez.'}
+                ? 'Plusieurs tentatives ont &eacute;chou&eacute;. V&eacute;rifiez votre connexion.'
+                : 'Le serveur n&apos;a pas pu g&eacute;n&eacute;rer l&apos;aper&ccedil;u. R&eacute;essayez.'}
             </p>
             <button
               onClick={handleRetry}
@@ -430,14 +447,19 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
               R&eacute;essayer
             </button>
           </div>
-        ) : pdfData ? (
-          /* ── PDF rendered on canvas ── */
+        ) : fallbackToIframe && blobUrlRef.current ? (
+          /* FALLBACK: Native browser PDF viewer via iframe + blob URL */
+          <iframe
+            src={blobUrlRef.current}
+            className="w-full h-full rounded-lg border-0 bg-white"
+            title="Apercu PDF"
+          />
+        ) : pdfData && !fallbackToIframe ? (
           <div className="relative">
             <canvas
               ref={canvasRef}
               className="bg-white shadow-2xl rounded-lg"
             />
-            {/* Rendering overlay spinner */}
             <AnimatePresence>
               {isRendering && (
                 <motion.div
@@ -452,13 +474,12 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             </AnimatePresence>
           </div>
         ) : (
-          /* ── Skeleton loader ── */
           <PdfSkeleton />
         )}
       </div>
 
-      {/* ─── Quick Stats Bar ─────────────────────────────────── */}
-      <div className="px-4 py-2 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
+      {/* Quick Stats Bar */}
+      <div className="shrink-0 px-4 py-2 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="text-center">
             <p className="text-[10px] text-gray-400 uppercase">Total TTC</p>

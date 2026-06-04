@@ -69,10 +69,9 @@ export default function CanvasCopilotLayout({
   // ─── Desktop: 2-column layout ──────────────────────
   // Left: PDF Canvas (~45%) | Right: Structured Form (~55%)
 
+  // Negative margins break out of app layout py-5/px-5 padding
+  // Mobile: 100dvh - top bar (3.5rem) - BottomTabBar (4rem) | Desktop: full viewport
   return (
-    {/* Negative margins break out of the app layout's py-5/px-5 padding.
-        Mobile: 100dvh minus top bar (3.5rem) minus BottomTabBar (4rem).
-        Desktop: full viewport. */}
     <div className="flex flex-col -my-5 -mx-5 lg:-my-6 lg:-mx-8 h-[calc(100dvh-3.5rem-4rem)] lg:h-screen">
 
       {/* ═══════════ TOP HEADER BAR ═══════════ */}
