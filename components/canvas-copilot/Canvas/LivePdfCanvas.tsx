@@ -8,8 +8,6 @@ import { Invoice, Profile } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
 // ─── PDF.js lazy loader ──────────────────────────────────
-// Lazy-imported to avoid SSR bundling issues (component is ssr: false).
-// The worker is served from /public for zero-CDN-dependency reliability.
 
 type PdfjsModule = typeof import('pdfjs-dist');
 
@@ -85,7 +83,7 @@ function PdfSkeleton() {
  * Live PDF Canvas — dual-strategy PDF preview.
  *
  * Strategy 1 (primary): pdfjs-dist renders on <canvas> (HiDPI, zoom controls).
- * Strategy 2 (fallback): native <iframe> + blob URL (browser PDF engine).
+ * Strategy 2 (fallback): native <iframe> + blob URL (browser built-in PDF engine).
  *
  * If pdfjs-dist fails to load or render, the component automatically falls
  * back to the iframe strategy which works on 100% of browsers.
@@ -98,7 +96,6 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderTaskRef = useRef<any>(null);
   const mountedRef = useRef(true);
-  const blobUrlRef = useRef<string | null>(null);
 
   // ─── State ───────────────────────────────────────────────
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
@@ -109,8 +106,9 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [containerWidth, setContainerWidth] = useState(595);
-  const [fallbackToIframe, setFallbackToIframe] = useState(false);
-  const [canvasFailed, setCanvasFailed] = useState(false);
+  const [useIframe, setUseIframe] = useState(false);
+  // blobUrl is STATE (not ref) so it triggers re-render for the iframe to appear
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   const MAX_RETRIES = 3;
 
@@ -193,24 +191,22 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     return () => observer.disconnect();
   }, []);
 
-  // ─── Blob URL management for iframe fallback ─────────────
+  // ─── Create blob URL when we have pdfData + iframe mode ──
+  // Uses STATE so the iframe re-renders when blob URL is ready
   useEffect(() => {
-    if (pdfData && fallbackToIframe) {
-      // Revoke previous blob URL
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-      }
-      const blob = new Blob([pdfData], { type: 'application/pdf' });
-      blobUrlRef.current = URL.createObjectURL(blob);
+    if (!pdfData || !useIframe) {
+      setBlobUrl(null);
+      return;
     }
 
+    const blob = new Blob([pdfData], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    if (mountedRef.current) setBlobUrl(url);
+
     return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
-      }
+      URL.revokeObjectURL(url);
     };
-  }, [pdfData, fallbackToIframe]);
+  }, [pdfData, useIframe]);
 
   // ─── Generate PDF via server-side API ────────────────────
   const generatePdf = useCallback(async () => {
@@ -253,7 +249,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
 
   // ─── Render PDF to <canvas> via pdfjs-dist ───────────────
   useEffect(() => {
-    if (!pdfData || fallbackToIframe) return;
+    if (!pdfData || useIframe) return;
 
     let cancelled = false;
     setIsRendering(true);
@@ -306,9 +302,8 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         if (err?.name === 'RenderingCancelledException') return;
         console.warn('[LivePdfCanvas] Canvas render failed, switching to iframe fallback:', err?.message);
         if (!cancelled && mountedRef.current) {
-          // Auto-switch to iframe fallback on canvas failure
-          setCanvasFailed(true);
-          setFallbackToIframe(true);
+          // Auto-switch to iframe fallback — blob URL effect will handle the rest
+          setUseIframe(true);
           setIsRendering(false);
         }
       }
@@ -323,7 +318,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
         renderTaskRef.current = null;
       }
     };
-  }, [pdfData, containerWidth, zoom, fallbackToIframe]);
+  }, [pdfData, containerWidth, zoom, useIframe]);
 
   // ─── Debounce: regenerate PDF after 600ms of inactivity ──
   useEffect(() => {
@@ -355,9 +350,6 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       if (renderTaskRef.current) {
         try { renderTaskRef.current.cancel(); } catch { /* ignore */ }
       }
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-      }
     };
   }, []);
 
@@ -365,8 +357,8 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   const handleRetry = useCallback(() => {
     setRetryCount(0);
     setError(null);
-    setFallbackToIframe(false);
-    setCanvasFailed(false);
+    setUseIframe(false);
+    setBlobUrl(null);
     resetPdfjs();
     generatePdf();
   }, [generatePdf]);
@@ -381,7 +373,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             Aper&ccedil;u temps r&eacute;el
           </span>
-          {fallbackToIframe && (
+          {useIframe && (
             <span className="text-[9px] text-blue-400 font-medium">(natif)</span>
           )}
         </div>
@@ -400,7 +392,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             )}
           </AnimatePresence>
 
-          {!fallbackToIframe && (
+          {!useIframe && (
             <>
               <button
                 onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
@@ -427,6 +419,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       {/* Canvas Area */}
       <div ref={containerRef} className="flex-1 overflow-auto flex items-start justify-center p-4">
         {error ? (
+          /* Error state with retry */
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
               <FileWarning size={24} className="text-amber-500" />
@@ -447,14 +440,15 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
               R&eacute;essayer
             </button>
           </div>
-        ) : fallbackToIframe && blobUrlRef.current ? (
+        ) : useIframe && blobUrl ? (
           /* FALLBACK: Native browser PDF viewer via iframe + blob URL */
           <iframe
-            src={blobUrlRef.current}
+            src={blobUrl}
             className="w-full h-full rounded-lg border-0 bg-white"
             title="Apercu PDF"
           />
-        ) : pdfData && !fallbackToIframe ? (
+        ) : pdfData && !useIframe ? (
+          /* PRIMARY: pdfjs-dist canvas rendering */
           <div className="relative">
             <canvas
               ref={canvasRef}
@@ -474,6 +468,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
             </AnimatePresence>
           </div>
         ) : (
+          /* Loading skeleton */
           <PdfSkeleton />
         )}
       </div>
