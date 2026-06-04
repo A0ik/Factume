@@ -21,8 +21,12 @@ import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
  * 4 onglets + FAB central pour création rapide de documents
  * Layout : [Tab][Tab][FAB][Tab][Tab] — 5 colonnes égales
  *
- * Design : glassmorphism, indicator animé via layoutId,
- * spring transitions, retour tactile visuel.
+ * Design : opaque background (no transparency leak),
+ * indicator animé via layoutId, spring transitions, retour tactile visuel.
+ *
+ * BUG FIX: Uses solid opaque background instead of semi-transparent to prevent
+ * content showing through during scroll. Uses env(safe-area-inset-bottom) for
+ * proper anchoring on notched devices.
  */
 const tabs = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
@@ -48,7 +52,9 @@ export default function BottomTabBar() {
         className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="bg-background/80 backdrop-blur-2xl border-t border-border">
+        {/* Opaque background — no content leak during scroll.
+            Using bg-white/bg-slate-900 instead of bg-background/80 transparency. */}
+        <div className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-white/10">
           <div className="flex items-end h-16 max-w-lg mx-auto px-2">
 
             {/* Tab 0: Accueil */}
@@ -124,13 +130,13 @@ function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean })
           strokeWidth={active ? 2.2 : 1.5}
           className={cn(
             'transition-colors duration-200',
-            active ? 'text-emerald-400' : 'text-muted-foreground',
+            active ? 'text-emerald-400' : 'text-slate-400 dark:text-slate-500',
           )}
         />
         <span
           className={cn(
             'text-[10px] font-semibold transition-colors duration-200',
-            active ? 'text-emerald-400' : 'text-muted-foreground',
+            active ? 'text-emerald-400' : 'text-slate-400 dark:text-slate-500',
           )}
         >
           {tab.label}

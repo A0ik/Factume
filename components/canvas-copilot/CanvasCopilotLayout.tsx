@@ -22,7 +22,7 @@ const LivePdfCanvas = dynamic(() => import('./Canvas/LivePdfCanvas'), {
   loading: () => (
     <div className="flex flex-col items-center justify-center h-full">
       <div className="w-8 h-8 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Chargement de l'aper&ccedil;u...</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Chargement de l&apos;aper&ccedil;u...</p>
     </div>
   ),
 });
@@ -70,10 +70,13 @@ export default function CanvasCopilotLayout({
   // Left: PDF Canvas (~45%) | Right: Structured Form (~55%)
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] lg:h-screen">
+    {/* Negative margins break out of the app layout's py-5/px-5 padding.
+        Mobile: 100dvh minus top bar (3.5rem) minus BottomTabBar (4rem).
+        Desktop: full viewport. */}
+    <div className="flex flex-col -my-5 -mx-5 lg:-my-6 lg:-mx-8 h-[calc(100dvh-3.5rem-4rem)] lg:h-screen">
 
       {/* ═══════════ TOP HEADER BAR ═══════════ */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 z-20">
+      <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 z-20">
         {/* Back button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -151,12 +154,12 @@ export default function CanvasCopilotLayout({
           {saving ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              <span className="hidden sm:inline">Creation...</span>
+              <span className="hidden sm:inline">Cr&eacute;ation...</span>
             </>
           ) : (
             <>
               <Save size={14} />
-              <span className="hidden sm:inline">Creer</span>
+              <span className="hidden sm:inline">Cr&eacute;er</span>
             </>
           )}
         </motion.button>
@@ -169,7 +172,7 @@ export default function CanvasCopilotLayout({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="px-4 py-2 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/30"
+            className="shrink-0 px-4 py-2 bg-red-50 dark:bg-red-500/10 border-b border-red-200 dark:border-red-500/30"
           >
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
           </motion.div>
@@ -191,7 +194,7 @@ export default function CanvasCopilotLayout({
         <div className="hidden lg:flex lg:w-[55%]">
           <div className="w-full flex flex-col">
             {/* The structured form — doubts are now rendered inline */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
               <DocumentFormPanel
                 profile={profile}
                 isPro={isPro}
@@ -199,8 +202,8 @@ export default function CanvasCopilotLayout({
               />
             </div>
 
-            {/* ─── Voice + Text Bar (desktop) ──────────── */}
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
+            {/* ─── Voice + Text Bar (desktop) — always visible at bottom ─── */}
+            <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
                 <SmartTextBar
                   profile={profile}
@@ -216,10 +219,10 @@ export default function CanvasCopilotLayout({
           </div>
         </div>
 
-        {/* ─── MOBILE: Full-screen form + floating preview ─── */}
-        <div className="lg:hidden flex-1 flex flex-col relative">
-          {/* Form fills the entire mobile screen — doubts rendered inline */}
-          <div className="flex-1 overflow-hidden">
+        {/* ─── MOBILE: Scrollable form + fixed bottom bar ─── */}
+        <div className="lg:hidden flex-1 flex flex-col">
+          {/* Form fills available space and scrolls independently */}
+          <div className="flex-1 overflow-y-auto">
             <DocumentFormPanel
               profile={profile}
               isPro={isPro}
@@ -227,10 +230,10 @@ export default function CanvasCopilotLayout({
             />
           </div>
 
-          {/* ─── Sticky Bottom Action Bar (thumb zone) ─── */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 dark:to-transparent pt-8">
+          {/* ─── Fixed Bottom Bar (always visible, never hidden) ─── */}
+          <div className="shrink-0 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
             {/* Voice + Text Bar (mobile) */}
-            <div className="px-3 pb-2">
+            <div className="px-3 pt-2">
               <div className="flex items-center gap-2">
                 <SmartTextBar
                   profile={profile}
@@ -245,24 +248,24 @@ export default function CanvasCopilotLayout({
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-2 px-3 pb-3">
+            <div className="flex gap-2 px-3 py-2">
               {/* Preview button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowMobilePreview(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-sm font-semibold transition-all min-w-[100px]"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 text-sm font-semibold transition-all min-w-[100px]"
               >
                 <Eye size={16} />
-                Apercu
+                Aper&ccedil;u
               </motion.button>
 
-              {/* Create button — primary CTA in thumb zone */}
+              {/* Create button — primary CTA */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={onSave}
                 disabled={saving || !hasContent}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all',
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all',
                   hasContent && !saving
                     ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg shadow-emerald-500/20`
                     : 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-not-allowed',
@@ -271,12 +274,12 @@ export default function CanvasCopilotLayout({
                 {saving ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Creation...
+                    Cr&eacute;ation...
                   </>
                 ) : (
                   <>
                     <Save size={16} />
-                    Creer le document
+                    Cr&eacute;er le document
                   </>
                 )}
               </motion.button>
@@ -309,7 +312,7 @@ export default function CanvasCopilotLayout({
 
                   {/* Preview header */}
                   <div className="flex items-center justify-between px-4 pb-2">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Apercu PDF</h3>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Aper&ccedil;u PDF</h3>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => setShowMobilePreview(false)}

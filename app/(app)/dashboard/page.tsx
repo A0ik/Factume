@@ -69,8 +69,12 @@ export default function DashboardPage() {
   const recentInvoices = useMemo(() => invoices.slice(0, 5), [invoices]);
 
   // --- Calcul du montant "À encaisser" (envoyées + en retard) ---
+  // IMPORTANT: Ne compter que les factures réelles (pas les devis, bons, etc.)
   const { toCollect, toCollectOverdue, toCollectPending } = useMemo(() => {
-    const sent = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
+    const actualInvoices = invoices.filter(i =>
+      !i.document_type || i.document_type === 'invoice'
+    );
+    const sent = actualInvoices.filter(i => i.status === 'sent' || i.status === 'overdue');
     const overdue = sent.filter(i => i.status === 'overdue');
     const pending = sent.filter(i => i.status === 'sent');
     return {
@@ -80,7 +84,7 @@ export default function DashboardPage() {
     };
   }, [invoices]);
 
-  const overdueCount = useMemo(() => invoices.filter(i => i.status === 'overdue').length, [invoices]);
+  const overdueCount = useMemo(() => invoices.filter(i => i.status === 'overdue' && (!i.document_type || i.document_type === 'invoice')).length, [invoices]);
 
   const chartData = useMemo(() => {
     const data = Array.from({ length: period }, (_, i) => {
