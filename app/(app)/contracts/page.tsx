@@ -202,7 +202,7 @@ export default function ContractsPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Contrats</h2>
+              <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Contrats</h2>
               <p className="text-slate-400 mt-1">Gerez vos contrats de travail conformes 2026</p>
             </div>
             <div className="flex gap-2">
@@ -268,9 +268,20 @@ export default function ContractsPage() {
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
                   {STATUS_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all">
-                  {TYPE_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
+                {/* ZENITH: Segment control for type filter */}
+                <div className="flex gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
+                  {TYPE_FILTERS.map((f) => (
+                    <button key={f.value} onClick={() => setTypeFilter(f.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                        typeFilter === f.value
+                          ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -291,16 +302,14 @@ export default function ContractsPage() {
               ))}
             </div>
 
-            {/* Mobile type filter pills */}
-            <div className="sm:hidden flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+            {/* ZENITH: Unified segment control for mobile type filter */}
+            <div className="sm:hidden flex gap-1 overflow-x-auto pb-1 scrollbar-hide bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
               {TYPE_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setTypeFilter(f.value)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                <button key={f.value} onClick={() => setTypeFilter(f.value)}
+                  className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                     typeFilter === f.value
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900'
+                      ? 'bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
                   {f.label}

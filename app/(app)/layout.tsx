@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useSidebarState, hydrateSidebarMode } from '@/hooks/useSidebarState';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileDrawer from '@/components/layout/MobileDrawer';
 import BottomTabBar from '@/components/layout/BottomTabBar';
@@ -13,7 +14,6 @@ import dynamic from 'next/dynamic';
 const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 import { TrialCountdown } from '@/components/ui/trial-countdown';
 import { InvoiceCounter } from '@/components/ui/invoice-counter';
-import { UpgradeBanner } from '@/components/ui/upgrade-banner';
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator';
 import { Toaster } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
@@ -25,7 +25,10 @@ import { ToastProvider } from '@/components/ui/SuccessToast';
 /** Titre contextuel de la page pour la top bar mobile */
 function getPageTitle(pathname: string): string {
   if (pathname === '/dashboard' || pathname === '/') return 'Accueil';
+  if (pathname === '/documents') return 'Documents';
+  if (pathname === '/contacts') return 'Contacts';
   if (pathname.startsWith('/documents')) return 'Documents';
+  if (pathname.startsWith('/contacts')) return 'Contacts';
   if (pathname.startsWith('/invoices/new') || pathname.startsWith('/documents/create')) return 'Nouveau document';
   if (pathname.startsWith('/invoices/')) return 'Document';
   if (pathname.startsWith('/clients')) return 'Clients';
@@ -34,7 +37,16 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/expenses')) return 'Dépenses';
   if (pathname.startsWith('/notifications')) return 'Notifications';
   if (pathname.startsWith('/recurring')) return 'Récurrentes';
+  if (pathname.startsWith('/products')) return 'Articles';
+  if (pathname.startsWith('/crm')) return 'Pipeline';
   return 'Factu.me';
+}
+
+/** Sidebar width for main content margin */
+function getSidebarWidth(mode: string): number {
+  if (mode === 'focus') return 0;
+  if (mode === 'expanded') return 260;
+  return 64;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -42,13 +54,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, initialized, profile } = useAuthStore();
   const fetchInvoices = useDataStore(state => state.fetchInvoices);
   const fetchClients = useDataStore(state => state.fetchClients);
-  const invoices = useDataStore(state => state.invoices);
   const { isFree, isTrialActive, invoiceCount } = useSubscription();
   const pathname = usePathname();
+  const sidebarMode = useSidebarState(state => state.mode);
   const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [showInvoiceCounter, setShowInvoiceCounter] = useState(true);
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Hydrate sidebar mode from localStorage on mount
+  useEffect(() => { hydrateSidebarMode(); }, []);
+
+  // ZENITH: Cmd+/ toggle focus mode
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        useSidebarState.getState().toggleFocus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     if (!initialized) return;
@@ -68,7 +94,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [initialized, user]);
 
-  const hideBanners = pathname === '/paywall' || pathname === '/trial';
+  // Redirect cabinet access
+  useEffect(() => {
+    if (pathname.startsWith('/cabinet') && !pathname.startsWith('/cabinets')) {
+      router.replace('/dashboard');
+    }
+  }, [pathname, router]);
+
+  const hideBanners = pathname === '/paywall' || pathname === '/trial' || pathname.startsWith('/cabinet');
 
   if (!initialized) {
     return (
@@ -82,6 +115,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  const sidebarWidth = getSidebarWidth(sidebarMode);
 
   return (
     <ToastProvider>
@@ -99,26 +134,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={5} onClose={() => setShowInvoiceCounter(false)} />
       )}
 
-      {isFree && !hideBanners && !pathname.startsWith('/cabinet') && showUpgradeBanner && pathname === '/invoices' && (
-        <div className="container mx-auto px-4 lg:px-8 pt-4">
-          <UpgradeBanner
-            type="limit"
-            buttonText="Activer l'essai gratuit"
-            description="7 jours d'accès complet à toutes les fonctionnalités"
-            onClick={() => router.push('/trial')}
-            onClose={() => setShowUpgradeBanner(false)}
-          />
-        </div>
-      )}
-
       <div className="flex min-h-screen bg-background">
-        {!pathname.startsWith('/cabinet') && <Sidebar />}
-        <main className={cn(
-          "flex-1 flex flex-col min-w-0",
-          pathname.startsWith('/cabinet') ? "pb-20 lg:pb-0 lg:pl-0" : "pb-20 lg:pb-0"
-        )}>
+        <Sidebar />
+        <main
+          className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0 transition-[margin-left] duration-300"
+          style={{ marginLeft: sidebarWidth > 0 ? undefined : 0 }}
+        >
           {/* Mobile top bar — native app style with contextual title */}
-          {!pathname.startsWith('/cabinet') && (
           <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-2xl border-b border-border"
                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             <div className="flex items-center justify-between px-4 h-14">
@@ -137,7 +159,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </div>
-          )}
 
           <MobileLayout>
             <div className={cn(
@@ -159,10 +180,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* Floating pill navigation */}
-        {!pathname.startsWith('/cabinet') && <BottomTabBar />}
+        <BottomTabBar />
 
         {/* Mobile drawer */}
-        {!pathname.startsWith('/cabinet') && <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
+        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       </div>
     </ToastProvider>
   );

@@ -18,20 +18,19 @@ import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
 /**
  * BottomTabBar — Navigation native mobile
  *
- * 4 onglets + FAB central pour création rapide de documents
+ * 4 onglets fusionnés + FAB central pour création rapide de documents
  * Layout : [Tab][Tab][FAB][Tab][Tab] — 5 colonnes égales
  *
- * Design : opaque background (no transparency leak),
- * indicator animé via layoutId, spring transitions, retour tactile visuel.
- *
- * BUG FIX: Uses solid opaque background instead of semi-transparent to prevent
- * content showing through during scroll. Uses env(safe-area-inset-bottom) for
- * proper anchoring on notched devices.
+ * Onglets mis à jour pour les routes fusionnées ZENITH :
+ * - Accueil → /dashboard
+ * - Documents → /documents (tous types fusionnés)
+ * - Clients → /contacts (clients, articles, CRM fusionnés)
+ * - Compte → /settings
  */
 const tabs = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
-  { href: '/documents/factures', icon: FileText, label: 'Documents' },
-  { href: '/clients', icon: Users, label: 'Clients' },
+  { href: '/documents', icon: FileText, label: 'Documents' },
+  { href: '/contacts', icon: Users, label: 'Clients' },
   { href: '/settings', icon: UserCircle, label: 'Compte' },
 ];
 
@@ -52,15 +51,13 @@ export default function BottomTabBar() {
         className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        {/* Opaque background — no content leak during scroll.
-            Using bg-white/bg-slate-900 instead of bg-background/80 transparency. */}
         <div className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-white/10">
           <div className="flex items-end h-16 max-w-lg mx-auto px-2">
 
             {/* Tab 0: Accueil */}
             <TabItem tab={tabs[0]} active={isActive(tabs[0].href)} />
 
-            {/* Tab 1: Factures */}
+            {/* Tab 1: Documents */}
             <TabItem tab={tabs[1]} active={isActive(tabs[1].href)} />
 
             {/* Central FAB — opens Document Type Sheet */}

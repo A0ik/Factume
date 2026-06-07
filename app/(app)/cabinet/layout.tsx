@@ -1,5 +1,21 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+/**
+ * ZENITH: Cabinet module disabled.
+ * All cabinet routes redirect to dashboard.
+ * Original code is preserved but unreachable.
+ */
+export default function CabinetLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  useEffect(() => { router.replace('/dashboard'); }, [router]);
+  return null;
+}
+
+/* ── Original Cabinet Layout (preserved, unreachable) ──
+
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +51,14 @@ const NAV_ITEMS = [
 ];
 
 export default function CabinetLayout({ children }: { children: React.ReactNode }) {
+  // ── ZENITH: Cabinet module disabled ──
+  // All cabinet routes redirect to dashboard.
+  // Code is preserved but access is blocked.
+  const router = require('next/navigation').useRouter();
+  React.useEffect(() => { router.replace('/dashboard'); }, [router]);
+  return null;
+
+  /* Original code preserved below (unreachable)
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -162,3 +186,4 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
     </div>
   );
 }
+─ end of preserved code ─ */

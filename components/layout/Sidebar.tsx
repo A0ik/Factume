@@ -1,30 +1,32 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, FileText, Users,
-  Settings, Zap, ChevronRight, ChevronDown,
-  Building2, Bell, HelpCircle, Package, Receipt, Calendar,
-  Calculator, Activity, Landmark, Search,
-  Rocket, Crown, Sparkles, ArrowUpRight, Target, Lock,
-  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard, ScanLine,
-  Shield, Plug, Briefcase, BookOpen,
-  FileSignature, ClipboardList, UsersRound, DollarSign,
+  LayoutDashboard, FileText, Users, Settings, Zap,
+  ChevronRight, ChevronLeft, Search, Bell, HelpCircle,
+  Package, Receipt, Calculator, Activity, Landmark,
+  Target, Shield, Plug, Calendar, ScanLine,
+  EyeOff, Eye, LogOut, Moon, Sun, Keyboard,
+  DollarSign, ClipboardList, UsersRound,
+  FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
+  Briefcase, Lock, ArrowUpRight, Crown, Rocket, Sparkles,
+  FileSignature,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { useCabinetStore } from '@/stores/cabinetStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useSidebarState, type SidebarMode } from '@/hooks/useSidebarState';
 import { cn, getInitials } from '@/lib/utils';
-import { UserDropdown } from '@/components/ui/user-dropdown';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { KeyboardShortcutsHelp } from '@/components/ui/KeyboardShortcutsHelp';
 import { openCommandPalette } from '@/components/ui/CommandPalette';
 import { toast } from 'sonner';
 
+// ─── Tier config (unchanged from original) ───────────────────────
 const TIER_CONFIG = {
   free: { name: 'Gratuit', nextTier: 'solo', gradient: 'from-gray-600 to-gray-700', icon: Zap, iconColor: 'text-white', message: 'Essai gratuit 7 jours', subtext: 'Accès complet · Sans engagement', cta: '/trial' },
   trial: { name: 'Essai', nextTier: 'pro', gradient: 'from-purple-500 to-violet-600', icon: Sparkles, iconColor: 'text-white', message: 'Essai en cours', subtext: 'Accès Pro · 7 jours gratuits', cta: '/paywall' },
@@ -33,13 +35,17 @@ const TIER_CONFIG = {
   business: { name: 'Business', nextTier: 'business', gradient: 'from-violet-600 to-purple-700', icon: Sparkles, iconColor: 'text-white', message: 'Tout inclus', subtext: 'Fonctionnalités illimitées', cta: '/paywall' },
 } as const;
 
-interface SubItem { href: string; icon: any; label: string; locked?: boolean; lockTier?: string }
-interface NavSection {
+// ─── Navigation items (flat, icon-based) ─────────────────────────
+interface NavItem {
   id: string;
-  label: string;
+  href: string;
   icon: any;
-  items: SubItem[];
-  defaultOpen?: boolean;
+  label: string;
+  subLabel?: string;
+  badge?: number;
+  locked?: boolean;
+  lockTier?: string;
+  children?: { href: string; icon: any; label: string; locked?: boolean; lockTier?: string }[];
 }
 
 export default function Sidebar() {
@@ -48,77 +54,59 @@ export default function Sidebar() {
   const { profile, user, signOut } = useAuthStore();
   const { invoices } = useDataStore();
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
-  const { cabinet } = useCabinetStore();
   const sub = useSubscription();
+  const { mode, setMode, toggleFocus } = useSidebarState();
+
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const hoverZoneRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
-  const hasCabinet = !!cabinet;
-  const canAccessCabinet = (sub.isBusiness || sub.isTrialActive);
-  const cabinetLocked = !canAccessCabinet;
-  const cabinetItemsLocked = !canAccessCabinet || !hasCabinet;
   const currentTier = (['free','trial','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig = TIER_CONFIG[currentTier];
   const shouldShowUpgrade = sub.tier !== 'business';
 
-  // Auto-expand sections based on current path
-  const getInitialExpanded = useCallback(() => {
-    const sections: Record<string, boolean> = {};
-    if (pathname.startsWith('/documents')) sections['documents'] = true;
-    if (pathname.startsWith('/clients') || pathname.startsWith('/products') || pathname.startsWith('/crm')) sections['contacts'] = true;
-    if (pathname.startsWith('/expenses') || pathname.startsWith('/accounting') || pathname.startsWith('/banking') || pathname.startsWith('/data-health')) sections['finances'] = true;
-    if (pathname.startsWith('/contracts')) sections['contrats'] = true;
-    if (pathname.startsWith('/cabinet')) sections['cabinet'] = true;
-    if (pathname.startsWith('/ocr') || pathname.startsWith('/integrations') || pathname.startsWith('/calendar')) sections['outils'] = true;
-    return sections;
-  }, [pathname]);
+  useEffect(() => { if (user) fetchNotifications(user.id); }, [user, fetchNotifications]);
 
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => getInitialExpanded());
-
-  useEffect(() => { if (user) fetchNotifications(user.id); }, [user]);
-
-  // Update expanded when pathname changes
+  // Click outside profile popover
   useEffect(() => {
-    setExpanded(prev => ({ ...prev, ...getInitialExpanded() }));
-  }, [pathname, getInitialExpanded]);
+    if (!showProfile) return;
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfile(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showProfile]);
 
-  const toggleSection = (id: string) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // When inside cabinet pages, collapse the cabinet section in main sidebar
-  // (the cabinet layout has its own dedicated sidebar)
-  const isInCabinet = pathname.startsWith('/cabinet');
-
-  // ── Section definitions ──
-  const sections: NavSection[] = [
+  // ─── Build nav items ──────────────────────────────────────────
+  const navItems: NavItem[] = [
+    { id: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
     {
-      id: 'documents',
-      label: 'Documents',
-      icon: FileText,
-      defaultOpen: true,
-      items: [
+      id: 'documents', href: '/documents', icon: FileText, label: 'Documents', subLabel: 'Factures, devis…',
+      children: [
         { href: '/documents/factures', icon: FilePlus2, label: 'Factures' },
         { href: '/documents/devis', icon: FileCheck, label: 'Devis' },
         { href: '/documents/avoirs', icon: FilePenLine, label: 'Avoirs' },
         { href: '/documents/commandes', icon: Receipt, label: 'Commandes' },
-        { href: '/documents/livraisons', icon: Truck, label: 'Bons de livraison' },
+        { href: '/documents/livraisons', icon: Truck, label: 'Livraisons' },
         { href: '/documents/acomptes', icon: CreditCard, label: 'Acomptes' },
       ],
     },
     {
-      id: 'contacts',
-      label: 'Contacts',
-      icon: UsersRound,
-      items: [
+      id: 'contacts', href: '/contacts', icon: UsersRound, label: 'Contacts', subLabel: 'Clients, articles…',
+      children: [
         { href: '/clients', icon: Users, label: 'Clients' },
         { href: '/products', icon: Package, label: 'Articles' },
         { href: '/crm', icon: Target, label: 'Pipeline CRM', locked: !sub.canUseCRM, lockTier: 'pro' },
       ],
     },
     {
-      id: 'finances',
-      label: 'Finances',
-      icon: DollarSign,
-      items: [
+      id: 'finances', href: '/expenses', icon: DollarSign, label: 'Finances',
+      children: [
         { href: '/expenses', icon: Receipt, label: 'Notes de frais', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
@@ -126,38 +114,16 @@ export default function Sidebar() {
       ],
     },
     {
-      id: 'contrats',
-      label: 'Contrats',
-      icon: ClipboardList,
-      items: [
+      id: 'contracts', href: '/contracts', icon: ClipboardList, label: 'Contrats',
+      children: [
         { href: '/contracts/list/cdi', icon: FileSignature, label: 'CDI' },
         { href: '/contracts/list/cdd', icon: FileSignature, label: 'CDD' },
         { href: '/contracts/list/other', icon: FileSignature, label: 'Autres' },
-        { href: '/contracts/reports', icon: ClipboardList, label: 'Rapports' },
       ],
     },
     {
-      id: 'cabinet',
-      label: 'Cabinet',
-      icon: Briefcase,
-      items: [
-        { href: '/cabinet', icon: LayoutDashboard, label: 'Dashboard', locked: cabinetLocked, lockTier: 'business' },
-        { href: '/cabinet/clients', icon: Users, label: 'Clients', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/facturation', icon: FilePlus2, label: 'Facturation', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/relances', icon: Bell, label: 'Relances', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/social', icon: UsersRound, label: 'Social', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/salaries', icon: Users, label: 'Salariés', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/missions', icon: FileCheck, label: 'Missions', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/juridique', icon: Shield, label: 'Juridique', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/echeances', icon: Calendar, label: 'Échéances', locked: cabinetItemsLocked, lockTier: 'business' },
-        { href: '/cabinet/settings', icon: Settings, label: 'Paramètres', locked: cabinetItemsLocked, lockTier: 'business' },
-      ],
-    },
-    {
-      id: 'outils',
-      label: 'Outils',
-      icon: ScanLine,
-      items: [
+      id: 'tools', href: '/integrations', icon: ScanLine, label: 'Outils',
+      children: [
         { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
         { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/calendar', icon: Calendar, label: 'Agenda' },
@@ -166,288 +132,452 @@ export default function Sidebar() {
     },
   ];
 
-  const isOpen = (id: string) => expanded[id] ?? false;
+  const utilityItems: NavItem[] = [
+    { id: 'settings', href: '/settings', icon: Settings, label: 'Paramètres' },
+    { id: 'help', href: '/help', icon: HelpCircle, label: 'Aide' },
+    { id: 'notifications', href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
+  ];
 
-  // ── Sub-item component ──
-  const SubItem = ({ href, icon: Icon, label, locked, lockTier }: SubItem) => {
-    const active = pathname.startsWith(href);
-    if (locked) {
-      const isCabinetItem = href.startsWith('/cabinet/') && canAccessCabinet && !hasCabinet;
-      const tooltip = isCabinetItem
-        ? 'Créez d\'abord votre cabinet'
-        : `Disponible avec ${lockTier === 'pro' ? 'Pro' : 'Business'}`;
-      return (
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-70 group" title={tooltip}>
-          <Icon size={14} strokeWidth={1.8} />
-          <span className="flex-1">{label}</span>
-          <Lock size={11} className="text-gray-400" />
-        </div>
-      );
-    }
-    return (
-      <Link href={href} className={cn(
-        'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200',
-        active
-          ? 'bg-primary/10 text-primary font-semibold'
-          : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
-      )}>
-        <Icon size={14} strokeWidth={active ? 2.5 : 1.8} />
-        <span>{label}</span>
-      </Link>
-    );
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+    return pathname.startsWith(href);
   };
 
-  // ── Section component ──
-  const Section = ({ section }: { section: NavSection }) => {
-    const open = isOpen(section.id);
-    const SectionIcon = section.icon;
-    const isActive = section.items.some(item => !item.locked && pathname.startsWith(item.href));
-    const allLocked = section.items.every(item => item.locked);
+  const isItemActive = (item: NavItem) => {
+    if (isActive(item.href)) return true;
+    return item.children?.some(c => isActive(c.href)) ?? false;
+  };
 
-    // Don't show cabinet section for non-business users unless they're on trial
-    if (section.id === 'cabinet' && !(sub.isBusiness || sub.isTrialActive)) {
-      // Show locked version
+  const sidebarWidth = mode === 'focus' ? 0 : mode === 'expanded' ? 260 : 64;
+  const isExpanded = mode === 'expanded';
+  const isFocus = mode === 'focus';
+
+  // ─── Render helpers ──────────────────────────────────────────
+
+  const renderNavItem = (item: NavItem) => {
+    const active = isItemActive(item);
+    const Icon = item.icon;
+
+    if (mode === 'icons') {
       return (
-        <div className="space-y-0.5">
-          <button onClick={() => toggleSection(section.id)} className={cn(
-            'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-white/5',
-          )}>
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex-shrink-0">
-              <SectionIcon size={15} className="text-gray-500 dark:text-gray-400" />
-            </span>
-            <span className="flex-1 text-left font-medium">{section.label}</span>
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 uppercase tracking-wide">BUSINESS</span>
-          </button>
+        <div
+          key={item.id}
+          className="relative"
+          onMouseEnter={() => setHoveredItem(item.id)}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <Link
+            href={item.children ? item.children[0].href : item.href}
+            className={cn(
+              'flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200',
+              active
+                ? 'bg-primary/10 text-primary'
+                : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
+            )}
+          >
+            <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+          </Link>
+
+          {/* Popover on hover */}
+          <AnimatePresence>
+            {hoveredItem === item.id && (
+              <motion.div
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-full top-0 ml-2 z-50 w-52 bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden"
+              >
+                <div className="px-3 py-2.5 border-b border-gray-100 dark:border-white/5">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.label}</p>
+                  {item.subLabel && <p className="text-[10px] text-gray-400 mt-0.5">{item.subLabel}</p>}
+                </div>
+                {item.children && (
+                  <div className="p-1.5">
+                    {item.children.map(child => (
+                      child.locked ? (
+                        <div key={child.href} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 opacity-60" title={`Disponible avec ${child.lockTier === 'pro' ? 'Pro' : 'Business'}`}>
+                          <child.icon size={14} strokeWidth={1.8} />
+                          <span className="flex-1">{child.label}</span>
+                          <Lock size={10} className="text-gray-400" />
+                        </div>
+                      ) : (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all',
+                            isActive(child.href)
+                              ? 'bg-primary/10 text-primary font-semibold'
+                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5',
+                          )}
+                        >
+                          <child.icon size={14} strokeWidth={isActive(child.href) ? 2.2 : 1.8} />
+                          <span>{child.label}</span>
+                        </Link>
+                      )
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       );
     }
 
+    // Expanded mode
     return (
-      <div className="space-y-0.5">
-        <button onClick={() => toggleSection(section.id)} className={cn(
-          'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-          isActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
-        )}>
+      <div key={item.id} className="space-y-0.5">
+        <Link
+          href={item.children ? item.children[0].href : item.href}
+          className={cn(
+            'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+            active
+              ? 'bg-primary/10 text-primary'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
+          )}
+        >
           <span className={cn(
             'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
-            isActive
+            active
               ? 'bg-primary text-white shadow-sm'
               : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500',
           )}>
-            <SectionIcon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+            <Icon size={15} strokeWidth={active ? 2.5 : 1.8} />
           </span>
-          <span className="flex-1 text-left font-semibold">{section.label}</span>
-          <span className="transition-transform duration-200" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-            <ChevronDown size={14} className="text-gray-400" />
-          </span>
-        </button>
-        {open && (
-          <div className="ml-4 pl-4 border-l border-gray-100 dark:border-white/5 space-y-0.5 py-1">
-            {section.items.map(item => <SubItem key={item.href} {...item} />)}
+          <span className="flex-1 text-left font-semibold">{item.label}</span>
+        </Link>
+
+        {item.children && active && (
+          <div className="ml-4 pl-4 border-l border-gray-100 dark:border-white/5 space-y-0.5 py-0.5">
+            {item.children.map(child => (
+              child.locked ? (
+                <div key={child.href} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 opacity-60" title={`Disponible avec ${child.lockTier === 'pro' ? 'Pro' : 'Business'}`}>
+                  <child.icon size={14} strokeWidth={1.8} />
+                  <span className="flex-1">{child.label}</span>
+                  <Lock size={11} className="text-gray-400" />
+                </div>
+              ) : (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200',
+                    isActive(child.href)
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
+                  )}
+                >
+                  <child.icon size={14} strokeWidth={isActive(child.href) ? 2.5 : 1.8} />
+                  <span>{child.label}</span>
+                </Link>
+              )
+            ))}
           </div>
         )}
       </div>
     );
   };
 
+  // ─── Main render ─────────────────────────────────────────────
+
   return (
-    <aside className="hidden lg:flex flex-col w-72 h-screen sticky top-0 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950 border-r border-emerald-100 dark:border-emerald-900/30 overflow-hidden flex-shrink-0">
-      <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-primary/[0.08] via-primary/[0.02] to-transparent pointer-events-none" />
+    <>
+      {/* Focus mode hover zone — invisible strip on left edge */}
+      {isFocus && (
+        <div
+          ref={hoverZoneRef}
+          className="fixed left-0 top-0 w-2 h-full z-50"
+          onMouseEnter={() => setMode('icons')}
+        />
+      )}
 
-      {/* Logo */}
-      <div className="relative px-5 pt-6 pb-5 border-b border-emerald-100/80 dark:border-emerald-900/20 flex-shrink-0">
-        <Link href="/dashboard" className="block hover:opacity-80 transition-opacity">
-          <Logo size="md" variant="full" dark={false} />
-        </Link>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-          </span>
-          <span className="text-[11px] text-gray-400 font-medium uppercase tracking-widest">Espace de travail</span>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative px-4 py-3 border-b border-emerald-100/60 dark:border-emerald-900/20 flex-shrink-0">
-        <button
-          onClick={() => openCommandPalette()}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-white/5 hover:bg-emerald-100/70 dark:hover:bg-white/10 border border-emerald-200/60 dark:border-emerald-800/30 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all text-sm group"
-        >
-          <Search size={15} className="group-hover:scale-110 transition-transform text-primary" />
-          <span className="flex-1 text-left font-medium text-gray-600 dark:text-gray-300">Rechercher...</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 text-gray-500 dark:text-gray-400 font-mono">⌘K</kbd>
-        </button>
-      </div>
-
-      {/* Main nav */}
-      <nav className="relative flex-1 overflow-y-auto px-3 py-4 scrollbar-none space-y-1">
-
-        {/* Dashboard - always visible */}
-        <Link href="/dashboard" className={cn(
-          'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
-          pathname.startsWith('/dashboard')
-            ? 'bg-primary/10 text-primary'
-            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
+      <motion.aside
+        ref={sidebarRef}
+        initial={false}
+        animate={{ width: sidebarWidth }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="hidden lg:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950 border-r border-emerald-100 dark:border-emerald-900/30 overflow-hidden flex-shrink-0"
+        style={{ pointerEvents: isFocus ? 'none' : 'auto' }}
+      >
+        {/* ─── Header ─────────────────────────────────────── */}
+        <div className={cn(
+          'flex-shrink-0 border-b border-emerald-100/60 dark:border-emerald-900/20 flex items-center',
+          isExpanded ? 'px-5 pt-5 pb-4 gap-3' : 'justify-center pt-5 pb-4',
         )}>
-          <span className={cn(
-            'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
-            pathname.startsWith('/dashboard')
-              ? 'bg-primary text-white shadow-md shadow-primary/30'
-              : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
-          )}>
-            <LayoutDashboard size={17} strokeWidth={pathname.startsWith('/dashboard') ? 2.5 : 1.8} />
-          </span>
-          <span className="flex-1 font-semibold">Tableau de bord</span>
-        </Link>
-
-        {/* Collapsible sections */}
-        {sections
-          .filter(section => !(section.id === 'cabinet' && isInCabinet))
-          .map(section => <Section key={section.id} section={section} />)}
-
-        {/* Quick stats */}
-        <div className="pt-4 pb-2">
-          <div className="h-px bg-gray-100 dark:bg-white/5 mx-1 mb-4" />
-          <div className="mx-1 px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/10">
-            <div className="flex items-center gap-2 mb-3">
-              <Receipt size={12} className="text-primary" />
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Factures</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Payées', value: invoices.filter(i => i.status === 'paid').length, color: 'text-primary' },
-                { label: 'Attente', value: invoices.filter(i => i.status === 'sent').length, color: 'text-amber-500' },
-                { label: 'Retard', value: overdueCount, color: overdueCount > 0 ? 'text-red-500' : 'text-gray-300' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="text-center p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-colors cursor-default">
-                  <p className={cn('text-xl font-black', color)}>{value}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+            <Logo size={isExpanded ? 'md' : 'sm'} variant={isExpanded ? 'full' : 'icon'} dark={false} />
+          </Link>
         </div>
 
-        {/* Account section */}
-        <div>
-          <div className="h-px bg-gradient-to-r from-emerald-200/60 via-emerald-100/40 to-transparent dark:from-emerald-800/30 dark:via-emerald-900/10 mx-1 mb-3" />
-          {[
-            { href: '/settings', icon: Settings, label: 'Paramètres' },
-            { href: '/help', icon: HelpCircle, label: 'Aide' },
-            { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
-          ].map(({ href, icon: Icon, label, badge }) => {
-            const active = pathname.startsWith(href);
+        {/* ─── Search button ──────────────────────────────── */}
+        <div className={cn(
+          'flex-shrink-0 border-b border-emerald-100/40 dark:border-emerald-900/15',
+          isExpanded ? 'px-4 py-3' : 'py-3 flex justify-center',
+        )}>
+          {isExpanded ? (
+            <button
+              onClick={() => openCommandPalette()}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-white/5 hover:bg-emerald-100/70 dark:hover:bg-white/10 border border-emerald-200/60 dark:border-emerald-800/30 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all text-sm group"
+            >
+              <Search size={15} className="group-hover:scale-110 transition-transform text-primary" />
+              <span className="flex-1 text-left font-medium text-gray-600 dark:text-gray-300">Rechercher...</span>
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 text-gray-500 dark:text-gray-400 font-mono">⌘K</kbd>
+            </button>
+          ) : (
+            <button
+              onClick={() => openCommandPalette()}
+              className="flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-primary transition-all"
+              title="Rechercher (⌘K)"
+            >
+              <Search size={20} strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
+
+        {/* ─── Main navigation ────────────────────────────── */}
+        <nav className={cn(
+          'flex-1 overflow-y-auto scrollbar-none',
+          isExpanded ? 'px-3 py-4 space-y-1' : 'py-4 flex flex-col items-center gap-1',
+        )}>
+          {navItems.map(renderNavItem)}
+
+          {/* Divider */}
+          <div className={cn(
+            'h-px bg-gray-100 dark:bg-white/5 my-3',
+            isExpanded ? 'mx-1' : 'mx-2',
+          )} />
+
+          {/* Utility items */}
+          {utilityItems.map(item => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
+            if (mode === 'icons') {
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  title={item.label}
+                  className={cn(
+                    'flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 relative',
+                    active
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-700 dark:hover:text-gray-300',
+                  )}
+                >
+                  <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
+                  {item.badge && (
+                    <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[9px] font-bold bg-primary text-white">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            }
             return (
-              <Link key={href} href={href} className={cn(
-                'group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
-                active
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100',
-              )}>
-                <span className={cn(
-                  'flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 transition-all',
+              <Link
+                key={item.id}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                   active
-                    ? 'bg-primary text-white shadow-md shadow-primary/30'
-                    : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 group-hover:bg-primary/10 group-hover:text-primary',
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5',
+                )}
+              >
+                <span className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all',
+                  active
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500',
                 )}>
-                  <Icon size={17} strokeWidth={active ? 2.5 : 1.8} />
+                  <Icon size={15} strokeWidth={active ? 2.5 : 1.8} />
                 </span>
-                <span className="flex-1 font-semibold">{label}</span>
-                {badge && (
+                <span className="flex-1 font-semibold">{item.label}</span>
+                {item.badge && (
                   <span className="flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold bg-primary text-white">
-                    {badge > 9 ? '9+' : badge}
+                    {item.badge > 9 ? '9+' : item.badge}
                   </span>
                 )}
               </Link>
             );
           })}
-        </div>
-      </nav>
+        </nav>
 
-      {/* Upgrade banner */}
-      {shouldShowUpgrade && (
-        <div className="px-4 mb-3 flex-shrink-0">
-          <Link href={tierConfig.cta} className="group relative flex items-center gap-3 p-4 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
-            <div className={cn('absolute inset-0 bg-gradient-to-br opacity-90', tierConfig.gradient)} />
-            <div className="relative flex items-center gap-3 w-full">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/20 transition-transform group-hover:scale-110 group-hover:rotate-6">
-                <tierConfig.icon size={18} className="text-white" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">{tierConfig.message}</p>
-                <p className="text-[11px] text-white/70 mt-0.5">{tierConfig.subtext}</p>
-              </div>
-              <ArrowUpRight size={16} className="relative text-white/70 group-hover:text-white transition-colors flex-shrink-0" />
-            </div>
-          </Link>
-        </div>
-      )}
-
-      {/* Profile */}
-      <div className="flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20 px-4 py-4">
-        <div
-          onClick={() => router.push(sub.tier === 'free' ? '/paywall' : '/settings')}
-          className={cn(
-            'relative overflow-hidden rounded-2xl p-3 mb-3 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border',
-            sub.tier === 'free' && 'bg-gradient-to-br from-gray-300 to-gray-200 border-gray-400 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700',
-            sub.tier === 'trial' && 'bg-gradient-to-br from-purple-300 to-purple-200 border-purple-400 dark:from-purple-900/30 dark:to-purple-800/20 dark:border-purple-700',
-            (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-gradient-to-br from-blue-300 to-blue-200 border-blue-400 dark:from-blue-900/30 dark:to-blue-800/20 dark:border-blue-700',
-            sub.tier === 'business' && 'bg-gradient-to-br from-violet-300 to-violet-200 border-violet-400 dark:from-violet-900/30 dark:to-violet-800/20 dark:border-violet-700',
+        {/* ─── Bottom section ──────────────────────────────── */}
+        <div className={cn(
+          'flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20',
+          isExpanded ? 'px-4 py-3' : 'py-3 flex flex-col items-center gap-2',
+        )}>
+          {/* Focus mode toggle */}
+          {isExpanded ? (
+            <button
+              onClick={toggleFocus}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
+            >
+              <EyeOff size={15} strokeWidth={1.8} />
+              <span>Mode Focus</span>
+              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 font-mono">⌘/</kbd>
+            </button>
+          ) : (
+            <button
+              onClick={toggleFocus}
+              className="flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
+              title="Mode Focus (⌘/)"
+            >
+              <EyeOff size={20} strokeWidth={1.8} />
+            </button>
           )}
-        >
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
-              sub.tier === 'free' && 'bg-gray-400 dark:bg-gray-700',
-              sub.tier === 'trial' && 'bg-purple-400 dark:bg-purple-800',
-              (sub.tier === 'solo' || sub.tier === 'pro') && 'bg-blue-400 dark:bg-blue-800',
-              sub.tier === 'business' && 'bg-violet-400 dark:bg-violet-800',
-            )}>
-              <tierConfig.icon size={18} className={tierConfig.iconColor} strokeWidth={2.5} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{tierConfig.name}</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {sub.tier === 'free' ? '3 factures gratuites/mois' : tierConfig.subtext}
-              </p>
-            </div>
-            {sub.tier !== 'business' && <ArrowUpRight size={14} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />}
+
+          {/* Expand/collapse toggle (only in non-focus) */}
+          {isExpanded ? (
+            <button
+              onClick={() => setMode('icons')}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
+            >
+              <ChevronLeft size={15} strokeWidth={1.8} />
+              <span>Réduire</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setMode('expanded')}
+              className="flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
+              title="Développer"
+            >
+              <ChevronRight size={20} strokeWidth={1.8} />
+            </button>
+          )}
+
+          {/* Profile */}
+          <div ref={profileRef} className="relative">
+            {isExpanded ? (
+              <button
+                onClick={() => setShowProfile(!showProfile)}
+                className={cn(
+                  'w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:shadow-sm border cursor-pointer',
+                  'bg-gradient-to-br border-gray-200 dark:border-gray-700',
+                  sub.tier === 'free' && 'from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900',
+                  sub.tier === 'trial' && 'from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10',
+                  (sub.tier === 'solo' || sub.tier === 'pro') && 'from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10',
+                  sub.tier === 'business' && 'from-violet-50 to-violet-100/50 dark:from-violet-900/20 dark:to-violet-800/10',
+                )}
+              >
+                <div className={cn(
+                  'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                  profile?.logo_url ? '' : 'bg-primary text-white text-xs font-bold',
+                )}>
+                  {profile?.logo_url ? (
+                    <img src={profile.logo_url} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                  ) : (
+                    getInitials(profile?.company_name || profile?.first_name || 'U')
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{profile?.company_name || profile?.first_name || 'Mon compte'}</p>
+                  <p className="text-[10px] text-gray-400 truncate">{tierConfig.name}</p>
+                </div>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowProfile(!showProfile)}
+                className="flex items-center justify-center w-12 h-12 rounded-xl transition-all hover:bg-gray-100 dark:hover:bg-white/5"
+                title={profile?.company_name || 'Mon compte'}
+              >
+                <div className={cn(
+                  'w-9 h-9 rounded-lg flex items-center justify-center',
+                  profile?.logo_url ? '' : 'bg-primary text-white text-xs font-bold',
+                )}>
+                  {profile?.logo_url ? (
+                    <img src={profile.logo_url} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                  ) : (
+                    getInitials(profile?.company_name || profile?.first_name || 'U')
+                  )}
+                </div>
+              </button>
+            )}
+
+            {/* Profile popover */}
+            <AnimatePresence>
+              {showProfile && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn(
+                    'absolute z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden',
+                    isExpanded ? 'bottom-full mb-2 left-0 right-0' : 'bottom-full mb-2 left-full ml-2 w-56',
+                  )}
+                >
+                  {/* Tier upgrade card */}
+                  {shouldShowUpgrade && (
+                    <Link
+                      href={tierConfig.cta}
+                      onClick={() => setShowProfile(false)}
+                      className={cn('flex items-center gap-3 p-3 bg-gradient-to-br opacity-90 hover:opacity-100 transition-opacity', tierConfig.gradient)}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
+                        <tierConfig.icon size={14} className="text-white" strokeWidth={2.5} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white">{tierConfig.message}</p>
+                        <p className="text-[10px] text-white/70 mt-0.5">{tierConfig.subtext}</p>
+                      </div>
+                      <ArrowUpRight size={14} className="text-white/70" />
+                    </Link>
+                  )}
+
+                  <div className="p-2">
+                    <button
+                      onClick={() => { router.push('/settings'); setShowProfile(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Settings size={14} strokeWidth={1.8} />
+                      Paramètres
+                    </button>
+                    <button
+                      onClick={() => { router.push('/notifications'); setShowProfile(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Bell size={14} strokeWidth={1.8} />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <span className="ml-auto min-w-4 h-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="border-t border-gray-100 dark:border-white/5 p-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ThemeToggle />
+                      <KeyboardShortcutsHelp />
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setShowProfile(false);
+                        try {
+                          toast.loading('Déconnexion...', { id: 'logout' });
+                          await signOut();
+                          toast.success('Déconnecté', { id: 'logout' });
+                        } catch {
+                          toast.error('Erreur déconnexion', { id: 'logout' });
+                        }
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    >
+                      <LogOut size={14} strokeWidth={1.8} />
+                      Déconnexion
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-
-        <UserDropdown
-          user={{
-            name: profile?.company_name || profile?.first_name || 'Mon compte',
-            email: profile?.email || '',
-            initials: getInitials(profile?.company_name || profile?.first_name || 'U'),
-            avatar: profile?.logo_url || undefined,
-            status: 'online',
-            tier: profile?.subscription_tier || 'free',
-          }}
-          onAction={async (action) => {
-            if (action === 'logout') {
-              try { toast.loading('Déconnexion...', { id: 'logout' }); await signOut(); toast.success('Déconnecté', { id: 'logout' }); }
-              catch { toast.error('Erreur déconnexion', { id: 'logout' }); }
-            }
-            if (action === 'settings') router.push('/settings');
-            if (action === 'profile') router.push('/settings');
-            if (action === 'notifications') router.push('/notifications');
-            if (action === 'help') router.push('/help');
-            if (action === 'upgrade') router.push('/paywall');
-            if (action === 'switch') {
-              try { await signOut(); router.push('/login'); } catch {}
-            }
-          }}
-        />
-
-        <div className="flex items-center gap-2 mt-2 px-2">
-          <KeyboardShortcutsHelp />
-          <ThemeToggle />
-        </div>
-      </div>
-    </aside>
+      </motion.aside>
+    </>
   );
 }

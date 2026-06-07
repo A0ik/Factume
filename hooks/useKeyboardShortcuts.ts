@@ -72,14 +72,14 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled: boo
 export function useGlobalKeyboardShortcuts(enabled?: boolean) {
   const router = useRouter();
 
-  // Raccourcis qui ne conflitent pas avec les raccourcis navigateur/système
+  // Raccourcis ZENITH — routes fusionnées
   const shortcuts: KeyboardShortcut[] = [
-    // Navigation - utilise des lettres moins conflictuelles
+    // Navigation — routes fusionnées
     { key: 'd', altKey: true, action: () => router.push('/dashboard'), description: 'Aller au tableau de bord' },
-    { key: 'i', altKey: true, action: () => router.push('/invoices'), description: 'Aller aux factures' },
-    { key: 'c', altKey: true, action: () => router.push('/clients'), description: 'Aller aux clients' },
-    { key: 'q', altKey: true, action: () => router.push('/documents/devis'), description: 'Aller aux devis' },
-    { key: 'n', altKey: true, shiftKey: true, action: () => router.push('/invoices/new'), description: 'Nouvelle facture' },
+    { key: 'f', altKey: true, action: () => router.push('/documents'), description: 'Aller aux documents' },
+    { key: 'c', altKey: true, action: () => router.push('/contacts'), description: 'Aller aux contacts' },
+    { key: 'x', altKey: true, action: () => router.push('/contracts'), description: 'Aller aux contrats' },
+    { key: 'n', altKey: true, shiftKey: true, action: () => router.push('/documents/factures/new'), description: 'Nouvelle facture' },
 
     // Actions - utilise Ctrl/Cmd + lettre qui est standard
     { key: 'k', ctrlKey: true, metaKey: true, action: () => {
