@@ -59,6 +59,8 @@ export default function MentionsLegales() {
         { label: 'RGPD', value: 'Conforme au Règlement (UE) 2016/679' },
         { label: 'CNIL', value: 'Déclaration auprès de la CNIL' },
         { label: 'LCEN', value: 'Conforme à la Loi pour la Confiance dans l\'Économie Numérique' },
+        { label: 'PDP Partenaire', value: 'superpdp.tech — Plateforme de Dématérialisation Partenaire agréée' },
+        { label: 'Facturation électronique', value: 'Conforme à la loi n° 2022-1156 du 16 novembre 2022' },
         { label: 'Code de commerce', value: 'Respect des obligations commerciales' }
       ]
     },

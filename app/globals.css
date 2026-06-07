@@ -97,23 +97,27 @@
    Text-gray/slate-300/400/500 are too light on white backgrounds.
    We bump them up to WCAG AA compliant levels in light mode only.
    Dark mode overrides below will handle the dark side.
+
+   NOTE: #landing exclusion — the landing page uses its own color scheme
+   with dark sections (bg-slate-950) containing text-slate-300/400.
+   These overrides must NOT apply to the landing page.
    ══════════════════════════════════════════════════════════════════ */
 html:not(.dark) {
   /* text-slate-300 → slate-500 (visible on white) */
   --tw-text-opacity: 1;
 }
-html:not(.dark) .text-slate-300 { color: rgb(100 116 139) !important; } /* → slate-500 */
-html:not(.dark) .text-slate-400 { color: rgb(71 85 105) !important; }  /* → slate-600 */
-html:not(.dark) .text-gray-300 { color: rgb(107 114 128) !important; } /* → gray-500 */
-html:not(.dark) .text-gray-400 { color: rgb(75 85 99) !important; }   /* → gray-600 */
+html:not(.dark) .text-slate-300:not(#landing *):not(#landing) { color: rgb(100 116 139) !important; } /* → slate-500 */
+html:not(.dark) .text-slate-400:not(#landing *):not(#landing) { color: rgb(71 85 105) !important; }  /* → slate-600 */
+html:not(.dark) .text-gray-300:not(#landing *):not(#landing) { color: rgb(107 114 128) !important; } /* → gray-500 */
+html:not(.dark) .text-gray-400:not(#landing *):not(#landing) { color: rgb(75 85 99) !important; }   /* → gray-600 */
 
 /* Buttons and interactive labels need even more contrast */
-html:not(.dark) button .text-slate-400,
-html:not(.dark) button .text-gray-400,
-html:not(.dark) button .text-slate-500,
-html:not(.dark) button .text-gray-500,
-html:not(.dark) a .text-slate-400,
-html:not(.dark) a .text-gray-400 {
+html:not(.dark) button .text-slate-400:not(#landing *),
+html:not(.dark) button .text-gray-400:not(#landing *),
+html:not(.dark) button .text-slate-500:not(#landing *),
+html:not(.dark) button .text-gray-500:not(#landing *),
+html:not(.dark) a .text-slate-400:not(#landing *),
+html:not(.dark) a .text-gray-400:not(#landing *) {
   color: rgb(51 65 85) !important; /* slate-700 — strong contrast */
 }
 

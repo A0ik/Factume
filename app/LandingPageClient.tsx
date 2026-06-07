@@ -11,7 +11,7 @@ import {
   ChevronDown, LogIn, Shield, Eye, Share2,
   Twitter, Linkedin, Github, Brain, Mic, Type, Pencil,
   ShieldCheck, Lock, CheckCircle, Calculator, FileClock,
-  LayoutGrid, Crown,
+  LayoutGrid, Crown, Hammer, Globe, Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Marquee } from '@/components/ui/marquee';
@@ -78,8 +78,8 @@ function VoiceWaveform() {
 }
 
 /* ─── Scroll Trail — ruban vectoriel qui se dessine au scroll ───
+   Positionné sur le tiers droit de l'écran, bande étroite.
    mix-blend-mode: screen → invisible sur fond blanc, visible sur fond sombre.
-   Les deux paths (glow + main) sont animés par le scroll.
 */
 function ScrollTrail() {
   const pathRef = useRef<SVGPathElement>(null);
@@ -121,11 +121,20 @@ function ScrollTrail() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const d = 'M93,0 C74,7 99,14 77,22 C55,30 98,38 73,47 C48,55 96,63 70,72 C44,80 94,88 82,94 C70,100 88,100 88,100';
+  const d = [
+    'M60,0',
+    'C30,5 10,10 50,15',
+    'C90,20 95,25 40,30',
+    'C5,35 15,40 65,45',
+    'C95,50 90,55 30,60',
+    'C10,65 15,70 70,75',
+    'C95,80 85,85 35,90',
+    'C20,94 40,98 60,100',
+  ].join(' ');
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-[1]"
+      className="fixed top-0 right-[5%] w-[20%] h-full pointer-events-none z-[5]"
       style={{ mixBlendMode: 'screen' }}
       aria-hidden="true"
     >
@@ -133,30 +142,30 @@ function ScrollTrail() {
         <defs>
           <linearGradient id="stGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="6%" stopColor="#10b981" stopOpacity="0.6" />
-            <stop offset="35%" stopColor="#34d399" stopOpacity="0.4" />
-            <stop offset="65%" stopColor="#10b981" stopOpacity="0.45" />
-            <stop offset="94%" stopColor="#34d399" stopOpacity="0.6" />
+            <stop offset="4%" stopColor="#10b981" stopOpacity="0.6" />
+            <stop offset="30%" stopColor="#34d399" stopOpacity="0.45" />
+            <stop offset="60%" stopColor="#10b981" stopOpacity="0.5" />
+            <stop offset="92%" stopColor="#34d399" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Glow — large, doux */}
+        {/* Glow */}
         <path
           ref={glowRef}
           d={d}
           stroke="url(#stGrad)"
-          strokeWidth="18"
+          strokeWidth="16"
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           fill="none"
-          opacity="0.18"
+          opacity="0.14"
         />
         {/* Trait principal */}
         <path
           ref={pathRef}
           d={d}
           stroke="url(#stGrad)"
-          strokeWidth="4.5"
+          strokeWidth="4"
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           fill="none"
@@ -192,16 +201,16 @@ const testimonials = [
 ];
 
 const plans = [
-  { name: 'Solo', price: '14,99€', yearly: '12€', tag: 'Freelances & Auto-entrepreneurs', features: ['Factur-X / EN 16931 conforme', 'Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], popular: false },
-  { name: 'Pro', price: '29,99€', yearly: '24€', tag: 'TPE & PME', features: ['Factur-X / EN 16931 conforme', 'Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail'], popular: true },
-  { name: 'Business', price: '59,99€', yearly: '48€', tag: 'PME en croissance', features: ['Factur-X / EN 16931 conforme', 'Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Multi-utilisateurs', 'Rapports avancés'], popular: false },
+  { name: 'Solo', price: '14,99€', yearly: '12€', tag: 'Freelances & Auto-entrepreneurs', features: ['Facture électronique conforme 2026', 'Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], popular: false },
+  { name: 'Pro', price: '29,99€', yearly: '24€', tag: 'TPE & PME', features: ['Facture électronique conforme 2026', 'Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail'], popular: true },
+  { name: 'Business', price: '59,99€', yearly: '48€', tag: 'PME en croissance', features: ['Facture électronique conforme 2026', 'Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Multi-utilisateurs', 'Rapports avancés'], popular: false },
 ];
 
 const faqItems = [
   { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Découverte est 100% gratuit (3 factures/mois). Pour tester les plans payants, profitez de 7 jours d\'essai complet, sans engagement.' },
   { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données.' },
-  { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA est entraînée pour comprendre le français naturel. Dites "5 jours de dev à 600€" et elle créera la facture complète avec TVA.' },
-  { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. L\'export officiel pour les impôts et le format Factur-X sont disponibles sur tous les plans.' },
+  { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA comprend parfaitement le français naturel. Dites "5 jours de dev à 600€" et elle crée la facture complète. Vous n\'avez qu\'à vérifier et envoyer.' },
+  { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. Vos factures électroniques sont conformes et prêtes pour l\'obligation 2026. L\'export officiel pour les impôts est disponible sur tous les plans.' },
   { q: 'Puis-je récupérer mes données si je veux quitter ?', a: 'Oui, conformément au RGPD vous pouvez télécharger l\'intégralité de vos données ou demander la suppression totale de votre compte.' },
 ];
 
@@ -212,6 +221,17 @@ const trustItems = [
   { icon: Briefcase, label: 'Consultants' },
   { icon: Palette, label: 'Agences' },
   { icon: HeartPulse, label: 'Santé' },
+];
+
+
+
+const targetAudience = [
+  { icon: Building2, title: 'Auto-entrepreneur', copy: 'Vos factures en 10 secondes, sans prise de tête.', color: 'from-emerald-500 to-teal-500' },
+  { icon: Hammer, title: 'Artisan', copy: "Entre deux chantiers, dictez et c'est envoyé.", color: 'from-amber-500 to-orange-500' },
+  { icon: Store, title: 'TPE / PME', copy: 'Gérez votre équipe et vos factures au même endroit.', color: 'from-blue-500 to-cyan-500' },
+  { icon: Code2, title: 'Freelance', copy: 'Facturation, CRM et contrats — un seul outil.', color: 'from-violet-500 to-purple-500' },
+  { icon: Briefcase, title: 'Consultant', copy: 'Devis signés et factures encaissées en 1 clic.', color: 'from-rose-500 to-pink-500' },
+  { icon: Palette, title: 'Agence', copy: 'Workspaces séparés pour chaque client.', color: 'from-indigo-500 to-blue-500' },
 ];
 
 const integrations = [
@@ -271,7 +291,7 @@ export default function LandingPageClient() {
   ];
 
   return (
-    <div className="bg-slate-950 text-white antialiased overflow-x-hidden">
+    <div id="landing" className="bg-slate-950 text-white antialiased overflow-x-hidden">
 
       {/* ═══ SCROLL TRAIL — ruban vectoriel qui se dessine au scroll ═══ */}
       <ScrollTrail />
@@ -358,29 +378,33 @@ export default function LandingPageClient() {
                 </h1>
               </R>
 
-              {/* CTA UNIQUE — Loi de Fitts */}
+              {/* Double CTA — Loi 1 : ancrage + secondaire */}
               <R delay={0.2}>
-                <Link href="/register" className="group relative inline-flex items-center justify-center gap-3 font-bold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-10 py-5 2xl:px-12 2xl:py-6 text-base 2xl:text-lg transition-all duration-300 active:scale-[0.97] shadow-[0_0_40px_rgba(16,185,129,0.35)] hover:shadow-[0_0_60px_rgba(16,185,129,0.45)]">
-                  <Mic className="w-5 h-5 2xl:w-6 2xl:h-6" />
-                  Dicter ma première facture
-                  <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <Link href="/register" className="group relative inline-flex items-center justify-center gap-3 font-bold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-10 py-5 2xl:px-12 2xl:py-6 text-base 2xl:text-lg transition-all duration-300 active:scale-[0.97] shadow-[0_0_40px_rgba(16,185,129,0.35)] hover:shadow-[0_0_60px_rgba(16,185,129,0.45)]">
+                    <Mic className="w-5 h-5 2xl:w-6 2xl:h-6" />
+                    Essayer gratuitement
+                    <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <a href="#features" onClick={(e) => scrollTo(e, '#features')} className="group inline-flex items-center justify-center gap-2 text-white/70 hover:text-white font-medium px-6 py-5 2xl:px-8 2xl:py-6 text-base 2xl:text-lg transition-colors duration-300 underline underline-offset-4 decoration-white/20 hover:decoration-white/60">
+                    <Play className="w-4 h-4 2xl:w-5 2xl:h-5 text-emerald-400" />
+                    Découvrir la plateforme
+                  </a>
+                </div>
               </R>
 
-              {/* TRUST — Score sous le CTA, RIEN d'autre */}
-              <R delay={0.32}>
-                <div className="flex items-center gap-5 pt-2">
+              {/* Preuve sociale immédiate — Loi 5 */}
+              <R delay={0.3}>
+                <div className="flex items-center gap-4 pt-2">
                   <div className="flex -space-x-2">
-                    {['M', 'S', 'A', 'L'].map((c, i) => (
-                      <div key={i} className="w-8 2xl:w-10 h-8 2xl:h-10 rounded-full border-2 border-slate-950 bg-slate-700 text-[10px] 2xl:text-xs font-bold text-slate-300 flex items-center justify-center">{c}</div>
-                    ))}
-                    <div className="w-8 2xl:w-10 h-8 2xl:h-10 rounded-full border-2 border-slate-950 bg-slate-800 text-[9px] 2xl:text-[10px] font-bold text-slate-400 flex items-center justify-center">+2k</div>
+                    {['M', 'S', 'A', 'L'].map((initial, i) => {
+                      const colors = ['bg-blue-500/30 text-blue-300', 'bg-purple-500/30 text-purple-300', 'bg-emerald-500/30 text-emerald-300', 'bg-amber-500/30 text-amber-300'];
+                      return <div key={i} className={'w-7 h-7 rounded-full border-2 border-slate-950 ' + colors[i] + ' font-bold text-[9px] flex items-center justify-center'}>{initial}</div>;
+                    })}
                   </div>
                   <div>
-                    <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}</div>
-                    <div className="text-[10px] 2xl:text-xs text-slate-400 mt-0.5">
-                      <span className="text-white font-semibold">4.9/5</span> — 2 000+ entrepreneurs
-                    </div>
+                    <div className="flex items-center gap-0.5">{[1,2,3,4,5].map(i => <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />)}</div>
+                    <span className="text-[10px] text-slate-400">2 000+ entrepreneurs nous font confiance</span>
                   </div>
                 </div>
               </R>
@@ -391,7 +415,7 @@ export default function LandingPageClient() {
               <R delay={0.2} y={0} x={30}>
                 <div className="relative w-full max-w-[280px] md:max-w-[320px] 2xl:max-w-[380px]">
                   <div style={{ filter: 'drop-shadow(0 40px 80px rgba(0,0,0,0.5)) drop-shadow(0 10px 30px rgba(0,0,0,0.3))' }}>
-                    <Image src="/iphone-hero.png" alt="Factu.me — Facturation électronique sur iPhone" width={500} height={1000} className="w-full h-auto object-contain" priority quality={95} />
+                    <Image src="/iphone-hero.png" alt="Factu.me — Facturation intelligente sur iPhone" width={500} height={1000} className="w-full h-auto object-contain" priority quality={95} />
                   </div>
                   <motion.div className="absolute -top-3 -left-6 md:-left-10 z-20 hidden lg:block" animate={{ y: [-4, 4, -4] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
                     <div className="bg-white/10 backdrop-blur-lg border border-white/10 text-white rounded-xl px-3 py-2 flex items-center gap-2">
@@ -415,27 +439,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#020617" toColor="#ffffff" variant={0} />
 
       {/* ════════════ SOCIAL PROOF ════════════ */}
-      <section data-nav-theme="light" className="relative py-12 2xl:py-16 overflow-hidden bg-white">
-        <div className={`${LC}`}>
-          <R>
-            <div className="flex items-center justify-center gap-6 sm:gap-10 mb-8">
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-extrabold text-gray-900">2 000+</div>
-                <div className="text-[10px] text-gray-400 font-medium">entreprises</div>
-              </div>
-              <div className="w-px h-10 bg-gray-200" />
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-extrabold text-gray-900">4.9<span className="text-amber-400">/5</span></div>
-                <div className="text-[10px] text-gray-400 font-medium">satisfaction</div>
-              </div>
-              <div className="w-px h-10 bg-gray-200" />
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-extrabold text-gray-900">&lt; 30s</div>
-                <div className="text-[10px] text-gray-400 font-medium">pour facturer</div>
-              </div>
-            </div>
-          </R>
-        </div>
+      <section data-nav-theme="light" className="relative py-8 2xl:py-10 overflow-hidden bg-white">
         <Marquee pauseOnHover className="[--duration:30s]" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' } as React.CSSProperties}>
           {trustItems.map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-2.5 text-gray-300 flex-shrink-0 px-3">
@@ -446,14 +450,45 @@ export default function LandingPageClient() {
         </Marquee>
       </section>
 
+      
       <Wave fromColor="#ffffff" toColor="#020617" variant={1} />
+
+      {/* ════════════ UNE SOLUTION POUR TOUS — Loi 2 ════════════ */}
+      <section data-nav-theme="dark" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-slate-950">
+        <div className={LC}>
+          <div className="text-center mb-14 2xl:mb-20">
+            <R><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Une solution pour <span className="text-emerald-400">tous</span></h2></R>
+            <R delay={0.1}><p className="text-base 2xl:text-lg text-slate-400 mt-4 max-w-xl mx-auto">Quel que soit votre métier, Factu.me s'adapte à votre quotidien.</p></R>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 2xl:gap-5 max-w-6xl 2xl:max-w-7xl mx-auto">
+            {targetAudience.map((item, i) => (
+              <R key={item.title} delay={i * 0.06}>
+                <motion.div
+                  whileHover={{ y: -6, scale: 1.03 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="group bg-slate-900/60 border border-white/[0.06] rounded-2xl p-5 2xl:p-6 text-center hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5 transition-colors duration-300 h-full cursor-default"
+                >
+                  <div className={LC}>
+                    <item.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-white" />
+                  </div>
+                  <h3 className="text-sm 2xl:text-base font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-[11px] 2xl:text-xs text-slate-400 leading-relaxed">{item.copy}</p>
+                </motion.div>
+              </R>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Wave fromColor="#020617" toColor="#ffffff" variant={2} />
 
       {/* ════════════ CORE FEATURE — Facture électronique + IA ════════════ */}
       <section data-nav-theme="dark" id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={`${LC} relative z-10`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
             <R><p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Facturation électronique</p></R>
-            <R delay={0.05}><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Votre facture électronique,<br /><span className="text-emerald-400">dictée et conforme</span></h2></R>
+            <R delay={0.05}><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Votre facture,<br /><span className="text-emerald-400">dictée et conforme</span></h2></R>
           </div>
 
           {/* Hero Feature — 2 colonnes */}
@@ -625,9 +660,21 @@ export default function LandingPageClient() {
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Conseil UX/UI</span><span className="font-semibold text-gray-900">800€</span></div>
                   <div className="flex justify-between text-sm border-t border-gray-100 pt-2"><span className="font-semibold text-gray-900">Total TTC</span><span className="font-bold text-emerald-600">4 560€</span></div>
                 </div>
+                {/* Stripe & SumUp logos — badges visuels avec couleurs de marque */}
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-center"><span className="text-sm font-bold text-gray-500 tracking-wide">stripe</span></div>
-                  <div className="flex-1 bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-center"><span className="text-sm font-bold text-gray-500 tracking-wide">sumup</span></div>
+                  <div className="flex-1 bg-[#635BFF]/[0.06] rounded-xl p-3 border border-[#635BFF]/10 flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 60 25" className="h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a10.3 10.3 0 0 1-4.56 1.02c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.2 0 .61-.04 1.18-.06 1.86zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.8-1.07-2.58-2.08-2.58zM43.94 20.22c-2.14 0-3.48-.98-4.4-1.7l-.08 1.48H35.7V.98l4.14-.87v5.38c.88-.56 2.15-1.24 3.88-1.24 3.88 0 6.07 3.5 6.07 7.3 0 4.38-2.63 7.67-5.85 7.67zm-.82-12.1c-1.07 0-1.94.38-2.52.95v5.54c.56.55 1.33.96 2.52.96 1.97 0 3.15-2.07 3.15-3.83 0-1.84-1.12-3.62-3.15-3.62zM27.36 5.23c-1.73 0-3.34.57-4.42 1.2V.98L19.18.1v19.22h3.72l.12-1.15c.97.87 2.4 1.47 4.1 1.47 3.87 0 6.14-3.5 6.14-7.3 0-4.08-2.28-7.11-5.9-7.11zm-.92 11.84c-1.3 0-2.22-.48-2.86-1.15V9.44c.68-.73 1.6-1.2 2.86-1.2 2.04 0 3.32 1.82 3.32 3.93 0 2.15-1.24 3.9-3.32 3.9zM13.9 5.7c-1.4 0-2.38.7-2.97 1.32l-.2-1.1H7.64v13.4h4.14v-8.7c.58-.78 1.62-1.28 2.78-1.06V5.86a3.32 3.32 0 0 0-.66-.16zM4.18 7.93c0-.67.55-1.05 1.5-1.05 1.2 0 2.5.46 3.42.95V4.78c-.94-.5-2.24-.8-3.72-.8C2.5 3.98.26 5.88.26 8.2c0 3.55 4.84 3.08 4.84 4.56 0 .78-.7 1.1-1.7 1.1-1.36 0-2.82-.62-3.9-1.28v3.2c1.2.58 2.56.88 3.9.88 3.16 0 5.1-1.72 5.1-4.18-.02-3.84-4.32-3.24-4.32-4.55z" fill="#635BFF"/>
+                    </svg>
+                    <span className="text-[10px] font-semibold text-[#635BFF]/70">Connecté</span>
+                  </div>
+                  <div className="flex-1 bg-[#F47B20]/[0.06] rounded-xl p-3 border border-[#F47B20]/10 flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 60 25" className="h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5.85 0A5.85 5.85 0 0 0 0 5.85v13.3A5.85 5.85 0 0 0 5.85 25h13.3A5.85 5.85 0 0 0 25 19.15V5.85A5.85 5.85 0 0 0 19.15 0H5.85zm2.5 5.5h5.8c2.9 0 4.8 1.55 4.8 4 0 2.2-1.5 3.5-3.5 3.95l4 5.55h-3.4l-3.6-5.2H10.8v5.2H8.35V5.5zm2.45 2.1v3.9h3c1.55 0 2.6-.7 2.6-2s-.95-1.9-2.5-1.9h-3.1z" fill="#F47B20"/>
+                      <text x="28" y="16" fontSize="11" fontWeight="700" fill="#F47B20" fontFamily="sans-serif">SumUp</text>
+                    </svg>
+                    <span className="text-[10px] font-semibold text-[#F47B20]/70">Connecté</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
                   <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
@@ -638,14 +685,18 @@ export default function LandingPageClient() {
             <div className="space-y-8">
               <R x={30} y={0}>
                 <p className="text-[11px] 2xl:text-xs text-emerald-600 uppercase tracking-[0.2em] font-medium mb-3">Encaissement</p>
-                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-8">
+                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-4">
                   De la facture à votre compte bancaire en <span className="text-emerald-500">1 lien</span>
                 </h2>
+                <p className="text-sm 2xl:text-base text-gray-500 mb-8 max-w-md">
+                  Connectez votre compte <span className="font-semibold text-[#635BFF]">Stripe</span> ou <span className="font-semibold text-[#F47B20]">SumUp</span> en 2 clics. Envoyez un lien de paiement directement avec votre facture — votre client paie par carte, vous recevez l'argent.
+                </p>
                 <ul className="space-y-4">
                   {[
                     { icon: CreditCard, text: 'Encaissez par carte bancaire, sans attendre un virement' },
                     { icon: ShieldCheck, text: 'Transactions sécurisées conformes aux normes européennes' },
                     { icon: Zap, text: 'Statut de paiement mis à jour en temps réel, sans action de votre part' },
+                    { icon: LinkIcon, text: '1 clic pour créer et envoyer un lien de paiement avec votre facture' },
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><item.icon className="w-4 h-4 text-emerald-600" /></div>
@@ -653,6 +704,21 @@ export default function LandingPageClient() {
                     </li>
                   ))}
                 </ul>
+                {/* CTA connexion */}
+                <div className="flex items-center gap-3 mt-8">
+                  <div className="inline-flex items-center gap-2 bg-[#635BFF]/[0.06] border border-[#635BFF]/15 rounded-full px-4 py-2">
+                    <svg viewBox="0 0 60 25" className="h-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a10.3 10.3 0 0 1-4.56 1.02c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.2 0 .61-.04 1.18-.06 1.86zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.8-1.07-2.58-2.08-2.58z" fill="#635BFF"/>
+                    </svg>
+                    <span className="text-xs font-semibold text-[#635BFF]">Stripe</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-[#F47B20]/[0.06] border border-[#F47B20]/15 rounded-full px-4 py-2">
+                    <svg viewBox="0 0 25 25" className="h-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5.85 0A5.85 5.85 0 0 0 0 5.85v13.3A5.85 5.85 0 0 0 5.85 25h13.3A5.85 5.85 0 0 0 25 19.15V5.85A5.85 5.85 0 0 0 19.15 0H5.85zm2.5 5.5h5.8c2.9 0 4.8 1.55 4.8 4 0 2.2-1.5 3.5-3.5 3.95l4 5.55h-3.4l-3.6-5.2H10.8v5.2H8.35V5.5zm2.45 2.1v3.9h3c1.55 0 2.6-.7 2.6-2s-.95-1.9-2.5-1.9h-3.1z" fill="#F47B20"/>
+                    </svg>
+                    <span className="text-xs font-semibold text-[#F47B20]">SumUp</span>
+                  </div>
+                </div>
               </R>
             </div>
           </div>
@@ -711,6 +777,77 @@ export default function LandingPageClient() {
           </div>
         </div>
       </section>
+
+      
+      <Wave fromColor="#ffffff" toColor="#020617" variant={0} />
+
+      {/* ════════════ CONFORMITÉ & ÉCOSYSTÈME — Loi 4 + 9 ════════════ */}
+      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
+        <div className={LC}>
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
+            <div className="space-y-8">
+              <R>
+                <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-3">Conformité 2026</p>
+                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-6">
+                  La facturation électronique <span className="text-emerald-400">sans prise de tête.</span>
+                </h2>
+                <p className="text-sm 2xl:text-base text-slate-400 leading-relaxed mb-6">
+                  Dès septembre 2026, toutes les entreprises françaises devront émettre et recevoir des factures électroniques. Avec Factu.me, vous êtes <span className="text-white font-semibold">déjà prêt</span>.
+                </p>
+              </R>
+              <R delay={0.1}>
+                <ul className="space-y-4">
+                  {[
+                    { icon: ShieldCheck, text: 'Conforme Factur-X / EN 16931 — le standard européen officiel' },
+                    { icon: Plug, text: 'Connexion à superpdp.tech, Plateforme de Dématérialisation Partenaire agréée' },
+                    { icon: Lock, text: 'Chiffrement de bout en bout — vos données restent en France' },
+                    { icon: Zap, text: 'Compatible Chorus Pro — vos factures passent partout' },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><item.icon className="w-4 h-4 text-emerald-400" /></div>
+                      <span className="text-sm text-slate-300 pt-1">{item.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </R>
+            </div>
+            <R delay={0.15}>
+              <div className="bg-slate-900 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
+                <div className="flex items-center justify-center mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <Zap className="w-7 h-7 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-center text-lg font-bold text-white mb-2">Votre écosystème, connecté</h3>
+                <p className="text-center text-xs text-slate-400 mb-6">Factu.me se connecte aux outils que vous utilisez déjà</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { name: 'Stripe', color: '#635BFF' },
+                    { name: 'SumUp', color: '#F47B20' },
+                    { name: 'Google', color: '#4285F4' },
+                    { name: 'CSV', color: '#10b981' },
+                    { name: 'PDF', color: '#8b5cf6' },
+                    { name: 'CPro', color: '#ef4444' },
+                  ].map((int, i) => (
+                    <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center hover:border-white/10 transition-colors">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: int.color + '15' }}>
+                        <span className="text-[10px] font-bold" style={{ color: int.color }}>{int.name.slice(0, 2)}</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-300">{int.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-xs text-emerald-300 font-medium">Vous êtes déjà prêt pour 2026</span>
+                </div>
+              </div>
+            </R>
+          </div>
+        </div>
+      </section>
+
+      <Wave fromColor="#020617" toColor="#ffffff" variant={1} />
 
       <Wave fromColor="#ffffff" toColor="#020617" variant={3} />
 

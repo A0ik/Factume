@@ -5,6 +5,7 @@ import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
 import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { validateAndCorrectTVA, isB2CClient, getDefaultTVARate } from '@/lib/tva-validator';
 
 export const maxDuration = 60;
 
@@ -350,6 +351,52 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
           }
           return item;
         }));
+      }
+
+      // --- B2C auto-detection: tag individual clients ---
+      let isB2C = false;
+      try {
+        const clientInfo = {
+          name: parsed.client_name,
+          siret: parsed.client_siret,
+          address: parsed.client_address,
+        };
+
+        if (isB2CClient(clientInfo)) {
+          isB2C = true;
+          (parsed as unknown as Record<string, unknown>).is_b2c = true;
+          (parsed as unknown as Record<string, unknown>).client_type = 'individual';
+
+          // If no explicit TVA rate and client is B2C, default to 0%
+          // Only apply when ALL items still have the default 20% rate (meaning AI didn't pick up a specific rate)
+          const allDefaultRate = parsed.items && parsed.items.every(item => item.vat_rate === 20);
+          if (allDefaultRate) {
+            parsed.items = parsed.items.map(item => ({
+              ...item,
+              vat_rate: 0,
+            }));
+            console.log('[process-voice] B2C client detected — defaulting TVA to 0% for all items');
+          }
+        }
+      } catch (e) {
+        console.error('[process-voice] B2C detection failed:', e);
+      }
+
+      // --- TVA validation: ensure HT + TVA = TTC (fixes AI subtraction bug) ---
+      if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+        try {
+          const tvaResult = validateAndCorrectTVA(parsed.items);
+          if (tvaResult.corrected) {
+            console.log('[process-voice] TVA corrections applied:', JSON.stringify(tvaResult.corrections));
+            parsed.items = tvaResult.items;
+          }
+        } catch (e) {
+          console.error('[process-voice] TVA validation failed:', e);
+        }
+      }
+
+      if (!isB2C) {
+        (parsed as unknown as Record<string, unknown>).client_type = 'business';
       }
     } catch (err) {
       console.error('[process-voice] Failed to parse AI response:', err);

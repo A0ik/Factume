@@ -216,6 +216,7 @@ export function AuthPage({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [cguAccepted, setCguAccepted] = useState(false);
 
   const isLogin = mode === 'login';
   const strength = useMemo(() => getPasswordStrength(password), [password]);
@@ -233,7 +234,7 @@ export function AuthPage({
 
   const canSubmit = isLogin
     ? email.length > 0 && password.length > 0
-    : email.length > 0 && allChecksPassed && password === confirmPassword;
+    : email.length > 0 && allChecksPassed && password === confirmPassword && cguAccepted;
 
   const inputCls =
     "w-full rounded-xl bg-white/[0.06] border border-white/[0.08] py-3 pl-10 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all";
@@ -492,6 +493,46 @@ export function AuthPage({
                       </>
                     )}
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* CGU acceptance — register only */}
+            <AnimatePresence>
+              {!isLogin && (
+                <motion.div
+                  key="cgu"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={SPRING_GENTLE}
+                  className="overflow-hidden"
+                >
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={cguAccepted}
+                      onClick={() => setCguAccepted(!cguAccepted)}
+                      className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center ${
+                        cguAccepted
+                          ? 'bg-emerald-500 border-emerald-500'
+                          : 'bg-white/[0.06] border-white/[0.12] hover:border-emerald-500/50'
+                      }`}
+                    >
+                      {cguAccepted && <Check size={10} className="text-white" strokeWidth={3} />}
+                    </button>
+                    <span className="text-[11px] text-slate-400 leading-relaxed">
+                      J'accepte les{' '}
+                      <Link href="/legal/cgu" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors">
+                        CGU
+                      </Link>{' '}
+                      et les{' '}
+                      <Link href="/legal/cgv" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors">
+                        CGV
+                      </Link>
+                    </span>
+                  </label>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -64,7 +64,7 @@ export default function CGU() {
         { subtitle: 'CRM', description: 'Gestion de la base clients et historique commercial' },
         { subtitle: 'Scan OCR', description: 'Numerisation automatique de recus et factures fournisseurs' },
         { subtitle: 'Paiements', description: 'Liens de paiement securises via Stripe et SumUp' },
-        { subtitle: 'Facturation electronique', description: 'Generation de factures electroniques conformes au standard Factur-X (Chorus Pro compatible)' },
+        { subtitle: 'Facturation electronique', description: "Factu.me utilise l'API de superpdp.tech en tant que PDP (Plateforme de Dematerialisation Partenaire), agree conformement a la reglementation francaise. Generation de factures electroniques conformes au standard Factur-X / EN 16931, compatibles Chorus Pro." },
         { subtitle: 'Export comptable', description: "Generation d'exports conformes aux obligations fiscales francaises" },
         { subtitle: 'Espaces collaboratifs', description: 'Workspaces pour equipes et comptables' }
       ]

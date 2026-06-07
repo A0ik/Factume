@@ -14,14 +14,6 @@ interface ThemeState {
 function applyTheme(theme: Theme) {
   if (typeof window !== 'undefined') {
     const root = document.documentElement;
-    const isLandingPage = window.location.pathname === '/';
-
-    // Ne jamais appliquer le mode sombre sur la landing page
-    if (isLandingPage) {
-      root.classList.remove('dark');
-      // Ne pas enregistrer le thème quand on est sur la landing page
-      return;
-    }
 
     if (theme === 'dark') {
       root.classList.add('dark');
