@@ -438,27 +438,12 @@ export default function LandingPageClient() {
 
       <Wave fromColor="#020617" toColor="#ffffff" variant={0} />
 
-      {/* ════════════ SOCIAL PROOF ════════════ */}
-      <section data-nav-theme="light" className="relative py-8 2xl:py-10 overflow-hidden bg-white">
-        <Marquee pauseOnHover className="[--duration:30s]" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' } as React.CSSProperties}>
-          {trustItems.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2.5 text-gray-300 flex-shrink-0 px-3">
-              <Icon className="w-4 h-4" />
-              <span className="text-sm font-semibold whitespace-nowrap">{label}</span>
-            </div>
-          ))}
-        </Marquee>
-      </section>
-
-      
-      <Wave fromColor="#ffffff" toColor="#020617" variant={1} />
-
       {/* ════════════ UNE SOLUTION POUR TOUS — Loi 2 ════════════ */}
-      <section data-nav-theme="dark" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-slate-950">
+      <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className={LC}>
           <div className="text-center mb-14 2xl:mb-20">
-            <R><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Une solution pour <span className="text-emerald-400">tous</span></h2></R>
-            <R delay={0.1}><p className="text-base 2xl:text-lg text-slate-400 mt-4 max-w-xl mx-auto">Quel que soit votre métier, Factu.me s'adapte à votre quotidien.</p></R>
+            <R><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1]">Une solution pour <span className="text-emerald-500">tous</span></h2></R>
+            <R delay={0.1}><p className="text-base 2xl:text-lg text-gray-500 mt-4 max-w-xl mx-auto">Quel que soit votre métier, Factu.me s'adapte à votre quotidien.</p></R>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 2xl:gap-5 max-w-6xl 2xl:max-w-7xl mx-auto">
@@ -467,13 +452,13 @@ export default function LandingPageClient() {
                 <motion.div
                   whileHover={{ y: -6, scale: 1.03 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="group bg-slate-900/60 border border-white/[0.06] rounded-2xl p-5 2xl:p-6 text-center hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5 transition-colors duration-300 h-full cursor-default"
+                  className="group bg-gray-50 border border-gray-200 rounded-2xl p-5 2xl:p-6 text-center hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 h-full cursor-default"
                 >
-                  <div className={LC}>
+                  <div className={"w-12 h-12 2xl:w-14 2xl:h-14 bg-gradient-to-br " + item.color + " rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"}>
                     <item.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-white" />
                   </div>
-                  <h3 className="text-sm 2xl:text-base font-bold text-white mb-2">{item.title}</h3>
-                  <p className="text-[11px] 2xl:text-xs text-slate-400 leading-relaxed">{item.copy}</p>
+                  <h3 className="text-sm 2xl:text-base font-bold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-[11px] 2xl:text-xs text-gray-500 leading-relaxed">{item.copy}</p>
                 </motion.div>
               </R>
             ))}
@@ -481,7 +466,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#020617" toColor="#ffffff" variant={2} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={2} />
 
       {/* ════════════ CORE FEATURE — Facture électronique + IA ════════════ */}
       <section data-nav-theme="dark" id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
