@@ -22,6 +22,24 @@ interface CanvasCopilotLayoutProps {
   onBack: () => void;
 }
 
+/**
+ * CanvasCopilotLayout — Voice-First document creation layout.
+ *
+ * ═══ FIXES APPLIED ═══
+ * • FLAW 1 (Mobile Scroll): min-h-0 on ALL flex containers prevents the
+ *   classic flexbox overflow bug. Removed the duplicate Create button from
+ *   mobile bottom bar (it's already in the header). Compacted bottom bar.
+ * • FLAW 4 (Voice-First): Voice button is positioned FIRST (left = primary),
+ *   is visually dominant. Text input is the alternative, not the default.
+ *
+ * ═══ UX LAWS APPLIED ═══
+ * • Fitts's Law — Large touch targets for primary actions
+ * • Hick's Law — Single clear primary action (voice) reduces decision time
+ * • Shneiderman Rule 3 — Informative feedback on every state change
+ * • Law of Proximity — Voice + text grouped, create action separate
+ * • Miller's Law — Minimal choices in the action bar (voice, text, create)
+ * • Von Restorff Effect — Voice button is the most distinctive element
+ */
 export default function CanvasCopilotLayout({
   profile,
   isPro,
@@ -50,7 +68,7 @@ export default function CanvasCopilotLayout({
     <div className="flex flex-col -my-5 -mx-5 lg:-my-6 lg:-mx-8 h-[calc(100dvh-3.5rem-4rem)] lg:h-screen">
 
       {/* ═══════════ TOP HEADER BAR ═══════════ */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 z-20">
+      <div className="shrink-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 z-20">
         {/* Back button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -112,14 +130,14 @@ export default function CanvasCopilotLayout({
           </motion.div>
         )}
 
-        {/* Save/Create button */}
+        {/* ═══ Save/Create button — ALWAYS visible (mobile + desktop) ═══ */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onSave}
           disabled={saving || !hasContent}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all',
+            'flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
             hasContent && !saving
               ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
               : 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-not-allowed',
@@ -128,12 +146,12 @@ export default function CanvasCopilotLayout({
           {saving ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              <span className="hidden sm:inline">Cr&eacute;ation...</span>
+              <span>...</span>
             </>
           ) : (
             <>
               <Save size={14} />
-              <span className="hidden sm:inline">Cr&eacute;er</span>
+              <span>Cr&eacute;er</span>
             </>
           )}
         </motion.button>
@@ -154,12 +172,13 @@ export default function CanvasCopilotLayout({
       </AnimatePresence>
 
       {/* ═══════════ MAIN CONTENT ═══════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* FLAW 1 FIX: min-h-0 on this flex container prevents overflow */}
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-        {/* ─── DESKTOP: Full-width form + voice bar ─── */}
-        <div className="hidden lg:flex flex-1">
-          <div className="w-full flex flex-col">
-            <div className="flex-1 overflow-y-auto">
+        {/* ─── DESKTOP: Full-width form + voice-first bar ─── */}
+        <div className="hidden lg:flex flex-1 min-h-0">
+          <div className="w-full flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
               <DocumentFormPanel
                 profile={profile}
                 isPro={isPro}
@@ -167,26 +186,33 @@ export default function CanvasCopilotLayout({
               />
             </div>
 
-            {/* Voice + Text Bar — always visible at bottom */}
+            {/* ═══ Voice-First Bar ═══
+                Voice LEFT = primary (Von Restorff).
+                Text RIGHT = secondary alternative. */}
             <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-3">
+                <VoiceOneShot
+                  sector={profile?.sector}
+                />
                 <SmartTextBar
                   profile={profile}
                   isPro={isPro}
                   onPaywall={onPaywall}
                   className="flex-1"
                 />
-                <VoiceOneShot
-                  sector={profile?.sector}
-                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ─── MOBILE: Scrollable form + fixed bottom bar ─── */}
-        <div className="lg:hidden flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+        {/* ─── MOBILE: Scrollable form + compact voice-first bar ─── */}
+        {/* FLAW 1 FIX: min-h-0 on BOTH flex containers is critical.
+            Without it, flex-1 children won't shrink below their content
+            height, causing the scroll to break on small viewports.
+            Also: removed duplicate Create button (already in header). */}
+        <div className="lg:hidden flex-1 flex flex-col min-h-0">
+          {/* Scrollable form */}
+          <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
             <DocumentFormPanel
               profile={profile}
               isPro={isPro}
@@ -194,47 +220,23 @@ export default function CanvasCopilotLayout({
             />
           </div>
 
-          {/* Bottom Bar — always visible */}
-          <div className="shrink-0 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
-            <div className="px-3 pt-2">
-              <div className="flex items-center gap-2">
-                <SmartTextBar
-                  profile={profile}
-                  isPro={isPro}
-                  onPaywall={onPaywall}
-                  className="flex-1"
-                />
-                <VoiceOneShot
-                  sector={profile?.sector}
-                />
-              </div>
-            </div>
-
-            {/* Create button — full width */}
-            <div className="px-3 py-2">
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={onSave}
-                disabled={saving || !hasContent}
-                className={cn(
-                  'w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all',
-                  hasContent && !saving
-                    ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg shadow-emerald-500/20`
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-not-allowed',
-                )}
-              >
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Cr&eacute;ation...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    Cr&eacute;er le document
-                  </>
-                )}
-              </motion.button>
+          {/* ═══ Compact Voice-First Bar ═══
+              FLAW 1: Removed the full-width Create button that was here.
+              It duplicated the header button and ate 64px of vertical space.
+              FLAW 4: Voice button is FIRST (left), text bar is secondary. */}
+          <div className="shrink-0 px-3 py-2.5 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+            <div className="flex items-center gap-2.5">
+              {/* HERO: Voice button first — Loi: Von Restorff Effect */}
+              <VoiceOneShot
+                sector={profile?.sector}
+              />
+              {/* ALTERNATIVE: Text input second — Loi: Hick's Law */}
+              <SmartTextBar
+                profile={profile}
+                isPro={isPro}
+                onPaywall={onPaywall}
+                className="flex-1"
+              />
             </div>
           </div>
         </div>

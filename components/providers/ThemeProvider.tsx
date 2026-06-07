@@ -9,9 +9,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // La landing page doit toujours être en mode clair
+    // La landing page utilise ses propres couleurs (bg-slate-950, text-white…)
+    // mais les overrides CSS globals.css (html:not(.dark) .text-slate-300/400)
+    // forcent le texte en gris foncé → invisible sur fond noir.
+    // Solution : activer .dark sur <html> pour que les overrides .dark s'appliquent
+    // et que les html:not(.dark) soient désactivés.
     if (pathname === '/') {
-      setTheme('light');
+      document.documentElement.classList.add('dark');
       return;
     }
 

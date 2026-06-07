@@ -11,22 +11,25 @@ const SPRING_BOUNCE = { type: "spring" as const, stiffness: 260, damping: 20 };
 const SPRING_GENTLE = { type: "spring" as const, stiffness: 180, damping: 22 };
 const SPRING_SNAP = { type: "spring" as const, stiffness: 400, damping: 25 };
 
-/* ——— Stagger variants ——— */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 14, filter: "blur(3px)" },
-  visible: {
-    opacity: 1, y: 0, filter: "blur(0px)",
-    transition: SPRING_BOUNCE,
-  },
-};
+/* ─── CSS-only reveal — same safe pattern as landing page R component ───
+   Uses existing @keyframes reveal from globals.css.
+   CSS animation is independent of JS hydration:
+   • If CSS loads → animation plays (opacity 0 → 1)
+   • If CSS fails → animation undefined → element at natural state (opacity 1)
+   No useState, no useEffect, no IntersectionObserver, no Framer Motion initial="hidden".
+*/
+function AuthReveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  return (
+    <div
+      style={{
+        animation: 'reveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both',
+        animationDelay: `${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 /* ——— Google icon ——— */
 const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
@@ -240,131 +243,115 @@ export function AuthPage({
 
       <AuthBackground />
 
-      {/* ——— Left panel (desktop only) ——— */}
+      {/* ——— Left panel (desktop only) ——— Uses CSS animation, no FM initial="hidden" */}
       <div className="relative z-10 hidden lg:flex h-full flex-col p-10 xl:p-16">
 
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={SPRING_GENTLE}
-          className="relative z-10 flex items-center gap-3"
-        >
-          <Image src="/logo-lg.png" alt="Factu.me" width={44} height={44} className="w-11 h-11 rounded-xl" priority style={{ borderRadius: '12px' }} />
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-xl font-black text-white">Factu</span>
-            <span className="text-xl font-black text-emerald-400">.me</span>
+        <AuthReveal delay={0}>
+          <div className="relative z-10 flex items-center gap-3">
+            <Image src="/logo-lg.png" alt="Factu.me" width={44} height={44} className="w-11 h-11 rounded-xl" priority style={{ borderRadius: '12px' }} />
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-xl font-black text-white">Factu</span>
+              <span className="text-xl font-black text-emerald-400">.me</span>
+            </div>
           </div>
-        </motion.div>
+        </AuthReveal>
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center py-8">
 
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...SPRING_GENTLE, delay: 0.15 }}
-            className="mb-6"
-          >
-            <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-3">
-              Factures, CRM,<br />
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                tout centralisé.
-              </span>
-            </h2>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-sm mx-auto">
-              Relances IA, scan de reçus, pipeline de ventes et comptabilité. Gérez votre activité sans friction.
-            </p>
-          </motion.div>
+          <AuthReveal delay={150}>
+            <div className="mb-6">
+              <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-3">
+                Factures, CRM,<br />
+                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                  tout centralisé.
+                </span>
+              </h2>
+              <p className="text-slate-400 text-sm leading-relaxed max-w-sm mx-auto">
+                Relances IA, scan de reçus, pipeline de ventes et comptabilité. Gérez votre activité sans friction.
+              </p>
+            </div>
+          </AuthReveal>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ ...SPRING_GENTLE, delay: 0.3 }}
-            className="flex-1 flex items-center justify-center w-full max-w-md"
-          >
-            <FloatingInvoice3D />
-          </motion.div>
+          <AuthReveal delay={300}>
+            <div className="flex-1 flex items-center justify-center w-full max-w-md">
+              <FloatingInvoice3D />
+            </div>
+          </AuthReveal>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...SPRING_GENTLE, delay: 0.45 }}
-            className="w-full max-w-xs border-t border-white/10 pt-5 mt-4"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-3">
-                {[
-                  { l: 'M', cls: 'bg-blue-500/20 text-blue-300' },
-                  { l: 'S', cls: 'bg-purple-500/20 text-purple-300' },
-                  { l: 'A', cls: 'bg-emerald-500/20 text-emerald-300' },
-                ].map((a) => (
-                  <div key={a.l} className={`w-9 h-9 rounded-full border-2 border-[#020617] flex items-center justify-center shadow-lg font-bold text-sm ${a.cls}`}>
-                    {a.l}
-                  </div>
-                ))}
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-white">Ils nous font confiance</p>
-                <p className="text-xs text-slate-500">Rejoignez +2&nbsp;000 freelances</p>
+          <AuthReveal delay={450}>
+            <div className="w-full max-w-xs border-t border-white/10 pt-5 mt-4">
+              <div className="flex items-center gap-4">
+                <div className="flex -space-x-3">
+                  {[
+                    { l: 'M', cls: 'bg-blue-500/20 text-blue-300' },
+                    { l: 'S', cls: 'bg-purple-500/20 text-purple-300' },
+                    { l: 'A', cls: 'bg-emerald-500/20 text-emerald-300' },
+                  ].map((a) => (
+                    <div key={a.l} className={`w-9 h-9 rounded-full border-2 border-[#020617] flex items-center justify-center shadow-lg font-bold text-sm ${a.cls}`}>
+                      {a.l}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Ils nous font confiance</p>
+                  <p className="text-xs text-slate-500">Rejoignez +2&nbsp;000 freelances</p>
+                </div>
               </div>
             </div>
-          </motion.div>
+          </AuthReveal>
         </div>
       </div>
 
-      {/* ——— Right panel / Mobile form ——— */}
+      {/* ——— Right panel / Mobile form ——— CSS-only stagger, no FM initial="hidden" */}
       <div className="relative z-10 flex min-h-screen flex-col justify-center p-5 sm:p-8">
 
         <Link href="/" className="absolute top-6 left-5 z-20 inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/80 transition-colors">
           <ChevronLeft className="size-4" /> Accueil
         </Link>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="mx-auto w-full max-w-sm"
-        >
+        <div className="mx-auto w-full max-w-sm">
+
           {/* Logo — mobile only */}
-          <motion.div variants={itemVariants} className="flex items-center gap-3 mb-8 lg:hidden">
-            <Image src="/logo-lg.png" alt="Factu.me" width={40} height={40} className="w-10 h-10 rounded-xl" priority style={{ borderRadius: '12px' }} />
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-lg font-black text-white">Factu</span>
-              <span className="text-lg font-black text-emerald-400">.me</span>
+          <AuthReveal delay={100}>
+            <div className="flex items-center gap-3 mb-8 lg:hidden">
+              <Image src="/logo-lg.png" alt="Factu.me" width={40} height={40} className="w-10 h-10 rounded-xl" priority style={{ borderRadius: '12px' }} />
+              <div className="flex items-baseline gap-0.5">
+                <span className="text-lg font-black text-white">Factu</span>
+                <span className="text-lg font-black text-emerald-400">.me</span>
+              </div>
             </div>
-          </motion.div>
+          </AuthReveal>
 
           {/* Heading */}
-          <motion.div variants={itemVariants} className="mb-6">
-            <h1 className="text-[26px] font-bold tracking-tight text-white">
-              {isLogin ? 'Connexion' : 'Créer un compte'}
-            </h1>
-            <p className="text-sm text-slate-400 mt-1.5">
-              {isLogin ? 'Connectez-vous à votre espace Factu.me.' : 'Commencez votre facturation intelligente.'}
-            </p>
-          </motion.div>
+          <AuthReveal delay={150}>
+            <div className="mb-6">
+              <h1 className="text-[26px] font-bold tracking-tight text-white">
+                {isLogin ? 'Connexion' : 'Créer un compte'}
+              </h1>
+              <p className="text-sm text-slate-400 mt-1.5">
+                {isLogin ? 'Connectez-vous à votre espace Factu.me.' : 'Commencez votre facturation intelligente.'}
+              </p>
+            </div>
+          </AuthReveal>
 
           {/* Google button */}
-          <motion.div variants={itemVariants}>
-            <motion.button
-              type="button"
-              disabled={loading}
-              onClick={onGoogleLogin}
-              whileTap={{ scale: 0.97 }}
-              className="flex w-full items-center justify-center gap-3 rounded-xl bg-white/[0.07] border border-white/[0.1] py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <GoogleIcon className="size-4" /> Continuer avec Google
-            </motion.button>
-          </motion.div>
+          <motion.button
+            type="button"
+            disabled={loading}
+            onClick={onGoogleLogin}
+            whileTap={{ scale: 0.97 }}
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-white/[0.07] border border-white/[0.1] py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <GoogleIcon className="size-4" /> Continuer avec Google
+          </motion.button>
 
           {/* Separator */}
-          <motion.div variants={itemVariants} className="py-1">
-            <AuthSeparator />
-          </motion.div>
+          <AuthSeparator />
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
 
-            <motion.div variants={itemVariants} className="relative">
+            <div className="relative">
               <input
                 type="email"
                 placeholder="votre@email.com"
@@ -374,9 +361,9 @@ export function AuthPage({
                 className={inputCls}
               />
               <AtSign className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-            </motion.div>
+            </div>
 
-            <motion.div variants={itemVariants} className="relative">
+            <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder={isLogin ? '••••••••' : 'Choisissez un mot de passe'}
@@ -394,15 +381,15 @@ export function AuthPage({
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            </motion.div>
+            </div>
 
             {/* Forgot password */}
             {isLogin && (
-              <motion.div variants={itemVariants} className="text-right pt-0.5">
+              <div className="text-right pt-0.5">
                 <Link href="/forgot-password" className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors">
                   Mot de passe oublié ?
                 </Link>
-              </motion.div>
+              </div>
             )}
 
             {/* Password strength — register only */}
@@ -461,7 +448,7 @@ export function AuthPage({
 
             {/* Confirm password — register only */}
             {!isLogin && (
-              <motion.div variants={itemVariants} className="relative">
+              <div className="relative">
                 <input
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="Confirmez le mot de passe"
@@ -478,7 +465,7 @@ export function AuthPage({
                 >
                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              </motion.div>
+              </div>
             )}
 
             {/* Password match — register only */}
@@ -528,12 +515,11 @@ export function AuthPage({
             </AnimatePresence>
 
             {/* Submit button */}
-            <motion.div variants={itemVariants} className="pt-1">
-              <motion.button
+            <div className="pt-1">
+              <button
                 type="submit"
                 disabled={loading || !canSubmit}
-                whileTap={{ scale: 0.97 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-400/30 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-400/30 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-[0.97]"
               >
                 {loading ? (
                   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -543,22 +529,22 @@ export function AuthPage({
                 ) : null}
                 {isLogin ? 'Se connecter' : 'Créer mon compte'}
                 {!loading && <ArrowRight size={16} />}
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
           </form>
 
           {/* Toggle */}
           {toggleHref && (
-            <motion.p variants={itemVariants} className="text-center text-sm text-slate-500 mt-6">
+            <p className="text-center text-sm text-slate-500 mt-6">
               {isLogin ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
               <Link href={toggleHref} className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
                 {isLogin ? 'Créer un compte' : 'Se connecter'}
               </Link>
-            </motion.p>
+            </p>
           )}
 
           {/* Trust Signals */}
-          <motion.div variants={itemVariants} className="space-y-3 pt-3 mt-5">
+          <div className="space-y-3 pt-3 mt-5">
             <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500">
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -577,8 +563,8 @@ export function AuthPage({
               et notre{' '}
               <Link href="/legal/confidentialite" className="underline underline-offset-2 hover:text-slate-400 transition-colors">Politique de confidentialité</Link>.
             </p>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </main>
   );

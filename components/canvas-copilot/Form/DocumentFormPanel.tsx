@@ -95,9 +95,11 @@ interface InputProps {
   fieldKey?: string;
   /** Ref map to register this field for doubt anchoring */
   fieldRefMap?: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  /** FLAW 3 FIX: Whether this field has a pending AI doubt (pulsing amber highlight) */
+  hasDoubt?: boolean;
 }
 
-function FormInput({ label, value, onChange, placeholder, type = 'text', icon, required, suffix, className, inputMode, autoFocus, fieldKey, fieldRefMap }: InputProps) {
+function FormInput({ label, value, onChange, placeholder, type = 'text', icon, required, suffix, className, inputMode, autoFocus, fieldKey, fieldRefMap, hasDoubt }: InputProps) {
   const [focused, setFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -111,8 +113,20 @@ function FormInput({ label, value, onChange, placeholder, type = 'text', icon, r
   return (
     <div
       ref={wrapperRef}
-      className={cn('space-y-1.5', className)}
+      className={cn('relative space-y-1.5', className)}
     >
+      {/* FLAW 3 FIX: AI Doubt highlight — pulsing amber ring (Loi: Visibility of System Status — NN/g Heuristic 1) */}
+      <AnimatePresence>
+        {hasDoubt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute -inset-1.5 rounded-xl border-2 border-amber-400/70 dark:border-amber-500/50 pointer-events-none z-10"
+          />
+        )}
+      </AnimatePresence>
       <motion.div
         animate={{ scale: focused ? 1.01 : 1 }}
         transition={{ type: 'spring', damping: 30, stiffness: 400 }}
@@ -223,6 +237,13 @@ export default function DocumentFormPanel({
     resolveDoubts(corrections);
   }, [resolveDoubts]);
 
+  // ─── FLAW 3: Doubt Highlight Helper ─────────────────
+  // Used to add pulsing amber rings around fields with pending AI doubts
+  const hasDoubtFor = useCallback((fieldKey: string) =>
+    pendingDoubts.some(d => d.field === fieldKey),
+    [pendingDoubts]
+  );
+
   // ─── Line item helpers ──────────────────────────────
   const formatPrice = (val: number) => {
     return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
@@ -252,7 +273,8 @@ export default function DocumentFormPanel({
   return (
     <div className="flex flex-col h-full">
       {/* ─── Scrollable Form Content ──────────────────── */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-32 lg:pb-4 space-y-4 scroll-momentum">
+      {/* FLAW 1 FIX: pb-28 (was pb-32) — reduced since mobile bottom bar is now compact (no duplicate Create button) */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-28 lg:pb-4 space-y-4 scroll-momentum">
 
         {/* ═══════════ CLIENT SECTION ═══════════ */}
         <FormSection
@@ -292,6 +314,7 @@ export default function DocumentFormPanel({
           </div>
 
           <div className="space-y-3">
+            {/* FLAW 2 FIX: clientType drives B2C/B2B search behavior */}
             <CompanySearch
               value={clientName}
               onChange={(v) => updateField('clientName', v)}
@@ -305,8 +328,9 @@ export default function DocumentFormPanel({
                 updateField('clientType', 'b2b');
               }}
               label="Nom du client"
-              placeholder="Nom, SIRET ou raison sociale"
+              placeholder={clientType === 'b2c' ? 'Prénom et nom du client' : 'Nom, SIRET ou raison sociale'}
               required
+              clientType={clientType}
             />
 
             <div className="grid grid-cols-2 gap-3">
@@ -461,6 +485,7 @@ export default function DocumentFormPanel({
                       placeholder="Prestation ou produit"
                       fieldKey={`items[${idx}].description`}
                       fieldRefMap={fieldRefMap}
+                      hasDoubt={hasDoubtFor(`items[${idx}].description`)}
                     />
                   </div>
                   {items.length > 1 && (
@@ -495,6 +520,7 @@ export default function DocumentFormPanel({
                     suffix="EUR"
                     fieldKey={`items[${idx}].unit_price`}
                     fieldRefMap={fieldRefMap}
+                    hasDoubt={hasDoubtFor(`items[${idx}].unit_price`)}
                   />
                   <div className="space-y-1.5 pb-[1px]">
                     <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
@@ -581,17 +607,17 @@ export default function DocumentFormPanel({
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-100 dark:border-white/[0.06]" />
+            <div className="border-t border-gray-100 dark:border-white/[0.06] my-1" />
 
-            {/* Total TTC */}
-            <div className="flex justify-between items-center">
+            {/* Total TTC — FLAW 5 FIX: HERO number with gradient accent (Chrométrie & Hiérarchie) */}
+            <div className="flex justify-between items-center -mx-4 px-4 py-3 bg-gradient-to-r from-emerald-50/80 to-transparent dark:from-emerald-500/[0.08] dark:to-transparent rounded-b-2xl -mb-4">
               <span className="text-sm font-bold text-gray-900 dark:text-white">Total TTC</span>
               <motion.span
                 key={total}
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.92, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={springFast}
-                className="text-lg font-bold text-emerald-600 dark:text-emerald-400"
+                className="text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight"
               >
                 {formatPrice(total)} EUR
               </motion.span>

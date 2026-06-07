@@ -14,13 +14,24 @@ interface VoiceOneShotProps {
 }
 
 /**
- * VoiceOneShot — Floating microphone button for one-shot voice invoice creation.
+ * VoiceOneShot — HERO microphone button for voice-first document creation.
  *
- * Flow:
- * 1. User taps mic -> getUserMedia -> MediaRecorder captures audio
- * 2. On stop -> POST /api/process-voice with FormData
- * 3. Response parsed -> applyAIParsedResult(result.parsed, 'voice')
- * 4. If uncertain_fields -> pendingDoubts mechanism triggers inline doubt cards
+ * ═══ DESIGN PHILOSOPHY (FLAW 4 — Voice-First UI) ═══
+ * The voice button is the PRIMARY interaction point. It is always the most
+ * visually prominent element in the creation bar. Manual text input is the
+ * alternative, not the default.
+ *
+ * States:
+ *  Idle       → Emerald glow pulse invites interaction
+ *  Recording  → Red double-pulse ring + 12-bar audio waveform
+ *  Processing → Blue shimmer indicates AI analysis
+ *  Error      → Amber auto-dismisses after 3s
+ *
+ * ═══ UX LAWS APPLIED ═══
+ * • Fitts's Law — Large touch target (56px mobile, 68px desktop)
+ * • Aesthetic-Usability Effect — Beautiful glow animations invite use
+ * • Shneiderman Rule 3 — Informative feedback on every state change
+ * • Von Restorff Effect — Voice button stands out as the most distinctive element
  */
 export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'error'>('idle');
@@ -32,7 +43,6 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   const {
     documentType,
     items,
-    isProcessingVoice,
     applyAIParsedResult,
     setProcessingVoice,
   } = useDocumentSessionStore();
@@ -123,101 +133,129 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
     }
   }, [state, startRecording, stopRecording]);
 
-  const isBusy = state === 'recording' || state === 'processing';
-
   return (
-    <div className={cn('relative', className)}>
-      {/* Main mic button */}
+    <div className={cn('relative flex flex-col items-center', className)}>
+      {/* ═══ IDLE GLOW RING ═══ Loi: Aesthetic-Usability Effect + Von Restorff */}
+      {state === 'idle' && (
+        <motion.div
+          className="absolute inset-[-6px] rounded-[20px] lg:rounded-[22px] pointer-events-none"
+          animate={{
+            boxShadow: [
+              '0 0 0 0px rgba(16, 185, 129, 0.35)',
+              '0 0 0 10px rgba(16, 185, 129, 0)',
+            ],
+          }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
+
+      {/* ═══ MAIN BUTTON ═══ Fitts's Law: Large touch target */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
         onClick={toggleRecording}
         disabled={state === 'processing'}
         className={cn(
-          'relative flex items-center justify-center w-12 h-12 rounded-2xl transition-all shadow-lg',
+          'relative z-10 flex items-center justify-center rounded-2xl transition-all duration-200',
+          // FLAW 4 FIX: Voice button is HERO — larger than everything else
+          'w-14 h-14 lg:w-[68px] lg:h-[68px]',
           state === 'recording'
-            ? 'bg-red-500 text-white shadow-red-500/30'
+            ? 'bg-red-500 text-white shadow-xl shadow-red-500/40'
             : state === 'processing'
-            ? 'bg-blue-500 text-white shadow-blue-500/20'
+            ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30'
             : state === 'error'
-            ? 'bg-amber-500 text-white shadow-amber-500/20'
-            : 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40',
+            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
+            : 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/35 hover:shadow-emerald-500/55',
         )}
       >
         {state === 'recording' ? (
-          <MicOff size={20} strokeWidth={2.5} />
+          <MicOff size={22} strokeWidth={2.5} />
         ) : state === 'processing' ? (
-          <Loader2 size={20} className="animate-spin" />
+          <Loader2 size={22} className="animate-spin" />
         ) : (
-          <Mic size={20} strokeWidth={2.5} />
+          <Mic size={22} strokeWidth={2.5} />
         )}
 
-        {/* Recording pulse ring */}
+        {/* ═══ RECORDING: Double pulse rings ═══ */}
         {state === 'recording' && (
+          <>
+            <motion.div
+              className="absolute inset-0 rounded-2xl bg-red-500"
+              animate={{ opacity: [0.5, 0], scale: [1, 1.35] }}
+              transition={{ duration: 1.0, repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-2xl bg-red-400/50"
+              animate={{ opacity: [0.3, 0], scale: [1, 1.55] }}
+              transition={{ duration: 1.0, repeat: Infinity, delay: 0.35 }}
+            />
+          </>
+        )}
+
+        {/* ═══ PROCESSING: Shimmer overlay ═══ */}
+        {state === 'processing' && (
           <motion.div
-            className="absolute inset-0 rounded-2xl bg-red-500"
-            animate={{ opacity: [0.4, 0], scale: [1, 1.2] }}
-            transition={{ duration: 1.2, repeat: Infinity }}
+            className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
           />
         )}
       </motion.button>
 
-      {/* Processing indicator tooltip */}
-      <AnimatePresence>
-        {state === 'processing' && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold shadow-lg"
-          >
-            Analyse en cours...
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-500 rotate-45 -mt-1" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Error tooltip */}
-      <AnimatePresence>
-        {state === 'error' && errorMsg && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 whitespace-nowrap px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-semibold shadow-lg"
-          >
-            {errorMsg}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-amber-500 rotate-45 -mt-1" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Recording waveform — shown below the button */}
+      {/* ═══ WAVEFORM — Recording state ═══ Loi: Visibility of System Status (NN/g Heuristic 1) */}
       <AnimatePresence>
         {state === 'recording' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 32 }}
+            animate={{ opacity: 1, height: 24 }}
             exit={{ opacity: 0, height: 0 }}
             transition={SPRING}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex items-end justify-center gap-[3px]"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex items-end justify-center gap-[2px]"
           >
-            {Array.from({ length: 7 }).map((_, i) => (
+            {Array.from({ length: 12 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="w-[3px] bg-red-400 rounded-full"
+                className="w-[2.5px] bg-red-400 rounded-full"
                 animate={{
-                  height: [4, 10 + Math.sin(i) * 6, 6, 14, 8, 10, 4],
+                  height: [3, 7 + Math.sin(i * 0.7) * 5, 4, 11 + Math.cos(i * 0.5) * 4, 5, 8, 3],
                 }}
                 transition={{
-                  duration: 0.7 + Math.sin(i) * 0.2,
+                  duration: 0.55 + Math.sin(i * 0.3) * 0.12,
                   repeat: Infinity,
-                  delay: i * 0.06,
+                  delay: i * 0.035,
                 }}
               />
             ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ TOOLTIP: Processing ═══ */}
+      <AnimatePresence>
+        {state === 'processing' && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={SPRING}
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg"
+          >
+            Analyse IA en cours...
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ TOOLTIP: Error ═══ */}
+      <AnimatePresence>
+        {state === 'error' && errorMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={SPRING}
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg"
+          >
+            {errorMsg}
           </motion.div>
         )}
       </AnimatePresence>

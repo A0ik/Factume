@@ -366,6 +366,11 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 }
 
 /* Landing Page Animations */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(1rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes blob {
   0%, 100% { border-radius: 60% 40% 30% 70%/60% 30% 70% 40%; }
   50% { border-radius: 30% 60% 70% 40%/50% 60% 30% 60%; }
@@ -440,6 +445,59 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 @keyframes gradientShift {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
+}
+
+/* Brush stroke draw-in animation for hero underline */
+@keyframes brushDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOI 6 : CHROMÉTRIE PSYCHOLOGIQUE
+   - Base: slate-950 (sombre, apaisant, professionnel)
+   - Ancrage: emerald (confiance, croissance, action)
+   - Disruptif/IA: amber (chaleur, innovation, intelligence)
+   Les 3 couleurs sont hiérarchisées et ne se mélangent pas.
+   ═══════════════════════════════════════════════════════════ */
+
+/* LOI 2 : Glow pulsant pour les CTA principaux — effet "vivant" */
+.cta-glow {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.35), 0 0 80px rgba(16, 185, 129, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+.cta-glow:hover {
+  box-shadow: 0 0 60px rgba(16, 185, 129, 0.45), 0 0 120px rgba(16, 185, 129, 0.2);
+}
+
+/* LOI 4 : Effet d'Ancrage — glow ring pour le plan recommandé */
+.pricing-anchor {
+  position: relative;
+}
+.pricing-anchor::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #10b981, #f59e0b, #10b981);
+  background-size: 300% 300%;
+  animation: gradientShift 4s ease infinite;
+  z-index: -1;
+  opacity: 0.5;
+  filter: blur(1px);
+}
+
+/* LOI 5 : Fil d'Ariane renforcé */
+.timeline-line {
+  background: linear-gradient(180deg,
+    rgba(16, 185, 129, 0.6) 0%,
+    rgba(245, 158, 11, 0.3) 50%,
+    rgba(16, 185, 129, 0.6) 100%
+  );
+}
+
+/* LOI 7 : Friendly Design — border-radius généreux */
+.friendly-radius {
+  border-radius: 1rem;
 }
 
 .hero-float { animation: heroFloat 8s ease-in-out infinite; }

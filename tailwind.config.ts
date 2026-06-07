@@ -35,6 +35,16 @@ const config: Config = {
           DEFAULT: '#EF9F27',
           light: '#FEF3DC',
         },
+        /* Amber accent for AI elements — Loi 6: Chrométrie Psychologique */
+        ai: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+        },
         /* Shadcn-compatible tokens */
         background: 'rgb(var(--background) / <alpha-value>)',
         foreground: 'rgb(var(--foreground) / <alpha-value>)',

@@ -31,11 +31,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null, session: null, profile: null, loading: false, initialized: false,
 
   initialize: async () => {
+    // Guard: if Supabase is not configured (landing page, missing env vars),
+    // skip auth init entirely so the page renders without crash.
+    const client = getSupabaseClient();
+    if (!client) {
+      set({ initialized: true });
+      return;
+    }
+
     if (_authUnsubscribe) { _authUnsubscribe(); _authUnsubscribe = null; }
 
     // Setup listener BEFORE getSession to avoid race conditions
     let profileDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         set({ user: session.user, session });
         // Debounce fetchProfile to prevent duplicate calls
@@ -52,11 +60,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     };
 
     try {
-      const { data: { session }, error } = await getSupabaseClient().auth.getSession();
-      if (error) { await getSupabaseClient().auth.signOut(); }
+      const { data: { session }, error } = await client.auth.getSession();
+      if (error) { await client.auth.signOut(); }
       else if (session?.user) { set({ user: session.user, session }); await get().fetchProfile(session.user.id); }
     } catch (e: any) {
-      if (e?.message?.includes('Refresh Token')) await getSupabaseClient().auth.signOut();
+      if (e?.message?.includes('Refresh Token')) await client.auth.signOut();
     } finally { set({ initialized: true }); }
   },
 

@@ -57,15 +57,21 @@ interface Position {
 function calcPosition(targetEl: HTMLElement): Position {
   const rect = targetEl.getBoundingClientRect();
   const vw = window.innerWidth;
-  const vh = window.innerHeight;
 
   // Card dimensions (approximate)
   const cardW = 320;
-  const cardH = 240;
 
-  // Try placing to the right of the field
+  // FLAW 3 FIX: On mobile (< 640px), always center the card for better UX
+  if (vw < 640) {
+    return {
+      top: Math.max(80, rect.bottom + 8),
+      left: (vw - Math.min(cardW, vw - 32)) / 2,
+      placement: 'below',
+    };
+  }
+
+  // Desktop: try placing to the right of the field
   const spaceRight = vw - rect.right;
-  const spaceBelow = vh - rect.bottom;
 
   if (spaceRight >= cardW + 16) {
     return {
@@ -133,9 +139,12 @@ export default function InlineDoubtCard({
 
   return (
     <>
-      {/* Backdrop — subtle, click to dismiss */}
-      <div
-        className="fixed inset-0 z-[9998]"
+      {/* FLAW 3 FIX: More visible backdrop for AI confidence check (Loi: User Control & Freedom — NN/g Heuristic 3) */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[9998] bg-black/10 dark:bg-black/30"
         onClick={onDismiss}
       />
 
