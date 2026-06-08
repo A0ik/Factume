@@ -54,14 +54,21 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
  * pdf-lib works everywhere (Vercel, Node, etc.) without CSP or WASM issues.
  */
 export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
-  // Pre-generate QR code data URL for payment links
-  const paymentUrl = (invoice as any).payment_link || (invoice as any).stripe_payment_url;
+  // Resolve payment URL from all possible fields (Stripe, SumUp, or generic)
+  const paymentUrl =
+    (invoice as any).payment_link ||
+    (invoice as any).stripe_payment_url ||
+    (invoice as any).stripe_payment_link_url ||
+    ((invoice as any).sumup_checkout_id ? `https://checkout.sumup.com/${(invoice as any).sumup_checkout_id}` : '');
+
+  // Pre-generate QR code data URL for payment links (used by @react-pdf/renderer fallback)
   if (paymentUrl) {
     try {
       const { generateQrDataUrl } = await import('./qr-generate');
-      (invoice as any).qr_data_url = await generateQrDataUrl(paymentUrl);
+      const qrDataUrl = await generateQrDataUrl(paymentUrl);
+      if (qrDataUrl) (invoice as any).qr_data_url = qrDataUrl;
     } catch {
-      // QR generation failed, continue without it
+      // QR pre-generation failed, pdf-server.ts will try again
     }
   }
 

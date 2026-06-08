@@ -490,26 +490,54 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // ── PAYMENT LINK ─────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const paymentUrl = invoice.payment_link || invoice.stripe_payment_url || '';
+  // Resolve payment URL from all possible fields (Stripe, SumUp, or generic)
+  const paymentUrl =
+    (invoice as any).payment_link ||
+    (invoice as any).stripe_payment_url ||
+    (invoice as any).stripe_payment_link_url ||
+    ((invoice as any).sumup_checkout_id ? `https://checkout.sumup.com/${(invoice as any).sumup_checkout_id}` : '');
+
   if (paymentUrl) {
     needPage();
     y -= 8;
 
-    // Generate QR code locally instead of relying on external API
-    const { generateQrBuffer } = await import('./qr-generate');
-    const qrBuffer = await generateQrBuffer(paymentUrl);
-    const qrImage = qrBuffer ? await pdfDoc.embedPng(qrBuffer) : null;
+    // Generate QR code — try buffer first, fall back to data URL → buffer
+    let qrImage: any = null;
+    try {
+      const { generateQrBuffer } = await import('./qr-generate');
+      const qrBuffer = await generateQrBuffer(paymentUrl);
+      if (qrBuffer && qrBuffer.length > 0) {
+        qrImage = await pdfDoc.embedPng(qrBuffer);
+      }
+    } catch (qrErr) {
+      console.warn('[pdf-server] QR buffer embed failed:', (qrErr as Error).message);
+    }
+
+    // Fallback: try data URL → PNG conversion
+    if (!qrImage) {
+      try {
+        const { generateQrDataUrl } = await import('./qr-generate');
+        const dataUrl = await generateQrDataUrl(paymentUrl);
+        if (dataUrl && dataUrl.startsWith('data:image/png;base64,')) {
+          const base64 = dataUrl.replace('data:image/png;base64,', '');
+          const qrBuffer = Buffer.from(base64, 'base64');
+          qrImage = await pdfDoc.embedPng(qrBuffer);
+        }
+      } catch (fallbackErr) {
+        console.warn('[pdf-server] QR data-URL fallback failed:', (fallbackErr as Error).message);
+      }
+    }
+
     const boxH = qrImage ? 70 : 48;
     page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
 
-    // Provider detection: explicit check using sumup_checkout_id
-    const isStripe = !!(invoice.stripe_payment_url);
-    const isSumUp = !!(invoice.sumup_checkout_id) || (!isStripe && !!(invoice.payment_link));
+    // Provider detection: explicit check using DB fields
+    const isStripe = !!(invoice as any).stripe_payment_url || !!(invoice as any).stripe_payment_link_url;
+    const isSumUp = !!(invoice as any).sumup_checkout_id || (!isStripe && !!(invoice as any).payment_link);
     const methodLabel = isStripe ? 'PAIEMENT EN LIGNE (STRIPE)' : isSumUp ? 'PAIEMENT EN LIGNE (SUMUP)' : 'PAIEMENT EN LIGNE';
     drawText(page, methodLabel, margin + 14, y - 8, 7, bold, accent);
 
     if (qrImage) {
-      // Draw text on the left, QR code on the right
       const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
       drawText(page, btnLabel, margin + 14, y - 22, 10, bold, accent);
 

@@ -450,13 +450,34 @@ export default function NewFacturePage() {
 
       // Succès - toast avec info e-invoicing si B2B
       const isB2B = clientType === 'b2b';
-      showToast({
-        icon: 'success',
-        title: isB2B ? 'Facture B2B créée et transmise !' : 'Facture créée avec succès !',
-        subtitle: isB2B
-          ? `${clientName ? clientName + ' • ' : ''}Transmission électronique en cours`
-          : clientName ? `Pour ${clientName}` : undefined,
-      });
+      const pdpResult = (newInvoice as any)?._pdpTransmission;
+      if (isB2B) {
+        if (pdpResult?.transmitted) {
+          showToast({
+            icon: 'success',
+            title: 'Facture B2B créée et transmise ✓',
+            subtitle: `${clientName ? clientName + ' • ' : ''}Facture électronique envoyée via PDP`,
+          });
+        } else if (pdpResult?.error) {
+          showToast({
+            icon: 'success',
+            title: 'Facture créée — transmission en attente',
+            subtitle: `${clientName ? clientName + ' • ' : ''}${pdpResult.error}`,
+          });
+        } else {
+          showToast({
+            icon: 'success',
+            title: 'Facture B2B créée !',
+            subtitle: `${clientName ? clientName + ' • ' : ''}Transmission électronique en cours`,
+          });
+        }
+      } else {
+        showToast({
+          icon: 'success',
+          title: 'Facture créée avec succès !',
+          subtitle: clientName ? `Pour ${clientName}` : undefined,
+        });
+      }
       setTimeout(() => {
         router.push(`/invoices/${newInvoice.id}`);
       }, 100);

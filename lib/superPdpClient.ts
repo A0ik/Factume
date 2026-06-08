@@ -206,6 +206,7 @@ export async function transmitInvoice(
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/xml; charset=utf-8',
         'Accept': 'application/json',
       },
       body: ciiXml, // XML brut — cf. quick_start.js

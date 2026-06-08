@@ -238,7 +238,12 @@
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(node _temp_patch.js)",
       "Bash(grep -E \"\\\\.ts$\")",
-      "mcp__supabase__search_docs"
+      "mcp__supabase__search_docs",
+      "Bash(gh api *)",
+      "Bash(where gh *)",
+      "mcp__plugin_vercel_vercel__list_teams",
+      "mcp__plugin_vercel_vercel__list_projects",
+      "mcp__plugin_vercel_vercel__list_deployments"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

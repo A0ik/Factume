@@ -454,10 +454,16 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
               <Text style={{ fontSize: 7.5, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 3 }}>PAIEMENT EN LIGNE {paymentMethod ? `— ${paymentMethod}` : ''}</Text>
               <Text style={{ fontSize: 10, fontFamily: bold, color: '#111827' }}>Payer {f(invoice.total)} en ligne</Text>
             </View>
-            <Image
-              src={(invoice as any).qr_data_url || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(paymentUrl)}`}
-              style={{ width: 56, height: 56, borderRadius: 4 }}
-            />
+            {(invoice as any).qr_data_url ? (
+              <Image
+                src={(invoice as any).qr_data_url}
+                style={{ width: 56, height: 56, borderRadius: 4 }}
+              />
+            ) : (
+              <View style={{ width: 56, height: 56, borderRadius: 4, backgroundColor: accent + '15', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 8, color: accent, fontFamily: bold }}>Payer</Text>
+              </View>
+            )}
           </View>
         )}
 

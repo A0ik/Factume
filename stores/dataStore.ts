@@ -195,6 +195,8 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       set((s) => ({ invoices: [data, ...s.invoices] }));
       get().computeStats();
+      // Attacher les infos PDP à l'invoice retournée pour que l'appelant puisse les utiliser
+      (data as any)._pdpTransmission = pdpTransmission || null;
       return data;
     } catch (serverError: any) {
       console.warn('[createInvoice] Server API failed:', serverError?.message, '— trying direct RPC...');

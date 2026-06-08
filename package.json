@@ -66,6 +66,7 @@
     "recharts": "^2.15.3",
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
+    "simple-icons": "^16.23.0",
     "sonner": "^2.0.7",
     "stripe": "^17.7.0",
     "tailwind-merge": "^3.6.0",

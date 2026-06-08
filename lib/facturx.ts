@@ -62,8 +62,15 @@ function getVatCategoryCode(vatRate: number): string {
 }
 
 function getVatExemptionReason(vatRate: number, legalStatus?: string): string {
-  if (vatRate === 0 && legalStatus === 'auto-entrepreneur') {
-    return 'TVA non applicable, art. 293 B du CGI';
+  // Auto-entrepreneurs et micro-entreprises en franchise de TVA
+  if (vatRate === 0) {
+    if (legalStatus === 'auto-entrepreneur' || legalStatus === 'micro_entreprise') {
+      return 'TVA non applicable, art. 293 B du CGI';
+    }
+    // Autres régimes en franchise de base (seuil non atteint)
+    if (legalStatus === 'ei' || legalStatus === 'eurl' || legalStatus === 'sarl') {
+      return 'TVA non applicable, art. 293 B du CGI';
+    }
   }
   return '';
 }
@@ -89,6 +96,23 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
 
   if (!profile.company_name?.trim()) {
     throw new Error('Nom de l\'entreprise manquant');
+  }
+
+  // Validation SIRET vendeur : 14 chiffres obligatoires pour B2B
+  if (profile.siret?.trim()) {
+    const cleanSiret = profile.siret.replace(/\s/g, '');
+    if (!/^\d{14}$/.test(cleanSiret)) {
+      throw new Error(`SIRET vendeur invalide : "${profile.siret}" — 14 chiffres attendus`);
+    }
+  }
+
+  // Validation SIRET acheteur si renseigné
+  const rawBuyerSiret = invoice.client_siret?.trim() || invoice.client?.siret?.trim() || '';
+  if (rawBuyerSiret) {
+    const cleanBuyerSiret = rawBuyerSiret.replace(/\s/g, '');
+    if (!/^\d{14}$/.test(cleanBuyerSiret)) {
+      throw new Error(`SIRET client invalide : "${rawBuyerSiret}" — 14 chiffres attendus`);
+    }
   }
 
   // ExchangedDocument - Informations document
@@ -245,6 +269,10 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
     throw new Error('Montant total invalide (négatif)');
   }
 
+  // FIX: Utiliser le code catégorie TVA correct pour la remise (S pour standard, Z pour zéro)
+  const discountVatRate = Number(invoice.items[0]?.vat_rate) || 0;
+  const discountVatCatCode = getVatCategoryCode(discountVatRate);
+
   const discountXml = discountAmount > 0 ? `
       <ram:SpecifiedTradeAllowanceCharge>
         <ram:ChargeIndicator><udt:Indicator>false</udt:Indicator></ram:ChargeIndicator>
@@ -252,8 +280,8 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
         <ram:Reason>${escapeXml(`Remise ${discountPct}%`)}</ram:Reason>
         <ram:CategoryTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>S</ram:CategoryCode>
-          <ram:RateApplicablePercent>${invoice.items[0]?.vat_rate ?? 20}</ram:RateApplicablePercent>
+          <ram:CategoryCode>${discountVatCatCode}</ram:CategoryCode>
+          <ram:RateApplicablePercent>${discountVatRate}</ram:RateApplicablePercent>
         </ram:CategoryTradeTax>
       </ram:SpecifiedTradeAllowanceCharge>` : '';
 
@@ -292,9 +320,9 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
           ${sellerCity ? `<ram:CityName>${sellerCity}</ram:CityName>` : ''}
           <ram:CountryID>${sellerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
-        <ram:URIUniversalCommunication>
-          <ram:URIID>${escapeXml(sellerSiret ? sellerSiret.substring(0, 9) : '')}</ram:URIID>
-        </ram:URIUniversalCommunication>
+        ${sellerSiret ? `<ram:URIUniversalCommunication>
+          <ram:URIID schemeID="0002">${escapeXml(sellerSiret.substring(0, 9))}</ram:URIID>
+        </ram:URIUniversalCommunication>` : ''}
         ${sellerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(sellerVat)}</ram:ID>
         </ram:SpecifiedTaxRegistration>` : ''}
@@ -311,13 +339,11 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
           <ram:CountryID>${buyerCountry}</ram:CountryID>
         </ram:PostalTradeAddress>
         ${buyerSiret ? `<ram:URIUniversalCommunication>
-          <ram:URIID>${escapeXml(buyerSiret.substring(0, 9))}</ram:URIID>
+          <ram:URIID schemeID="0002">${escapeXml(buyerSiret.substring(0, 9))}</ram:URIID>
         </ram:URIUniversalCommunication>` : ''}
         ${buyerVat ? `<ram:SpecifiedTaxRegistration>
           <ram:ID schemeID="VA">${escapeXml(buyerVat)}</ram:ID>
         </ram:SpecifiedTaxRegistration>` : ''}
-          <ram:CountryID>${buyerCountry}</ram:CountryID>
-        </ram:PostalTradeAddress>
       </ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
 

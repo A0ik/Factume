@@ -29,7 +29,7 @@ const segmentPages = [
 // Pages fonctionnalités SEO
 const featurePages = [
   { url: `${baseUrl}/facturation-factur-x`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
-  { url: `${baseUrl}/facturation-electronique`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
+  { url: `${baseUrl}/facturation-electronique`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.95 },
   { url: `${baseUrl}/facturation-ocr`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
   { url: `${baseUrl}/facturation-vocale`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.75 },
   { url: `${baseUrl}/facture-gratuite`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
@@ -67,16 +67,20 @@ const legalPages = [
   { url: `${baseUrl}/legal/cgu`, lastModified: new Date('2026-01-15'), changeFrequency: 'yearly' as const, priority: 0.3 },
 ];
 
-// Pages E-E-A-T
+// Pages E-E-A.T
 const trustPages = [
   { url: `${baseUrl}/securite`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
   { url: `${baseUrl}/experts`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.7 },
+  { url: `${baseUrl}/a-propos`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
 ];
 
 // Pages hub programmatiques
 const hubPages = [
   { url: `${baseUrl}/modeles-facture`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.9 },
   { url: `${baseUrl}/comment-facturer`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.9 },
+  { url: `${baseUrl}/modeles/facture`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.85 },
+  { url: `${baseUrl}/modeles/devis`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.85 },
+  { url: `${baseUrl}/modeles/contrat`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.85 },
 ];
 
 // Pages principales

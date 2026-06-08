@@ -77,30 +77,15 @@ function VoiceWaveform() {
   );
 }
 
-/* ─── Scroll Trail — ruban vectoriel qui se dessine au scroll ───
-   Positionné sur le tiers droit de l'écran, bande étroite.
-   mix-blend-mode: screen → invisible sur fond blanc, visible sur fond sombre.
+/* ─── Scroll Trail — ligne continue verticale qui se remplit au scroll ───
+   Simple div-based: no SVG distortion, guaranteed continuous line.
+   mix-blend-mode: screen → invisible on white, visible on dark.
+   z-index [1] → behind ALL content.
 */
 function ScrollTrail() {
-  const pathRef = useRef<SVGPathElement>(null);
-  const glowRef = useRef<SVGPathElement>(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const path = pathRef.current;
-    const glow = glowRef.current;
-    if (!path) return;
-
-    const len = path.getTotalLength();
-    path.style.strokeDasharray = `${len}`;
-    path.style.strokeDashoffset = `${len}`;
-
-    let glowLen = 0;
-    if (glow) {
-      glowLen = glow.getTotalLength();
-      glow.style.strokeDasharray = `${glowLen}`;
-      glow.style.strokeDashoffset = `${glowLen}`;
-    }
-
     let ticking = false;
     const onScroll = () => {
       if (ticking) return;
@@ -108,69 +93,45 @@ function ScrollTrail() {
       requestAnimationFrame(() => {
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         if (docHeight > 0) {
-          const p = Math.min(window.scrollY / docHeight, 1);
-          path.style.strokeDashoffset = `${len * (1 - p)}`;
-          if (glow) glow.style.strokeDashoffset = `${glowLen * (1 - p)}`;
+          setProgress(Math.min(window.scrollY / docHeight, 1));
         }
         ticking = false;
       });
     };
-
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const d = [
-    'M60,0',
-    'C30,5 10,10 50,15',
-    'C90,20 95,25 40,30',
-    'C5,35 15,40 65,45',
-    'C95,50 90,55 30,60',
-    'C10,65 15,70 70,75',
-    'C95,80 85,85 35,90',
-    'C20,94 40,98 60,100',
-  ].join(' ');
-
   return (
     <div
-      className="fixed top-0 right-[5%] w-[20%] h-full pointer-events-none z-[5]"
+      className="fixed top-0 right-[5%] w-[3px] h-full pointer-events-none z-[1]"
       style={{ mixBlendMode: 'screen' }}
       aria-hidden="true"
     >
-      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="stGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="4%" stopColor="#10b981" stopOpacity="0.6" />
-            <stop offset="30%" stopColor="#34d399" stopOpacity="0.45" />
-            <stop offset="60%" stopColor="#10b981" stopOpacity="0.5" />
-            <stop offset="92%" stopColor="#34d399" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* Glow */}
-        <path
-          ref={glowRef}
-          d={d}
-          stroke="url(#stGrad)"
-          strokeWidth="16"
-          vectorEffect="non-scaling-stroke"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.14"
+      {/* Background track */}
+      <div className="absolute inset-0 rounded-full bg-emerald-500/[0.08]" />
+      {/* Filled progress */}
+      <div
+        className="absolute top-0 left-0 right-0 rounded-full transition-[height] duration-100 ease-out"
+        style={{
+          height: `${progress * 100}%`,
+          background: 'linear-gradient(to bottom, #10b981, #34d399, #10b981)',
+          boxShadow: '0 0 8px rgba(16,185,129,0.4), 0 0 20px rgba(52,211,153,0.15)',
+        }}
+      />
+      {/* Glow dot at the tip */}
+      {progress > 0.02 && (
+        <div
+          className="absolute left-1/2 w-3 h-3 rounded-full"
+          style={{
+            top: `${progress * 100}%`,
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, #34d399 0%, #10b981 60%, transparent 100%)',
+            boxShadow: '0 0 12px rgba(52,211,153,0.6), 0 0 24px rgba(16,185,129,0.3)',
+          }}
         />
-        {/* Trait principal */}
-        <path
-          ref={pathRef}
-          d={d}
-          stroke="url(#stGrad)"
-          strokeWidth="4"
-          vectorEffect="non-scaling-stroke"
-          strokeLinecap="round"
-          fill="none"
-        />
-      </svg>
+      )}
     </div>
   );
 }
@@ -645,19 +606,14 @@ export default function LandingPageClient() {
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Conseil UX/UI</span><span className="font-semibold text-gray-900">800€</span></div>
                   <div className="flex justify-between text-sm border-t border-gray-100 pt-2"><span className="font-semibold text-gray-900">Total TTC</span><span className="font-bold text-emerald-600">4 560€</span></div>
                 </div>
-                {/* Stripe & SumUp logos — badges visuels avec couleurs de marque */}
+                {/* Stripe & SumUp logos — vrais logos officiels */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-[#635BFF]/[0.06] rounded-xl p-3 border border-[#635BFF]/10 flex items-center justify-center gap-2">
-                    <svg viewBox="0 0 60 25" className="h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a10.3 10.3 0 0 1-4.56 1.02c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.2 0 .61-.04 1.18-.06 1.86zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.8-1.07-2.58-2.08-2.58zM43.94 20.22c-2.14 0-3.48-.98-4.4-1.7l-.08 1.48H35.7V.98l4.14-.87v5.38c.88-.56 2.15-1.24 3.88-1.24 3.88 0 6.07 3.5 6.07 7.3 0 4.38-2.63 7.67-5.85 7.67zm-.82-12.1c-1.07 0-1.94.38-2.52.95v5.54c.56.55 1.33.96 2.52.96 1.97 0 3.15-2.07 3.15-3.83 0-1.84-1.12-3.62-3.15-3.62zM27.36 5.23c-1.73 0-3.34.57-4.42 1.2V.98L19.18.1v19.22h3.72l.12-1.15c.97.87 2.4 1.47 4.1 1.47 3.87 0 6.14-3.5 6.14-7.3 0-4.08-2.28-7.11-5.9-7.11zm-.92 11.84c-1.3 0-2.22-.48-2.86-1.15V9.44c.68-.73 1.6-1.2 2.86-1.2 2.04 0 3.32 1.82 3.32 3.93 0 2.15-1.24 3.9-3.32 3.9zM13.9 5.7c-1.4 0-2.38.7-2.97 1.32l-.2-1.1H7.64v13.4h4.14v-8.7c.58-.78 1.62-1.28 2.78-1.06V5.86a3.32 3.32 0 0 0-.66-.16zM4.18 7.93c0-.67.55-1.05 1.5-1.05 1.2 0 2.5.46 3.42.95V4.78c-.94-.5-2.24-.8-3.72-.8C2.5 3.98.26 5.88.26 8.2c0 3.55 4.84 3.08 4.84 4.56 0 .78-.7 1.1-1.7 1.1-1.36 0-2.82-.62-3.9-1.28v3.2c1.2.58 2.56.88 3.9.88 3.16 0 5.1-1.72 5.1-4.18-.02-3.84-4.32-3.24-4.32-4.55z" fill="#635BFF"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" className="h-5" fill="#635BFF" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
                     <span className="text-[10px] font-semibold text-[#635BFF]/70">Connecté</span>
                   </div>
                   <div className="flex-1 bg-[#F47B20]/[0.06] rounded-xl p-3 border border-[#F47B20]/10 flex items-center justify-center gap-2">
-                    <svg viewBox="0 0 60 25" className="h-4" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5.85 0A5.85 5.85 0 0 0 0 5.85v13.3A5.85 5.85 0 0 0 5.85 25h13.3A5.85 5.85 0 0 0 25 19.15V5.85A5.85 5.85 0 0 0 19.15 0H5.85zm2.5 5.5h5.8c2.9 0 4.8 1.55 4.8 4 0 2.2-1.5 3.5-3.5 3.95l4 5.55h-3.4l-3.6-5.2H10.8v5.2H8.35V5.5zm2.45 2.1v3.9h3c1.55 0 2.6-.7 2.6-2s-.95-1.9-2.5-1.9h-3.1z" fill="#F47B20"/>
-                      <text x="28" y="16" fontSize="11" fontWeight="700" fill="#F47B20" fontFamily="sans-serif">SumUp</text>
-                    </svg>
+                    <svg viewBox="0 0 24 24" className="h-5" fill="#F47B20" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
                     <span className="text-[10px] font-semibold text-[#F47B20]/70">Connecté</span>
                   </div>
                 </div>
@@ -692,15 +648,11 @@ export default function LandingPageClient() {
                 {/* CTA connexion */}
                 <div className="flex items-center gap-3 mt-8">
                   <div className="inline-flex items-center gap-2 bg-[#635BFF]/[0.06] border border-[#635BFF]/15 rounded-full px-4 py-2">
-                    <svg viewBox="0 0 60 25" className="h-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a10.3 10.3 0 0 1-4.56 1.02c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.2 0 .61-.04 1.18-.06 1.86zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.8-1.07-2.58-2.08-2.58z" fill="#635BFF"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" className="h-4" fill="#635BFF" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
                     <span className="text-xs font-semibold text-[#635BFF]">Stripe</span>
                   </div>
                   <div className="inline-flex items-center gap-2 bg-[#F47B20]/[0.06] border border-[#F47B20]/15 rounded-full px-4 py-2">
-                    <svg viewBox="0 0 25 25" className="h-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5.85 0A5.85 5.85 0 0 0 0 5.85v13.3A5.85 5.85 0 0 0 5.85 25h13.3A5.85 5.85 0 0 0 25 19.15V5.85A5.85 5.85 0 0 0 19.15 0H5.85zm2.5 5.5h5.8c2.9 0 4.8 1.55 4.8 4 0 2.2-1.5 3.5-3.5 3.95l4 5.55h-3.4l-3.6-5.2H10.8v5.2H8.35V5.5zm2.45 2.1v3.9h3c1.55 0 2.6-.7 2.6-2s-.95-1.9-2.5-1.9h-3.1z" fill="#F47B20"/>
-                    </svg>
+                    <svg viewBox="0 0 24 24" className="h-4" fill="#F47B20" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
                     <span className="text-xs font-semibold text-[#F47B20]">SumUp</span>
                   </div>
                 </div>
@@ -807,16 +759,40 @@ export default function LandingPageClient() {
                 <p className="text-center text-xs text-slate-400 mb-6">Factu.me se connecte aux outils que vous utilisez déjà</p>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { name: 'Stripe', color: '#635BFF' },
-                    { name: 'SumUp', color: '#F47B20' },
-                    { name: 'Google', color: '#4285F4' },
-                    { name: 'CSV', color: '#10b981' },
-                    { name: 'PDF', color: '#8b5cf6' },
-                    { name: 'CPro', color: '#ef4444' },
+                    {
+                      name: 'Stripe',
+                      color: '#635BFF',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#635BFF"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>,
+                    },
+                    {
+                      name: 'SumUp',
+                      color: '#F47B20',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#F47B20"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>,
+                    },
+                    {
+                      name: 'Google',
+                      color: '#4285F4',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#4285F4"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>,
+                    },
+                    {
+                      name: 'CSV',
+                      color: '#10b981',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>,
+                    },
+                    {
+                      name: 'PDF',
+                      color: '#8b5cf6',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v2h6"/></svg>,
+                    },
+                    {
+                      name: 'CPro',
+                      color: '#ef4444',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+                    },
                   ].map((int, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center hover:border-white/10 transition-colors">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: int.color + '15' }}>
-                        <span className="text-[10px] font-bold" style={{ color: int.color }}>{int.name.slice(0, 2)}</span>
+                        {int.svg}
                       </div>
                       <span className="text-[10px] font-semibold text-slate-300">{int.name}</span>
                     </div>
