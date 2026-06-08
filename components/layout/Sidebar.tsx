@@ -298,12 +298,12 @@ export default function Sidebar() {
         initial={false}
         animate={{ width: sidebarWidth }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden lg:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950 border-r border-emerald-100 dark:border-emerald-900/30 overflow-hidden flex-shrink-0"
+        className="hidden lg:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-emerald-50/50 to-white dark:from-[#09090B] dark:to-[#09090B] border-r border-emerald-100 dark:border-white/[0.06] overflow-hidden flex-shrink-0"
         style={{ pointerEvents: isFocus ? 'none' : 'auto' }}
       >
         {/* ─── Header ─────────────────────────────────────── */}
         <div className={cn(
-          'flex-shrink-0 border-b border-emerald-100/60 dark:border-emerald-900/20 flex items-center',
+          'flex-shrink-0 border-b border-emerald-100/60 dark:border-white/[0.04] flex items-center',
           isExpanded ? 'px-5 pt-5 pb-4 gap-3' : 'justify-center pt-5 pb-4',
         )}>
           <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
@@ -313,17 +313,17 @@ export default function Sidebar() {
 
         {/* ─── Search button ──────────────────────────────── */}
         <div className={cn(
-          'flex-shrink-0 border-b border-emerald-100/40 dark:border-emerald-900/15',
+          'flex-shrink-0 border-b border-emerald-100/40 dark:border-white/[0.03]',
           isExpanded ? 'px-4 py-3' : 'py-3 flex justify-center',
         )}>
           {isExpanded ? (
             <button
               onClick={() => openCommandPalette()}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-white/5 hover:bg-emerald-100/70 dark:hover:bg-white/10 border border-emerald-200/60 dark:border-emerald-800/30 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all text-sm group"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-white/5 hover:bg-emerald-100/70 dark:hover:bg-white/10 border border-emerald-200/60 dark:border-white/[0.06] text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-all text-sm group"
             >
               <Search size={15} className="group-hover:scale-110 transition-transform text-primary" />
               <span className="flex-1 text-left font-medium text-gray-600 dark:text-gray-300">Rechercher...</span>
-              <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 text-gray-500 dark:text-gray-400 font-mono">⌘K</kbd>
+              <kbd className="text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-white/[0.06] border border-emerald-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 font-mono">⌘K</kbd>
             </button>
           ) : (
             <button
@@ -407,7 +407,7 @@ export default function Sidebar() {
 
         {/* ─── Bottom section ──────────────────────────────── */}
         <div className={cn(
-          'flex-shrink-0 border-t border-emerald-100/60 dark:border-emerald-900/20',
+          'flex-shrink-0 border-t border-emerald-100/60 dark:border-white/[0.04]',
           isExpanded ? 'px-4 py-3' : 'py-3 flex flex-col items-center gap-2',
         )}>
           {/* Focus mode toggle */}

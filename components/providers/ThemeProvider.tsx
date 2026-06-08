@@ -12,9 +12,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // La landing page (/) gère ses propres couleurs directement dans ses composants
     // (bg-slate-950, bg-white, text-white…). On ne touche PAS au .dark sur <html>
     // car les overrides globals.css .dark détruiraient les sections blanches
-    // (bg-white → slate-900 avec !important).
+    // (bg-white → surface dark avec !important).
     if (pathname === '/') {
       document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
       return;
     }
 
@@ -22,10 +23,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
 
     if (stored) {
-      setTheme(stored);
+      setTheme(stored as any);
     } else {
-      // Par défaut: thème sombre
-      setTheme('dark');
+      // OBSIDIAN: Par défaut, respecter la préférence système
+      if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        setTheme('light');
+      } else {
+        setTheme('dark');
+      }
     }
   }, [setTheme, pathname]);
 

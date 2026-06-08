@@ -207,10 +207,10 @@ export default function MobileDrawer({ open, onClose }: Props) {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-100 dark:border-emerald-900/30 bg-gradient-to-b from-emerald-50/50 to-white dark:from-slate-950 dark:to-slate-950"
+            className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-sm flex flex-col shadow-2xl border-r border-emerald-100 dark:border-white/[0.06] bg-gradient-to-b from-emerald-50/50 to-white dark:from-[#09090B] dark:to-[#09090B]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-100/80 dark:border-emerald-900/20 bg-emerald-50/30 dark:bg-slate-900/50 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-emerald-100/80 dark:border-white/[0.04] bg-emerald-50/30 dark:bg-white/[0.02] flex-shrink-0">
               <div className="flex items-center gap-3">
                 <Link href="/dashboard" onClick={onClose} className="flex-shrink-0">
                   <Logo size="sm" variant="icon" className="hover:opacity-80 transition-opacity" />
@@ -243,7 +243,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
             </div>
 
             {/* Search */}
-            <div className="px-3 py-2 border-b border-emerald-100/60 dark:border-emerald-900/20 flex-shrink-0">
+            <div className="px-3 py-2 border-b border-emerald-100/60 dark:border-white/[0.04] flex-shrink-0">
               <button
                 onClick={() => { onClose(); openCommandPalette(); }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700/80 transition-all text-sm"
