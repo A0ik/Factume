@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Update invoice with Stripe payment info
-    await admin
+    const { error: updateErr } = await admin
       .from('invoices')
       .update({
         stripe_payment_url: session.url,
@@ -118,6 +118,10 @@ export async function POST(req: NextRequest) {
         sumup_checkout_id: null,
       })
       .eq('id', invoiceId);
+
+    if (updateErr) {
+      console.error('[Stripe Connect Payment Link] DB update failed:', updateErr.message);
+    }
 
     return NextResponse.json({
       paymentLinkId: session.id,

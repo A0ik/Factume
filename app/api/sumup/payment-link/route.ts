@@ -128,6 +128,36 @@ export async function POST(req: NextRequest) {
       }
 
       if (checkoutRes.status === 409) {
+        // Checkout already exists for this checkout_reference — reconstruct URL
+        // The checkout_reference is the invoiceId, so the checkout exists on SumUp's side
+        const existingCheckoutId = err.id || err.checkout_id;
+        if (existingCheckoutId) {
+          const existingUrl = `https://checkout.sumup.com/${existingCheckoutId}`;
+          // Re-save to DB in case it was lost
+          await supabase
+            .from('invoices')
+            .update({ sumup_checkout_id: existingCheckoutId, payment_link: existingUrl, stripe_payment_url: null })
+            .eq('id', invoiceId);
+          return NextResponse.json({ url: existingUrl, checkoutId: existingCheckoutId });
+        }
+        // Fallback: try to list checkouts to find the existing one
+        try {
+          const listRes = await fetch(`https://api.sumup.com/v0.1/checkouts?checkout_reference=${invoiceId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const existing = Array.isArray(listData) ? listData[0] : listData?.items?.[0];
+            if (existing?.id) {
+              const existingUrl = existing.hosted_checkout_url || `https://checkout.sumup.com/${existing.id}`;
+              await supabase
+                .from('invoices')
+                .update({ sumup_checkout_id: existing.id, payment_link: existingUrl, stripe_payment_url: null })
+                .eq('id', invoiceId);
+              return NextResponse.json({ url: existingUrl, checkoutId: existing.id });
+            }
+          }
+        } catch {}
         return NextResponse.json({
           error: 'Un lien de paiement existe déjà pour cette facture côté SumUp.',
         }, { status: 400 });
@@ -155,10 +185,14 @@ export async function POST(req: NextRequest) {
     const paymentUrl = checkout.hosted_checkout_url || `https://checkout.sumup.com/${checkout.id}`;
 
     // Save checkout to invoice
-    await supabase
+    const { error: saveErr } = await supabase
       .from('invoices')
       .update({ sumup_checkout_id: checkout.id, payment_link: paymentUrl, stripe_payment_url: null })
       .eq('id', invoiceId);
+
+    if (saveErr) {
+      console.error('[sumup-payment-link] DB save failed:', saveErr.message);
+    }
 
     return NextResponse.json({ url: paymentUrl, checkoutId: checkout.id });
   } catch (error: any) {

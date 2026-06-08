@@ -444,10 +444,12 @@ export default function LandingPageClient() {
                 <Image
                   src="/images/ipad-section.png"
                   alt="Factu.me sur iPad — Dictez votre facture"
-                  width={800}
-                  height={500}
+                  width={2106}
+                  height={1250}
+                  quality={100}
                   className="w-full h-auto rounded-2xl"
                   priority
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
             </R>
