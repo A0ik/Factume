@@ -21,7 +21,6 @@ export default function MentionsLegales() {
     {
       icon: Building2,
       title: 'Éditeur du site',
-      color: 'from-blue-500 to-cyan-500',
       content: [
         { label: 'Raison sociale', value: 'Factu.me' },
         { label: 'Forme juridique', value: 'Société par actions simplifiée (SAS)' },
@@ -34,7 +33,6 @@ export default function MentionsLegales() {
     {
       icon: Server,
       title: 'Hébergement',
-      color: 'from-purple-500 to-pink-500',
       content: [
         { label: 'Hébergeur', value: 'Vercel Inc.' },
         { label: 'Localisation', value: 'Serveurs situés en France (Paris)' },
@@ -44,9 +42,8 @@ export default function MentionsLegales() {
     {
       icon: Shield,
       title: 'Propriété intellectuelle',
-      color: 'from-emerald-500 to-teal-500',
       content: [
-        { label: 'Protection', value: 'Tous les éléments sont protégés par le droit d\'auteur' },
+        { label: 'Protection', value: "Tous les éléments sont protégés par le droit d'auteur" },
         { label: 'Interdiction', value: 'Toute reproduction même partielle est interdite' },
         { label: 'Marques', value: 'Les logos et marques sont déposés' }
       ]
@@ -54,11 +51,10 @@ export default function MentionsLegales() {
     {
       icon: Scale,
       title: 'Conformité légale',
-      color: 'from-orange-500 to-red-500',
       content: [
         { label: 'RGPD', value: 'Conforme au Règlement (UE) 2016/679' },
         { label: 'CNIL', value: 'Déclaration auprès de la CNIL' },
-        { label: 'LCEN', value: 'Conforme à la Loi pour la Confiance dans l\'Économie Numérique' },
+        { label: 'LCEN', value: "Conforme à la Loi pour la Confiance dans l'Économie Numérique" },
         { label: 'PDP Partenaire', value: 'superpdp.tech — Plateforme de Dématérialisation Partenaire agréée' },
         { label: 'Facturation électronique', value: 'Conforme à la loi n° 2022-1156 du 16 novembre 2022' },
         { label: 'Code de commerce', value: 'Respect des obligations commerciales' }
@@ -67,17 +63,15 @@ export default function MentionsLegales() {
     {
       icon: Users,
       title: 'Données personnelles',
-      color: 'from-indigo-500 to-violet-500',
       content: [
         { label: 'Traitement', value: 'Conforme à notre politique de confidentialité' },
-        { label: 'Droit d\'accès', value: 'Droit d\'accès et de rectification (RGPD)' },
+        { label: "Droit d'accès", value: "Droit d'accès et de rectification (RGPD)" },
         { label: 'Conservation', value: 'Durée limitée selon les obligations légales' }
       ]
     },
     {
       icon: Globe,
       title: 'Juridiction',
-      color: 'from-amber-500 to-yellow-500',
       content: [
         { label: 'Droit applicable', value: 'Droit français' },
         { label: 'Compétence', value: 'Tribunaux de commerce de Paris' },
@@ -87,7 +81,7 @@ export default function MentionsLegales() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
+    <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         {/* Header */}
         <motion.div
@@ -97,27 +91,27 @@ export default function MentionsLegales() {
         >
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             Retour à l'accueil
           </Link>
 
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
               <Scale className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
                 Mentions Légales
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-zinc-400 mt-1">
                 Conformément à l'article L.111-1 du Code de la consommation
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-zinc-500">
             <Zap className="w-4 h-4" />
             Dernière mise à jour : avril 2026
           </div>
@@ -128,17 +122,17 @@ export default function MentionsLegales() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-12 bg-gradient-to-r from-primary/10 to-purple-600/10 dark:from-primary/20 dark:to-purple-600/20 border-2 border-primary/20 dark:border-primary/30 rounded-3xl p-6"
+          className="mb-12 bg-white/[0.06] backdrop-blur border border-white/[0.06] rounded-3xl p-6"
         >
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-bold text-white mb-2">
                 Informations légales
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+              <p className="text-zinc-400 text-sm leading-relaxed">
                 Conformément aux dispositions des articles L.111-1 et suivants du Code de la consommation,
                 nous vous informons que ce site est édité par la société Factu.me, SAS immatriculée au RCS de Paris.
               </p>
@@ -156,13 +150,13 @@ export default function MentionsLegales() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className="bg-white dark:bg-slate-800/50 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all duration-300"
+                className="bg-[#171717] border border-white/[0.06] rounded-3xl p-6"
               >
                 <div className="flex items-center gap-4 mb-6">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${section.color} flex items-center justify-center shadow-lg`}>
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-bold text-white">
                     {section.title}
                   </h2>
                 </div>
@@ -171,12 +165,12 @@ export default function MentionsLegales() {
                   {section.content.map((item) => (
                     <div
                       key={item.label}
-                      className="bg-gray-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-gray-100 dark:border-white/5"
+                      className="bg-white/[0.06] rounded-2xl p-4 border border-white/[0.06]"
                     >
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
                         {item.label}
                       </p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-white">
                         {item.value}
                       </p>
                     </div>
@@ -192,16 +186,16 @@ export default function MentionsLegales() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="mt-12 bg-gradient-to-br from-primary to-purple-600 rounded-3xl p-8 text-white"
+          className="mt-12 bg-white/[0.06] backdrop-blur border border-white/[0.06] rounded-3xl p-8"
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
-                <Mail className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold mb-1">Contactez-nous</h3>
-                <p className="text-white/80 text-sm">
+                <h3 className="text-xl font-bold text-white mb-1">Contactez-nous</h3>
+                <p className="text-zinc-400 text-sm">
                   Pour toute question relative aux mentions légales
                 </p>
               </div>
@@ -209,7 +203,7 @@ export default function MentionsLegales() {
 
             <a
               href="mailto:contact@factu.me"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary font-semibold rounded-xl hover:bg-white/90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-white/90 transition-colors"
             >
               <Mail className="w-5 h-5" />
               contact@factu.me
@@ -222,22 +216,22 @@ export default function MentionsLegales() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-12 pt-8 border-t border-gray-200 dark:border-white/10 text-center"
+          className="mt-12 pt-8 border-t border-white/[0.06] text-center"
         >
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-            <Link href="/legal/confidentialite" className="hover:text-primary transition-colors">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-400">
+            <Link href="/legal/confidentialite" className="hover:text-white transition-colors">
               Politique de confidentialité
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">•</span>
-            <Link href="/legal/cgu" className="hover:text-primary transition-colors">
+            <span className="text-zinc-600">•</span>
+            <Link href="/legal/cgu" className="hover:text-white transition-colors">
               CGU
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">|</span>
-            <Link href="/legal/cgv" className="hover:text-primary transition-colors">
+            <span className="text-zinc-600">|</span>
+            <Link href="/legal/cgv" className="hover:text-white transition-colors">
               CGV
             </Link>
-            <span className="text-gray-300 dark:text-gray-600">|</span>
-            <Link href="/" className="hover:text-primary transition-colors flex items-center gap-2">
+            <span className="text-zinc-600">|</span>
+            <Link href="/" className="hover:text-white transition-colors flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Retour sur Factu.me
             </Link>

@@ -440,47 +440,15 @@ export default function LandingPageClient() {
           {/* Hero Feature — 2 colonnes */}
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center mb-20 2xl:mb-28">
             <R x={-30} y={0}>
-              <div className="bg-neutral-900 border border-white/[0.06] rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-3 border-b border-white/[0.06]">
-                  <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /></div>
-                  <span className="text-[10px] 2xl:text-xs text-emerald-400 font-medium ml-2">Factu.me AI</span>
-                </div>
-                <div className="p-5 2xl:p-7 space-y-4 font-mono text-xs 2xl:text-sm">
-                  {/* Voice Waveform */}
-                  <div className="bg-neutral-800/60 rounded-2xl px-4 py-3 border border-white/[0.04]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center"><Mic className="w-3 h-3 text-emerald-400" /></div>
-                      <span className="text-[10px] text-emerald-400 font-semibold">Écoute…</span>
-                    </div>
-                    <VoiceWaveform />
-                  </div>
-                  {/* Transcription */}
-                  <div className="flex gap-3">
-                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-white/[0.05] rounded-lg flex items-center justify-center flex-shrink-0"><Mic className="w-3.5 h-3.5 text-neutral-400" /></div>
-                    <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-2.5 text-neutral-300 max-w-[90%] border border-white/[0.04]">
-                      &quot;Facture pour Dupont, 5 jours de dev à 600€ HT, TVA 20%, ajoute 2 jours conseil à 400€&quot;
-                    </div>
-                  </div>
-                  {/* Résultat IA */}
-                  <div className="flex gap-3">
-                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><Sparkles className="w-3.5 h-3.5 text-emerald-400" /></div>
-                    <div className="space-y-2 max-w-[90%]">
-                      <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-2 text-emerald-400 border border-white/[0.04] flex items-center gap-2">
-                        <motion.div className="w-1.5 h-1.5 rounded-full bg-emerald-400" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
-                        Analyse en cours...
-                      </div>
-                      <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-3 text-neutral-300 space-y-1.5 border border-white/[0.04]">
-                        {['Client : Dupont Consulting SAS', 'Développement — 5j x 600€', 'Conseil — 2j x 400€', 'TVA 20% appliquée'].map((t, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-neutral-400"><Check className="w-3 h-3 text-emerald-500" /><span className="text-[11px] 2xl:text-xs">{t}</span></div>
-                        ))}
-                        <div className="flex items-center gap-1.5 text-white font-semibold pt-1 border-t border-white/[0.06]">
-                          <Zap className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[11px] 2xl:text-xs">FACT-2026-0042 — Conforme Factur-X / EN 16931</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="relative">
+                <Image
+                  src="/images/ipad-section.png"
+                  alt="Factu.me sur iPad — Dictez votre facture"
+                  width={800}
+                  height={500}
+                  className="w-full h-auto rounded-2xl"
+                  priority
+                />
               </div>
             </R>
             <div className="space-y-6">
@@ -606,14 +574,14 @@ export default function LandingPageClient() {
                   <div className="flex justify-between text-sm"><span className="text-gray-500">Conseil UX/UI</span><span className="font-semibold text-gray-900">800€</span></div>
                   <div className="flex justify-between text-sm border-t border-gray-100 pt-2"><span className="font-semibold text-gray-900">Total TTC</span><span className="font-bold text-emerald-600">4 560€</span></div>
                 </div>
-                {/* Stripe & SumUp logos — vrais logos officiels */}
+                {/* Stripe & SumUp logos */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-[#10b981]/[0.06] rounded-xl p-3 border border-[#10b981]/10 flex items-center justify-center gap-2">
                     <svg viewBox="0 0 24 24" className="h-5" fill="#10b981" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
                     <span className="text-[10px] font-semibold text-[#10b981]/70">Connecté</span>
                   </div>
                   <div className="flex-1 bg-[#34d399]/[0.06] rounded-xl p-3 border border-[#34d399]/10 flex items-center justify-center gap-2">
-                    <svg viewBox="0 0 24 24" className="h-5" fill="#34d399" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
+                    <Image src="/images/sumup-logo.png" alt="SumUp" width={20} height={20} className="h-5 w-auto" />
                     <span className="text-[10px] font-semibold text-[#34d399]/70">Connecté</span>
                   </div>
                 </div>
@@ -652,7 +620,7 @@ export default function LandingPageClient() {
                     <span className="text-xs font-semibold text-[#10b981]">Stripe</span>
                   </div>
                   <div className="inline-flex items-center gap-2 bg-[#34d399]/[0.06] border border-[#34d399]/15 rounded-full px-4 py-2">
-                    <svg viewBox="0 0 24 24" className="h-4" fill="#34d399" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
+                    <Image src="/images/sumup-logo.png" alt="SumUp" width={16} height={16} className="h-4 w-auto" />
                     <span className="text-xs font-semibold text-[#34d399]">SumUp</span>
                   </div>
                 </div>
@@ -767,7 +735,7 @@ export default function LandingPageClient() {
                     {
                       name: 'SumUp',
                       color: '#34d399',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#34d399"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>,
+                      svg: <Image src="/images/sumup-logo.png" alt="SumUp" width={20} height={20} className="w-5 h-5" />,
                     },
                     {
                       name: 'Google',

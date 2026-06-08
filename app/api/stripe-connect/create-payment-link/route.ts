@@ -30,6 +30,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
+    // If a Stripe payment link already exists for this invoice, return it
+    const existingStripeUrl = invoice.stripe_payment_url || invoice.stripe_payment_link_url;
+    if (existingStripeUrl) {
+      return NextResponse.json({
+        paymentLinkUrl: existingStripeUrl,
+        shortUrl: existingStripeUrl,
+        paymentLinkId: invoice.stripe_payment_link_id || null,
+      });
+    }
+
     // Get user's Stripe Connect account ID (stored as stripe_connect_account_id)
     const { data: profile } = await admin
       .from('profiles')

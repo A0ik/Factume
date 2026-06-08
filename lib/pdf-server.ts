@@ -538,7 +538,8 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     drawText(page, methodLabel, margin + 14, y - 8, 7, bold, accent);
 
     if (qrImage) {
-      const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
+      const providerName = isStripe ? 'Stripe' : isSumUp ? 'SumUp' : '';
+      const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
       drawText(page, btnLabel, margin + 14, y - 22, 10, bold, accent);
 
       const urlText = safe(paymentUrl).slice(0, 50);
@@ -554,7 +555,8 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         height: qrSize,
       });
     } else {
-      const btnLabel = `Payer ${fmt(invoice.total ?? 0)} en ligne`;
+      const providerName = isStripe ? 'Stripe' : isSumUp ? 'SumUp' : '';
+      const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
       centreText(page, btnLabel, margin, contentW, y - 22, 10, bold, accent);
 
       const urlText = safe(paymentUrl).slice(0, 80);
