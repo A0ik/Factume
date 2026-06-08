@@ -548,11 +548,11 @@ export default function CGU() {
                 <div className="bg-white/[0.06] rounded-xl p-4 border border-white/[0.06]">
                   <p className="font-semibold text-white mb-2">Références légales</p>
                   <ul className="space-y-1 text-sm text-zinc-400">
-                    <li>&bull; <strong>Article L.123-22 du Code de commerce</strong> : conservation des documents comptables pendant 10 ans</li>
+                    <li>&bull; <strong>Article L.123-22 du Code de commerce</strong> : conservation des documents comptables pendant 10 ans (<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006419824" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Legifrance</a>)</li>
                     <li>&bull; <strong>Article 1649 quater B du CGI</strong> : conservation des factures et pièces justificatives</li>
                     <li>&bull; <strong>Article 6 de la loi du 21 juin 2004</strong> : conservation des données de trafic</li>
-                    <li>&bull; <strong>Loi n° 2022-1156 du 16 novembre 2022</strong> : obligations de facturation électronique</li>
-                    <li>&bull; <strong>Règlement (UE) 2024/1689 (AI Act)</strong> : transparence et gouvernance des systèmes d'IA</li>
+                    <li>&bull; <strong>Loi n° 2022-1156 du 16 novembre 2022</strong> : obligations de facturation électronique (<a href="https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000046440660" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Legifrance</a>)</li>
+                    <li>&bull; <strong>Règlement (UE) 2024/1689 (AI Act)</strong> : transparence et gouvernance des systèmes d'IA (<a href="https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX%3A32024R1689" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">EUR-Lex</a>)</li>
                   </ul>
                 </div>
                 <p className="text-xs text-zinc-500">

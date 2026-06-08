@@ -73,12 +73,12 @@ export default function RegisterPage() {
 
   if (confirmEmail) {
     return (
-      <main className="relative min-h-screen flex items-center justify-center p-5 bg-[#020617]">
+      <main className="relative min-h-screen flex items-center justify-center p-5 bg-[#09090B]">
         {/* Animated background */}
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617]" />
-          <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] blur-[120px]" style={{ background: 'rgba(16,185,129,0.12)', animation: 'blob 8s ease-in-out infinite' }} />
-          <div className="absolute -bottom-[20%] -left-[10%] w-[400px] h-[400px] blur-[100px]" style={{ background: 'rgba(20,184,166,0.08)', animation: 'blob 8s ease-in-out infinite 2s' }} />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#09090B] via-[#111113] to-[#09090B]" />
+          <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] blur-[120px]" style={{ background: 'rgba(16,185,129,0.10)', animation: 'blob 8s ease-in-out infinite' }} />
+          <div className="absolute -bottom-[20%] -left-[10%] w-[400px] h-[400px] blur-[100px]" style={{ background: 'rgba(20,184,166,0.06)', animation: 'blob 8s ease-in-out infinite 2s' }} />
         </div>
 
         <div className="relative z-10 w-full max-w-sm text-center space-y-5">
@@ -96,7 +96,7 @@ export default function RegisterPage() {
 
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-white">Vérifiez votre email</h2>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <p className="text-sm text-zinc-400 leading-relaxed">
               Un lien de confirmation a été envoyé à <strong className="text-white">{pendingEmail}</strong>.
               Cliquez dessus pour activer votre compte.
             </p>

@@ -239,7 +239,7 @@ export default function CGV() {
           <div className="text-zinc-400 prose prose-sm max-w-none prose-invert">
             <div className="space-y-3">
               <p className="mb-3">
-                Conformément à l'<strong className="text-white">article L.221-18 du Code de la consommation</strong>, vous disposez d'un délai de rétractation de <strong>14 jours calendaires</strong> à compter de la conclusion du contrat pour revenir sur votre décision.
+                Conformément à l'<strong className="text-white">article L.221-18 du Code de la consommation</strong> (<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006291912" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Legifrance</a>), vous disposez d'un délai de rétractation de <strong>14 jours calendaires</strong> à compter de la conclusion du contrat pour revenir sur votre décision.
               </p>
               <div className="bg-white/[0.06] rounded-xl p-4 border border-white/[0.06]">
                 <p className="text-xs font-semibold text-white uppercase mb-2">Modalités d'exercice</p>
@@ -261,7 +261,7 @@ export default function CGV() {
               <div className="bg-white/[0.06] rounded-xl p-4 border border-white/[0.06]">
                 <p className="text-xs font-semibold text-white uppercase mb-1">Exception</p>
                 <p className="text-sm text-zinc-300">
-                  Conformément à l'article L.221-28 du Code de la consommation, le droit de rétractation ne peut être exercé pour les contrats fournissant des services pleinement exécutés avant la fin du délai de rétractation, si l'exécution a commencé avec votre accord préalable exprès et renonciation explicite à votre droit de rétractation.
+                  Conformément à l'article L.221-28 du Code de la consommation (<a href="https://www.service-public.fr/particuliers/vosdroits/Fuite-de-retractation" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">service-public.fr</a>), le droit de rétractation ne peut être exercé pour les contrats fournissant des services pleinement exécutés avant la fin du délai de rétractation, si l'exécution a commencé avec votre accord préalable exprès et renonciation explicite à votre droit de rétractation.
                 </p>
               </div>
             </div>

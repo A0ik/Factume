@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://factu.me/login' },
   openGraph: {
     title: 'Connexion – Factu.me',
-    description: 'Accédez à votre espace facturation.',
+    description: 'Accédez à votre espace facturation Factu.me.',
     url: 'https://factu.me/login',
     siteName: 'Factu.me',
     type: 'website',

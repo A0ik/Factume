@@ -211,6 +211,66 @@ export default function MentionsLegales() {
           </div>
         </motion.div>
 
+        {/* External References */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="mt-8 bg-white/[0.06] backdrop-blur border border-white/[0.06] rounded-3xl p-6"
+        >
+          <h3 className="text-lg font-bold text-white mb-4">Références officielles</h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <a
+              href="https://www.cnil.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-white/[0.04] rounded-xl p-3 border border-white/[0.04] hover:border-white/[0.12] transition-colors"
+            >
+              <Shield className="w-5 h-5 text-white flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-white">CNIL</p>
+                <p className="text-xs text-zinc-500">Commission Nationale de l'Informatique et des Libertés</p>
+              </div>
+            </a>
+            <a
+              href="https://www.legifrance.gouv.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-white/[0.04] rounded-xl p-3 border border-white/[0.04] hover:border-white/[0.12] transition-colors"
+            >
+              <Scale className="w-5 h-5 text-white flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-white">Legifrance</p>
+                <p className="text-xs text-zinc-500">Service public de la diffusion du droit</p>
+              </div>
+            </a>
+            <a
+              href="https://www.inpi.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-white/[0.04] rounded-xl p-3 border border-white/[0.04] hover:border-white/[0.12] transition-colors"
+            >
+              <FileText className="w-5 h-5 text-white flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-white">INPI</p>
+                <p className="text-xs text-zinc-500">Institut National de la Propriété Industrielle</p>
+              </div>
+            </a>
+            <a
+              href="https://www.service-public.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-white/[0.04] rounded-xl p-3 border border-white/[0.04] hover:border-white/[0.12] transition-colors"
+            >
+              <Globe className="w-5 h-5 text-white flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-white">Service-public.fr</p>
+                <p className="text-xs text-zinc-500">Informations et démarches administratives</p>
+              </div>
+            </a>
+          </div>
+        </motion.div>
+
         {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}

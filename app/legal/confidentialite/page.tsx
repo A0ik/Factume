@@ -313,7 +313,7 @@ export default function Confidentialite() {
         <div class="space-y-3">
           <p class="mb-3 text-zinc-400">Si vous estimez que le traitement de vos données personnelles n'est pas conforme à la réglementation, vous disposez du droit d'introduire une réclamation auprès de l'autorité de contrôle :</p>
           <div class="bg-white/[0.06] rounded-xl p-4 border border-white/[0.06]">
-            <p class="font-semibold text-white mb-2">CNIL - Commission Nationale de l'Informatique et des Libertés</p>
+            <p class="font-semibold text-white mb-2">CNIL - Commission Nationale de l'Informatique et des Libertés (<a href="https://www.cnil.fr/" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">cnil.fr</a>)</p>
             <ul class="space-y-1 text-sm text-zinc-400">
               <li>Site web : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" class="text-white hover:underline">www.cnil.fr</a></li>
               <li>Adresse : 3 Place de Fontenoy, TSA 80715, 75334 PARIS CEDEX 07</li>
@@ -379,7 +379,7 @@ export default function Confidentialite() {
               <p className="text-zinc-400 text-sm leading-relaxed">
                 Factu.me s'engage à protéger vos données personnelles et à respecter votre vie privée.
                 Cette politique décrit comment nous collectons, utilisons, conservons et sécurisons vos informations,
-                conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi Informatique et Libertés.
+                conformément au <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Règlement Général sur la Protection des Données (RGPD)</a> et à la loi Informatique et Libertés.
               </p>
             </div>
           </div>
