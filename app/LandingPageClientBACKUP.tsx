@@ -67,7 +67,7 @@ function VoiceWaveform() {
         return (
           <motion.div
             key={i}
-            className="w-[3px] rounded-full bg-gradient-to-t from-emerald-500 to-emerald-300"
+            className="w-[3px] rounded-full bg-gradient-to-t from-emerald-500 to-teal-300"
             animate={{ height: [`${minH}px`, `${baseH}px`, `${minH + 8}px`, `${baseH * 0.7}px`, `${minH}px`] }}
             transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.08, ease: 'easeInOut' }}
           />
@@ -187,12 +187,12 @@ const trustItems = [
 
 
 const targetAudience = [
-  { icon: Building2, title: 'Auto-entrepreneur', copy: 'Vos factures en 10 secondes, sans prise de tête.', color: 'from-emerald-500 to-emerald-400' },
-  { icon: Hammer, title: 'Artisan', copy: "Entre deux chantiers, dictez et c'est envoyé.", color: 'from-neutral-600 to-neutral-400' },
-  { icon: Store, title: 'TPE / PME', copy: 'Gérez votre équipe et vos factures au même endroit.', color: 'from-emerald-600 to-emerald-400' },
-  { icon: Code2, title: 'Freelance', copy: 'Facturation, CRM et contrats — un seul outil.', color: 'from-neutral-500 to-emerald-500' },
-  { icon: Briefcase, title: 'Consultant', copy: 'Devis signés et factures encaissées en 1 clic.', color: 'from-emerald-700 to-emerald-400' },
-  { icon: Palette, title: 'Agence', copy: 'Workspaces séparés pour chaque client.', color: 'from-neutral-600 to-emerald-500' },
+  { icon: Building2, title: 'Auto-entrepreneur', copy: 'Vos factures en 10 secondes, sans prise de tête.', color: 'from-emerald-500 to-teal-500' },
+  { icon: Hammer, title: 'Artisan', copy: "Entre deux chantiers, dictez et c'est envoyé.", color: 'from-amber-500 to-orange-500' },
+  { icon: Store, title: 'TPE / PME', copy: 'Gérez votre équipe et vos factures au même endroit.', color: 'from-blue-500 to-cyan-500' },
+  { icon: Code2, title: 'Freelance', copy: 'Facturation, CRM et contrats — un seul outil.', color: 'from-violet-500 to-purple-500' },
+  { icon: Briefcase, title: 'Consultant', copy: 'Devis signés et factures encaissées en 1 clic.', color: 'from-rose-500 to-pink-500' },
+  { icon: Palette, title: 'Agence', copy: 'Workspaces séparés pour chaque client.', color: 'from-indigo-500 to-blue-500' },
 ];
 
 const integrations = [
@@ -237,12 +237,12 @@ export default function LandingPageClient() {
   }, []);
 
   /* Navbar text colors based on background */
-  const navText = navLight ? 'text-neutral-600' : 'text-neutral-400';
-  const navLogo = navLight ? 'text-neutral-900' : 'text-white';
+  const navText = navLight ? 'text-slate-600' : 'text-slate-400';
+  const navLogo = navLight ? 'text-slate-900' : 'text-white';
   const navBg = scrolled
     ? navLight
       ? 'bg-white/90 backdrop-blur-xl border-b border-gray-200'
-      : 'bg-black/90 backdrop-blur-xl border-b border-white/[0.06]'
+      : 'bg-slate-950/90 backdrop-blur-xl border-b border-white/[0.06]'
     : 'bg-transparent';
 
   const navLinks = [
@@ -252,7 +252,7 @@ export default function LandingPageClient() {
   ];
 
   return (
-    <div id="landing" className="bg-black text-white antialiased overflow-x-hidden">
+    <div id="landing" className="bg-slate-950 text-white antialiased overflow-x-hidden">
 
       {/* ═══ SCROLL TRAIL — ruban vectoriel qui se dessine au scroll ═══ */}
       <ScrollTrail />
@@ -278,7 +278,7 @@ export default function LandingPageClient() {
             <Link href="/register" className="inline-flex items-center gap-1 text-[11px] sm:text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-colors duration-200 active:scale-[0.97] whitespace-nowrap">
               <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </Link>
-            <button onClick={() => setMenuOpen(!menuOpen)} className={cn('md:hidden p-1 transition-colors duration-300', navLight ? 'text-neutral-700' : 'text-white')}>
+            <button onClick={() => setMenuOpen(!menuOpen)} className={cn('md:hidden p-1 transition-colors duration-300', navLight ? 'text-slate-700' : 'text-white')}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -286,12 +286,12 @@ export default function LandingPageClient() {
 
         <AnimatePresence>
           {menuOpen && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2, ease }} className={cn('md:hidden backdrop-blur-xl overflow-hidden', navLight ? 'bg-white/95' : 'bg-black/95')}>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2, ease }} className={cn('md:hidden backdrop-blur-xl overflow-hidden', navLight ? 'bg-white/95' : 'bg-slate-950/95')}>
               <div className="px-6 py-4 space-y-1">
                 {navLinks.map((l) => (
-                  <a key={l.href} href={l.href} onClick={(e) => scrollTo(e, l.href)} className={cn('block py-3 text-sm font-medium transition-colors', navLight ? 'text-neutral-700 hover:text-emerald-600' : 'text-neutral-300 hover:text-white')}>{l.label}</a>
+                  <a key={l.href} href={l.href} onClick={(e) => scrollTo(e, l.href)} className={cn('block py-3 text-sm font-medium transition-colors', navLight ? 'text-slate-700 hover:text-emerald-600' : 'text-slate-300 hover:text-white')}>{l.label}</a>
                 ))}
-                <Link href="/login" className={cn('flex items-center gap-2 py-3 text-sm', navLight ? 'text-neutral-500' : 'text-neutral-400')}><LogIn className="w-4 h-4" />Se connecter</Link>
+                <Link href="/login" className={cn('flex items-center gap-2 py-3 text-sm', navLight ? 'text-slate-500' : 'text-slate-400')}><LogIn className="w-4 h-4" />Se connecter</Link>
               </div>
             </motion.div>
           )}
@@ -300,9 +300,9 @@ export default function LandingPageClient() {
 
       {/* ════════════ HERO — Pattern Stripe/Linear ════════════ */}
       <section data-nav-theme="dark" className="relative min-h-screen flex items-center overflow-hidden pt-20">
-        <div className="absolute inset-0 bg-black">
+        <div className="absolute inset-0 bg-slate-950">
           <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
-          <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-emerald-500/[0.03] rounded-full blur-[200px] animate-[blob_15s_ease-in-out_infinite]" />
+          <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-500/[0.03] rounded-full blur-[200px] animate-[blob_15s_ease-in-out_infinite]" />
           <div className="absolute bottom-[-10%] left-[-10%] w-[800px] h-[800px] bg-emerald-500/[0.06] rounded-full blur-[180px] animate-[blob_15s_ease-in-out_infinite]" style={{ animationDelay: '-5s' }} />
         </div>
 
@@ -359,13 +359,13 @@ export default function LandingPageClient() {
                 <div className="flex items-center gap-4 pt-2">
                   <div className="flex -space-x-2">
                     {['M', 'S', 'A', 'L'].map((initial, i) => {
-                      const colors = ['bg-emerald-500/30 text-emerald-300', 'bg-neutral-500/30 text-neutral-300', 'bg-emerald-600/30 text-emerald-300', 'bg-neutral-400/30 text-neutral-300'];
-                      return <div key={i} className={'w-7 h-7 rounded-full border-2 border-black ' + colors[i] + ' font-bold text-[9px] flex items-center justify-center'}>{initial}</div>;
+                      const colors = ['bg-blue-500/30 text-blue-300', 'bg-purple-500/30 text-purple-300', 'bg-emerald-500/30 text-emerald-300', 'bg-amber-500/30 text-amber-300'];
+                      return <div key={i} className={'w-7 h-7 rounded-full border-2 border-slate-950 ' + colors[i] + ' font-bold text-[9px] flex items-center justify-center'}>{initial}</div>;
                     })}
                   </div>
                   <div>
-                    <div className="flex items-center gap-0.5">{[1,2,3,4,5].map(i => <Star key={i} className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400" />)}</div>
-                    <span className="text-[10px] text-neutral-400">2 000+ entrepreneurs nous font confiance</span>
+                    <div className="flex items-center gap-0.5">{[1,2,3,4,5].map(i => <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />)}</div>
+                    <span className="text-[10px] text-slate-400">2 000+ entrepreneurs nous font confiance</span>
                   </div>
                 </div>
               </R>
@@ -397,7 +397,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={0} />
 
       {/* ════════════ UNE SOLUTION POUR TOUS — Loi 2 ════════════ */}
       <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
@@ -427,10 +427,10 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#ffffff" toColor="#000000" variant={2} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={2} />
 
       {/* ════════════ CORE FEATURE — Facture électronique + IA ════════════ */}
-      <section data-nav-theme="dark" id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={`${LC} relative z-10`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
             <R><p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Facturation électronique</p></R>
@@ -440,14 +440,14 @@ export default function LandingPageClient() {
           {/* Hero Feature — 2 colonnes */}
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center mb-20 2xl:mb-28">
             <R x={-30} y={0}>
-              <div className="bg-neutral-900 border border-white/[0.06] rounded-2xl overflow-hidden">
+              <div className="bg-slate-900 border border-white/[0.06] rounded-2xl overflow-hidden">
                 <div className="flex items-center gap-2 px-5 py-3 border-b border-white/[0.06]">
-                  <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /><div className="w-2.5 h-2.5 rounded-full bg-neutral-700" /></div>
+                  <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-slate-700" /><div className="w-2.5 h-2.5 rounded-full bg-slate-700" /><div className="w-2.5 h-2.5 rounded-full bg-slate-700" /></div>
                   <span className="text-[10px] 2xl:text-xs text-emerald-400 font-medium ml-2">Factu.me AI</span>
                 </div>
                 <div className="p-5 2xl:p-7 space-y-4 font-mono text-xs 2xl:text-sm">
                   {/* Voice Waveform */}
-                  <div className="bg-neutral-800/60 rounded-2xl px-4 py-3 border border-white/[0.04]">
+                  <div className="bg-slate-800/60 rounded-2xl px-4 py-3 border border-white/[0.04]">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center"><Mic className="w-3 h-3 text-emerald-400" /></div>
                       <span className="text-[10px] text-emerald-400 font-semibold">Écoute…</span>
@@ -456,22 +456,22 @@ export default function LandingPageClient() {
                   </div>
                   {/* Transcription */}
                   <div className="flex gap-3">
-                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-white/[0.05] rounded-lg flex items-center justify-center flex-shrink-0"><Mic className="w-3.5 h-3.5 text-neutral-400" /></div>
-                    <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-2.5 text-neutral-300 max-w-[90%] border border-white/[0.04]">
+                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-white/[0.05] rounded-lg flex items-center justify-center flex-shrink-0"><Mic className="w-3.5 h-3.5 text-slate-400" /></div>
+                    <div className="bg-slate-800/80 rounded-2xl rounded-tl-none px-4 py-2.5 text-slate-300 max-w-[90%] border border-white/[0.04]">
                       &quot;Facture pour Dupont, 5 jours de dev à 600€ HT, TVA 20%, ajoute 2 jours conseil à 400€&quot;
                     </div>
                   </div>
                   {/* Résultat IA */}
                   <div className="flex gap-3">
-                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><Sparkles className="w-3.5 h-3.5 text-emerald-400" /></div>
+                    <div className="w-7 h-7 2xl:w-8 2xl:h-8 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><Sparkles className="w-3.5 h-3.5 text-amber-400" /></div>
                     <div className="space-y-2 max-w-[90%]">
-                      <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-2 text-emerald-400 border border-white/[0.04] flex items-center gap-2">
-                        <motion.div className="w-1.5 h-1.5 rounded-full bg-emerald-400" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
+                      <div className="bg-slate-800/80 rounded-2xl rounded-tl-none px-4 py-2 text-amber-400 border border-white/[0.04] flex items-center gap-2">
+                        <motion.div className="w-1.5 h-1.5 rounded-full bg-amber-400" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} />
                         Analyse en cours...
                       </div>
-                      <div className="bg-neutral-800/80 rounded-2xl rounded-tl-none px-4 py-3 text-neutral-300 space-y-1.5 border border-white/[0.04]">
+                      <div className="bg-slate-800/80 rounded-2xl rounded-tl-none px-4 py-3 text-slate-300 space-y-1.5 border border-white/[0.04]">
                         {['Client : Dupont Consulting SAS', 'Développement — 5j x 600€', 'Conseil — 2j x 400€', 'TVA 20% appliquée'].map((t, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-neutral-400"><Check className="w-3 h-3 text-emerald-500" /><span className="text-[11px] 2xl:text-xs">{t}</span></div>
+                          <div key={i} className="flex items-center gap-1.5 text-slate-400"><Check className="w-3 h-3 text-emerald-500" /><span className="text-[11px] 2xl:text-xs">{t}</span></div>
                         ))}
                         <div className="flex items-center gap-1.5 text-white font-semibold pt-1 border-t border-white/[0.06]">
                           <Zap className="w-3 h-3 text-emerald-400" />
@@ -494,7 +494,7 @@ export default function LandingPageClient() {
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-4">
                       <div className="w-10 h-10 2xl:w-12 2xl:h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0"><item.icon className="w-5 h-5 2xl:w-6 2xl:h-6 text-emerald-400" /></div>
-                      <span className="text-sm 2xl:text-base 2xl:leading-relaxed text-neutral-300 pt-2">{item.text}</span>
+                      <span className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-300 pt-2">{item.text}</span>
                     </li>
                   ))}
                 </ul>
@@ -504,7 +504,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={2} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={2} />
 
       {/* ════════════ SECONDARY FEATURES — 6 cartes ════════════ */}
       <section data-nav-theme="light" className="relative py-24 md:py-32 2xl:py-40 overflow-hidden bg-white">
@@ -536,10 +536,10 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#ffffff" toColor="#000000" variant={3} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={3} />
 
       {/* ════════════ CONTRATS — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={`${LC} relative z-[2]`}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <div className="space-y-8">
@@ -556,32 +556,32 @@ export default function LandingPageClient() {
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><item.icon className="w-4 h-4 text-emerald-400" /></div>
-                      <span className="text-sm text-neutral-300 pt-1">{item.text}</span>
+                      <span className="text-sm text-slate-300 pt-1">{item.text}</span>
                     </li>
                   ))}
                 </ul>
               </R>
             </div>
             <R x={30} y={0}>
-              <div className="bg-neutral-900 border border-white/[0.06] rounded-2xl p-5 sm:p-6">
+              <div className="bg-slate-900 border border-white/[0.06] rounded-2xl p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06]">
                   <div>
-                    <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Contrat de travail</div>
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Contrat de travail</div>
                     <div className="text-sm font-bold text-white">CDI — Développeur Full Stack</div>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full"><CheckCircle className="w-3 h-3" />Conforme</div>
                 </div>
                 <div className="space-y-3 mb-4">
                   {[['Type de contrat', 'CDI'], ['Salaire brut', '3 500€/mois'], ['Convention collective', 'SYNTEC'], ['Période d\'essai', '4 mois'], ['Lieu de travail', 'Paris + Télétravail']].map(([label, value], i) => (
-                    <div key={i} className="flex justify-between text-sm"><span className="text-neutral-400">{label}</span><span className="font-semibold text-white">{value}</span></div>
+                    <div key={i} className="flex justify-between text-sm"><span className="text-slate-400">{label}</span><span className="font-semibold text-white">{value}</span></div>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 bg-white/[0.05] text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 border border-white/[0.08]"><Eye className="w-4 h-4 text-neutral-400" />Aperçu</div>
+                  <div className="flex-1 bg-white/[0.05] text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 border border-white/[0.08]"><Eye className="w-4 h-4 text-slate-400" />Aperçu</div>
                   <div className="flex-1 bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"><Share2 className="w-4 h-4" />Faire signer</div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-2 text-xs text-neutral-500"><Shield className="w-3.5 h-3.5 text-emerald-500" />Signature eIDAS Avancé gratuite</div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500"><Shield className="w-3.5 h-3.5 text-emerald-500" />Signature eIDAS Avancé gratuite</div>
                 </div>
               </div>
             </R>
@@ -589,7 +589,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={0} />
 
       {/* ════════════ ENCAISSEMENT — BLANC ════════════ */}
       <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
@@ -608,13 +608,13 @@ export default function LandingPageClient() {
                 </div>
                 {/* Stripe & SumUp logos — vrais logos officiels */}
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-[#10b981]/[0.06] rounded-xl p-3 border border-[#10b981]/10 flex items-center justify-center gap-2">
-                    <svg viewBox="0 0 24 24" className="h-5" fill="#10b981" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
-                    <span className="text-[10px] font-semibold text-[#10b981]/70">Connecté</span>
+                  <div className="flex-1 bg-[#635BFF]/[0.06] rounded-xl p-3 border border-[#635BFF]/10 flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 24 24" className="h-5" fill="#635BFF" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
+                    <span className="text-[10px] font-semibold text-[#635BFF]/70">Connecté</span>
                   </div>
-                  <div className="flex-1 bg-[#34d399]/[0.06] rounded-xl p-3 border border-[#34d399]/10 flex items-center justify-center gap-2">
-                    <svg viewBox="0 0 24 24" className="h-5" fill="#34d399" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
-                    <span className="text-[10px] font-semibold text-[#34d399]/70">Connecté</span>
+                  <div className="flex-1 bg-[#F47B20]/[0.06] rounded-xl p-3 border border-[#F47B20]/10 flex items-center justify-center gap-2">
+                    <svg viewBox="0 0 24 24" className="h-5" fill="#F47B20" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
+                    <span className="text-[10px] font-semibold text-[#F47B20]/70">Connecté</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
@@ -630,7 +630,7 @@ export default function LandingPageClient() {
                   De la facture à votre compte bancaire en <span className="text-emerald-500">1 lien</span>
                 </h2>
                 <p className="text-sm 2xl:text-base text-gray-500 mb-8 max-w-md">
-                  Connectez votre compte <span className="font-semibold text-emerald-600">Stripe</span> ou <span className="font-semibold text-emerald-600">SumUp</span> en 2 clics. Envoyez un lien de paiement directement avec votre facture — votre client paie par carte, vous recevez l'argent.
+                  Connectez votre compte <span className="font-semibold text-[#635BFF]">Stripe</span> ou <span className="font-semibold text-[#F47B20]">SumUp</span> en 2 clics. Envoyez un lien de paiement directement avec votre facture — votre client paie par carte, vous recevez l'argent.
                 </p>
                 <ul className="space-y-4">
                   {[
@@ -647,13 +647,13 @@ export default function LandingPageClient() {
                 </ul>
                 {/* CTA connexion */}
                 <div className="flex items-center gap-3 mt-8">
-                  <div className="inline-flex items-center gap-2 bg-[#10b981]/[0.06] border border-[#10b981]/15 rounded-full px-4 py-2">
-                    <svg viewBox="0 0 24 24" className="h-4" fill="#10b981" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
-                    <span className="text-xs font-semibold text-[#10b981]">Stripe</span>
+                  <div className="inline-flex items-center gap-2 bg-[#635BFF]/[0.06] border border-[#635BFF]/15 rounded-full px-4 py-2">
+                    <svg viewBox="0 0 24 24" className="h-4" fill="#635BFF" xmlns="http://www.w3.org/2000/svg"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>
+                    <span className="text-xs font-semibold text-[#635BFF]">Stripe</span>
                   </div>
-                  <div className="inline-flex items-center gap-2 bg-[#34d399]/[0.06] border border-[#34d399]/15 rounded-full px-4 py-2">
-                    <svg viewBox="0 0 24 24" className="h-4" fill="#34d399" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
-                    <span className="text-xs font-semibold text-[#34d399]">SumUp</span>
+                  <div className="inline-flex items-center gap-2 bg-[#F47B20]/[0.06] border border-[#F47B20]/15 rounded-full px-4 py-2">
+                    <svg viewBox="0 0 24 24" className="h-4" fill="#F47B20" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>
+                    <span className="text-xs font-semibold text-[#F47B20]">SumUp</span>
                   </div>
                 </div>
               </R>
@@ -662,25 +662,25 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={1} />
 
       {/* ════════════ TIMELINE — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={`${LC} relative z-[2]`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
             <R><p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Comment ça marche</p></R>
             <R><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">3 étapes. <span className="text-emerald-400">C'est tout.</span></h2></R>
           </div>
           <div className="relative max-w-4xl 2xl:max-w-5xl mx-auto">
-            <div className="absolute left-[23px] md:left-1/2 md:-translate-x-px top-0 bottom-0 w-px bg-gradient-to-b from-emerald-500/60 via-emerald-500/30 to-emerald-500/60" />
+            <div className="absolute left-[23px] md:left-1/2 md:-translate-x-px top-0 bottom-0 w-px bg-gradient-to-b from-emerald-500/60 via-amber-500/30 to-emerald-500/60" />
             <div className="space-y-12 md:space-y-16 2xl:space-y-20">
               {steps.map((step, i) => (
                 <div key={i} className={cn('relative flex items-start gap-8', i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse')}>
-                  <div className="absolute left-[15px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 border-4 border-black z-10 shadow-[0_0_12px_rgba(16,185,129,0.4)]" />
+                  <div className="absolute left-[15px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 border-4 border-slate-950 z-10 shadow-[0_0_12px_rgba(16,185,129,0.4)]" />
                   <R delay={i * 0.1} x={i % 2 === 0 ? -30 : 30} y={0} className={cn('ml-12 md:ml-0 md:w-[calc(50%-2rem)]', i % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12 md:text-left')}>
                     <span className="text-emerald-400 font-mono text-xs 2xl:text-sm font-bold">{step.num}</span>
                     <h3 className="text-lg 2xl:text-xl font-semibold text-white mt-1 mb-2">{step.title}</h3>
-                    <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-neutral-400">{step.desc}</p>
+                    <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-slate-400">{step.desc}</p>
                   </R>
                 </div>
               ))}
@@ -689,7 +689,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={2} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={2} />
 
       {/* ════════════ TESTIMONIALS — BLANC ════════════ */}
       <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
@@ -702,7 +702,7 @@ export default function LandingPageClient() {
             {testimonials.map((t, i) => (
               <R key={i} delay={i * 0.08}>
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 md:p-8 2xl:p-10 h-full flex flex-col transition-colors duration-300 hover:border-gray-300">
-                  <div className="flex gap-0.5 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-emerald-400 fill-emerald-400" />)}</div>
+                  <div className="flex gap-0.5 mb-4">{[1, 2, 3, 4, 5].map((s) => <Star key={s} className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-amber-400 fill-amber-400" />)}</div>
                   <p className="text-sm 2xl:text-base 2xl:leading-relaxed text-gray-600 flex-grow mb-6">&ldquo;{t.text}&rdquo;</p>
                   <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
                     <div className="w-9 h-9 2xl:w-11 2xl:h-11 rounded-full bg-gray-200 text-gray-600 font-bold text-xs 2xl:text-sm flex items-center justify-center">{t.name.charAt(0)}</div>
@@ -716,10 +716,10 @@ export default function LandingPageClient() {
       </section>
 
       
-      <Wave fromColor="#ffffff" toColor="#000000" variant={0} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={0} />
 
       {/* ════════════ CONFORMITÉ & ÉCOSYSTÈME — Loi 4 + 9 ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={LC}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <div className="space-y-8">
@@ -728,7 +728,7 @@ export default function LandingPageClient() {
                 <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-6">
                   La facturation électronique <span className="text-emerald-400">sans prise de tête.</span>
                 </h2>
-                <p className="text-sm 2xl:text-base text-neutral-400 leading-relaxed mb-6">
+                <p className="text-sm 2xl:text-base text-slate-400 leading-relaxed mb-6">
                   Dès septembre 2026, toutes les entreprises françaises devront émettre et recevoir des factures électroniques. Avec Factu.me, vous êtes <span className="text-white font-semibold">déjà prêt</span>.
                 </p>
               </R>
@@ -742,37 +742,37 @@ export default function LandingPageClient() {
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><item.icon className="w-4 h-4 text-emerald-400" /></div>
-                      <span className="text-sm text-neutral-300 pt-1">{item.text}</span>
+                      <span className="text-sm text-slate-300 pt-1">{item.text}</span>
                     </li>
                   ))}
                 </ul>
               </R>
             </div>
             <R delay={0.15}>
-              <div className="bg-neutral-900 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
+              <div className="bg-slate-900 border border-white/[0.06] rounded-2xl p-6 sm:p-8">
                 <div className="flex items-center justify-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-400 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
                     <Zap className="w-7 h-7 text-white" />
                   </div>
                 </div>
                 <h3 className="text-center text-lg font-bold text-white mb-2">Votre écosystème, connecté</h3>
-                <p className="text-center text-xs text-neutral-400 mb-6">Factu.me se connecte aux outils que vous utilisez déjà</p>
+                <p className="text-center text-xs text-slate-400 mb-6">Factu.me se connecte aux outils que vous utilisez déjà</p>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     {
                       name: 'Stripe',
-                      color: '#10b981',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#10b981"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>,
+                      color: '#635BFF',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#635BFF"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>,
                     },
                     {
                       name: 'SumUp',
-                      color: '#34d399',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#34d399"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>,
+                      color: '#F47B20',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#F47B20"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.4A9.6 9.6 0 0 1 21.6 12 9.6 9.6 0 0 1 12 21.6 9.6 9.6 0 0 1 2.4 12 9.6 9.6 0 0 1 12 2.4zM8.4 6v12h3V6h-3zm4.2 0v12h3V6h-3z"/></svg>,
                     },
                     {
                       name: 'Google',
-                      color: '#6ee7b7',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#6ee7b7"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>,
+                      color: '#4285F4',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#4285F4"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>,
                     },
                     {
                       name: 'CSV',
@@ -781,20 +781,20 @@ export default function LandingPageClient() {
                     },
                     {
                       name: 'PDF',
-                      color: '#059669',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v2h6"/></svg>,
+                      color: '#8b5cf6',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v2h6"/></svg>,
                     },
                     {
                       name: 'CPro',
-                      color: '#047857',
-                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#047857" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+                      color: '#ef4444',
+                      svg: <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
                     },
                   ].map((int, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3 text-center hover:border-white/10 transition-colors">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: int.color + '15' }}>
                         {int.svg}
                       </div>
-                      <span className="text-[10px] font-semibold text-neutral-300">{int.name}</span>
+                      <span className="text-[10px] font-semibold text-slate-300">{int.name}</span>
                     </div>
                   ))}
                 </div>
@@ -808,22 +808,22 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={1} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={1} />
 
-      <Wave fromColor="#ffffff" toColor="#000000" variant={3} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={3} />
 
       {/* ════════════ PRICING — DARK ════════════ */}
-      <section data-nav-theme="dark" id="pricing" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="pricing" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className={`${LC} relative z-[2]`}>
           <div className="text-center mb-14 2xl:mb-20">
             <R>
               <p className="text-[11px] 2xl:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">Tarifs transparents</p>
               <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white mb-4">Choisissez votre plan</h2>
-              <p className="text-base 2xl:text-lg text-neutral-400">Sans engagement. Évoluez quand vous voulez.</p>
+              <p className="text-base 2xl:text-lg text-slate-400">Sans engagement. Évoluez quand vous voulez.</p>
             </R>
             <div className="flex items-center justify-center gap-3 mt-8">
-              <button onClick={() => setBilling('monthly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'monthly' ? 'bg-white text-neutral-950' : 'bg-neutral-900 text-neutral-400 hover:text-white')}>Mensuel</button>
-              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-neutral-900 text-neutral-400 hover:text-white')}>
+              <button onClick={() => setBilling('monthly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'monthly' ? 'bg-white text-slate-950' : 'bg-slate-900 text-slate-400 hover:text-white')}>Mensuel</button>
+              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-xl text-sm 2xl:text-base font-semibold transition-colors duration-200', billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white')}>
                 Annuel <span className="text-xs opacity-70">(-20%)</span>
               </button>
             </div>
@@ -834,8 +834,8 @@ export default function LandingPageClient() {
                 <div className={cn(
                   'relative rounded-2xl p-7 2xl:p-9 flex flex-col h-full transition-all duration-300',
                   plan.popular
-                    ? 'border-2 border-emerald-500/70 scale-100 md:scale-105 z-10 bg-neutral-900/60 shadow-[0_0_50px_rgba(16,185,129,0.15)]'
-                    : 'bg-neutral-900/40 border border-white/[0.06] hover:border-white/10'
+                    ? 'border-2 border-emerald-500/70 scale-100 md:scale-105 z-10 bg-slate-900/60 shadow-[0_0_50px_rgba(16,185,129,0.15)]'
+                    : 'bg-slate-900/40 border border-white/[0.06] hover:border-white/10'
                 )}>
                   {plan.popular && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
@@ -849,10 +849,10 @@ export default function LandingPageClient() {
                       <h3 className="text-xl 2xl:text-2xl font-bold text-white">{plan.name}</h3>
                       {plan.popular && <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">TOP</span>}
                     </div>
-                    <p className="text-xs 2xl:text-sm text-neutral-400 mt-1 mb-4">{plan.tag}</p>
+                    <p className="text-xs 2xl:text-sm text-slate-400 mt-1 mb-4">{plan.tag}</p>
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl 2xl:text-5xl font-extrabold text-white tracking-tight">{billing === 'monthly' ? plan.price : plan.yearly}</span>
-                      <span className="text-sm 2xl:text-base text-neutral-400">/mois</span>
+                      <span className="text-sm 2xl:text-base text-slate-400">/mois</span>
                     </div>
                     {billing === 'yearly' && <p className="text-xs 2xl:text-sm text-emerald-400 font-medium mt-1">Économisez sur l'annuel</p>}
                   </div>
@@ -860,7 +860,7 @@ export default function LandingPageClient() {
                     {plan.features.map((f, j) => (
                       <li key={j} className="flex items-center gap-2.5 text-sm 2xl:text-base">
                         <Check className="w-4 h-4 2xl:w-5 2xl:h-5 text-emerald-500 flex-shrink-0" />
-                        <span className={cn('text-neutral-300', j === 0 && 'text-emerald-300 font-medium')}>{f}</span>
+                        <span className={cn('text-slate-300', j === 0 && 'text-emerald-300 font-medium')}>{f}</span>
                       </li>
                     ))}
                   </ul>
@@ -877,14 +877,14 @@ export default function LandingPageClient() {
             ))}
           </div>
           <R>
-            <p className="text-center text-xs 2xl:text-sm text-neutral-400 mt-8 flex items-center justify-center gap-2">
+            <p className="text-center text-xs 2xl:text-sm text-slate-400 mt-8 flex items-center justify-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />Données en France · SSL · RGPD · Annulation en un clic
             </p>
           </R>
         </div>
       </section>
 
-      <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
+      <Wave fromColor="#020617" toColor="#ffffff" variant={0} />
 
       {/* ════════════ FAQ — BLANC ════════════ */}
       <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
@@ -901,10 +901,10 @@ export default function LandingPageClient() {
         </div>
       </section>
 
-      <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
+      <Wave fromColor="#ffffff" toColor="#020617" variant={1} />
 
       {/* ════════════ CTA FINAL — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-slate-950">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] lg:w-[1000px] h-[600px] sm:h-[800px] lg:h-[1000px] bg-emerald-500/8 rounded-full blur-[180px] lg:blur-[250px]" />
         </div>
@@ -919,13 +919,13 @@ export default function LandingPageClient() {
               Commencer gratuitement
               <ArrowRight className="w-4 h-4 2xl:w-5 2xl:h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <p className="text-xs 2xl:text-sm text-neutral-500 mt-8">Sans engagement · Annulation en un clic</p>
+            <p className="text-xs 2xl:text-sm text-slate-500 mt-8">Sans engagement · Annulation en un clic</p>
           </R>
         </div>
       </section>
 
       {/* ════════════ FOOTER — DARK ════════════ */}
-      <footer data-nav-theme="dark" className="relative py-14 md:py-20 2xl:py-24 overflow-hidden bg-black border-t border-white/[0.04]">
+      <footer data-nav-theme="dark" className="relative py-14 md:py-20 2xl:py-24 overflow-hidden bg-slate-950 border-t border-white/[0.04]">
         <div className={`${LC} relative z-[2]`}>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 2xl:gap-12 mb-12">
             <div className="col-span-2">
@@ -933,10 +933,10 @@ export default function LandingPageClient() {
                 <Image src="/logo-lg.png" alt="Factu.me" width={38} height={38} className="rounded-lg" />
                 <span className="text-lg 2xl:text-xl font-bold text-white">Factu<span className="text-emerald-400">.me</span></span>
               </Link>
-              <p className="text-xs 2xl:text-sm text-neutral-400 max-w-xs leading-relaxed mb-4">L'assistant IA vocal pour votre facturation électronique. 100% français.</p>
+              <p className="text-xs 2xl:text-sm text-slate-400 max-w-xs leading-relaxed mb-4">L'assistant IA vocal pour votre facturation électronique. 100% français.</p>
               <div className="flex gap-2">
                 {[Twitter, Linkedin, Github].map((Icon, i) => (
-                  <a key={i} href="#" className="w-8 h-8 2xl:w-9 2xl:h-9 bg-neutral-900 hover:bg-neutral-800 rounded-lg flex items-center justify-center transition-colors duration-200"><Icon className="w-3.5 h-3.5 text-neutral-400" /></a>
+                  <a key={i} href="#" className="w-8 h-8 2xl:w-9 2xl:h-9 bg-slate-900 hover:bg-slate-800 rounded-lg flex items-center justify-center transition-colors duration-200"><Icon className="w-3.5 h-3.5 text-slate-400" /></a>
                 ))}
               </div>
             </div>
@@ -947,14 +947,14 @@ export default function LandingPageClient() {
               { title: 'Confiance', links: [['Sécurité', '/securite'], ['Mentions légales', '/legal/mentions-legales'], ['CGU', '/legal/cgu'], ['Confidentialité', '/legal/confidentialite']] },
             ].map((col) => (
               <div key={col.title}>
-                <h4 className="font-semibold text-xs 2xl:text-sm text-neutral-300 mb-3">{col.title}</h4>
+                <h4 className="font-semibold text-xs 2xl:text-sm text-slate-300 mb-3">{col.title}</h4>
                 <ul className="space-y-2">
                   {col.links.map(([label, href]) => (
                     <li key={label}>
                       {href.startsWith('#') ? (
-                        <a href={href} onClick={(e) => scrollTo(e, href)} className="text-xs 2xl:text-sm text-neutral-400 hover:text-white transition-colors duration-200">{label}</a>
+                        <a href={href} onClick={(e) => scrollTo(e, href)} className="text-xs 2xl:text-sm text-slate-400 hover:text-white transition-colors duration-200">{label}</a>
                       ) : (
-                        <Link href={href} className="text-xs 2xl:text-sm text-neutral-400 hover:text-white transition-colors duration-200">{label}</Link>
+                        <Link href={href} className="text-xs 2xl:text-sm text-slate-400 hover:text-white transition-colors duration-200">{label}</Link>
                       )}
                     </li>
                   ))}
@@ -963,8 +963,8 @@ export default function LandingPageClient() {
             ))}
           </div>
           <div className="border-t border-white/[0.04] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs 2xl:text-sm text-neutral-500">2026 Factu.me. Fait en France.</p>
-            <div className="flex items-center gap-1.5 text-[11px] 2xl:text-xs text-neutral-500"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />Opérationnel</div>
+            <p className="text-xs 2xl:text-sm text-slate-500">2026 Factu.me. Fait en France.</p>
+            <div className="flex items-center gap-1.5 text-[11px] 2xl:text-xs text-slate-500"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />Opérationnel</div>
           </div>
         </div>
       </footer>
