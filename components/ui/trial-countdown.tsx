@@ -22,7 +22,14 @@ export function TrialCountdown({ onClose, className, trialDocumentCount = 0, tri
     seconds: number;
   } | null>(null);
 
-  const [isVisible, setIsVisible] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(() => {
+    // TOLL FIX F1: Re-show banner after 24h since last dismiss
+    try {
+      const dismissed = sessionStorage.getItem('trial_banner_dismissed');
+      if (dismissed && Date.now() - parseInt(dismissed, 10) < 24 * 60 * 60 * 1000) return false;
+    } catch {}
+    return true;
+  });
 
   React.useEffect(() => {
     // Check sessionStorage cache first to avoid re-fetching on every navigation
@@ -148,6 +155,7 @@ export function TrialCountdown({ onClose, className, trialDocumentCount = 0, tri
                 <button
                   onClick={() => {
                     setIsVisible(false);
+                    try { sessionStorage.setItem('trial_banner_dismissed', String(Date.now())); } catch {}
                     onClose?.();
                   }}
                   className="p-1 hover:bg-white/20 rounded-full transition-colors"

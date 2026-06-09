@@ -9,7 +9,6 @@ import MobileDrawer from '@/components/layout/MobileDrawer';
 import BottomTabBar from '@/components/layout/BottomTabBar';
 import MobileLayout from '@/components/layout/MobileLayout';
 import { Logo } from '@/components/ui/Logo';
-import { ServiceWorkerRegistration } from '@/components/ui/ServiceWorkerRegistration';
 import dynamic from 'next/dynamic';
 const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 import { TrialCountdown } from '@/components/ui/trial-countdown';
@@ -122,7 +121,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <ToastProvider>
       <meta name="robots" content="noindex, nofollow" />
       <Toaster position="top-right" richColors closeButton />
-      <ServiceWorkerRegistration />
       <CommandPalette />
       <AutoSaveIndicator />
 

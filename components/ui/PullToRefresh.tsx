@@ -30,6 +30,8 @@ export default function PullToRefresh({
   const startY = useRef(0);
   const pullDistance = useMotionValue(0);
   const pulling = useRef(false);
+  const canTriggerRef = useRef(canTrigger);
+  canTriggerRef.current = canTrigger;
 
   // Detect touch device
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function PullToRefresh({
       if (!pulling.current) return;
       pulling.current = false;
 
-      if (canTrigger && !refreshing) {
+      if (canTriggerRef.current && !refreshing) {
         setRefreshing(true);
         animate(pullDistance, threshold, { type: 'spring', damping: 25, stiffness: 300 });
 
@@ -114,7 +116,7 @@ export default function PullToRefresh({
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
-  }, [isTouchDevice, refreshing, canTrigger, threshold, pullDistance, onRefresh, getScrollTop]);
+  }, [isTouchDevice, refreshing, threshold, pullDistance, onRefresh, getScrollTop]);
 
   // Desktop: no touch, render children directly
   if (!isTouchDevice) {

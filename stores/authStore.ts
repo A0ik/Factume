@@ -4,6 +4,7 @@ import { getSupabaseClient } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { Profile } from '@/types';
 import { changeLanguage } from '@/i18n';
+import { isDisposableEmail } from '@/lib/disposable-emails';
 
 let _authUnsubscribe: (() => void) | null = null;
 
@@ -79,8 +80,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signUp: async (email, password) => {
     set({ loading: true });
+    if (isDisposableEmail(email)) throw new Error('Les adresses email jetables ne sont pas acceptées. Veuillez utiliser une adresse email valide.');
     try {
-      const { data, error } = await getSupabaseClient().auth.signUp({ email, password });
+      const { data, error } = await getSupabaseClient().auth.signUp({ email, password, options: { data: { cgu_accepted: true, cgu_accepted_at: new Date().toISOString() } } });
       if (error) throw error;
       if (!data.user) throw new Error('Erreur lors de la création du compte');
       set({ user: data.user, session: data.session });
@@ -134,9 +136,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setProfile: (profile) => set({ profile }),
 
-  completeOnboarding: () => set((state) => ({
-    profile: state.profile ? { ...state.profile, onboarding_done: true } : null,
-  })),
+  completeOnboarding: () => {
+    const { profile } = get();
+    set({ profile: profile ? { ...profile, onboarding_done: true } : null });
+    // ARBITER FIX: Sauvegarder onboarding_done en BDD, pas juste en local
+    if (profile?.id) {
+      getSupabaseClient()
+        .from('profiles')
+        .update({ onboarding_done: true, updated_at: new Date().toISOString() })
+        .eq('id', profile.id)
+        .then(({ error }) => {
+          if (error) console.error('[completeOnboarding] DB save error:', error.message);
+        });
+    }
+  },
 
   fetchProfile: async (userId) => {
     const { data, error } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();

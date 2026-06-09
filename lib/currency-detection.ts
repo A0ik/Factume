@@ -134,6 +134,11 @@ const CURRENCY_PATTERNS: Record<
 // In production, use an API like exchangerate-api.com
 // ---------------------------------------------------------------------------
 
+// ⚠️ HARDCODED EXCHANGE RATES — Last updated: 2024
+// These rates become stale over time. TODO: Integrate a live exchange rate API
+// (e.g., exchangerate-api.com) for production use.
+// Current drift risk: up to 10-20% for volatile currencies (TRY, ARS, etc.)
+
 const EXCHANGE_RATES_TO_EUR: Record<string, number> = {
   EUR: 1.0,
   USD: 0.92, // 1 USD = 0.92 EUR

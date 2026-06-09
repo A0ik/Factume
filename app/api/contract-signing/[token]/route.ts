@@ -105,6 +105,7 @@ export async function GET(
     });
   } catch (error: unknown) {
     const err = error as Error;
-    return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
+    console.error('[API Error]', err);
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

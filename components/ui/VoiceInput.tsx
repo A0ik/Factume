@@ -28,6 +28,11 @@ export function VoiceInput({
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
+  const onTranscriptRef = useRef(onTranscript);
+  const isFinalReceivedRef = useRef(false);
+
+  // Keep the ref up to date with the latest callback
+  onTranscriptRef.current = onTranscript;
 
   useEffect(() => {
     // Vérifier si l'API Web Speech est disponible
@@ -51,6 +56,7 @@ export function VoiceInput({
           const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
             finalTranscript += transcript + ' ';
+            isFinalReceivedRef.current = true;
           } else {
             interimTranscript += transcript;
           }
@@ -62,11 +68,12 @@ export function VoiceInput({
       };
 
       recognitionRef.current.onend = () => {
-        if (transcriptRef.current) {
-          onTranscript(transcriptRef.current);
+        if (transcriptRef.current && isFinalReceivedRef.current) {
+          onTranscriptRef.current(transcriptRef.current);
           transcriptRef.current = '';
           setTranscript('');
         }
+        isFinalReceivedRef.current = false;
         setIsListening(false);
       };
 
@@ -81,7 +88,7 @@ export function VoiceInput({
         recognitionRef.current.abort();
       }
     };
-  }, [language, onTranscript]);
+  }, [language]);
 
   const toggleListening = () => {
     if (!isSupported || !isPro) return;

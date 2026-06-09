@@ -20,6 +20,9 @@ const AMENDMENT_LABELS: Record<AmendmentType, string> = {
 /**
  * Crée un nouvel avenant pour un contrat
  */
+// TODO: Race condition risk — count then increment is not atomic.
+// For production safety, use a Supabase RPC with:
+// SELECT COUNT(*) FROM contract_amendments WHERE contract_id = $1 FOR UPDATE;
 export async function createAmendment(
   contractId: string,
   contractType: ContractType,

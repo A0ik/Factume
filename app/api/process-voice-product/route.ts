@@ -3,6 +3,7 @@ import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, incrementVoiceUsage } from '@/lib/subscription-guard';
 
 export const maxDuration = 60;
 
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // TOLL FIX B1: Subscription check — voice features require Solo+ or trial (free: 1/month)
+    const sub = await getUserSubscriptionStatus(user.id);
+    if (!sub.canUseVoice) {
+      return NextResponse.json({
+        error: 'Vous avez utilisé votre facture vocale gratuite ce mois-ci. Passez au plan Solo pour un usage illimité.',
+        code: 'VOICE_LIMIT',
+        upgradeUrl: '/paywall?plan=solo',
+      }, { status: 403 });
+    }
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
@@ -104,6 +115,9 @@ Exemples de détection de catégorie :
       console.error('[process-voice-product] Failed to parse AI response:', err);
       parsed = {};
     }
+
+    // TOLL: Track voice usage for free tier (1/month limit)
+    if (sub.isFree) await incrementVoiceUsage(user.id);
 
     return NextResponse.json({
       transcript,

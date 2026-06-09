@@ -211,6 +211,8 @@ export default function CommandPalette() {
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4 bg-black/50 backdrop-blur-sm"
+      role="dialog"
+      aria-label="Palette de commandes"
       onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
     >
       <div className="w-full max-w-xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -223,6 +225,9 @@ export default function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher un document, client, ou naviguer..."
             className="flex-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent focus:outline-none"
+            role="combobox"
+            aria-expanded={open}
+            aria-activedescendant={selected >= 0 ? 'cmd-result-' + selected : undefined}
           />
           {query && (
             <button onClick={() => setQuery('')} className="text-gray-300 hover:text-gray-500 dark:hover:text-gray-400 transition-colors">
@@ -248,7 +253,7 @@ export default function CommandPalette() {
             <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">↑↓ naviguer · ↵ ouvrir · Échap fermer</p>
           </div>
         ) : (
-          <div className="py-1.5 max-h-[60vh] overflow-y-auto">
+          <div className="py-1.5 max-h-[60vh] overflow-y-auto" role="listbox">
             {sections.map(section => {
               const sectionResults = results.filter(r => r.section === section);
               if (sectionResults.length === 0) return null;
@@ -266,6 +271,9 @@ export default function CommandPalette() {
                         key={result.id}
                         onClick={() => go(result.href)}
                         onMouseEnter={() => setSelected(globalIdx)}
+                        role="option"
+                        id={'cmd-result-' + globalIdx}
+                        aria-selected={globalIdx === selected}
                         className={cn(
                           'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
                           selected === globalIdx ? 'bg-primary/10 dark:bg-primary/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'

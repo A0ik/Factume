@@ -9,6 +9,22 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // TOLL FIX B5: AI contract clauses require Pro plan or above
+    const { data: subProfile } = await supabase
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', user.id)
+      .single();
+    const hasPlan = subProfile && ['pro', 'business', 'trial'].includes(subProfile.subscription_tier || '');
+    const isTrial = subProfile?.is_trial_active === true;
+    if (!hasPlan && !isTrial) {
+      return NextResponse.json({
+        error: 'Les suggestions de clauses IA sont disponibles avec les plans Pro et Business.',
+        code: 'SUBSCRIPTION_REQUIRED',
+        upgradeUrl: '/paywall?plan=pro',
+      }, { status: 403 });
+    }
+
     const rateLimitError = applyUserIdRateLimit(user.id, 10, 60_000);
     if (rateLimitError) return rateLimitError;
 

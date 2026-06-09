@@ -130,6 +130,16 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // TOLL FIX B4: CRM features require Business plan or trial
+    const { data: subProfile } = await admin
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', user.id)
+      .single();
+    if (!subProfile || (!['business', 'trial'].includes(subProfile.subscription_tier) && subProfile.is_trial_active !== true)) {
+      return NextResponse.json({ error: 'Abonnement Business requis pour gérer des clients.' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { company_name, siret, address, zip_code, city, phone, contact_email, contact_name, notes } = body;
 

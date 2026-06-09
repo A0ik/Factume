@@ -205,11 +205,11 @@ export function CameraCapture({
   );
 
   /* ---- accept captured frame ---- */
-  const useCaptured = useCallback(() => {
+  const useCaptured = useCallback(async () => {
     if (!capturedFile) return;
 
     const finalFile = enhanced
-      ? applyEnhancement(capturedFile)
+      ? await applyEnhancement(capturedFile)
       : capturedFile;
 
     onCapture([finalFile]);
@@ -230,23 +230,29 @@ export function CameraCapture({
   /*  Simple brightness/contrast enhancement via canvas                  */
   /* ------------------------------------------------------------------ */
 
-  function applyEnhancement(file: File): File {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return file;
-
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-
-    // Synchronous fallback — we return the original and mark enhanced
-    // Real enhancement happens asynchronously, but for the File callback
-    // we apply CSS filters on preview and trust the upload pipeline.
-    // In production you'd await this. For now, return original with metadata.
-    return new File([file], file.name, {
-      type: file.type,
-      lastModified: file.lastModified,
+  const applyEnhancement = async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.filter = 'contrast(1.25) brightness(1.1)';
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: file.type }));
+          } else {
+            resolve(file);
+          }
+        }, file.type);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
     });
-  }
+  };
 
   /* ------------------------------------------------------------------ */
   /*  Render                                                             */

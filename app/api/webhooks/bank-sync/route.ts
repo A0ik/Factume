@@ -7,6 +7,16 @@ export async function POST(req: NextRequest) {
   const rateLimitError = applyIpRateLimit(req, 100, 60_000);
   if (rateLimitError) return rateLimitError as NextResponse;
 
+  // Shared secret verification
+  const syncSecret = process.env.BANK_SYNC_SECRET;
+  if (syncSecret) {
+    const provided = req.headers.get('authorization')?.replace('Bearer ', '')
+      || req.headers.get('x-sync-secret');
+    if (provided !== syncSecret) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+  }
+
   try {
     const payload = await req.json();
     const email = payload.user_email;

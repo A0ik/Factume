@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,10 +30,22 @@ export function DatePicker({
   maxDate,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
+  // Internal month/year state for navigation (independent of selected date)
   const dateValue = value ? new Date(value) : new Date();
-  const currentMonth = dateValue.getMonth();
-  const currentYear = dateValue.getFullYear();
+  const [viewMonth, setViewMonth] = useState(dateValue.getMonth());
+  const [viewYear, setViewYear] = useState(dateValue.getFullYear());
+
+  // Sync view to selected date when value changes externally
+  useEffect(() => {
+    const d = value ? new Date(value) : new Date();
+    setViewMonth(d.getMonth());
+    setViewYear(d.getFullYear());
+  }, [value]);
+
+  const currentMonth = viewMonth;
+  const currentYear = viewYear;
 
   // Build calendar cells
   const cells = useMemo(() => {
@@ -47,6 +59,17 @@ export function DatePicker({
     }
     return cells;
   }, [currentYear, currentMonth]);
+
+  // Flip-up logic: if popover overflows viewport bottom, position it above the trigger
+  useEffect(() => {
+    if (isOpen && popoverRef.current) {
+      const rect = popoverRef.current.getBoundingClientRect();
+      if (rect.bottom > window.innerHeight) {
+        popoverRef.current.style.transform = 'translateY(-100%)';
+        popoverRef.current.style.marginTop = '-8px';
+      }
+    }
+  }, [isOpen, currentMonth, currentYear]);
 
   const today = new Date();
   const isToday = (day: number) => {
@@ -84,13 +107,21 @@ export function DatePicker({
   };
 
   const prevMonth = () => {
-    const newDate = new Date(currentYear, currentMonth - 1, 1);
-    onChange(newDate.toISOString().split('T')[0]);
+    if (currentMonth === 0) {
+      setViewMonth(11);
+      setViewYear(currentYear - 1);
+    } else {
+      setViewMonth(currentMonth - 1);
+    }
   };
 
   const nextMonth = () => {
-    const newDate = new Date(currentYear, currentMonth + 1, 1);
-    onChange(newDate.toISOString().split('T')[0]);
+    if (currentMonth === 11) {
+      setViewMonth(0);
+      setViewYear(currentYear + 1);
+    } else {
+      setViewMonth(currentMonth + 1);
+    }
   };
 
   const goToday = () => {
@@ -158,13 +189,14 @@ export function DatePicker({
 
             {/* Popover */}
             <motion.div
+              ref={popoverRef}
               variants={popoverVariants}
               initial="hidden"
               animate="visible"
               exit="hidden"
               transition={{ duration: 0.15 }}
               className={cn(
-                'absolute z-50 mt-2 p-4 w-[320px]',
+                'absolute z-50 mt-2 p-4 w-[min(320px,calc(100vw-2rem))]',
                 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl',
                 'rounded-3xl border border-white/30 dark:border-white/10 shadow-2xl'
               )}

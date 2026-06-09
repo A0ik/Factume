@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Check, X, Pencil, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VoiceUncertainField } from '@/types';
+import { getFieldLabel } from './fieldLabels';
 
 // ─── Spring animation config ───────────────────────────
 
@@ -182,15 +183,15 @@ interface DoubtPopoverProps {
 }
 
 export default function DoubtPopover({ doubts, onResolve, onDismiss }: DoubtPopoverProps) {
-  const corrections: Record<string, string | number> = {};
+  const correctionsRef = useRef<Record<string, string | number>>({});
 
   const handleConfirm = (doubt: VoiceUncertainField, value: string | number) => {
-    corrections[doubt.field] = value;
+    correctionsRef.current[doubt.field] = value;
     checkAllResolved(doubt);
   };
 
   const handleCorrect = (doubt: VoiceUncertainField, value: string | number) => {
-    corrections[doubt.field] = value;
+    correctionsRef.current[doubt.field] = value;
     checkAllResolved(doubt);
   };
 
@@ -203,7 +204,7 @@ export default function DoubtPopover({ doubts, onResolve, onDismiss }: DoubtPopo
       // If all doubts are resolved, trigger the callback
       if (next.size === doubts.length) {
         // Apply the corrections for previously resolved ones too
-        setTimeout(() => onResolve(corrections), 100);
+        setTimeout(() => onResolve({...correctionsRef.current}), 100);
       }
       return next;
     });
@@ -211,36 +212,36 @@ export default function DoubtPopover({ doubts, onResolve, onDismiss }: DoubtPopo
 
   const remainingDoubts = doubts.filter((d) => !resolvedKeys.has(d.field));
 
-  if (remainingDoubts.length === 0) return null;
-
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <motion.div
-            animate={{
-              boxShadow: [
-                '0 0 0 0 rgba(16, 185, 129, 0.4)',
-                '0 0 0 6px rgba(16, 185, 129, 0)',
-              ],
-            }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center"
+      {remainingDoubts.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <motion.div
+              animate={{
+                boxShadow: [
+                  '0 0 0 0 rgba(16, 185, 129, 0.4)',
+                  '0 0 0 6px rgba(16, 185, 129, 0)',
+                ],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center"
+            >
+              <AlertTriangle size={12} className="text-white" />
+            </motion.div>
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+              {remainingDoubts.length} champ{remainingDoubts.length > 1 ? 's' : ''} à confirmer
+            </p>
+          </div>
+          <button
+            onClick={onDismiss}
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
           >
-            <AlertTriangle size={12} className="text-white" />
-          </motion.div>
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-            {remainingDoubts.length} champ{remainingDoubts.length > 1 ? 's' : ''} à confirmer
-          </p>
+            <X size={12} /> Ignorer
+          </button>
         </div>
-        <button
-          onClick={onDismiss}
-          className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
-        >
-          <X size={12} /> Ignorer
-        </button>
-      </div>
+      )}
 
       {/* Doubt cards */}
       <AnimatePresence>
@@ -252,7 +253,7 @@ export default function DoubtPopover({ doubts, onResolve, onDismiss }: DoubtPopo
             onCorrect={(val) => handleCorrect(doubt, val)}
             onDismiss={() => {
               // Treat dismissal as confirming current value
-              corrections[doubt.field] = doubt.current_value ?? '';
+              correctionsRef.current[doubt.field] = doubt.current_value ?? '';
               checkAllResolved(doubt);
             }}
           />
@@ -263,33 +264,4 @@ export default function DoubtPopover({ doubts, onResolve, onDismiss }: DoubtPopo
 }
 
 // ─── Helper ────────────────────────────────────────────
-
-function getFieldLabel(field: string): string {
-  const labels: Record<string, string> = {
-    'client_name': 'Nom du client',
-    'client_email': 'Email',
-    'client_phone': 'Téléphone',
-    'client_address': 'Adresse',
-    'client_city': 'Ville',
-    'client_postal_code': 'Code postal',
-    'client_siret': 'SIRET',
-    'client_vat_number': 'N° TVA',
-    'items[0].description': 'Description',
-    'items[0].unit_price': 'Prix unitaire',
-    'items[0].quantity': 'Quantité',
-    'items[0].vat_rate': 'Taux TVA',
-    'due_days': 'Délai de paiement',
-    'discount_percent': 'Remise %',
-    'notes': 'Notes',
-  };
-
-  // Handle dynamic item indices
-  const itemMatch = field.match(/items\[(\d+)\]\.(.+)/);
-  if (itemMatch) {
-    const idx = parseInt(itemMatch[1]) + 1;
-    const prop = itemMatch[2];
-    return `Ligne ${idx} — ${labels[`items[0].${prop}`] || prop}`;
-  }
-
-  return labels[field] || field;
-}
+// getFieldLabel is imported from './fieldLabels'

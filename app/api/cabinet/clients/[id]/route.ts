@@ -29,6 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ client, profile });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });
+    console.error('[API Error]', err);
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

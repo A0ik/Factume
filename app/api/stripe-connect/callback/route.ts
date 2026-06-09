@@ -122,6 +122,6 @@ export async function GET(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
       || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/settings?stripe-connect-error=${error.message}`);
+    return NextResponse.redirect(`${baseUrl}/settings?stripe-connect-error=internal_error`);
   }
 }

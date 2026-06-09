@@ -76,10 +76,13 @@ export const useCrmStore = create<CrmState>((set, get) => ({
   fetchOpportunities: async () => {
     set({ loading: true });
     try {
-      const { data } = await getSupabaseClient()
+      const { data: { session } } = await getSupabaseClient().auth.getSession();
+      const userId = session?.user?.id;
+      let query = getSupabaseClient()
         .from('opportunities')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+      if (userId) query = query.eq('user_id', userId);
+      const { data } = await query.order('created_at', { ascending: false });
       set({ opportunities: data || [] });
     } finally { set({ loading: false }); }
   },
@@ -129,7 +132,10 @@ export const useCrmStore = create<CrmState>((set, get) => ({
   },
 
   deleteOpportunity: async (id) => {
-    const { error } = await getSupabaseClient().from('opportunities').delete().eq('id', id);
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
+    const { error } = await getSupabaseClient().from('opportunities').delete().eq('id', id).eq('user_id', userId);
     if (error) throw error;
     set((s) => ({
       opportunities: s.opportunities.filter((o) => o.id !== id),
@@ -161,8 +167,11 @@ export const useCrmStore = create<CrmState>((set, get) => ({
   },
 
   toggleTask: async (task) => {
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
     const updated = { ...task, done: !task.done };
-    await getSupabaseClient().from('crm_tasks').update({ done: updated.done }).eq('id', task.id);
+    await getSupabaseClient().from('crm_tasks').update({ done: updated.done }).eq('id', task.id).eq('user_id', userId);
     set((s) => ({
       tasks: {
         ...s.tasks,
@@ -172,7 +181,10 @@ export const useCrmStore = create<CrmState>((set, get) => ({
   },
 
   deleteTask: async (task) => {
-    await getSupabaseClient().from('crm_tasks').delete().eq('id', task.id);
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
+    await getSupabaseClient().from('crm_tasks').delete().eq('id', task.id).eq('user_id', userId);
     set((s) => ({
       tasks: {
         ...s.tasks,
@@ -182,11 +194,14 @@ export const useCrmStore = create<CrmState>((set, get) => ({
   },
 
   fetchActivities: async (opportunityId) => {
-    const { data } = await getSupabaseClient()
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const userId = session?.user?.id;
+    let query = getSupabaseClient()
       .from('crm_activities')
       .select('*')
-      .eq('opportunity_id', opportunityId)
-      .order('created_at', { ascending: false });
+      .eq('opportunity_id', opportunityId);
+    if (userId) query = query.eq('user_id', userId);
+    const { data } = await query.order('created_at', { ascending: false });
     set((s) => ({ activities: { ...s.activities, [opportunityId]: (data || []) as CrmActivity[] } }));
   },
 

@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log la création du token
-    await logSignatureEvent(admin, contractId, contractType, 'token_created', tokenData.id, { token: tokenData.token }, req);
+    await logSignatureEvent(admin, contractId, contractType, 'token_created', tokenData.id, { tokenId: tokenData.id }, req);
 
     // Generer le PDF du contrat
     let attachment: Array<{ filename: string; content: Buffer }> = [];

@@ -23,8 +23,7 @@ export async function POST(req: NextRequest) {
 async function handleRetry(req: NextRequest) {
   // ── Sécurité : vérifier le CRON_SECRET ─────────────────────────────────
   const cronSecret = req.headers.get('x-cron-secret')
-    || req.headers.get('authorization')?.replace('Bearer ', '')
-    || req.nextUrl.searchParams.get('secret');
+    || req.headers.get('authorization')?.replace('Bearer ', '');
   if (cronSecret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }

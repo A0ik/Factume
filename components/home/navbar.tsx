@@ -149,7 +149,7 @@ export function Navbar() {
                   </motion.a>
                 ))}
                 <div className="pt-2 border-t border-slate-100 mt-1">
-                  <Link href="/login" className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 py-2.5 px-3 rounded-xl transition-colors">
+                  <Link href="/login" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 py-2.5 px-3 rounded-xl transition-colors">
                     <LogIn className="w-4 h-4" />Se connecter
                   </Link>
                 </div>

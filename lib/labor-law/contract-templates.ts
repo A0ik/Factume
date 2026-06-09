@@ -1449,6 +1449,13 @@ export function validateContractData(data: ContractTemplateData): ValidationErro
     }
   }
 
+  // CDD/Stage/Apprentissage: la date de fin doit être postérieure à la date de début
+  if (data.contractEndDate && data.contractStartDate) {
+    if (new Date(data.contractEndDate) <= new Date(data.contractStartDate)) {
+      errors.push({ field: 'contractEndDate', message: 'La date de fin doit être postérieure à la date de début.', severity: 'error' });
+    }
+  }
+
   // Non-compete clause validation (4 cumulative conditions)
   if (data.nonCompeteClause && !['stage', 'freelance'].includes(data.contractType)) {
     if (!data.nonCompeteArea) {

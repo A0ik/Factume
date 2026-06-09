@@ -106,9 +106,10 @@ export async function POST(req: NextRequest) {
 
     // 10. Activate trial — update profile with CORRECT column names
     const updateData: Record<string, unknown> = {
-      subscription_tier: plan,           // NOT "tier"
-      trial_start_date: now.toISOString(),   // NOT "trial_started_at"
-      trial_end_date: trialEnd.toISOString(), // NOT "trial_ends_at"
+      subscription_tier: 'trial',        // TOLL FIX S2: Always 'trial' for consistency with Stripe trials
+      trial_selected_plan: plan,         // Store the user's chosen plan separately for conversion
+      trial_start_date: now.toISOString(),
+      trial_end_date: trialEnd.toISOString(),
       is_trial_active: true,
       has_used_trial: true,
       trial_fingerprint: fingerprint || null,
@@ -126,7 +127,8 @@ export async function POST(req: NextRequest) {
       const { error: minimalError } = await supabase
         .from('profiles')
         .update({
-          subscription_tier: plan,
+          subscription_tier: 'trial',
+          trial_selected_plan: plan,
           is_trial_active: true,
           has_used_trial: true,
           trial_ip_address: clientIp || null,

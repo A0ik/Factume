@@ -4,6 +4,8 @@
 // Fixes the bug where AI subtracts TVA instead of adding it
 // ---------------------------------------------------------------------------
 
+import { roundMoney } from '@/lib/money';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -30,15 +32,6 @@ export interface ValidationResult {
   corrected: boolean;
   items: InvoiceItem[];
   corrections: TVACorrection[];
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Round a number to 2 decimal places for currency */
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,9 +63,9 @@ export function validateAndCorrectTVA(items: InvoiceItem[]): ValidationResult {
     const unitPrice = typeof item.unit_price === 'number' && Number.isFinite(item.unit_price) ? item.unit_price : 0;
     const vatRate = typeof item.vat_rate === 'number' && Number.isFinite(item.vat_rate) ? item.vat_rate : 20;
 
-    const expectedTotalHT = round2(quantity * unitPrice);
-    const expectedVatAmount = round2(expectedTotalHT * (vatRate / 100));
-    const expectedTotalTTC = round2(expectedTotalHT + expectedVatAmount);
+    const expectedTotalHT = roundMoney(quantity * unitPrice);
+    const expectedVatAmount = roundMoney(expectedTotalHT * (vatRate / 100));
+    const expectedTotalTTC = roundMoney(expectedTotalHT + expectedVatAmount);
 
     // --- Validate / correct total_ht ---
     if (item.total_ht !== undefined && item.total_ht !== null) {

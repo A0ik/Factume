@@ -5,6 +5,17 @@
  */
 import Groq from 'groq-sdk';
 
+// Lazy Groq client — created on first use, fails fast if API key is missing
+let _groqClient: Groq | null = null;
+function getGroqClient(): Groq {
+  if (!_groqClient) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY non configuré');
+    _groqClient = new Groq({ apiKey });
+  }
+  return _groqClient;
+}
+
 /**
  * Detect if text is Arabic (MSA or dialect)
  */
@@ -35,6 +46,10 @@ function isEnglishText(text: string): boolean {
  * Detect if text is Spanish
  */
 export function isSpanishText(text: string): boolean {
+  // Negative check: exclude French-only words to reduce false positives
+  const frenchOnlyWords = ['facture', 'client', 'facturation', 'entreprise', 'facturer', 'montant', 'euros', ' euro ', 'pour'];
+  if (frenchOnlyWords.some(w => text.toLowerCase().includes(w))) return false;
+
   const spanishIndicators = /\b(el|la|los|las|de|del|en|por|con|para|una|uno|que|es|son|factura|precio|total|empresa)\b/i;
   const spanishChars = /[ñ¿¡]/;
   return spanishIndicators.test(text) || spanishChars.test(text);
@@ -82,8 +97,7 @@ export async function translateArabicToFrench(text: string): Promise<{ text: str
   }
 
   try {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const translation = await groq.chat.completions.create({
+    const translation = await getGroqClient().chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
         {
@@ -145,8 +159,7 @@ export async function translateEnglishToFrench(text: string): Promise<{ text: st
   }
 
   try {
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const translation = await groq.chat.completions.create({
+    const translation = await getGroqClient().chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
         {
@@ -211,8 +224,7 @@ export async function translateToFrench(text: string, sourceLang: string): Promi
 
   const langName = LANGUAGE_NAMES[sourceLang] || sourceLang;
 
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroqClient().chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [
       { role: 'system', content: `Traduis le texte suivant de ${langName} vers le français. Conserve les nombres, dates, noms propres et montants. Ne traduis que le texte, sans ajouter de commentaires. Tempérament: précis et professionnel.` },

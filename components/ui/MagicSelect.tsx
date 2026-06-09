@@ -351,8 +351,20 @@ export function MagicSelect({
     const spaceAbove = rect.top;
     const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
+    const getScrollOffset = (el: HTMLElement) => {
+      let top = 0;
+      let element = el.parentElement;
+      while (element && element !== document.body) {
+        top += element.scrollTop;
+        element = element.parentElement;
+      }
+      return top + window.scrollY;
+    };
+
+    const scrollY = getScrollOffset(triggerRef.current);
+
     setDropdownPos({
-      top: openUpward ? rect.top + window.scrollY - dropdownHeight - 8 : rect.bottom + window.scrollY + 8,
+      top: openUpward ? rect.top + scrollY - dropdownHeight - 8 : rect.bottom + scrollY + 8,
       left: rect.left + window.scrollX,
       width: rect.width,
       openUpward,

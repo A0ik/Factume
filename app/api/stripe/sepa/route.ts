@@ -95,13 +95,13 @@ export async function POST(req: NextRequest) {
         paid_at: new Date().toISOString(),
         payment_method: 'sepa',
         updated_at: new Date().toISOString(),
-      }).eq('id', invoiceId);
+      }).eq('id', invoiceId).eq('user_id', user.id);
     } else if (paymentIntent.status === 'processing') {
       await supabase.from('invoices').update({
         status: 'pending_payment',
         payment_method: 'sepa',
         updated_at: new Date().toISOString(),
-      }).eq('id', invoiceId);
+      }).eq('id', invoiceId).eq('user_id', user.id);
     }
 
     return NextResponse.json({
@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
       ibanLast4,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[API Error]', error);
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

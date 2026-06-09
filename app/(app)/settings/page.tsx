@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [accentOpen, setAccentOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -488,7 +489,11 @@ export default function SettingsPage() {
     if (deleteConfirmText !== 'SUPPRIMER') return;
     setDeleting(true);
     try {
-      const res = await fetch('/api/account/delete', { method: 'DELETE' });
+      const res = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Erreur lors de la suppression');
@@ -1720,7 +1725,7 @@ export default function SettingsPage() {
           {/* Delete account confirmation modal */}
           <Modal
             open={showDeleteModal}
-            onClose={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+            onClose={() => { setShowDeleteModal(false); setDeleteConfirmText(''); setDeletePassword(''); }}
             title="Supprimer le compte"
             size="sm"
           >
@@ -1728,16 +1733,29 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 p-3 bg-red-500/10 rounded-xl border border-red-500/15">
                 <ShieldAlert size={20} className="text-red-400 flex-shrink-0" />
                 <p className="text-sm text-red-300 font-medium">
-                  Cette action est <strong>irréversible</strong>. Toutes vos données seront supprimées définitivement.
+                  Cette action est <strong>irréversible</strong>. Vos données personnelles seront anonymisées conformément au RGPD. Les factures existantes sont conservées pour des raisons légales comptables.
                 </p>
               </div>
 
               <ul className="text-sm text-slate-400 space-y-1 pl-4">
-                <li className="list-disc">Toutes vos factures et devis</li>
-                <li className="list-disc">Tous vos clients</li>
-                <li className="list-disc">Vos factures récurrentes</li>
-                <li className="list-disc">Votre profil et paramètres</li>
+                <li className="list-disc">Vos données personnelles seront anonymisées</li>
+                <li className="list-disc">Votre abonnement Stripe sera annulé</li>
+                <li className="list-disc">Vos connexions tierces (Google, SumUp) seront supprimées</li>
+                <li className="list-disc">Les factures déjà émises seront conservées (obligation légale)</li>
               </ul>
+
+              <div>
+                <label className="text-sm font-semibold text-slate-300 block mb-2">
+                  Mot de passe <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Votre mot de passe actuel"
+                  className="w-full px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all"
+                />
+              </div>
 
               <div>
                 <label className="text-sm font-semibold text-slate-300 block mb-2">
@@ -1755,14 +1773,14 @@ export default function SettingsPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                  onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); setDeletePassword(''); }}
                   className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDeleteAccount}
-                  disabled={deleteConfirmText !== 'SUPPRIMER' || deleting}
+                  disabled={deleteConfirmText !== 'SUPPRIMER' || !deletePassword || deleting}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {deleting ? (

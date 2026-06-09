@@ -1,15 +1,9 @@
 'use client';
-import { useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 
 export function ThemeToggle() {
   const { theme, toggle } = useThemeStore();
-
-  useEffect(() => {
-    // Initialiser le thème au montage
-    useThemeStore.getState().initTheme();
-  }, []);
 
   return (
     <button

@@ -91,8 +91,8 @@ function validate() {
 }
 
 export function validateEnv() {
-  // Only validate in production or if explicitly enabled
-  if (process.env.NODE_ENV === 'production' || process.env.VALIDATE_ENV === 'true') {
+  // Validate everywhere except tests
+  if (process.env.NODE_ENV !== 'test') {
     validate();
   }
 }

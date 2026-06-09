@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useMemo } from 'react';
 
 export function useSubscription() {
+  // NOTE: Feature gating here is client-side for UX only. Actual enforcement is via Supabase RLS policies on each table.
   const profile = useAuthStore((s) => s.profile);
   const tier = profile?.subscription_tier || 'free';
   const isTrialActive = profile?.is_trial_active || false;
@@ -65,7 +66,8 @@ export function useSubscription() {
     trialDocLimit,
     trialDocsRemaining: isTrialActive ? Math.max(0, trialDocLimit - trialDocumentCount) : null,
     isTrialAtDocLimit: isTrialActive && trialDocumentCount >= trialDocLimit,
-    canUseVoice:          isSolo || effectiveIsPro || effectiveIsBusiness,
+    canUseVoice:          isSolo || effectiveIsPro || effectiveIsBusiness, // Free: 1 voice/month enforced server-side via subscription-guard
+    voiceUsedThisMonth:   isFree ? (profile?.voice_usage_month === currentMonth ? (profile?.voice_usage_count || 0) : 0) : 0,
     canUseCustomTemplate: effectiveIsPro || effectiveIsBusiness,
     canUseRecurring:      effectiveIsPro || effectiveIsBusiness,
     canEditInvoice:       isSolo || effectiveIsPro || effectiveIsBusiness,

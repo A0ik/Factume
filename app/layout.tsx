@@ -86,8 +86,6 @@ export const viewport: Viewport = {
   themeColor: '#1D9E75',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
 };
 
@@ -308,6 +306,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme-storage');var p=t?JSON.parse(t):null;var d=p&&p.state&&p.state.theme?p.state.theme:'dark';if(d==='system')d=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.classList.add(d)}catch(e){document.documentElement.classList.add('dark')}})()` }} />
         <script
           type="application/ld+json"
           nonce={nonce}

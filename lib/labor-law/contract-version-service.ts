@@ -41,6 +41,10 @@ export interface ContractComparison {
 /**
  * Crée une nouvelle version d'un contrat
  */
+// TODO: Race condition risk — three sequential non-atomic operations.
+// For production safety, wrap in a Supabase RPC function:
+// SELECT version_number FROM contract_versions WHERE contract_id = $1 AND is_current = true FOR UPDATE;
+// Then UPDATE + INSERT in the same transaction.
 export async function createContractVersion(
   contractId: string,
   contractType: 'cdi' | 'cdd' | 'other',

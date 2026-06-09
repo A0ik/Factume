@@ -234,8 +234,8 @@ export function PulseVoiceRecorder({
     }
   };
 
-  const isSupported = typeof window !== 'undefined' &&
-    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const isSupported = typeof navigator !== 'undefined' &&
+    navigator.mediaDevices && typeof MediaRecorder !== 'undefined';
 
   // Apply corrections to the pending result and submit
   const confirmAndApply = () => {

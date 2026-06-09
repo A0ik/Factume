@@ -137,6 +137,8 @@ export async function rateLimitAsync(options: {
   }
 
   // No Redis or Redis error — use in-memory fallback
+  console.warn('[rate-limit] ⚠️ Upstash Redis unavailable — falling back to in-memory (ineffective in serverless). Set UPSTASH_REDIS_REST_URL for production.');
+  if (process.env.NODE_ENV === 'production') console.error('[rate-limit] CRITICAL: No Redis in production — rate limiting is DISABLED.');
   return rateLimit(options);
 }
 

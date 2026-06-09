@@ -50,6 +50,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Erreur lors de la suppression' }, { status: 500 });
     }
 
+    // TOLL FIX B3: Decrement monthly invoice counter to reopen the slot for free users
+    try {
+      await supabase.rpc('decrement_invoice_count', { p_user_id: user.id });
+    } catch (decrementError) {
+      // Non-critical — counter may be slightly off but no data loss
+      console.warn('[Invoices] Failed to decrement invoice count:', decrementError);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[Invoices] DELETE error:', error);

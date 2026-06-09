@@ -18,7 +18,7 @@ function ParticlesCanvas() {
 
     const isMobile = window.innerWidth < 768;
     const isXL = window.innerWidth >= 1280;
-    const count = isMobile ? 25 : isXL ? 60 : 40;
+    const count = isMobile ? 20 : isXL ? 60 : 40;
     let w = 0, h = 0;
 
     const resize = () => {
@@ -64,6 +64,8 @@ function ParticlesCanvas() {
 
     let raf: number;
     const draw = () => {
+      if (document.hidden) { raf = requestAnimationFrame(draw); return; }
+
       ctx.clearRect(0, 0, w, h);
 
       ps.forEach((p, i) => {

@@ -54,7 +54,7 @@ export function AutoSaveIndicator() {
         {saveStatus === 'saving' && (
           <>
             <Loader2 size={16} className="text-blue-500 animate-spin" />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Sauvegarde...</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Synchronisation...</span>
           </>
         )}
         {saveStatus === 'saved' && (
@@ -62,13 +62,13 @@ export function AutoSaveIndicator() {
             <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
               <Check size={10} className="text-white" />
             </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300">Sauvegardé</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Synchronisé</span>
           </>
         )}
         {saveStatus === 'error' && (
           <>
             <AlertTriangle size={16} className="text-amber-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Sauvegarde longue...</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Synchronisation longue...</span>
           </>
         )}
       </div>

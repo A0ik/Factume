@@ -6,6 +6,7 @@ import { X, Search, Loader2, Sparkles, Plus } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency } from '@/lib/utils';
+import { cents, fromCents, roundMoney } from '@/lib/money';
 import { triggerHaptic } from '@/lib/haptics';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -75,8 +76,10 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
         return;
       }
 
-      const subtotal = total / 1.2; // TVA 20% par défaut
-      const vat = total - subtotal;
+      const vatRate = 20; // TVA 20% par défaut
+      const subtotalCents = Math.round(cents(total) * 100 / (100 + vatRate));
+      const subtotal = fromCents(subtotalCents);
+      const vat = roundMoney(total - subtotal);
 
       const invoice = await createInvoice(
         {
@@ -89,7 +92,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
               id: crypto.randomUUID(),
               description: 'Prestation',
               quantity: 1,
-              unit_price: Math.round(subtotal * 100) / 100,
+              unit_price: subtotal,
               vat_rate: 20,
             },
           ],
@@ -266,7 +269,7 @@ export default function QuickCreateSheet({ open, onClose }: QuickCreateSheetProp
                     animate={{ opacity: 1, y: 0 }}
                     className="text-xs text-muted-foreground mt-1.5 px-1"
                   >
-                    TVA 20% incluse · HT : {formatCurrency(parseFloat(amount.replace(',', '.')) / 1.2)}
+                    TVA 20% incluse · HT : {formatCurrency(fromCents(Math.round(cents(parseFloat(amount.replace(',', '.'))) * 100 / 120)))}
                   </motion.p>
                 )}
               </div>

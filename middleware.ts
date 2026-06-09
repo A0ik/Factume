@@ -34,7 +34,6 @@ const PUBLIC_API_PREFIXES = [
   '/api/sumup/oauth',
   '/api/google/callback',
   '/api/google/oauth',
-  '/api/email/inbound',
   '/api/webhooks/',
 ];
 
@@ -64,6 +63,9 @@ const PROTECTED_PREFIXES = [
   '/data-health',
   '/integrations',
   '/cabinet',
+  // CITADEL: Added missing protected prefixes
+  '/offline',    // PWA offline pages (app data)
+  '/cabinets',   // Cabinet listing
 ];
 
 export async function middleware(req: NextRequest) {
@@ -123,6 +125,10 @@ export async function middleware(req: NextRequest) {
     shouldRateLimit = true;
     rlLimit = 3;
     rlWindow = 86_400_000; // 3 per day — anti-abuse
+  } else if (pathname === '/api/stripe/subscription') {
+    shouldRateLimit = true;
+    rlLimit = 3;
+    rlWindow = 86_400_000; // 3 per day — anti-double-charge
   } else if (isAuthRoute) {
     shouldRateLimit = true;
     rlLimit = 10;
@@ -204,6 +210,29 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
     return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  // ── ARBITER: Onboarding Gate ──────────────────────────────────────────
+  // LOI 3 (PERSISTANCE DE L'ÉTAT) : si onboarding_done !== true,
+  // l'utilisateur NE PEUT PAS accéder aux pages protégées autres que /onboarding.
+  // Il est redirigé (307) vers /onboarding/quick.
+  const isOnboardingRoute = pathname.startsWith('/onboarding');
+
+  if (!isOnboardingRoute && !isApiRoute) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_done')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile || profile.onboarding_done !== true) {
+        return NextResponse.redirect(new URL('/onboarding/quick', req.url));
+      }
+    } catch (err) {
+      // Si le profil n'existe pas encore (race condition signup), laisser passer
+      console.warn('[middleware] onboarding check failed:', err);
+    }
   }
 
   return res;

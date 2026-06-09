@@ -17,6 +17,11 @@ interface ClientTypeModalProps {
  * - B2C (Particulier) : Pas de SIRET, facture classique, e-reporting agrégé
  *
  * Perfect dark/light mode support via Tailwind dark: variants.
+ *
+ * IMPORTANT: Parent component should handle the following on type change:
+ * - B2B → B2C: clear siret, vat_number fields, set items vat_rate to 0
+ * - B2C → B2B: set items vat_rate to default (20%)
+ * Use getDefaultTVARate() from @/lib/tva-validator for the correct rate
  */
 export default function ClientTypeModal({ open, onSelect, clientName }: ClientTypeModalProps) {
   return (

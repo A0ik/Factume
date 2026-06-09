@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Check, X, Pencil, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VoiceUncertainField } from '@/types';
+import { getFieldLabel } from './fieldLabels';
 
 // ─── Spring animation config ───────────────────────────
 
@@ -16,35 +17,7 @@ const SPRING = {
 };
 
 // ─── Field Labels ──────────────────────────────────────
-
-function getFieldLabel(field: string): string {
-  const labels: Record<string, string> = {
-    'client_name': 'Nom du client',
-    'client_email': 'Email',
-    'client_phone': 'Telephone',
-    'client_address': 'Adresse',
-    'client_city': 'Ville',
-    'client_postal_code': 'Code postal',
-    'client_siret': 'SIRET',
-    'client_vat_number': 'N TVA',
-    'items[0].description': 'Description',
-    'items[0].unit_price': 'Prix unitaire',
-    'items[0].quantity': 'Quantite',
-    'items[0].vat_rate': 'Taux TVA',
-    'due_days': 'Delai de paiement',
-    'discount_percent': 'Remise %',
-    'notes': 'Notes',
-  };
-
-  const itemMatch = field.match(/items\[(\d+)\]\.(.+)/);
-  if (itemMatch) {
-    const idx = parseInt(itemMatch[1]) + 1;
-    const prop = itemMatch[2];
-    return `Ligne ${idx} - ${labels[`items[0].${prop}`] || prop}`;
-  }
-
-  return labels[field] || field;
-}
+// getFieldLabel is imported from './fieldLabels'
 
 // ─── Position Calculation ──────────────────────────────
 
@@ -144,7 +117,7 @@ export default function InlineDoubtCard({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9998] bg-black/10 dark:bg-black/30"
+        className="fixed inset-0 z-[9998] bg-black/20 dark:bg-black/30"
         onClick={onDismiss}
       />
 

@@ -54,6 +54,16 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.allSettled(
     matchingEndpoints.map(async (ep: { url: string; id: string }) => {
+      const triggerUrl = new URL(ep.url);
+      if (triggerUrl.protocol !== 'https:') throw new Error('Only HTTPS URLs allowed');
+      const blockedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '169.254.169.254',
+        'metadata.google.internal', '::1'];
+      const privateRanges = ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
+        '172.2', '172.3', '192.168.'];
+      const allBlocked = [...blockedHosts, ...privateRanges];
+      if (allBlocked.some(h => triggerUrl.hostname === h || triggerUrl.hostname.startsWith(h))) {
+        throw new Error(`Blocked internal URL: ${triggerUrl.hostname}`);
+      }
       const res = await fetch(ep.url, {
         method: 'POST',
         headers: {

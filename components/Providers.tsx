@@ -12,7 +12,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       console.error('[Providers] Auth init failed — landing page continues:', err);
     });
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/sw.js').catch((e) => console.warn('[SW] Registration failed:', e?.message || e));
     }
   }, []);
 

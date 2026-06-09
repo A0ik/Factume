@@ -70,6 +70,22 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // TOLL FIX B5: AI invoice generation requires Solo plan or above
+    const { data: subProfile } = await supabaseAuth
+      .from('profiles')
+      .select('subscription_tier, is_trial_active')
+      .eq('id', user.id)
+      .single();
+    const hasPlan = subProfile && ['solo', 'pro', 'business', 'trial'].includes(subProfile.subscription_tier || '');
+    const isTrial = subProfile?.is_trial_active === true;
+    if (!hasPlan && !isTrial) {
+      return NextResponse.json({
+        error: 'La génération IA de factures nécessite au minimum le plan Solo.',
+        code: 'SUBSCRIPTION_REQUIRED',
+        upgradeUrl: '/paywall?plan=solo',
+      }, { status: 403 });
+    }
+
     // Récupérer et valider le corps de la requête
     let body: unknown;
     try {

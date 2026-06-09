@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, Loader2, Sparkles, X, Check, Plus, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,41 @@ interface VoiceAssistantProps {
   onClose: () => void;
   isPro: boolean;
   mode: 'product' | 'recurring';
+  defaultVatRate?: number;
+}
+
+// ─── French word-to-number conversion ────────────────────
+function frenchWordsToNumber(text: string): number | null {
+  const words = text.toLowerCase().replace(/[^a-zàâéèêëïîôùûü\s]/g, '').trim();
+  if (!words) return null;
+
+  const numberWords: Record<string, number> = {
+    'zéro': 0, 'zero': 0, 'un': 1, 'une': 1, 'deux': 2, 'trois': 3, 'quatre': 4, 'cinq': 5,
+    'six': 6, 'sept': 7, 'huit': 8, 'neuf': 9, 'dix': 10, 'onze': 11, 'douze': 12,
+    'treize': 13, 'quatorze': 14, 'quinze': 15, 'seize': 16, 'vingt': 20, 'trente': 30,
+    'quarante': 40, 'cinquante': 50, 'soixante': 60, 'cent': 100, 'mille': 1000,
+  };
+
+  let result = 0;
+  let current = 0;
+  const tokens = words.split(/\s+/);
+
+  for (const token of tokens) {
+    if (numberWords[token] !== undefined) {
+      const val = numberWords[token];
+      if (val === 100) {
+        current = current === 0 ? 100 : current * 100;
+      } else if (val === 1000) {
+        current = current === 0 ? 1000 : current * 1000;
+        result += current;
+        current = 0;
+      } else {
+        current += val;
+      }
+    }
+  }
+  result += current;
+  return result > 0 ? result : null;
 }
 
 export interface VoiceAnalysisResult {
@@ -26,12 +61,14 @@ export interface VoiceAnalysisResult {
   startDate?: string; // Pour les récurrentes: date de première génération
 }
 
-export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistantProps) {
+export function VoiceAssistant({ onResult, onClose, isPro, mode, defaultVatRate = 20 }: VoiceAssistantProps) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [recognizedData, setRecognizedData] = useState<VoiceAnalysisResult>({});
+  const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const analyzeVoiceRef = useRef<(text: string) => void>(() => {});
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -60,12 +97,12 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
       if (interimTranscript) {
         setTranscript(interimTranscript);
         // Analyse en temps réel
-        analyzeVoice(interimTranscript);
+        analyzeVoiceRef.current(interimTranscript);
       }
 
       if (finalTranscript) {
         setTranscript(finalTranscript);
-        analyzeVoice(finalTranscript);
+        analyzeVoiceRef.current(finalTranscript);
       }
     };
 
@@ -110,7 +147,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
     }
   };
 
-  const analyzeVoice = (text: string) => {
+  const analyzeVoice = useCallback((text: string) => {
     const lowerText = text.toLowerCase();
 
     const result: VoiceAnalysisResult = {};
@@ -185,13 +222,9 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
       }
     }
 
-    // Si prix détecté mais pas de TVA, auto-déduire selon le prix
+    // Si prix détecté mais pas de TVA, appliquer le taux par défaut
     if (result.price && !result.vatRate) {
-      if (result.price < 1000) {
-        result.vatRate = 20; // TVA standard
-      } else {
-        result.vatRate = 20; // Toujours 20% par défaut
-      }
+      result.vatRate = defaultVatRate;
     }
 
     // Extraction de la référence
@@ -231,7 +264,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
     if (mode === 'recurring') {
       const clientPatterns = [
         /client\s*[:=]\s*([^\s,]+(?:\s+[^\s,]+)*)/i,
-        /pour\s+([^\s,]+(?:\s+[^\s,]+)*)/i,
+        /pour\s+(?:[^\d\s]+\s?){1,3}(?=\s|$)/i,
       ];
 
       for (const pattern of clientPatterns) {
@@ -248,6 +281,9 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
     }
 
     // Extraction de la date de première génération (pour les récurrentes)
+    // NOTE: Date parsing assumes DD/MM/YYYY (French locale) by default.
+    // There is an inherent DD/MM vs MM/DD ambiguity when both values are <= 12.
+    // The speech recognition lang is set to 'fr-FR' above, so DD/MM is the correct default.
     if (mode === 'recurring') {
       const datePatterns = [
         /(?:commencer?|départ|début|première?\s*génération)\s*(?:le\s*)?((?:\d{1,4})[-/](?:\d{1,2})[-/](?:\d{1,4})|(?:\d{1,2})[-/](?:\d{1,2})[-/](?:\d{2,4}))/i,
@@ -289,7 +325,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
     workingText = workingText.replace(/réf\s*[:=]\s*[a-zA-Z0-9-]+/gi, '');
     workingText = workingText.replace(/référence\s*[:=]\s*[a-zA-Z0-9-]+/gi, '');
     workingText = workingText.replace(/client\s*[:=]\s*[^\s]+(?:\s+[^\s]+)*/gi, '');
-    workingText = workingText.replace(/pour\s+[^\s]+(?:\s+[^\s]+)*/gi, '');
+    workingText = workingText.replace(/pour\s+(?:[^\d\s]+\s?){1,3}(?=\s|$)/gi, '');
     workingText = workingText.replace(pricePatterns[0], '');
     workingText = workingText.replace(pricePatterns[1], '');
     workingText = workingText.replace(pricePatterns[2], '');
@@ -311,8 +347,21 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
       result.name = workingText.charAt(0).toUpperCase() + workingText.slice(1).toLowerCase();
     }
 
+    // Fallback: try French word-to-number if no digit-based price was found
+    if (!result.price) {
+      const wordPrice = frenchWordsToNumber(text);
+      if (wordPrice !== null) {
+        result.price = wordPrice;
+        if (!result.vatRate) {
+          result.vatRate = defaultVatRate;
+        }
+      }
+    }
+
     setRecognizedData(result);
-  };
+  }, [mode, defaultVatRate]);
+
+  analyzeVoiceRef.current = analyzeVoice;
 
   const handleConfirm = () => {
     if (recognizedData.name || recognizedData.price) {
@@ -323,8 +372,13 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode }: VoiceAssistan
     }
   };
 
-  const isSupported = typeof window !== 'undefined' &&
-    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  // Hydration-safe browser support detection
+  useEffect(() => {
+    setIsSupported(
+      typeof window !== 'undefined' &&
+      (!!((window as any).SpeechRecognition) || !!((window as any).webkitSpeechRecognition))
+    );
+  }, []);
 
   if (!isSupported) {
     return (

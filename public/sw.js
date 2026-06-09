@@ -13,6 +13,7 @@ self.addEventListener('install', (event) => {
         '/clients',
         '/manifest.json',
         '/icons/icon.svg',
+        '/offline.html',
       ]).catch(() => {})
     )
   );
@@ -41,7 +42,11 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        return caches.match(event.request).then(response => {
+          return response || caches.match(OFFLINE_URL);
+        });
+      })
   );
 });
 

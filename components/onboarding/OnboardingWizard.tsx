@@ -62,19 +62,16 @@ export function OnboardingWizard() {
   const [skipped, setSkipped] = useState(false);
 
   useEffect(() => {
-    // Check if user has already seen onboarding or has created content
+    // ARBITER FIX: OnboardingWizard ne s'affiche qu'APRÈS que l'utilisateur
+    // a complété le formulaire d'entreprise (onboarding_done === true en BDD).
+    // Avant, il apparaissait sur la page d'onboarding elle-même, bloquant le flux.
     const hasSeenOnboarding = localStorage.getItem('onboarding_completed') === 'true';
-    const hasCompletedInProfile = profile?.onboarding_done === true;
-    const hasContent = clients.length > 0 || invoices.length > 0;
 
-    // Ne montrer le tutoriel que si :
-    // 1. L'utilisateur n'a PAS déjà vu le tutoriel (localStorage OU profil)
-    // 2. L'utilisateur n'a PAS de contenu (pas de clients, pas de factures)
-    // 3. Le profil est chargé
-    if (!hasSeenOnboarding && !hasCompletedInProfile && !hasContent && profile) {
+    // Condition stricte : profil chargé + onboarding validé en BDD + pas déjà vu
+    if (profile && profile.onboarding_done === true && !hasSeenOnboarding) {
       setIsOpen(true);
     }
-  }, [profile, clients, invoices]);
+  }, [profile]);
 
   const handleNext = () => {
     const step = ONBOARDING_STEPS[currentStep];

@@ -281,23 +281,30 @@ export const useContractStore = create<ContractState>((set, get) => ({
 
   updateContract: async (id, contractType, data) => {
     const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
     const row: Record<string, any> = { ...data, updated_at: new Date().toISOString() };
     if (row.salary_amount && typeof row.salary_amount === 'string') row.salary_amount = parseFloat(row.salary_amount);
     if (row.trial_period_days && typeof row.trial_period_days === 'string') row.trial_period_days = parseInt(row.trial_period_days);
 
-    const { error } = await supabase.from(TABLE_MAP[contractType]).update(row).eq('id', id);
+    const { error } = await supabase.from(TABLE_MAP[contractType]).update(row).eq('id', id).eq('user_id', userId);
     if (error) throw error;
     await get().fetchContracts();
   },
 
   updateContractStatus: async (id, contractType, status) => {
     const supabase = getSupabaseClient();
+    const { data: { session: statusSession } } = await supabase.auth.getSession();
+    const userId = statusSession?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
 
     // Valider la transition
     const { data: contract } = await supabase
       .from(TABLE_MAP[contractType])
       .select('document_status')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
 
     if (contract && !canTransition(contract.document_status as ContractStatus, status)) {
@@ -305,7 +312,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
     }
 
     const row: any = { document_status: status, updated_at: new Date().toISOString() };
-    const { error } = await supabase.from(TABLE_MAP[contractType]).update(row).eq('id', id);
+    const { error } = await supabase.from(TABLE_MAP[contractType]).update(row).eq('id', id).eq('user_id', userId);
     if (error) throw error;
 
     // Envoyer notification si changement de statut significatif
@@ -329,6 +336,7 @@ export const useContractStore = create<ContractState>((set, get) => ({
             .from(TABLE_MAP[contractType])
             .select('contract_number, employee_first_name, employee_last_name')
             .eq('id', id)
+            .eq('user_id', session.user.id)
             .single();
 
           if (contract) {
@@ -354,7 +362,11 @@ export const useContractStore = create<ContractState>((set, get) => ({
   },
 
   deleteContract: async (id, contractType) => {
-    const { error } = await getSupabaseClient().from(TABLE_MAP[contractType]).delete().eq('id', id);
+    const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
+    const { error } = await supabase.from(TABLE_MAP[contractType]).delete().eq('id', id).eq('user_id', userId);
     if (error) throw error;
     set((s) => ({ contracts: s.contracts.filter((c) => c.id !== id) }));
     get().computeStats();
@@ -449,10 +461,15 @@ export const useContractStore = create<ContractState>((set, get) => ({
   },
 
   getContractDetail: async (id, contractType) => {
-    const { data, error } = await getSupabaseClient()
+    const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) throw new Error('Non authentifié');
+    const { data, error } = await supabase
       .from(TABLE_MAP[contractType])
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
     if (error) throw error;
     return { ...data, contract_type: contractType } as Contract;

@@ -158,6 +158,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       .from('workspaces')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', workspace.id)
+      .eq('owner_id', workspace.owner_id)
       .select()
       .single();
 
@@ -173,7 +174,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const { error } = await supabase
       .from('workspaces')
       .delete()
-      .eq('id', workspace.id);
+      .eq('id', workspace.id)
+      .eq('owner_id', workspace.owner_id);
 
     if (error) throw error;
     set({ workspace: null, members: [], invitations: [] });
@@ -259,11 +261,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   updateMemberRole: async (memberId, role) => {
+    const { workspace } = get();
+    if (!workspace) throw new Error('Aucun workspace actif');
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('workspace_members')
       .update({ role })
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .eq('workspace_id', workspace.id);
 
     if (error) throw error;
     set((s) => ({
@@ -272,13 +277,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   removeMember: async (memberId) => {
+    const { workspace, members } = get();
+    if (!workspace) throw new Error('Aucun workspace actif');
     const supabase = getSupabaseClient();
-    const member = get().members.find((m) => m.id === memberId);
+    const member = members.find((m) => m.id === memberId);
 
     const { error } = await supabase
       .from('workspace_members')
       .delete()
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .eq('workspace_id', workspace.id);
 
     if (error) throw error;
 

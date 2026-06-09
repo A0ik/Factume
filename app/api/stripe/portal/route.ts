@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       throw stripeError;
     }
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[API Error]', error);
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

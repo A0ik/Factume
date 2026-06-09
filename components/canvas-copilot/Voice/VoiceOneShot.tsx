@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDocumentSessionStore } from '../documentSessionStore';
+import { toast } from 'sonner';
 
 const SPRING = { type: 'spring' as const, damping: 25, stiffness: 400 };
 
@@ -39,6 +40,8 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const isRecordingRef = useRef(false);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     documentType,
@@ -50,6 +53,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      mediaRecorderRef.current?.stop();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
@@ -57,6 +61,9 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   }, []);
 
   const startRecording = useCallback(async () => {
+    if (isRecordingRef.current) return;
+    isRecordingRef.current = true;
+
     setErrorMsg('');
     setState('recording');
     chunksRef.current = [];
@@ -72,11 +79,18 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
       };
 
       mediaRecorder.onstop = async () => {
+        // Clear recording timeout
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+        }
+
         // Stop all tracks immediately
         stream.getTracks().forEach(t => t.stop());
         streamRef.current = null;
 
         if (chunksRef.current.length === 0) {
+          toast.error('Aucun audio détecté. Vérifiez que votre micro fonctionne.');
           setState('idle');
           return;
         }
@@ -94,13 +108,21 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         formData.append('mode', documentType);
 
         try {
-          const res = await fetch('/api/process-voice', { method: 'POST', body: formData });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Erreur vocale');
+          const controller = new AbortController();
+          const fetchTimeout = setTimeout(() => controller.abort(), 30000);
+          try {
+            const res = await fetch('/api/process-voice', { method: 'POST', body: formData, signal: controller.signal });
+            clearTimeout(fetchTimeout);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erreur vocale');
 
-          // Apply parsed result — this also triggers doubt resolution if uncertain_fields exist
-          applyAIParsedResult(data.parsed || data, 'voice');
-          setState('idle');
+            // Apply parsed result — this also triggers doubt resolution if uncertain_fields exist
+            applyAIParsedResult(data.parsed || data, 'voice');
+            setState('idle');
+          } catch (fetchErr: any) {
+            clearTimeout(fetchTimeout);
+            throw fetchErr;
+          }
         } catch (err: any) {
           setState('error');
           setErrorMsg(err.message || 'Erreur lors du traitement');
@@ -112,7 +134,9 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
       };
 
       mediaRecorder.start();
+      recordingTimeoutRef.current = setTimeout(() => stopRecording(), 60000);
     } catch (err: any) {
+      isRecordingRef.current = false;
       setState('error');
       setErrorMsg('Acces au micro refuse');
       setTimeout(() => setState('idle'), 3000);
@@ -120,6 +144,11 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   }, [documentType, items, sector, applyAIParsedResult, setProcessingVoice]);
 
   const stopRecording = useCallback(() => {
+    isRecordingRef.current = false;
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
     }

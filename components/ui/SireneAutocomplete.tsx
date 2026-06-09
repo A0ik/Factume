@@ -56,6 +56,8 @@ export function SireneAutocomplete({
   const [selectedCompany, setSelectedCompany] = useState<SireneCompany | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedIndexRef = useRef(selectedIndex);
+  selectedIndexRef.current = selectedIndex;
 
   // Fetch companies from API SIRENE (via INSEE)
   const searchCompanies = async (query: string) => {
@@ -148,8 +150,8 @@ export function SireneAutocomplete({
           break;
         case 'Enter':
           e.preventDefault();
-          if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-            handleSelect(suggestions[selectedIndex]);
+          if (selectedIndexRef.current >= 0 && suggestions[selectedIndexRef.current]) {
+            handleSelect(suggestions[selectedIndexRef.current]);
           }
           break;
         case 'Escape':
@@ -161,7 +163,7 @@ export function SireneAutocomplete({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, suggestions]);
+  }, [isOpen, suggestions]);
 
   const handleSelect = (company: SireneCompany) => {
     setSelectedCompany(company);

@@ -55,9 +55,15 @@ function formatCurrencyFacturX(amount: number): string {
   return amount.toFixed(2);
 }
 
-function getVatCategoryCode(vatRate: number): string {
+function getVatCategoryCode(vatRate: number, legalStatus?: string): string {
   // Codes de catégorie TVA selon EN 16931 (UNCL 5305)
-  if (vatRate === 0) return 'Z'; // Zero-rated (taux zéro)
+  if (vatRate === 0) {
+    // Auto-entrepreneurs et micro-entreprises en franchise de TVA → E (exempt)
+    if (legalStatus === 'auto-entrepreneur' || legalStatus === 'micro_entreprise') {
+      return 'E'; // Exempt (franchise de TVA, art. 293 B CGI)
+    }
+    return 'Z'; // Zero-rated (taux zéro)
+  }
   return 'S'; // Standard (taux normal)
 }
 
@@ -211,7 +217,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
         <ram:SpecifiedLineTradeSettlement>
           <ram:ApplicableTradeTax>
             <ram:TypeCode>VAT</ram:TypeCode>
-            <ram:CategoryCode>${getVatCategoryCode(vatRate)}</ram:CategoryCode>
+            <ram:CategoryCode>${getVatCategoryCode(vatRate, profile.legal_status)}</ram:CategoryCode>
             <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
           </ram:ApplicableTradeTax>
           <ram:SpecifiedTradeSettlementLineMonetarySummation>
@@ -244,7 +250,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
   });
 
   const vatBreakdownXml = Array.from(vatByRate.entries()).map(([rate, amounts]) => {
-    const catCode = getVatCategoryCode(rate);
+    const catCode = getVatCategoryCode(rate, profile.legal_status);
     const exemptionReason = getVatExemptionReason(rate, profile.legal_status);
     return `
         <ram:ApplicableTradeTax>
@@ -271,7 +277,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
 
   // FIX: Utiliser le code catégorie TVA correct pour la remise (S pour standard, Z pour zéro)
   const discountVatRate = Number(invoice.items[0]?.vat_rate) || 0;
-  const discountVatCatCode = getVatCategoryCode(discountVatRate);
+  const discountVatCatCode = getVatCategoryCode(discountVatRate, profile.legal_status);
 
   const discountXml = discountAmount > 0 ? `
       <ram:SpecifiedTradeAllowanceCharge>

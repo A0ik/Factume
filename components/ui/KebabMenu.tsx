@@ -53,6 +53,7 @@ export default function KebabMenu({ items, align = 'right' }: KebabMenuProps) {
     <div ref={menuRef} className="relative">
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(!open); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
       >
         <MoreHorizontal size={16} strokeWidth={2} />

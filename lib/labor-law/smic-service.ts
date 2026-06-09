@@ -4,6 +4,8 @@
  * Avec cache et fallback pour garantir la disponibilité
  */
 
+import { SMIC_2026_HORAIRE, SMIC_2026_MENSUEL, SMIC_2026_ANNUEL } from './smic-constants';
+
 // Cache en mémoire (TTL: 24 heures)
 let smicCache: {
   data: SMICData | null;
@@ -34,9 +36,9 @@ export interface SMICVerificationResult {
 
 // Valeurs de fallback 2026 (mises à jour manuellement)
 const SMIC_2026_FALLBACK: SMICData = {
-  horaire: 11.65,
-  mensuel: 1766.92,
-  annuel: 21203.04,
+  horaire: SMIC_2026_HORAIRE,
+  mensuel: SMIC_2026_MENSUEL,
+  annuel: SMIC_2026_ANNUEL,
   dateMiseAJour: '2026-01-01',
   source: 'Valeur légale 2026 (fallback)'
 };

@@ -3,6 +3,7 @@
 // Couleur personnalisable, format 1 page A4, erreurs détaillées
 
 import { calculerCotisations, getCotisationsDisplay, SMIC_2026, getSalaireMinimumAlternance } from './cotisations';
+import { roundMoney } from '@/lib/money';
 import { validateContract } from './rules';
 
 export interface BulletinPaieData {
@@ -172,17 +173,17 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
     ? new Date(data.datePaiement).toLocaleDateString('fr-FR')
     : new Date().toLocaleDateString('fr-FR');
 
-  const tauxH = data.tauxHoraire ?? (data.salaireBrut / (data.heuresMensuelles || 151.67));
+  const tauxH = data.tauxHoraire ?? roundMoney(data.salaireBrut / (data.heuresMensuelles || 151.67));
   const joursOuvres = data.nombreJoursOuvres || 22;
 
   // Montants calculés pour chaque ligne
-  const montantSupp25 = (data.heuresSupp25 ?? 0) * tauxH * 1.25;
-  const montantSupp50 = (data.heuresSupp50 ?? 0) * tauxH * 1.50;
-  const retenueMaladie = data.joursMaladie ? (data.salaireBrut / joursOuvres) * data.joursMaladie : 0;
-  const retenueAbsence = data.joursAbsenceNonJustifiee ? (data.salaireBrut / joursOuvres) * data.joursAbsenceNonJustifiee : 0;
+  const montantSupp25 = roundMoney((data.heuresSupp25 ?? 0) * tauxH * 1.25);
+  const montantSupp50 = roundMoney((data.heuresSupp50 ?? 0) * tauxH * 1.50);
+  const retenueMaladie = data.joursMaladie ? roundMoney((data.salaireBrut / joursOuvres) * data.joursMaladie) : 0;
+  const retenueAbsence = data.joursAbsenceNonJustifiee ? roundMoney((data.salaireBrut / joursOuvres) * data.joursAbsenceNonJustifiee) : 0;
 
   // Totalbrut = base de calcul des cotisations
-  const totalBrut = data.salaireBrut
+  const totalBrut = roundMoney(data.salaireBrut
     + montantSupp25
     + montantSupp50
     + (data.primeExceptionnelle ?? 0)
@@ -192,7 +193,7 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
     + (data.autresPrimes ?? 0)
     + (data.indemniteCongesPayes ?? 0)
     - retenueMaladie
-    - retenueAbsence;
+    - retenueAbsence);
 
   // Cotisations calculées sur le totalBrut réel (pas seulement le salaire de base)
   const cotisations = calculerCotisations({
@@ -213,18 +214,18 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
   const baseDéplafonnée = totalBrut;
   const tauxVieillessePlafonnée = 6.93;
   const tauxVieillesseDéplafonnée = 0.40;
-  const vieillessePlafonnéeMontant = basePlafonnée * tauxVieillessePlafonnée / 100;
-  const vieillesseDéplafonnéeMontant = baseDéplafonnée * tauxVieillesseDéplafonnée / 100;
-  const totalVieillesseSalariale = vieillessePlafonnéeMontant + vieillesseDéplafonnéeMontant;
+  const vieillessePlafonnéeMontant = roundMoney(basePlafonnée * tauxVieillessePlafonnée / 100);
+  const vieillesseDéplafonnéeMontant = roundMoney(baseDéplafonnée * tauxVieillesseDéplafonnée / 100);
+  const totalVieillesseSalariale = roundMoney(vieillessePlafonnéeMontant + vieillesseDéplafonnéeMontant);
 
-  const netAvantImpot = totalBrut - cotisations.salariales.total
+  const netAvantImpot = roundMoney(totalBrut - cotisations.salariales.total
     + (data.indemnitesTransport ?? 0)
     + (data.indemniteDeplacementVehicule ?? 0)
     + (data.autresIndemnites ?? 0)
     - (data.mutuellePartSalarie ?? 0)
     - (data.prevoyancePartSalarie ?? 0)
     + (data.maintienSalaireMaladie ?? 0)
-    + (data.indemnitesJournalieresSS ?? 0); // IJ SS complète le net quand maintien partiel
+    + (data.indemnitesJournalieresSS ?? 0)); // IJ SS complète le net quand maintien partiel
 
   const row = (label: string, base: string, taux: string, prelever: string, payer: string, bold = false, shade = false) =>
     `<tr style="${shade ? 'background:linear-gradient(135deg, #f8f9fa, #f5f6f7);' : ''}${bold ? 'font-weight:bold;' : ''}">
@@ -361,8 +362,8 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
       ${data.autresPrimes ? row('Autres primes', '', '', '', fmtE(data.autresPrimes)) : ''}
       ${data.indemniteCongesPayes ? row('Indemnité de congés payés', '', '', '', fmtE(data.indemniteCongesPayes)) : ''}
       ${data.avantagesEnNature ? row('Avantages en nature', fmtE(data.avantagesEnNature), '', fmtE(data.avantagesEnNature), '') : ''}
-      ${data.joursMaladie ? row(`Retenue absence maladie (${data.joursMaladie} j)`, `${fmtE(data.salaireBrut / joursOuvres)}/j`, `${joursOuvres} j`, fmtE(retenueMaladie), '') : ''}
-      ${data.joursAbsenceNonJustifiee ? row(`Retenue absence injustifiée (${data.joursAbsenceNonJustifiee} j)`, `${fmtE(data.salaireBrut / joursOuvres)}/j`, `${joursOuvres} j`, fmtE(retenueAbsence), '') : ''}
+      ${data.joursMaladie ? row(`Retenue absence maladie (${data.joursMaladie} j)`, `${fmtE(roundMoney(data.salaireBrut / joursOuvres))}/j`, `${joursOuvres} j`, fmtE(retenueMaladie), '') : ''}
+      ${data.joursAbsenceNonJustifiee ? row(`Retenue absence injustifiée (${data.joursAbsenceNonJustifiee} j)`, `${fmtE(roundMoney(data.salaireBrut / joursOuvres))}/j`, `${joursOuvres} j`, fmtE(retenueAbsence), '') : ''}
       ${row('TOTAL BRUT', '', '', '', fmtE(totalBrut), true, true)}
     </tbody>
   </table>
@@ -381,9 +382,9 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
       ${row('Vieillesse plafonnée', fmtE(basePlafonnée), `${tauxVieillessePlafonnée.toFixed(2)}%`, fmtE(vieillessePlafonnéeMontant), '')}
       ${row('Vieillesse déplafonnée', fmtE(baseDéplafonnée), `${tauxVieillesseDéplafonnée.toFixed(2)}%`, fmtE(vieillesseDéplafonnéeMontant), '')}
       ${data.statut === 'cadre' ? row('Retraite cadres AGIRC-ARRCO (T1)', fmtE(Math.min(totalBrut, plafondSS)), '0,86%', fmtE(cotisations.salariales.retraite_cadres), '') : ''}
-      ${row('CSG déductible', fmtE(totalBrut * 0.9825), '6,80%', fmtE(cotisations.salariales.csg_deductible), '')}
-      ${row('CSG non-déductible', fmtE(totalBrut * 0.9825), '2,40%', fmtE(cotisations.salariales.csg_non_deductible), '')}
-      ${row('CRDS', fmtE(totalBrut * 0.9825), '0,50%', fmtE(cotisations.salariales.crds), '')}
+      ${row('CSG déductible', fmtE(roundMoney(totalBrut * 0.9825)), '6,80%', fmtE(cotisations.salariales.csg_deductible), '')}
+      ${row('CSG non-déductible', fmtE(roundMoney(totalBrut * 0.9825)), '2,40%', fmtE(cotisations.salariales.csg_non_deductible), '')}
+      ${row('CRDS', fmtE(roundMoney(totalBrut * 0.9825)), '0,50%', fmtE(cotisations.salariales.crds), '')}
       ${data.mutuellePartSalarie ? row('Mutuelle — part salarié', '', '', fmtE(data.mutuellePartSalarie), '') : ''}
       ${data.prevoyancePartSalarie ? row('Prévoyance — part salarié', '', '', fmtE(data.prevoyancePartSalarie), '') : ''}
       ${row('TOTAL COTISATIONS', '', '', fmtE(cotisations.salariales.total + (data.mutuellePartSalarie ?? 0) + (data.prevoyancePartSalarie ?? 0)), '', true, true)}
@@ -402,15 +403,15 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
     </tr></thead>
     <tbody>
       ${row('Maladie', fmtE(totalBrut), '13,00%', '', fmtE(cotisations.patronales.maladie))}
-      ${row('Vieillesse plafonnée', fmtE(basePlafonnée), '8,55%', '', fmtE(basePlafonnée * 8.55 / 100))}
-      ${row('Vieillesse déplafonnée', fmtE(baseDéplafonnée), '2,00%', '', fmtE(baseDéplafonnée * 2.00 / 100))}
+      ${row('Vieillesse plafonnée', fmtE(basePlafonnée), '8,55%', '', fmtE(roundMoney(basePlafonnée * 8.55 / 100)))}
+      ${row('Vieillesse déplafonnée', fmtE(baseDéplafonnée), '2,00%', '', fmtE(roundMoney(baseDéplafonnée * 2.00 / 100)))}
       ${row('Allocations familiales', fmtE(totalBrut), '3,45%', '', fmtE(cotisations.patronales.allocations_familiales))}
       ${row('Accident du travail', fmtE(totalBrut), (data.tauxAccidentTravail ?? 0.70).toFixed(2).replace('.', ',') + '%', '', fmtE(cotisations.patronales.accident_du_travail))}
       ${row('Solidarité autonomie', fmtE(totalBrut), '0,30%', '', fmtE(cotisations.patronales.solidarite_autonomie))}
       ${row('FNAL', fmtE(totalBrut), '0,10%', '', fmtE(cotisations.patronales.fnal))}
       ${row('Chômage', fmtE(Math.min(totalBrut, 4 * plafondSS)), '4,05%', '', fmtE(cotisations.patronales.chomage))}
-      ${data.statut === 'cadre' ? row('Retraite cadres AGIRC-ARRCO T1', fmtE(Math.min(totalBrut, plafondSS)), '1,29%', '', fmtE(Math.min(totalBrut, plafondSS) * 1.29 / 100)) : ''}
-      ${data.statut === 'cadre' && totalBrut > plafondSS ? row('Retraite cadres AGIRC-ARRCO T2', fmtE(Math.min(Math.max(0, totalBrut - plafondSS), 7 * plafondSS)), '11,49%', '', fmtE(Math.min(Math.max(0, totalBrut - plafondSS), 7 * plafondSS) * 11.49 / 100)) : ''}
+      ${data.statut === 'cadre' ? row('Retraite cadres AGIRC-ARRCO T1', fmtE(Math.min(totalBrut, plafondSS)), '1,29%', '', fmtE(roundMoney(Math.min(totalBrut, plafondSS) * 1.29 / 100))) : ''}
+      ${data.statut === 'cadre' && totalBrut > plafondSS ? row('Retraite cadres AGIRC-ARRCO T2', fmtE(Math.min(Math.max(0, totalBrut - plafondSS), 7 * plafondSS)), '11,49%', '', fmtE(roundMoney(Math.min(Math.max(0, totalBrut - plafondSS), 7 * plafondSS) * 11.49 / 100))) : ''}
       ${row('AGS', fmtE(totalBrut), '0,15%', '', fmtE(cotisations.patronales.ags))}
       ${row('Formation professionnelle', fmtE(totalBrut), '0,55%', '', fmtE(cotisations.patronales.formation))}
       ${data.statut === 'cadre' ? row('Prévoyance cadres', fmtE(totalBrut), '1,50%', '', fmtE(cotisations.patronales.prevoyance)) : ''}
@@ -432,8 +433,8 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
   </tr></thead><tbody>
     ${data.indemnitesTransport ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Remboursement transport</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.indemnitesTransport)}</td></tr>` : ''}
     ${data.indemniteDeplacementVehicule ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Indemnité kilométrique</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.indemniteDeplacementVehicule)}</td></tr>` : ''}
-    ${data.ticketRestaurantNombre ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Tickets restaurant (${data.ticketRestaurantNombre} × ${fmtE(data.ticketRestaurantMontantEmployeur ?? 0)} part empl.)</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE((data.ticketRestaurantNombre) * (data.ticketRestaurantMontantEmployeur ?? 0))}</td></tr>` : ''}
-    ${data.paniersRepasNombre ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Paniers repas (${data.paniersRepasNombre} × ${fmtE(data.paniersRepasMontantEmployeur ?? 0)} part empl.)</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.paniersRepasTotal ?? (data.paniersRepasNombre * (data.paniersRepasMontantEmployeur ?? 0)))}</td></tr>` : ''}
+    ${data.ticketRestaurantNombre ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Tickets restaurant (${data.ticketRestaurantNombre} × ${fmtE(data.ticketRestaurantMontantEmployeur ?? 0)} part empl.)</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(roundMoney((data.ticketRestaurantNombre) * (data.ticketRestaurantMontantEmployeur ?? 0)))}</td></tr>` : ''}
+    ${data.paniersRepasNombre ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Paniers repas (${data.paniersRepasNombre} × ${fmtE(data.paniersRepasMontantEmployeur ?? 0)} part empl.)</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.paniersRepasTotal ?? roundMoney(data.paniersRepasNombre * (data.paniersRepasMontantEmployeur ?? 0)))}</td></tr>` : ''}
     ${data.indemnitesJournalieresSS ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">IJ Sécurité Sociale</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.indemnitesJournalieresSS)}</td></tr>` : ''}
     ${data.maintienSalaireMaladie ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Maintien salaire maladie (employeur)</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.maintienSalaireMaladie)}</td></tr>` : ''}
     ${data.autresIndemnites ? `<tr><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;">Autres indemnités</td><td></td><td style="padding:4px 8px;border-bottom:1px solid #e8e8e8;text-align:right;color:#27ae60;">${fmtE(data.autresIndemnites)}</td></tr>` : ''}
@@ -468,7 +469,7 @@ export function genererBulletinPaieHTML(data: BulletinPaieData): string {
     <div class="footer-box">
       <div class="footer-box-title">PAS & Cumuls</div>
       <div class="cp-row"><span>Taux PAS</span><span>${data.tauxPAS ? data.tauxPAS.toFixed(1) + ' %' : 'Cf. DGFIP'}</span></div>
-      <div class="cp-row"><span>Brut annuel</span><span>${fmtE(data.cumulsAnnuelsBrut ?? data.salaireBrutAnnuel ?? totalBrut * 12)}</span></div>
+      <div class="cp-row"><span>Brut annuel</span><span>${fmtE(data.cumulsAnnuelsBrut ?? data.salaireBrutAnnuel ?? roundMoney(totalBrut * 12))}</span></div>
     </div>
   </div>
 
@@ -590,7 +591,7 @@ export function creerBulletinDepuisContrat(
     coef: 100,
 
     salaireBrut: parseFloat(contrat.salaryAmount) || SMIC_2026.mensuel_35h,
-    salaireBrutAnnuel: (parseFloat(contrat.salaryAmount) || SMIC_2026.mensuel_35h) * 12,
+    salaireBrutAnnuel: roundMoney((parseFloat(contrat.salaryAmount) || SMIC_2026.mensuel_35h) * 12),
     heuresMensuelles: parseFloat(contrat.workingHours) || 151.67,
     tauxHoraire: (() => {
       const s = parseFloat(contrat.salaryAmount);

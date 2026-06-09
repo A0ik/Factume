@@ -22,7 +22,11 @@ export function multiplyCents(qty: number, unitPrice: number): number {
 
 /** Apply a percentage discount to a cents amount */
 export function discountCents(amountCents: number, discountPct: number): number {
-  if (discountPct <= 0) return 0;
+  if (discountPct < 0) {
+    console.warn('[money] discountCents: negative discount percent ignored:', discountPct);
+    return 0;
+  }
+  if (discountPct === 0) return 0;
   return Math.round(amountCents * cents(discountPct) / 10000);
 }
 

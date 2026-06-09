@@ -76,7 +76,7 @@ export default function DocPickerModal({ open, onClose, clientId, clientName }: 
   useEffect(() => { setMounted(true); }, []);
 
   const handleSelect = (path: string) => {
-    const params = new URLSearchParams({ clientId, clientName });
+    const params = new URLSearchParams({ clientId }); // CITADEL: removed clientName from URL (PII leak in logs/history)
     router.push(`${path}?${params.toString()}`);
     onClose();
   };

@@ -1,6 +1,8 @@
 // Moteur de règles métier basé sur le Code du travail français
 // Source: LEGIFRANCE et Code du travail 2024
 
+import { SMIC_2026_HORAIRE, SMIC_2026_MENSUEL } from './smic-constants';
+
 export interface LaborRule {
   id: string;
   category: 'cdd' | 'cdi' | 'alternance' | 'portage' | 'interim' | 'stage';
@@ -200,8 +202,6 @@ export const CDI_RULES: LaborRule[] = [
       // Import dynamique du service SMIC pour éviter les dépendances circulaires
       // La vérification sera faite via le composant ContractValidator qui appelle l'API
       const monthlySalary = parseFloat(data.salaryAmount) || 0;
-      const SMIC_2026_HORAIRE = 11.65; // €/heure au 1er janvier 2026 (valeur de secours)
-      const SMIC_2026_MENSUEL = 1766.92; // €/mois pour 35h (valeur de secours)
 
       if (data.salaryFrequency === 'hourly') {
         if (monthlySalary < SMIC_2026_HORAIRE) {

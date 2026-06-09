@@ -6,6 +6,7 @@ import { Send, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
+import { toast } from 'sonner';
 
 interface SmartTextBarProps {
   profile: any;
@@ -63,8 +64,8 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
 
       applyAIParsedResult(data.parsed, 'ai');
     } catch (err: any) {
-      // Silently fail — the user can retry
       console.error('[SmartTextBar] Error:', err.message);
+      toast.error('Erreur lors de l\'analyse. Veuillez réessayer.');
     } finally {
       setStreaming(false);
     }

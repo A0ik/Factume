@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
         results.failed++;
         results.errors.push({
           recurringId: recurring.id,
-          error: error.message || 'Erreur inconnue',
+          error: 'Erreur lors du traitement de la facture récurrente',
         });
       }
     }
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in recurring send API:', error);
     return NextResponse.json(
-      { error: error.message || 'Erreur interne du serveur' },
+      { error: 'Erreur interne du serveur' },
       { status: 500 }
     );
   }
@@ -402,8 +402,9 @@ export async function GET(request: NextRequest) {
       invoices: recurringInvoices,
     });
   } catch (error: any) {
+    console.error('[API Error]', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: 'Erreur interne du serveur' },
       { status: 500 }
     );
   }

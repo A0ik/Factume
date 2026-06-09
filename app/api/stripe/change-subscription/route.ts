@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         const isNotFound = se.code === 'resource_missing' || se.message?.includes('No such subscription');
         if (!isNotFound) {
           console.error('[change-subscription] Erreur Stripe:', se.message);
-          return NextResponse.json({ error: se.message || 'Erreur Stripe lors du changement d\'abonnement' }, { status: 500 });
+          return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
         }
         // Subscription invalide → on continue vers la création d'une nouvelle
       }
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error('[change-subscription] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }
 
@@ -263,6 +263,6 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error('[change-subscription] GET Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

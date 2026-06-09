@@ -39,23 +39,44 @@ export async function POST(req: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Profil introuvable. Veuillez vous reconnecter.' }, { status: 404 });
 
+    // 1b. Vérifier qu'aucun abonnement actif n'existe déjà (anti-double-charge)
+    if (profile.stripe_subscription_id) {
+      try {
+        const existingSub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+        if (existingSub.status === 'active' || existingSub.status === 'trialing') {
+          return NextResponse.json(
+            { error: 'Vous avez déjà un abonnement actif. Veuillez annuler votre abonnement actuel avant d\'en souscrire un nouveau.' },
+            { status: 409 }
+          );
+        }
+      } catch {
+        // Subscription not found in Stripe (deleted/expired) — safe to proceed
+      }
+    }
+
     // 1. Créer ou récupérer le client Stripe
     let customerId = profile?.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({ email: profile?.email, metadata: { userId } });
+      const customer = await stripe.customers.create(
+        { email: profile?.email, metadata: { userId } },
+        { idempotencyKey: 'customer_' + userId }
+      );
       customerId = customer.id;
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
     }
 
     // 2. Créer l'abonnement en attente de paiement (Payment Element)
-    const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-      metadata: { userId, plan },
-    });
+    const subscription = await stripe.subscriptions.create(
+      {
+        customer: customerId,
+        items: [{ price: priceId }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
+        metadata: { userId, plan },
+      },
+      { idempotencyKey: 'sub_' + userId + '_' + plan + '_' + interval + '_' + Date.now() }
+    );
 
     // 3. Extraire le client_secret pour le formulaire de paiement
     const invoice = subscription.latest_invoice as Stripe.Invoice | null;
@@ -85,6 +106,7 @@ export async function POST(req: NextRequest) {
     if (err.code === 'resource_missing') {
       return NextResponse.json({ error: 'Configuration de paiement introuvable. Veuillez contacter le support.' }, { status: 400 });
     }
-    return NextResponse.json({ error: err.message || 'Une erreur est survenue. Veuillez réessayer.' }, { status: 500 });
+    console.error('[API Error]', err);
+    return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

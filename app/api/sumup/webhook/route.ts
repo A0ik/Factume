@@ -22,6 +22,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  const webhookSecret = process.env.SUMUP_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const provided = req.headers.get('x-sumup-webhook-secret');
+    if (provided !== webhookSecret) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+  }
+
   const eventType = event.event_type || event.type;
   const checkoutId = event.id;
 

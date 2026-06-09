@@ -4,7 +4,7 @@ import { BridgeClient } from '@/lib/bridge-client';
 
 export async function GET(req: NextRequest) {
   try {
-    const cronSecret = req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret');
+    const cronSecret = req.headers.get('x-cron-secret') || req.headers.get('authorization')?.replace('Bearer ', '');
     if (cronSecret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }

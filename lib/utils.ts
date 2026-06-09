@@ -46,7 +46,7 @@ export function formatDateShort(dateStr: string, locale = 'fr-FR'): string {
 }
 
 export function formatFrenchDate(year: number, month: number, day: number): string {
-  const date = new Date(year, month, day);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 

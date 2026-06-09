@@ -15,6 +15,7 @@ export function UndoRedoControls({ canUndo, canRedo, onUndo, onRedo }: UndoRedoC
       <button
         onClick={onUndo}
         disabled={!canUndo}
+        aria-label="Annuler"
         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         title="Annuler (Ctrl+Z)"
       >
@@ -23,6 +24,7 @@ export function UndoRedoControls({ canUndo, canRedo, onUndo, onRedo }: UndoRedoC
       <button
         onClick={onRedo}
         disabled={!canRedo}
+        aria-label="Rétablir"
         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         title="Rétablir (Ctrl+Y)"
       >
