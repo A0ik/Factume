@@ -1,10 +1,12 @@
 'use client';
+
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState } from 'react';
-import { Check, CreditCard, Smartphone, Shield, Loader2, Lock, Sparkles, Crown, Zap, Rocket, Clock, BadgeCheck } from 'lucide-react';
+import { Check, Shield, Loader2, Lock, Sparkles, Crown, Zap, Rocket, Clock, BadgeCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useThemeStore } from '@/stores/themeStore';
 
 const stripePk = process.env.NEXT_PUBLIC_STRIPE_PK;
 const stripePromise = stripePk ? loadStripe(stripePk) : null;
@@ -17,11 +19,236 @@ export interface PlanInfo {
   features: string[];
 }
 
-function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planInfo: PlanInfo; isSetupMode: boolean }) {
+/* ═══════════════════════════════════════════════════════════════
+   LOI 8 : STRIPE APPEARANCE API — Dual Theme
+   Light → theme 'stripe' with clean whites
+   Dark  → theme 'night' with Obsidian palette
+   ═══════════════════════════════════════════════════════════════ */
+
+function getLightAppearance(primaryColor: string) {
+  return {
+    theme: 'stripe' as const,
+    variables: {
+      colorPrimary: primaryColor,
+      colorBackground: '#ffffff',
+      colorText: '#111827',
+      colorDanger: '#ef4444',
+      colorWarning: '#f59e0b',
+      colorSuccess: '#10b981',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+      fontSizeBase: '14px',
+      fontSizeSm: '13px',
+      fontSizeXs: '11px',
+      fontSizeLg: '16px',
+      fontWeightNormal: '400',
+      fontWeightMedium: '500',
+      fontWeightBold: '600',
+      spacingUnit: '4px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      focusRing: `${primaryColor}15`,
+    },
+    rules: {
+      '.Tab': {
+        color: '#6B7280',
+        backgroundColor: '#F9FAFB',
+        border: '1px solid #E5E7EB',
+        borderRadius: '10px',
+        padding: '10px 14px',
+        fontSize: '13px',
+        fontWeight: '500',
+        boxShadow: 'none',
+      },
+      '.Tab:hover': {
+        backgroundColor: '#F3F4F6',
+        borderColor: '#D1D5DB',
+      },
+      '.Tab--selected': {
+        backgroundColor: '#FFFFFF',
+        borderColor: primaryColor,
+        color: primaryColor,
+        fontWeight: '600',
+        boxShadow: `0 0 0 2px ${primaryColor}15`,
+      },
+      '.Input': {
+        backgroundColor: '#F9FAFB',
+        border: '1px solid #E5E7EB',
+        borderRadius: '10px',
+        padding: '11px 14px',
+        fontSize: '14px',
+        color: '#111827',
+        boxShadow: 'none',
+      },
+      '.Input::placeholder': { color: '#9CA3AF' },
+      '.Input:focus': {
+        border: `1px solid ${primaryColor}`,
+        backgroundColor: '#FFFFFF',
+        boxShadow: `0 0 0 3px ${primaryColor}12`,
+      },
+      '.Input--invalid': {
+        border: '1px solid #EF4444',
+        backgroundColor: '#FEF2F2',
+      },
+      '.Label': {
+        color: '#374151',
+        fontWeight: '600',
+        fontSize: '12px',
+        marginBottom: '6px',
+      },
+      '.Label--focused': { color: primaryColor },
+      '.Label--invalid': { color: '#EF4444' },
+      '.Error': {
+        color: '#EF4444',
+        fontSize: '12px',
+        marginTop: '6px',
+        fontWeight: '500',
+      },
+      '.Divider': { borderColor: '#E5E7EB' },
+    },
+  };
+}
+
+function getDarkAppearance(primaryColor: string) {
+  return {
+    theme: 'night' as const,
+    variables: {
+      colorPrimary: primaryColor,
+      colorBackground: '#111113',
+      colorText: '#FAFAFA',
+      colorDanger: '#f87171',
+      colorWarning: '#fbbf24',
+      colorSuccess: '#34d399',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+      fontSizeBase: '14px',
+      fontSizeSm: '13px',
+      fontSizeXs: '11px',
+      fontSizeLg: '16px',
+      fontWeightNormal: '400',
+      fontWeightMedium: '500',
+      fontWeightBold: '600',
+      spacingUnit: '4px',
+      borderRadius: '12px',
+      borderWidth: '1px',
+      focusRing: `${primaryColor}25`,
+    },
+    rules: {
+      '.Tab': {
+        color: '#A1A1AA',
+        backgroundColor: '#09090B',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '10px',
+        padding: '10px 14px',
+        fontSize: '13px',
+        fontWeight: '500',
+        boxShadow: 'none',
+      },
+      '.Tab:hover': {
+        backgroundColor: '#111113',
+        borderColor: 'rgba(255,255,255,0.12)',
+      },
+      '.Tab--selected': {
+        backgroundColor: '#111113',
+        borderColor: primaryColor,
+        color: primaryColor,
+        fontWeight: '600',
+        boxShadow: `0 0 0 2px ${primaryColor}20`,
+      },
+      '.Input': {
+        backgroundColor: '#09090B',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '10px',
+        padding: '11px 14px',
+        fontSize: '14px',
+        color: '#FAFAFA',
+        boxShadow: 'none',
+      },
+      '.Input::placeholder': { color: '#71717A' },
+      '.Input:focus': {
+        border: `1px solid ${primaryColor}`,
+        backgroundColor: '#111113',
+        boxShadow: `0 0 0 3px ${primaryColor}18`,
+      },
+      '.Input--invalid': {
+        border: '1px solid #f87171',
+        backgroundColor: 'rgba(239,68,68,0.08)',
+      },
+      '.Label': {
+        color: '#D4D4D8',
+        fontWeight: '600',
+        fontSize: '12px',
+        marginBottom: '6px',
+      },
+      '.Label--focused': { color: primaryColor },
+      '.Label--invalid': { color: '#f87171' },
+      '.Error': {
+        color: '#f87171',
+        fontSize: '12px',
+        marginTop: '6px',
+        fontWeight: '500',
+      },
+      '.Divider': { borderColor: 'rgba(255,255,255,0.08)' },
+    },
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Plan Config — colors per plan
+   ═══════════════════════════════════════════════════════════════ */
+
+const PLAN_CONFIG: Record<string, {
+  icon: typeof Zap;
+  gradient: string;
+  color: string;
+  lightBg: string;
+  darkBg: string;
+  lightText: string;
+  darkText: string;
+  lightRing: string;
+  darkRing: string;
+}> = {
+  solo: {
+    icon: Zap, gradient: 'from-emerald-500 to-emerald-600', color: '#10B981',
+    lightBg: 'bg-emerald-50', darkBg: 'bg-emerald-500/10',
+    lightText: 'text-emerald-700', darkText: 'text-emerald-400',
+    lightRing: 'ring-emerald-200', darkRing: 'ring-emerald-500/30',
+  },
+  pro: {
+    icon: Rocket, gradient: 'from-blue-600 to-blue-800', color: '#2563EB',
+    lightBg: 'bg-blue-50', darkBg: 'bg-blue-500/10',
+    lightText: 'text-blue-700', darkText: 'text-blue-400',
+    lightRing: 'ring-blue-200', darkRing: 'ring-blue-500/30',
+  },
+  business: {
+    icon: Crown, gradient: 'from-purple-600 to-violet-700', color: '#9333EA',
+    lightBg: 'bg-purple-50', darkBg: 'bg-purple-500/10',
+    lightText: 'text-purple-700', darkText: 'text-purple-400',
+    lightRing: 'ring-purple-200', darkRing: 'ring-purple-500/30',
+  },
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   CheckoutForm — inner form with PaymentElement
+   LOI 9: Elegant error handling, no page reload
+   LOI 7: Micro-reassurance under submit button
+   ═══════════════════════════════════════════════════════════════ */
+
+function CheckoutForm({
+  planInfo,
+  isSetupMode,
+  isDark,
+}: {
+  userId: string;
+  planInfo: PlanInfo;
+  isSetupMode: boolean;
+  isDark: boolean;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.solo;
+  const PlanIcon = config.icon;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,32 +268,18 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
     }
   };
 
-  const getPlanConfig = () => {
-    switch (planInfo.id) {
-      case 'solo':
-        return { icon: Zap, gradient: 'from-emerald-500 to-emerald-600', color: '#10B981', lightBg: 'bg-emerald-50', textColor: 'text-emerald-700', ring: 'ring-emerald-200' };
-      case 'pro':
-        return { icon: Rocket, gradient: 'from-blue-600 to-blue-800', color: '#2563EB', lightBg: 'bg-blue-50', textColor: 'text-blue-700', ring: 'ring-blue-200' };
-      case 'business':
-        return { icon: Crown, gradient: 'from-purple-600 to-violet-700', color: '#9333EA', lightBg: 'bg-purple-50', textColor: 'text-purple-700', ring: 'ring-purple-200' };
-      default:
-        return { icon: Sparkles, gradient: 'from-gray-700 to-gray-900', color: '#374151', lightBg: 'bg-gray-50', textColor: 'text-gray-700', ring: 'ring-gray-200' };
-    }
-  };
-
-  const config = getPlanConfig();
-  const PlanIcon = config.icon;
-
   return (
     <div className="space-y-5">
-      {/* Plan summary card */}
+      {/* Plan summary card — dual theme */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
           "relative overflow-hidden rounded-2xl border",
-          "bg-white shadow-sm",
-          `ring-2 ${config.ring}`
+          isDark
+            ? "bg-[#111113] border-white/[0.08]"
+            : "bg-white border-gray-200",
+          `ring-2 ${isDark ? config.darkRing : config.lightRing}`
         )}
       >
         <div className="flex items-center gap-4 p-4">
@@ -78,33 +291,61 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className={cn("font-bold text-base", config.textColor)}>{planInfo.name}</h3>
+              <h3 className={cn(
+                "font-bold text-base",
+                isDark ? config.darkText : config.lightText
+              )}>
+                {planInfo.name}
+              </h3>
               {isSetupMode && (
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
+                <span className={cn(
+                  "px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1",
+                  isDark
+                    ? "bg-amber-500/15 text-amber-400"
+                    : "bg-amber-100 text-amber-700"
+                )}>
                   <Clock size={10} />
                   Essai 7j
                 </span>
               )}
             </div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className={cn("text-xl font-black", config.textColor)}>{planInfo.price}€</span>
-              <span className="text-xs text-gray-500">{planInfo.priceNote}</span>
+              <span className={cn(
+                "text-xl font-black",
+                isDark ? config.darkText : config.lightText
+              )}>
+                {planInfo.price}€
+              </span>
+              <span className={cn(
+                "text-xs",
+                isDark ? "text-zinc-500" : "text-gray-500"
+              )}>
+                {planInfo.priceNote}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Features pills */}
+        {/* Feature pills — dual theme */}
         <div className="px-4 pb-4 flex flex-wrap gap-1.5">
           {planInfo.features.map((f, i) => (
-            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-50 text-[11px] text-gray-600 font-medium">
-              <Check size={10} className={config.textColor} strokeWidth={3} />
+            <span
+              key={i}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium",
+                isDark
+                  ? "bg-white/[0.05] text-zinc-400"
+                  : "bg-gray-50 text-gray-600"
+              )}
+            >
+              <Check size={10} className={isDark ? config.darkText : config.lightText} strokeWidth={3} />
               {f}
             </span>
           ))}
         </div>
       </motion.div>
 
-      {/* Payment form */}
+      {/* Payment form — LOI 9: Error handling */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -112,12 +353,16 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
         className="space-y-4"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Stripe Payment Element */}
+          {/* LOI 8: Stripe Appearance adapts to theme */}
           <div className={cn(
-            "relative overflow-hidden rounded-xl border bg-white",
-            "border-gray-200",
+            "relative overflow-hidden rounded-xl border",
+            isDark
+              ? "bg-[#111113] border-white/[0.08]"
+              : "bg-white border-gray-200",
             "transition-all duration-200",
-            "hover:border-gray-300 focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-gray-100"
+            isDark
+              ? "hover:border-white/[0.12] focus-within:border-white/[0.12] focus-within:ring-2 focus-within:ring-emerald-500/10"
+              : "hover:border-gray-300 focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-gray-100"
           )}>
             <PaymentElement
               options={{
@@ -128,17 +373,22 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
             />
           </div>
 
-          {/* Error message */}
+          {/* LOI 9: Error display — theme-aware */}
           <AnimatePresence>
             {error && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="rounded-xl bg-red-50 border border-red-200 p-3 flex items-start gap-2"
+                className={cn(
+                  "rounded-xl border p-3 flex items-start gap-2",
+                  isDark
+                    ? "bg-red-500/10 border-red-500/20"
+                    : "bg-red-50 border-red-200"
+                )}
               >
-                <Shield size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-red-700">{error}</p>
+                <Shield size={14} className={isDark ? "text-red-400 mt-0.5 flex-shrink-0" : "text-red-500 mt-0.5 flex-shrink-0"} />
+                <p className={cn("text-xs", isDark ? "text-red-400" : "text-red-700")}>{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -165,24 +415,33 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
             ) : (
               <>
                 <Lock size={15} />
-                <span>{isSetupMode ? 'Démarrer mon essai gratuit' : 'Confirmer et s\'abonner'}</span>
+                <span>{isSetupMode ? 'Démarrer mon essai gratuit' : "Confirmer et s'abonner"}</span>
               </>
             )}
           </motion.button>
 
-          {/* Security footer */}
+          {/* LOI 7: Micro-reassurance */}
           <div className="flex items-center justify-center gap-4 pt-1">
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+            <div className={cn(
+              "flex items-center gap-1.5 text-[11px]",
+              isDark ? "text-zinc-500" : "text-gray-400"
+            )}>
               <Lock size={11} />
               <span>Chiffrement SSL</span>
             </div>
-            <div className="w-px h-3 bg-gray-200" />
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+            <div className={cn("w-px h-3", isDark ? "bg-zinc-800" : "bg-gray-200")} />
+            <div className={cn(
+              "flex items-center gap-1.5 text-[11px]",
+              isDark ? "text-zinc-500" : "text-gray-400"
+            )}>
               <Shield size={11} />
               <span>Stripe PCI DSS</span>
             </div>
-            <div className="w-px h-3 bg-gray-200" />
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+            <div className={cn("w-px h-3", isDark ? "bg-zinc-800" : "bg-gray-200")} />
+            <div className={cn(
+              "flex items-center gap-1.5 text-[11px]",
+              isDark ? "text-zinc-500" : "text-gray-400"
+            )}>
               <BadgeCheck size={11} />
               <span>RGPD</span>
             </div>
@@ -192,6 +451,11 @@ function CheckoutForm({ userId, planInfo, isSetupMode }: { userId: string; planI
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   EmbeddedCheckout — Wrapper with dynamic Stripe Appearance
+   LOI 8: Dynamically switches between light/dark Stripe themes
+   ═══════════════════════════════════════════════════════════════ */
 
 export default function EmbeddedCheckout({
   clientSecret,
@@ -204,113 +468,41 @@ export default function EmbeddedCheckout({
   planInfo: PlanInfo;
   isSetupMode?: boolean;
 }) {
-  const getPlanColor = () => {
-    switch (planInfo.id) {
-      case 'solo': return '#10B981';
-      case 'pro': return '#2563EB';
-      case 'business': return '#9333EA';
-      default: return '#111827';
-    }
-  };
+  const { resolvedTheme } = useThemeStore();
+  const isDark = resolvedTheme === 'dark';
 
-  const primaryColor = getPlanColor();
+  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.solo;
+  const primaryColor = config.color;
+
+  // LOI 8: Build Stripe Appearance dynamically
+  const appearance = isDark
+    ? getDarkAppearance(primaryColor)
+    : getLightAppearance(primaryColor);
 
   const options = {
     clientSecret,
-    appearance: {
-      theme: 'flat' as const,
-      variables: {
-        colorPrimary: primaryColor,
-        colorBackground: '#FFFFFF',
-        colorText: '#111827',
-        colorDanger: '#EF4444',
-        colorWarning: '#F59E0B',
-        colorSuccess: '#10B981',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        fontSizeBase: '14px',
-        fontSizeSm: '13px',
-        fontSizeXs: '11px',
-        fontSizeLg: '16px',
-        fontWeightNormal: '400',
-        fontWeightMedium: '500',
-        fontWeightBold: '600',
-        spacingUnit: '4px',
-        borderRadius: '10px',
-        borderWidth: '1px',
-        focusRing: `${primaryColor}15`,
-      },
-      rules: {
-        '.Tab': {
-          color: '#6B7280',
-          backgroundColor: '#F9FAFB',
-          border: '1px solid #E5E7EB',
-          borderRadius: '8px',
-          padding: '10px 14px',
-          fontSize: '13px',
-          fontWeight: '500',
-          transition: 'all 0.15s ease',
-          boxShadow: 'none',
-        },
-        '.Tab:hover': {
-          backgroundColor: '#F3F4F6',
-          borderColor: '#D1D5DB',
-        },
-        '.Tab--selected': {
-          backgroundColor: '#FFFFFF',
-          borderColor: primaryColor,
-          color: primaryColor,
-          fontWeight: '600',
-          boxShadow: `0 0 0 2px ${primaryColor}15`,
-        },
-        '.Input': {
-          backgroundColor: '#F9FAFB',
-          border: '1px solid #E5E7EB',
-          borderRadius: '8px',
-          padding: '10px 12px',
-          fontSize: '14px',
-          color: '#111827',
-          boxShadow: 'none',
-          transition: 'all 0.15s ease',
-        },
-        '.Input::placeholder': { color: '#9CA3AF' },
-        '.Input:focus': {
-          border: `1px solid ${primaryColor}`,
-          backgroundColor: '#FFFFFF',
-          boxShadow: `0 0 0 2px ${primaryColor}12`,
-          outline: 'none',
-        },
-        '.Input--invalid': {
-          border: '1px solid #EF4444',
-          backgroundColor: '#FEF2F2',
-        },
-        '.Label': {
-          color: '#374151',
-          fontWeight: '600',
-          fontSize: '12px',
-          marginBottom: '6px',
-          letterSpacing: '-0.01em',
-        },
-        '.Label--focused': { color: primaryColor },
-        '.Label--invalid': { color: '#EF4444' },
-        '.Error': {
-          color: '#EF4444',
-          fontSize: '12px',
-          marginTop: '6px',
-          fontWeight: '500',
-        },
-        '.CardField': { backgroundColor: '#F9FAFB' },
-        '.Divider': { borderColor: '#E5E7EB', margin: '12px 0' },
-      },
-    },
+    appearance,
   };
 
   if (!stripePromise) {
-    return <div className="p-4 text-red-500">Configuration Stripe manquante.</div>;
+    return (
+      <div className={cn(
+        "p-4 rounded-xl",
+        isDark ? "text-red-400 bg-red-500/10" : "text-red-500 bg-red-50"
+      )}>
+        Configuration Stripe manquante.
+      </div>
+    );
   }
 
   return (
     <Elements options={options} stripe={stripePromise}>
-      <CheckoutForm userId={userId} planInfo={planInfo} isSetupMode={isSetupMode} />
+      <CheckoutForm
+        userId={userId}
+        planInfo={planInfo}
+        isSetupMode={isSetupMode}
+        isDark={isDark}
+      />
     </Elements>
   );
 }

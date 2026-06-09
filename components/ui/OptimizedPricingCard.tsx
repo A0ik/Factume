@@ -1,9 +1,17 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Sparkles, Shield, ArrowRight, CheckCircle2, Circle, Lock, HeadphonesIcon as Headphones, BadgePercent } from 'lucide-react';
+import {
+  Check, Shield, ArrowRight, CheckCircle2, Circle, Lock,
+  HeadphonesIcon as Headphones, BadgePercent,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
+
+/* ═══════════════════════════════════════════════════════════════
+   Types
+   ═══════════════════════════════════════════════════════════════ */
 
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
@@ -29,7 +37,10 @@ interface OptimizedPricingCardProps {
   currentPlan?: string;
 }
 
-// Animated background particles per plan
+/* ═══════════════════════════════════════════════════════════════
+   Plan Visual Config — per-plan colors for both themes
+   ═══════════════════════════════════════════════════════════════ */
+
 const PLAN_COLORS: Record<string, { dot: string; glow: string; meteor: string }> = {
   solo: { dot: 'rgba(16, 185, 129, 0.5)', glow: 'rgba(16, 185, 129, 0.15)', meteor: '#10b981' },
   pro: { dot: 'rgba(59, 130, 246, 0.5)', glow: 'rgba(59, 130, 246, 0.15)', meteor: '#3b82f6' },
@@ -48,6 +59,10 @@ const PLAN_HEADER: Record<string, string> = {
   business: 'linear-gradient(135deg, #9333ea, #6d28d9)',
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   Animated Background Effects
+   ═══════════════════════════════════════════════════════════════ */
+
 function FloatingOrbs({ color }: { color: string }) {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -57,10 +72,8 @@ function FloatingOrbs({ color }: { color: string }) {
           className="absolute rounded-full"
           style={{
             background: `radial-gradient(circle, ${color}, transparent 70%)`,
-            width: 40 + i * 20,
-            height: 40 + i * 20,
-            left: `${15 + i * 22}%`,
-            top: `${10 + i * 18}%`,
+            width: 40 + i * 20, height: 40 + i * 20,
+            left: `${15 + i * 22}%`, top: `${10 + i * 18}%`,
           }}
           animate={{
             x: [0, 30 + i * 10, -20, 0],
@@ -68,12 +81,7 @@ function FloatingOrbs({ color }: { color: string }) {
             opacity: [0.3, 0.6, 0.4, 0.3],
             scale: [1, 1.2, 0.9, 1],
           }}
-          transition={{
-            duration: 6 + i * 1.5,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: i * 0.8,
-          }}
+          transition={{ duration: 6 + i * 1.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.8 }}
         />
       ))}
     </div>
@@ -88,24 +96,14 @@ function MeteorShower({ color }: { color: string }) {
           key={`meteor-${i}`}
           className="absolute"
           style={{
-            width: 2,
-            height: 20 + i * 10,
+            width: 2, height: 20 + i * 10,
             background: `linear-gradient(to bottom, ${color}, transparent)`,
-            borderRadius: 999,
-            left: `${20 + i * 30}%`,
-            top: '-10%',
+            borderRadius: 999, left: `${20 + i * 30}%`, top: '-10%',
           }}
           animate={{
-            y: ['0%', '120%'],
-            x: [0, -30 + i * 15],
-            opacity: [0, 1, 0],
+            y: ['0%', '120%'], x: [0, -30 + i * 15], opacity: [0, 1, 0],
           }}
-          transition={{
-            duration: 2.5 + i * 0.8,
-            repeat: Infinity,
-            ease: 'linear',
-            delay: i * 1.2 + Math.random() * 2,
-          }}
+          transition={{ duration: 2.5 + i * 0.8, repeat: Infinity, ease: 'linear', delay: i * 1.2 }}
         />
       ))}
     </div>
@@ -120,77 +118,98 @@ function FloatingDots({ color }: { color: string }) {
           key={`dot-${i}`}
           className="absolute rounded-full"
           style={{
-            width: 2 + (i % 3),
-            height: 2 + (i % 3),
+            width: 2 + (i % 3), height: 2 + (i % 3),
             backgroundColor: color,
-            left: `${10 + i * 12}%`,
-            top: `${15 + (i * 17) % 70}%`,
+            left: `${10 + i * 12}%`, top: `${15 + (i * 17) % 70}%`,
           }}
           animate={{
             y: [0, -15 - i * 3, 10, 0],
             x: [0, 8 - i * 2, -5, 0],
             opacity: [0, 0.8, 0.4, 0],
           }}
-          transition={{
-            duration: 3 + i * 0.5,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: i * 0.4,
-          }}
+          transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 }}
         />
       ))}
     </div>
   );
 }
 
-const PlanFeatureItem = ({ feature, delay }: { feature: PlanFeature; delay: number }) => (
+/* ═══════════════════════════════════════════════════════════════
+   Feature Item — dual theme
+   ═══════════════════════════════════════════════════════════════ */
+
+const PlanFeatureItem = ({
+  feature, delay, isDark,
+}: { feature: PlanFeature; delay: number; isDark: boolean }) => (
   <motion.li
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: delay + 0.05 }}
     className={cn(
       'flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg transition-all duration-200',
-      feature.included ? 'hover:bg-gray-50' : 'opacity-50',
-      feature.highlight && 'bg-emerald-50/80 border border-emerald-200/50'
+      feature.included
+        ? isDark ? 'hover:bg-white/[0.04]' : 'hover:bg-gray-50'
+        : 'opacity-50',
+      feature.highlight && (
+        isDark
+          ? 'bg-emerald-500/10 border border-emerald-500/20'
+          : 'bg-emerald-50/80 border border-emerald-200/50'
+      )
     )}
   >
     {feature.included ? (
       <CheckCircle2 size={15} className={cn(
         'flex-shrink-0 stroke-[2.5]',
-        feature.highlight ? 'text-emerald-600' : 'text-primary'
+        feature.highlight
+          ? isDark ? 'text-emerald-400' : 'text-emerald-600'
+          : 'text-primary'
       )} />
     ) : (
-      <Circle size={15} className="flex-shrink-0 text-gray-300 stroke-2" />
+      <Circle size={15} className={cn(
+        "flex-shrink-0 stroke-2",
+        isDark ? "text-zinc-700" : "text-gray-300"
+      )} />
     )}
     <span className={cn(
       'text-[13px] flex-1',
-      feature.included ? 'text-gray-700' : 'text-gray-400',
-      feature.highlight && 'font-semibold text-emerald-800'
+      feature.included
+        ? isDark ? 'text-zinc-300' : 'text-gray-700'
+        : isDark ? 'text-zinc-600' : 'text-gray-400',
+      feature.highlight && (
+        isDark
+          ? 'font-semibold text-emerald-400'
+          : 'font-semibold text-emerald-800'
+      )
     )}>
       {feature.label}
     </span>
     {feature.highlight && (
-      <span className="px-2 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full uppercase tracking-wider">
+      <span className={cn(
+        "px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider",
+        isDark
+          ? "bg-emerald-500/15 text-emerald-400"
+          : "bg-emerald-100 text-emerald-700"
+      )}>
         Top
       </span>
     )}
   </motion.li>
 );
 
+/* ═══════════════════════════════════════════════════════════════
+   OptimizedPricingCard — Full dual-theme support
+   LOI 1: Dualité parfaite
+   LOI 2: Ancrage psychologique (Solo = recommended)
+   LOI 5: Adaptation rétinienne
+   ═══════════════════════════════════════════════════════════════ */
+
 export function OptimizedPricingCard({
-  plan,
-  isHighlighted,
-  isCurrent,
-  isLoading,
-  isDowngrade,
-  onClick,
-  delay,
-  billing,
-  userCount = '+2,500',
-  prorataAmount = 0,
-  prorataPercent = 0,
-  currentPlan,
+  plan, isHighlighted, isCurrent, isLoading, isDowngrade,
+  onClick, delay, billing, userCount = '+2,500',
+  prorataAmount = 0, prorataPercent = 0, currentPlan,
 }: OptimizedPricingCardProps) {
+  const { resolvedTheme } = useThemeStore();
+  const isDark = resolvedTheme === 'dark';
   const Icon = plan.icon;
   const isYearly = billing === 'yearly';
   const displayPrice = isYearly ? plan.yearlyPrice : plan.price;
@@ -211,17 +230,24 @@ export function OptimizedPricingCard({
         animate={{ y: hovered ? -6 : 0 }}
         transition={{ duration: 0.2 }}
         className={cn(
-          'relative h-full flex flex-col rounded-2xl overflow-hidden cursor-pointer',
-          'bg-white border transition-all duration-300',
+          'relative h-full flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-300',
+          isDark
+            ? 'bg-[#111113] border'
+            : 'bg-white border',
           isHighlighted
-            ? 'border-gray-200 shadow-xl ring-2'
-            : 'border-gray-200/80 shadow-sm hover:shadow-lg hover:border-gray-300',
-          isCurrent && !isHighlighted && 'ring-1 ring-primary/20',
+            ? isDark
+              ? 'border-emerald-500/30 shadow-xl ring-2 ring-emerald-500/20'
+              : 'border-emerald-300 shadow-xl ring-2 ring-emerald-200'
+            : isDark
+              ? 'border-white/[0.08] shadow-sm hover:shadow-lg hover:border-white/[0.12]'
+              : 'border-gray-200/80 shadow-sm hover:shadow-lg hover:border-gray-300',
+          isCurrent && !isHighlighted && (isDark ? 'ring-1 ring-primary/20' : 'ring-1 ring-primary/20'),
         )}
         style={{
-          ...(isHighlighted ? { ringColor: colors.dot.replace('0.5', '0.3') } : {}),
           boxShadow: isHighlighted
-            ? `0 8px 40px -12px ${colors.glow}`
+            ? isDark
+              ? `0 8px 40px -12px ${colors.glow}, 0 0 60px -20px ${colors.glow}`
+              : `0 8px 40px -12px ${colors.glow}`
             : hovered
               ? `0 4px 20px -8px ${colors.glow}`
               : undefined,
@@ -233,7 +259,6 @@ export function OptimizedPricingCard({
           <FloatingOrbs color={colors.glow} />
           <MeteorShower color={colors.meteor} />
           <FloatingDots color={colors.dot} />
-
           {/* Subtle grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.02]"
@@ -244,20 +269,20 @@ export function OptimizedPricingCard({
           />
         </div>
 
-        {/* Popular badge */}
+        {/* LOI 2: Anchor badge for recommended plan */}
         {isHighlighted && (
           <div className="absolute top-0 right-0 z-20">
             <div
               className="text-[10px] font-bold px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-white"
               style={{ background: PLAN_HEADER[plan.id] }}
             >
-              {plan.badge}
+              {plan.badge || 'Recommandé'}
             </div>
           </div>
         )}
 
         <div className="relative z-10 flex flex-col h-full">
-          {/* Header */}
+          {/* Header — gradient stays vibrant in both themes */}
           <div
             className="relative p-6 pb-7 rounded-t-2xl overflow-hidden text-white"
             style={{ background: PLAN_HEADER[plan.id] }}
@@ -270,9 +295,7 @@ export function OptimizedPricingCard({
                   className="absolute rounded-full bg-white/20"
                   style={{ width: 3, height: 3, left: `${i * 22}%`, top: `${20 + i * 15}%` }}
                   animate={{
-                    y: [0, -20, 10, 0],
-                    x: [0, 10 - i * 4, -8, 0],
-                    opacity: [0, 0.8, 0.3, 0],
+                    y: [0, -20, 10, 0], x: [0, 10 - i * 4, -8, 0], opacity: [0, 0.8, 0.3, 0],
                   }}
                   transition={{ duration: 4 + i, repeat: Infinity, delay: i * 0.6 }}
                 />
@@ -355,36 +378,47 @@ export function OptimizedPricingCard({
             </div>
           </div>
 
-          {/* Features */}
+          {/* Features — dual theme */}
           <div className="flex-1 px-5 py-5 relative">
             <ul className="space-y-0.5 relative z-10">
               {plan.features.map((feat, i) => (
-                <PlanFeatureItem key={i} feature={feat} delay={delay} />
+                <PlanFeatureItem key={i} feature={feat} delay={delay} isDark={isDark} />
               ))}
             </ul>
           </div>
 
-          {/* Trust badges for highlighted plan */}
+          {/* LOI 7: Trust badges for highlighted plan — dual theme */}
           {isHighlighted && (
             <div className="px-5 pb-3">
               <div className="flex items-center justify-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
-                  <Shield size={11} className="text-primary" />
-                  <span className="text-[9px] font-semibold text-gray-500">Sécurisé</span>
-                </div>
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
-                  <Lock size={11} className="text-primary" />
-                  <span className="text-[9px] font-semibold text-gray-500">RGPD</span>
-                </div>
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
-                  <Headphones size={11} className="text-primary" />
-                  <span className="text-[9px] font-semibold text-gray-500">Support</span>
-                </div>
+                {[
+                  { icon: Shield, label: 'Sécurisé' },
+                  { icon: Lock, label: 'RGPD' },
+                  { icon: Headphones, label: 'Support' },
+                ].map((badge, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 rounded-lg border",
+                      isDark
+                        ? "bg-white/[0.04] border-white/[0.06]"
+                        : "bg-gray-50 border-gray-100"
+                    )}
+                  >
+                    <badge.icon size={11} className="text-primary" />
+                    <span className={cn(
+                      "text-[9px] font-semibold",
+                      isDark ? "text-zinc-500" : "text-gray-500"
+                    )}>
+                      {badge.label}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* CTA */}
+          {/* CTA — dual theme */}
           <div className="px-5 pb-5 pt-2">
             <motion.button
               whileHover={{ scale: isCurrent || isDowngrade ? 1 : 1.02 }}
@@ -393,9 +427,13 @@ export function OptimizedPricingCard({
               className={cn(
                 'w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 relative overflow-hidden',
                 isCurrent
-                  ? 'bg-gray-100 text-gray-500 cursor-default'
+                  ? isDark
+                    ? 'bg-white/[0.06] text-zinc-500 cursor-default'
+                    : 'bg-gray-100 text-gray-500 cursor-default'
                   : isDowngrade
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    ? isDark
+                      ? 'bg-white/[0.06] text-zinc-600 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'text-white shadow-lg hover:shadow-xl',
               )}
               style={(!isCurrent && !isDowngrade) ? { background: PLAN_BUTTON[plan.id] } : undefined}
@@ -421,7 +459,10 @@ export function OptimizedPricingCard({
             </motion.button>
 
             {!isCurrent && !isDowngrade && (
-              <p className="text-[10px] text-gray-400 text-center mt-2.5 flex items-center justify-center gap-1">
+              <p className={cn(
+                "text-[10px] text-center mt-2.5 flex items-center justify-center gap-1",
+                isDark ? "text-zinc-600" : "text-gray-400"
+              )}>
                 <Shield size={10} />
                 Satisfait ou remboursé sous 30 jours
               </p>

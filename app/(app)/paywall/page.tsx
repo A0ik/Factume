@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useThemeStore } from '@/stores/themeStore';
 import {
   ArrowLeft, Check, Crown, Zap, Rocket, Shield, Loader2, ArrowRight,
-  CreditCard, RefreshCw, Sparkles, Award, Infinity, Lock, CheckCircle2, Circle,
+  CreditCard, RefreshCw, Sparkles, Award, Infinity as InfinityIcon, Lock, CheckCircle2, Circle,
   BadgePercent, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,9 @@ import EmbeddedCheckout, { PlanInfo } from '@/components/ui/EmbeddedCheckout';
 import OptimizedPricingCard from '@/components/ui/OptimizedPricingCard';
 import { PaywallHeader } from '@/components/ui/PaywallHeader';
 
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════════════ */
 
 interface PlanFeature { label: string; included: boolean; highlight?: boolean; }
 interface Plan {
@@ -26,6 +30,10 @@ interface Plan {
   borderColor: string; glowColor: string; popular?: boolean;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   PLANS DATA
+   ═══════════════════════════════════════════════════════════════ */
+
 const PLANS: Plan[] = [
   {
     id: 'solo', name: 'Solo', price: '14,99€', yearlyPrice: '12€', yearlySavings: '36€', tagline: 'Idéal pour démarrer',
@@ -33,7 +41,7 @@ const PLANS: Plan[] = [
     gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
     gradientFrom: 'from-emerald-500', gradientTo: 'to-emerald-700',
     borderColor: 'emerald-500', glowColor: 'shadow-emerald-500',
-    cta: 'Choisir Solo', badge: 'Économique', features: [
+    cta: 'Choisir Solo', badge: 'Recommandé', features: [
       { label: 'Factures illimitées', included: true },
       { label: 'Clients illimités', included: true },
       { label: 'Envoi par email', included: true },
@@ -52,7 +60,7 @@ const PLANS: Plan[] = [
     gradient: 'from-blue-800 via-blue-900 to-indigo-900',
     gradientFrom: 'from-blue-800', gradientTo: 'to-indigo-900',
     borderColor: 'blue-800', glowColor: 'shadow-blue-800',
-    cta: 'Choisir Pro', badge: 'Populaire', popular: true, features: [
+    cta: 'Choisir Pro', badge: 'Populaire', features: [
       { label: 'Tout dans Solo', included: true },
       { label: 'Contrats avec signatures électroniques', included: true, highlight: true },
       { label: 'Factures électroniques', included: true },
@@ -73,7 +81,7 @@ const PLANS: Plan[] = [
     gradient: 'from-purple-600 via-violet-700 to-purple-800',
     gradientFrom: 'from-purple-600', gradientTo: 'to-purple-800',
     borderColor: 'purple-600', glowColor: 'shadow-purple-600',
-    cta: 'Choisir Business', badge: 'Recommandé', features: [
+    cta: 'Choisir Business', badge: 'Premium', features: [
       { label: 'Tout dans Pro', included: true },
       { label: 'Outils avancés (OCR, Analyse IA)', included: true, highlight: true },
       { label: 'Factur-X + Transmission PDP', included: true },
@@ -88,8 +96,14 @@ const PLANS: Plan[] = [
   },
 ];
 
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+
+// LOI 2: Solo recommended for free users, upgrade suggestion for paid
 function getHighlightedPlan(tier: string): string {
-  if (tier === 'free' || tier === 'solo') return 'pro';
+  if (tier === 'free') return 'solo';
+  if (tier === 'solo') return 'pro';
   return 'business';
 }
 
@@ -103,10 +117,21 @@ function getPriceNote(plan: Plan, yearly: boolean, trialMode = false): string {
   return trialMode ? '/ mois (après 7 jours d\'essai)' : '/ mois';
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   MAIN PAYWALL PAGE
+   LOI 1: Dualité parfaite (Clair & Obsidian)
+   LOI 4: Toggle fluide Mensuel/Annuel
+   LOI 6: Sticky Summary (desktop)
+   LOI 10: Mobile fluide
+   ═══════════════════════════════════════════════════════════════ */
+
 export default function PaywallPage() {
   const router = useRouter();
   const { profile } = useAuthStore();
   const sub = useSubscription();
+  const { resolvedTheme } = useThemeStore();
+  const isDark = resolvedTheme === 'dark';
+
   const [loading, setLoading] = useState<string | null>(null);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const highlighted = getHighlightedPlan(sub.tier);
@@ -119,6 +144,7 @@ export default function PaywallPage() {
     isSetupMode?: boolean;
   } | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [trialLoading, setTrialLoading] = useState(false);
 
   const [prorataData, setProrataData] = useState<Record<string, { amount: number; percent: number }>>({});
   const [confirmChange, setConfirmChange] = useState<{ plan: Plan; prorata: { amount: number; percent: number } } | null>(null);
@@ -131,24 +157,12 @@ export default function PaywallPage() {
 
   useEffect(() => {
     if (monthlyRef.current && yearlyRef.current) {
-      const parent = monthlyRef.current.parentElement;
-      if (!parent) return;
-      if (!isYearly) {
-        setTogglePos({
-          left: monthlyRef.current.offsetLeft,
-          width: monthlyRef.current.offsetWidth,
-        });
-      } else {
-        setTogglePos({
-          left: yearlyRef.current.offsetLeft,
-          width: yearlyRef.current.offsetWidth,
-        });
-      }
+      const ref = !isYearly ? monthlyRef.current : yearlyRef.current;
+      setTogglePos({ left: ref.offsetLeft, width: ref.offsetWidth });
     }
   }, [isYearly]);
 
-  // Si l'utilisateur change la facturation alors que le checkout est déjà ouvert,
-  // on reset pour qu'il reparte sur les plans avec le bon prix.
+  // Reset checkout when billing changes
   useEffect(() => {
     if (checkoutData) {
       setCheckoutData(null);
@@ -157,6 +171,7 @@ export default function PaywallPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [billing]);
 
+  // Fetch prorata data for plan changes
   useEffect(() => {
     const fetchProrataData = async () => {
       if (!profile?.id || sub.isFree) return;
@@ -167,7 +182,7 @@ export default function PaywallPage() {
             const data = await res.json();
             return { planId: plan.id, data: { amount: data.prorataAmount || 0, percent: data.prorataPercent || 0 } };
           }
-        } catch {}
+        } catch { /* ignore */ }
         return null;
       });
       const results = await Promise.all(promises);
@@ -178,52 +193,41 @@ export default function PaywallPage() {
     fetchProrataData();
   }, [profile?.id, sub.isFree, sub.tier]);
 
-  const handleSelectWithTrial = async (planId: string) => {
-    const selectedPlan = PLANS.find(p => p.id === planId);
-    if (!selectedPlan || !profile?.id) return;
-
-    setLoading(planId);
-    setSelectedPlan(selectedPlan);
+  /* ─── Trial without card activation ─── */
+  const handleTrialActivation = async () => {
+    if (!profile?.id) return;
+    setTrialLoading(true);
     try {
-      const res = await fetch('/api/stripe/trial-subscription', {
+      // Simple fingerprint from browser
+      const fp = btoa(
+        `${navigator.userAgent}|${screen.width}x${screen.height}|${Intl.DateTimeFormat().resolvedOptions().timeZone}`
+      ).slice(0, 64);
+
+      const res = await fetch('/api/trial/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, yearly: isYearly }),
+        body: JSON.stringify({ plan: 'solo', fingerprint: fp }),
       });
       const data = await res.json();
 
-      if (data.clientSecret) {
-        const planInfo: PlanInfo = {
-          id: selectedPlan.id,
-          name: selectedPlan.name,
-          price: (isYearly ? selectedPlan.yearlyPrice : selectedPlan.price).replace('€', ''),
-          priceNote: getPriceNote(selectedPlan, isYearly, true),
-          features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
-        };
-
-        setCheckoutData({
-          clientSecret: data.clientSecret,
-          userId: profile.id,
-          planInfo,
-          isSetupMode: data.isSetupMode || false,
-        });
+      if (data.success) {
+        toast.success('Essai activé ! Profitez de Solo pendant 7 jours.');
+        setTimeout(() => { window.location.href = '/dashboard?trial=true'; }, 800);
       } else {
-        toast.error(data.error || "Impossible de créer l'essai");
-        setSelectedPlan(null);
+        toast.error(data.error || "Impossible d'activer l'essai");
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Erreur');
-      setSelectedPlan(null);
+    } catch (e: unknown) {
+      const err = e as Error;
+      toast.error(err.message || 'Erreur');
     } finally {
-      setLoading(null);
+      setTrialLoading(false);
     }
   };
 
+  /* ─── URL-based trial trigger ─── */
   useEffect(() => {
     if (trialTriggered.current) return;
     if (!profile?.id) return;
-
-    // Ne pas déclencher si l'utilisateur a déjà un abonnement actif ou un trial
     if (sub.tier !== 'free') return;
 
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -232,25 +236,19 @@ export default function PaywallPage() {
 
     if (planParam && trialParam === 'true') {
       trialTriggered.current = true;
-      // Nettoyer l'URL immédiatement pour éviter un re-trigger au refresh
       window.history.replaceState({}, '', '/paywall');
-      const plan = PLANS.find(p => p.id === planParam);
-      if (plan) {
-        setSelectedPlan(plan);
-        handleSelectWithTrial(planParam);
-      }
+      handleTrialActivation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
+  /* ─── Select plan for checkout ─── */
   const handleSelect = async (planId: string) => {
     if (planId === sub.tier) return;
     const selectedPlan = PLANS.find(p => p.id === planId);
     if (!selectedPlan || !profile?.id) return;
 
-    // La modal prorata ne s'affiche que si l'utilisateur a une VRAIE subscription Stripe active.
-    // Si le tier a été mis manuellement (test Supabase) sans stripe_subscription_id,
-    // on passe directement au formulaire de paiement.
+    // If user has real Stripe subscription, show prorata confirmation
     const hasRealStripeSubscription = !sub.isFree && sub.tier !== 'free' && !!profile?.stripe_subscription_id;
     if (hasRealStripeSubscription) {
       const prorata = prorataData[planId] || { amount: 0, percent: 0 };
@@ -258,7 +256,7 @@ export default function PaywallPage() {
       return;
     }
 
-    // Utilisateur gratuit : afficher le checkout Stripe
+    // Free user: show Stripe checkout
     setLoading(planId);
     setSelectedPlan(selectedPlan);
     try {
@@ -277,24 +275,21 @@ export default function PaywallPage() {
           priceNote: getPriceNote(selectedPlan, isYearly),
           features: selectedPlan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
-
-        setCheckoutData({
-          clientSecret: data.clientSecret,
-          userId: profile?.id ?? '',
-          planInfo,
-        });
+        setCheckoutData({ clientSecret: data.clientSecret, userId: profile?.id ?? '', planInfo });
       } else {
         toast.error(data.error || "Impossible de créer l'abonnement");
         setSelectedPlan(null);
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Erreur');
+    } catch (e: unknown) {
+      const err = e as Error;
+      toast.error(err.message || 'Erreur');
       setSelectedPlan(null);
     } finally {
       setLoading(null);
     }
   };
 
+  /* ─── Confirm plan change (prorata) ─── */
   const confirmPlanChange = async () => {
     if (!confirmChange || !profile?.id) return;
     const { plan } = confirmChange;
@@ -315,27 +310,22 @@ export default function PaywallPage() {
         toast.success('Abonnement mis à jour avec succès !');
         setTimeout(() => window.location.reload(), 1500);
       } else if (data.clientSecret) {
-        // L'utilisateur n'a pas de moyen de paiement enregistré — afficher le formulaire
         const planInfo: PlanInfo = {
-          id: plan.id,
-          name: plan.name,
+          id: plan.id, name: plan.name,
           price: (isYearly ? plan.yearlyPrice : plan.price).replace('€', ''),
           priceNote: getPriceNote(plan, isYearly),
           features: plan.features.filter(f => f.included).slice(0, 4).map(f => f.label),
         };
-        setCheckoutData({
-          clientSecret: data.clientSecret,
-          userId: profile.id,
-          planInfo,
-        });
+        setCheckoutData({ clientSecret: data.clientSecret, userId: profile.id, planInfo });
         setLoading(null);
         return;
       } else {
         toast.error(data.error || "Impossible de changer l'abonnement");
         setSelectedPlan(null);
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Erreur');
+    } catch (e: unknown) {
+      const err = e as Error;
+      toast.error(err.message || 'Erreur');
       setSelectedPlan(null);
     } finally {
       setLoading(null);
@@ -349,137 +339,193 @@ export default function PaywallPage() {
 
   const remainingInvoices = sub.invoicesRemaining ?? 0;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 pb-20 px-4 sm:px-6 lg:px-8 py-8">
+  /* ═══════════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════════ */
 
-      {/* Back Button */}
+  return (
+    <div className={cn(
+      "min-h-screen pb-24 px-4 sm:px-6 lg:px-8 py-6 md:py-8",
+      isDark
+        ? "bg-[#09090B]"
+        : "bg-gradient-to-br from-gray-50 via-white to-gray-50"
+    )}>
+
+      {/* Back Button — dual theme */}
       <motion.button
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={router.back}
-        className="mb-4 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 w-fit transition-colors"
+        className={cn(
+          "mb-4 inline-flex items-center gap-2 text-sm w-fit transition-colors",
+          isDark
+            ? "text-zinc-500 hover:text-zinc-200"
+            : "text-gray-500 hover:text-gray-900"
+        )}
       >
         <ArrowLeft size={14} /> Retour
       </motion.button>
 
       <PaywallHeader onCTAClick={() => {}} />
 
-      {/* Free User Alerts */}
+      {/* ═══ FREE USER ALERTS ═══ */}
       {sub.isFree && !sub.isTrialActive && (
         <>
-          {/* Trial Banner */}
+          {/* Trial Banner — Cardless, no Stripe */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mx-auto mb-8 max-w-3xl"
+            className="mx-auto mb-6 max-w-3xl"
           >
-            <Link href="/trial" className="block group">
-              <div className="relative overflow-hidden rounded-3xl border-2 border-purple-500 bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 p-6 shadow-xl shadow-purple-200/50 hover:shadow-2xl hover:shadow-purple-300/60 transition-all">
-                <div className="absolute inset-0 overflow-hidden">
-                  {[...Array(3)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      className="absolute w-2 h-2 bg-purple-500/30 rounded-full"
-                      animate={{
-                        x: [0, Math.random() * 400 - 200],
-                        y: [0, Math.random() * 100 - 50],
-                        opacity: [0, 1, 0],
-                      }}
-                      transition={{ duration: 3 + Math.random() * 2, repeat: Number.POSITIVE_INFINITY, delay: i * 0.5 }}
-                      style={{ left: `${20 + i * 30}%`, top: `${20 + i * 20}%` }}
-                    />
-                  ))}
-                </div>
-                <div className="relative flex items-center gap-5">
-                  <motion.div
-                    whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
-                    className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-violet-700 text-white shadow-lg group-hover:shadow-xl transition-shadow"
-                  >
-                    <Sparkles size={32} className="fill-current" />
-                  </motion.div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-xl font-bold text-purple-700">Essai Gratuit 7 Jours</h3>
-                      <motion.span
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                        className="px-2.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-purple-600 to-violet-700 text-white rounded-full uppercase tracking-wider"
-                      >
-                        Nouveau
-                      </motion.span>
-                    </div>
-                    <p className="text-sm text-purple-800 mb-2">
-                      Accédez à TOUTES les fonctionnalités pendant 7 jours, sans engagement.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-purple-700 font-semibold">
-                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                      <span>Commencer maintenant</span>
-                    </div>
+            <div
+              onClick={handleTrialActivation}
+              className={cn(
+                "block group cursor-pointer",
+                "relative overflow-hidden rounded-2xl border-2 p-5 transition-all",
+                isDark
+                  ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10"
+                  : "border-emerald-300 bg-gradient-to-r from-emerald-50 via-emerald-50/50 to-emerald-50 shadow-xl shadow-emerald-200/50 hover:shadow-2xl hover:shadow-emerald-300/60"
+              )}
+            >
+              <div className="relative flex items-center gap-4">
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
+                  className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg"
+                >
+                  {trialLoading
+                    ? <Loader2 size={24} className="animate-spin" />
+                    : <Sparkles size={24} className="fill-current" />
+                  }
+                </motion.div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={cn(
+                      "text-lg font-bold",
+                      isDark ? "text-emerald-400" : "text-emerald-700"
+                    )}>
+                      Essai Gratuit 7 Jours
+                    </h3>
+                    <span className={cn(
+                      "px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider",
+                      "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white"
+                    )}>
+                      Sans carte
+                    </span>
+                  </div>
+                  <p className={cn(
+                    "text-sm",
+                    isDark ? "text-zinc-400" : "text-gray-600"
+                  )}>
+                    Testez toutes les fonctionnalités Solo pendant 7 jours. Aucune carte requise.
+                  </p>
+                  <div className={cn(
+                    "flex items-center gap-2 text-sm font-semibold mt-1",
+                    isDark ? "text-emerald-400" : "text-emerald-700"
+                  )}>
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    <span>Commencer maintenant</span>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           </motion.div>
 
-          {/* Usage Alert */}
+          {/* Usage Alert — dual theme */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="mx-auto mb-10 max-w-3xl"
+            className="mx-auto mb-8 max-w-3xl"
           >
             <div className={cn(
-              "relative overflow-hidden rounded-3xl border-2 p-6 backdrop-blur-xl",
+              "relative overflow-hidden rounded-2xl border-2 p-5",
               remainingInvoices > 0
-                ? "border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10"
-                : "border-red-300 bg-gradient-to-r from-red-50 via-orange-50 to-red-50"
+                ? isDark
+                  ? "border-emerald-500/20 bg-emerald-500/5"
+                  : "border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10"
+                : isDark
+                  ? "border-red-500/30 bg-red-500/5"
+                  : "border-red-300 bg-gradient-to-r from-red-50 via-orange-50 to-red-50"
             )}>
-              <div className="relative flex items-start gap-5">
+              <div className="relative flex items-start gap-4">
                 <motion.div
                   animate={remainingInvoices > 0 ? { rotate: [0, 5, -5, 0] } : {}}
-                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                  transition={{ duration: 2, repeat: Infinity }}
                   className={cn(
-                    "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl shadow-lg",
-                    remainingInvoices > 0 ? "bg-gradient-to-br from-primary/20 to-primary/10" : "bg-gradient-to-br from-red-100 to-red-200"
+                    "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl shadow-lg",
+                    remainingInvoices > 0
+                      ? isDark ? "bg-emerald-500/15" : "bg-gradient-to-br from-primary/20 to-primary/10"
+                      : isDark ? "bg-red-500/15" : "bg-gradient-to-br from-red-100 to-red-200"
                   )}
                 >
-                  {remainingInvoices > 0 ? <Zap size={24} className="text-primary" /> : <Lock size={24} className="text-red-500" />}
+                  {remainingInvoices > 0
+                    ? <Zap size={22} className="text-primary" />
+                    : <Lock size={22} className={isDark ? "text-red-400" : "text-red-500"} />
+                  }
                 </motion.div>
                 <div className="flex-1">
-                  <h3 className={cn("text-xl font-bold mb-1", remainingInvoices > 0 ? "text-primary" : "text-red-700")}>
+                  <h3 className={cn(
+                    "text-lg font-bold mb-1",
+                    remainingInvoices > 0
+                      ? isDark ? "text-emerald-400" : "text-primary"
+                      : isDark ? "text-red-400" : "text-red-700"
+                  )}>
                     {remainingInvoices > 0 ? 'Plan Gratuit' : 'Limite atteinte'}
                   </h3>
-                  <p className="text-sm text-gray-700 mb-4">
+                  <p className={cn("text-sm mb-3", isDark ? "text-zinc-400" : "text-gray-700")}>
                     {remainingInvoices > 0
                       ? `Vous pouvez créer encore ${remainingInvoices} facture${remainingInvoices > 1 ? 's' : ''} ce mois-ci.`
                       : 'Vous avez atteint votre limite de 3 factures mensuelles.'}
                   </p>
-                  <div className="mb-5">
+                  <div className="mb-4">
                     <div className="flex justify-between text-xs mb-2">
-                      <span className="font-medium text-gray-600">{sub.invoiceCount} / 3 factures</span>
-                      <span className={cn("font-bold", remainingInvoices > 0 ? "text-primary" : "text-red-500")}>
+                      <span className={cn("font-medium", isDark ? "text-zinc-500" : "text-gray-600")}>
+                        {sub.invoiceCount} / 3 factures
+                      </span>
+                      <span className={cn(
+                        "font-bold",
+                        remainingInvoices > 0
+                          ? isDark ? "text-emerald-400" : "text-primary"
+                          : isDark ? "text-red-400" : "text-red-500"
+                      )}>
                         {remainingInvoices > 0 ? `${remainingInvoices} restantes` : 'Limite atteinte'}
                       </span>
                     </div>
-                    <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                    <div className={cn(
+                      "h-2 rounded-full overflow-hidden",
+                      isDark ? "bg-white/[0.06]" : "bg-gray-200"
+                    )}>
                       <motion.div
-                        className={cn("h-full rounded-full", remainingInvoices > 0 ? "bg-gradient-to-r from-primary to-primary-dark" : "bg-gradient-to-r from-red-400 to-red-500")}
+                        className={cn(
+                          "h-full rounded-full",
+                          remainingInvoices > 0
+                            ? "bg-gradient-to-r from-primary to-primary-dark"
+                            : "bg-gradient-to-r from-red-400 to-red-500"
+                        )}
                         initial={{ width: 0 }}
-                        animate={{ width: `${(sub.invoiceCount / 10) * 100}%` }}
+                        animate={{ width: `${(sub.invoiceCount / 3) * 100}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-200/50">
-                      <Infinity size={15} className="text-gray-500" />
-                      <span className="text-xs text-gray-700 font-medium">Illimité avec Pro</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-200/50">
-                      <Sparkles size={15} className="text-gray-500" />
-                      <span className="text-xs text-gray-700 font-medium">IA incluse</span>
-                    </div>
+                    {[
+                      { icon: InfinityIcon, text: 'Illimité avec Solo' },
+                      { icon: Sparkles, text: 'IA incluse' },
+                    ].map((item, i) => (
+                      <div key={i} className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg border",
+                        isDark
+                          ? "bg-white/[0.04] border-white/[0.06]"
+                          : "bg-white/60 backdrop-blur-sm border-gray-200/50"
+                      )}>
+                        <item.icon size={14} className={isDark ? "text-zinc-500" : "text-gray-500"} />
+                        <span className={cn("text-xs font-medium", isDark ? "text-zinc-400" : "text-gray-700")}>
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -488,46 +534,65 @@ export default function PaywallPage() {
         </>
       )}
 
-      {/* Paid User Alert */}
+      {/* ═══ PAID USER ALERT ═══ */}
       {!sub.isFree && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mx-auto mb-10 max-w-3xl"
+          className="mx-auto mb-8 max-w-3xl"
         >
-          <div className="flex items-center gap-4 rounded-3xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 p-5 backdrop-blur-xl">
+          <div className={cn(
+            "flex items-center gap-4 rounded-2xl border p-4",
+            isDark
+              ? "border-emerald-500/20 bg-emerald-500/5"
+              : "border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10"
+          )}>
             <motion.div
               animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10"
+              transition={{ duration: 3, repeat: Infinity }}
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10"
             >
-              <Award size={24} className="text-primary" />
+              <Award size={22} className="text-primary" />
             </motion.div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-primary">Plan {sub.tier.charAt(0).toUpperCase() + sub.tier.slice(1)} actif</p>
-              <p className="text-xs text-gray-600 mt-0.5">Accès illimité à toutes les fonctionnalités</p>
+              <p className="text-sm font-bold text-primary">
+                Plan {sub.tier.charAt(0).toUpperCase() + sub.tier.slice(1)} actif
+              </p>
+              <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-400" : "text-gray-600")}>
+                Accès illimité à toutes les fonctionnalités
+              </p>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* ====== BILLING TOGGLE — masqué pendant le checkout ====== */}
+      {/* ═══ LOI 4: BILLING TOGGLE ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className={cn("flex flex-col items-center gap-3 mb-10", checkoutData && "invisible pointer-events-none h-0 mb-0 overflow-hidden")}
+        className={cn(
+          "flex flex-col items-center gap-3 mb-8",
+          checkoutData && "invisible pointer-events-none h-0 mb-0 overflow-hidden"
+        )}
       >
-        <div className="relative inline-flex items-center p-1 rounded-full bg-gray-100 border border-gray-200/60 shadow-md">
+        <div className={cn(
+          "relative inline-flex items-center p-1 rounded-full border shadow-md",
+          isDark
+            ? "bg-[#111113] border-white/[0.08]"
+            : "bg-gray-100 border-gray-200/60"
+        )}>
           <motion.div
-            className="absolute top-1 bottom-1 rounded-full shadow-md"
+            className={cn("absolute top-1 bottom-1 rounded-full shadow-md", isDark ? "bg-[#1B1B1D]" : "")}
             animate={{
               left: togglePos.left - 1,
               width: togglePos.width + 2,
               background: isYearly
                 ? 'linear-gradient(135deg, #059669, #047857)'
-                : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                : isDark
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           />
@@ -536,8 +601,8 @@ export default function PaywallPage() {
             ref={monthlyRef}
             onClick={() => setBilling('monthly')}
             className={cn(
-              "relative z-10 px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200",
-              !isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
+              "relative z-10 px-6 sm:px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200",
+              !isYearly ? "text-white" : isDark ? "text-zinc-500 hover:text-zinc-300" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Mensuel
@@ -546,8 +611,8 @@ export default function PaywallPage() {
             ref={yearlyRef}
             onClick={() => setBilling('yearly')}
             className={cn(
-              "relative z-10 px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center gap-2",
-              isYearly ? "text-white" : "text-gray-500 hover:text-gray-700"
+              "relative z-10 px-6 sm:px-7 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center gap-2",
+              isYearly ? "text-white" : isDark ? "text-zinc-500 hover:text-zinc-300" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Annuel
@@ -555,7 +620,9 @@ export default function PaywallPage() {
               "px-2 py-0.5 text-[10px] font-black rounded-full tracking-wide transition-all duration-200",
               isYearly
                 ? "bg-white/25 text-white"
-                : "bg-emerald-100 text-emerald-700"
+                : isDark
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "bg-emerald-100 text-emerald-700"
             )}>
               -20%
             </span>
@@ -569,10 +636,18 @@ export default function PaywallPage() {
               animate={{ opacity: 1, y: 0, height: 'auto' }}
               exit={{ opacity: 0, y: -8, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200"
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full border",
+                isDark
+                  ? "bg-emerald-500/10 border-emerald-500/20"
+                  : "bg-emerald-50 border-emerald-200"
+              )}
             >
-              <BadgePercent size={14} className="text-emerald-600" />
-              <span className="text-xs font-semibold text-emerald-700">
+              <BadgePercent size={14} className={isDark ? "text-emerald-400" : "text-emerald-600"} />
+              <span className={cn(
+                "text-xs font-semibold",
+                isDark ? "text-emerald-400" : "text-emerald-700"
+              )}>
                 Économisez jusqu'à {PLANS[2].yearlySavings}/an avec le plan annuel
               </span>
             </motion.div>
@@ -580,21 +655,24 @@ export default function PaywallPage() {
         </AnimatePresence>
       </motion.div>
 
-      {/* Confirmation Modal for Plan Change */}
+      {/* ═══ CONFIRMATION MODAL (Plan Change) — dual theme ═══ */}
       <AnimatePresence>
         {confirmChange && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={() => setConfirmChange(null)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              className={cn(
+                "rounded-2xl shadow-2xl max-w-md w-full p-6",
+                isDark ? "bg-[#111113] border border-white/[0.08]" : "bg-white"
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -605,33 +683,46 @@ export default function PaywallPage() {
                   <confirmChange.plan.icon size={24} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Changer vers {confirmChange.plan.name} ?</h3>
-                  <p className="text-sm text-gray-500">Confirmez le changement de plan</p>
+                  <h3 className={cn("text-lg font-bold", isDark ? "text-white" : "text-gray-900")}>
+                    Changer vers {confirmChange.plan.name} ?
+                  </h3>
+                  <p className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-500")}>
+                    Confirmez le changement de plan
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className={cn("rounded-xl p-4 mb-4", isDark ? "bg-white/[0.04]" : "bg-gray-50")}>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">Nouveau prix</span>
-                  <span className="text-sm font-bold">{isYearly ? confirmChange.plan.yearlyPrice : confirmChange.plan.price}/mois</span>
+                  <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-600")}>Nouveau prix</span>
+                  <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-gray-900")}>
+                    {isYearly ? confirmChange.plan.yearlyPrice : confirmChange.plan.price}/mois
+                  </span>
                 </div>
                 {confirmChange.prorata.amount > 0 && (
                   <>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">Prorata</span>
-                      <span className="text-sm font-bold text-emerald-600">{confirmChange.prorata.amount.toFixed(2)}€</span>
+                      <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-600")}>Prorata</span>
+                      <span className={cn("text-sm font-bold", isDark ? "text-emerald-400" : "text-emerald-600")}>
+                        {confirmChange.prorata.amount.toFixed(2)}€
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Période restante</span>
-                      <span className="text-sm font-bold">{confirmChange.prorata.percent}%</span>
+                      <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-600")}>Période restante</span>
+                      <span className={cn("text-sm font-bold", isDark ? "text-white" : "text-gray-900")}>
+                        {confirmChange.prorata.percent}%
+                      </span>
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-5">
-                <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700">
+              <div className={cn(
+                "flex items-start gap-2 p-3 rounded-xl mb-5",
+                isDark ? "bg-amber-500/10 border border-amber-500/20" : "bg-amber-50 border border-amber-200"
+              )}>
+                <AlertTriangle size={16} className={isDark ? "text-amber-400 flex-shrink-0 mt-0.5" : "text-amber-600 flex-shrink-0 mt-0.5"} />
+                <p className={cn("text-xs", isDark ? "text-amber-400" : "text-amber-700")}>
                   Le changement sera facturé immédiatement par prorata sur votre méthode de paiement actuelle.
                 </p>
               </div>
@@ -639,13 +730,18 @@ export default function PaywallPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmChange(null)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                  className={cn(
+                    "flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-colors",
+                    isDark
+                      ? "border-white/[0.08] text-zinc-400 hover:bg-white/[0.04]"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  )}
                 >
                   Annuler
                 </button>
                 <button
                   onClick={confirmPlanChange}
-                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r {confirmChange.plan.gradient} hover:opacity-90 transition-opacity"
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                   style={{
                     background: confirmChange.plan.id === 'solo'
                       ? 'linear-gradient(135deg, #10b981, #059669)'
@@ -662,40 +758,50 @@ export default function PaywallPage() {
         )}
       </AnimatePresence>
 
-      {/* Checkout View or Plans Grid */}
+      {/* ═══ CHECKOUT VIEW OR PLANS GRID ═══ */}
       <AnimatePresence mode="wait">
         {checkoutData && selectedPlan ? (
+          /* ─── CHECKOUT: Sticky summary + Stripe form ─── */
           <motion.div
             key="checkout"
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 max-w-6xl mx-auto"
           >
-            {/* Selected Plan Summary */}
+            {/* LOI 6: Sticky Summary — desktop only */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="lg:sticky lg:top-8"
+              className="lg:sticky lg:top-8 lg:self-start"
             >
               <button
                 onClick={handleBack}
-                className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                className={cn(
+                  "mb-4 inline-flex items-center gap-2 text-sm transition-colors",
+                  isDark ? "text-zinc-500 hover:text-zinc-200" : "text-gray-500 hover:text-gray-900"
+                )}
               >
                 <ArrowLeft size={14} /> Changer de plan
               </button>
 
-              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl border-2 border-gray-200 shadow-xl overflow-hidden">
-                <div className={cn("p-6 pb-8 bg-gradient-to-br", selectedPlan.gradient)}>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-white/20 backdrop-blur-sm">
-                      <selectedPlan.icon size={28} className="text-white" />
+              <div className={cn(
+                "rounded-2xl border-2 overflow-hidden",
+                isDark
+                  ? "bg-[#111113] border-white/[0.08] shadow-xl"
+                  : "bg-white border-gray-200 shadow-xl"
+              )}>
+                {/* Plan header gradient */}
+                <div className={cn("p-6 pb-7 bg-gradient-to-br", selectedPlan.gradient)}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm">
+                      <selectedPlan.icon size={24} className="text-white" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="text-2xl font-black text-white">{selectedPlan.name}</h2>
+                        <h2 className="text-xl font-black text-white">{selectedPlan.name}</h2>
                         {selectedPlan.badge && (
-                          <span className="px-2.5 py-0.5 text-[10px] font-bold bg-white/20 backdrop-blur-sm text-white rounded-full uppercase tracking-wider border border-white/30">
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-white/20 backdrop-blur-sm text-white rounded-full uppercase tracking-wider border border-white/30">
                             {selectedPlan.badge}
                           </span>
                         )}
@@ -705,7 +811,7 @@ export default function PaywallPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-white/80 mt-1">{selectedPlan.tagline}</p>
+                      <p className="text-sm text-white/80 mt-0.5">{selectedPlan.tagline}</p>
                     </div>
                   </div>
                   <div className="flex items-end gap-2">
@@ -716,31 +822,42 @@ export default function PaywallPage() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -20, opacity: 0 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                        className="text-5xl font-black text-white"
+                        className="text-4xl font-black text-white"
                       >
                         {isYearly ? selectedPlan.yearlyPrice : selectedPlan.price}
                       </motion.span>
                     </AnimatePresence>
-                    <span className="text-lg text-white/60 mb-2">/ mois</span>
+                    <span className="text-base text-white/60 mb-1">/ mois</span>
                   </div>
                   {isYearly && (
                     <p className="text-sm text-white/70 mt-1">
-                      {selectedPlan.yearlySavings} économisés/an • Facturé annuellement
+                      {selectedPlan.yearlySavings} économisés/an · Facturé annuellement
                     </p>
                   )}
                 </div>
 
-                <div className="p-6">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Inclus dans ce plan</p>
-                  <div className="space-y-3">
+                {/* Features list */}
+                <div className="p-5">
+                  <p className={cn(
+                    "text-xs font-bold uppercase tracking-wider mb-3",
+                    isDark ? "text-zinc-600" : "text-gray-400"
+                  )}>
+                    Inclus dans ce plan
+                  </p>
+                  <div className="space-y-2.5">
                     {selectedPlan.features.map((feat, i) => (
-                      <div key={i} className="flex items-start gap-3">
+                      <div key={i} className="flex items-start gap-2.5">
                         {feat.included ? (
-                          <CheckCircle2 size={18} className="text-primary flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                          <CheckCircle2 size={16} className="text-primary flex-shrink-0 mt-0.5" strokeWidth={2.5} />
                         ) : (
-                          <Circle size={18} className="text-gray-300 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                          <Circle size={16} className={cn("flex-shrink-0 mt-0.5", isDark ? "text-zinc-700" : "text-gray-300")} strokeWidth={2} />
                         )}
-                        <span className={cn("text-sm", feat.included ? "text-gray-700" : "text-gray-400")}>
+                        <span className={cn(
+                          "text-sm",
+                          feat.included
+                            ? isDark ? "text-zinc-300" : "text-gray-700"
+                            : isDark ? "text-zinc-600" : "text-gray-400"
+                        )}>
                           {feat.label}
                         </span>
                       </div>
@@ -750,19 +867,25 @@ export default function PaywallPage() {
               </div>
             </motion.div>
 
-            {/* Stripe Checkout */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="bg-white rounded-3xl border-2 border-gray-200 shadow-xl p-8">
+            {/* Stripe Payment Form */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <div className={cn(
+                "rounded-2xl border-2 p-6 md:p-8",
+                isDark
+                  ? "bg-[#111113] border-white/[0.08] shadow-xl"
+                  : "bg-white border-gray-200 shadow-xl"
+              )}>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg">
-                    <Shield size={24} className="text-white" />
+                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg">
+                    <Shield size={22} className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">Paiement sécurisé</h2>
-                    <p className="text-xs text-gray-500">Crypté et protégé par Stripe</p>
+                    <h2 className={cn("text-lg font-black", isDark ? "text-white" : "text-gray-900")}>
+                      Paiement sécurisé
+                    </h2>
+                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>
+                      Crypté et protégé par Stripe
+                    </p>
                   </div>
                 </div>
 
@@ -776,13 +899,13 @@ export default function PaywallPage() {
             </motion.div>
           </motion.div>
         ) : (
-          /* Plans Grid */
+          /* ─── PLANS GRID ─── */
           <motion.div
             key="plans"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto"
+            className="w-full grid grid-cols-1 md:grid-cols-3 gap-5 max-w-6xl mx-auto"
           >
             {PLANS.map((plan, index) => {
               const isHighlighted = plan.id === highlighted;
@@ -813,42 +936,53 @@ export default function PaywallPage() {
         )}
       </AnimatePresence>
 
-      {/* Continuer gratuitement — uniquement pour les utilisateurs sur plan gratuit */}
+      {/* ═══ Continue free link ═══ */}
       {sub.isFree && !checkoutData && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="flex justify-center mt-8"
+          className="flex justify-center mt-6"
         >
           <button
             onClick={router.back}
-            className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-4 transition-colors"
+            className={cn(
+              "text-sm underline underline-offset-4 transition-colors",
+              isDark ? "text-zinc-600 hover:text-zinc-400" : "text-gray-400 hover:text-gray-600"
+            )}
           >
             Continuer gratuitement (3 factures/mois)
           </button>
         </motion.div>
       )}
 
-      {/* Footer */}
+      {/* ═══ LOI 7: Footer — Micro-reassurance ═══ */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
-        className="mx-auto mt-16 max-w-2xl flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500"
+        className="mx-auto mt-12 max-w-2xl flex flex-wrap items-center justify-center gap-3 text-sm"
       >
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-gray-200">
-          <Shield size={15} className="text-primary" />
-          <span>Paiement sécurisé Stripe</span>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-gray-200">
-          <RefreshCw size={15} className="text-primary" />
-          <span>Annulation en 1 clic</span>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-gray-200">
-          <CreditCard size={15} className="text-primary" />
-          <span>RGPD compliant</span>
-        </div>
+        {[
+          { icon: Shield, label: 'Paiement sécurisé Stripe' },
+          { icon: RefreshCw, label: 'Annulation en 1 clic' },
+          { icon: CreditCard, label: 'RGPD compliant' },
+        ].map((badge, i) => (
+          <div
+            key={i}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-full border",
+              isDark
+                ? "bg-[#111113]/50 border-white/[0.06]"
+                : "bg-white/50 backdrop-blur-sm border-gray-200"
+            )}
+          >
+            <badge.icon size={15} className="text-primary" />
+            <span className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>
+              {badge.label}
+            </span>
+          </div>
+        ))}
       </motion.div>
     </div>
   );
