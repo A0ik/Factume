@@ -103,12 +103,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ loading: true });
     try {
-      const { error } = await getSupabaseClient().auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      // BASTION: Direct Google OAuth — bypasses Supabase redirect
+      // so the user sees "Factu.me" instead of "ggrwyfhptxwpahwkeoyj.supabase.co"
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!clientId) throw new Error('Google OAuth non configuré');
+      const redirectUri = `${window.location.origin}/auth/callback`;
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid email profile',
+        prompt: 'select_account',
       });
-      if (error) throw error;
-    } finally { set({ loading: false }); }
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+      // Don't reset loading — navigating away
+    } catch (error) {
+      set({ loading: false });
+      throw error;
+    }
   },
 
   signOut: async () => {

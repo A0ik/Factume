@@ -6,7 +6,6 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const code = searchParams.get('code');
-    const state = searchParams.get('state');
     const error = searchParams.get('error');
 
     // Gérer les erreurs OAuth
@@ -19,6 +18,48 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=missing_code', req.url));
     }
 
+    // BASTION: Échange direct avec Google (bypass Supabase OAuth)
+    // On obtient un ID token Google qu'on passe ensuite à Supabase via signInWithIdToken.
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      console.error('[auth-callback] Missing Google credentials');
+      return NextResponse.redirect(new URL('/login?error=google_not_configured', req.url));
+    }
+
+    const redirectUri = `${req.nextUrl.origin}/auth/callback`;
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errBody = await tokenResponse.text();
+      console.error('[auth-callback] Token exchange failed:', errBody);
+      return NextResponse.redirect(new URL('/login?error=token_exchange_failed', req.url));
+    }
+
+    const tokens = await tokenResponse.json() as {
+      id_token?: string;
+      access_token?: string;
+      refresh_token?: string;
+    };
+
+    if (!tokens.id_token) {
+      console.error('[auth-callback] No ID token in Google response');
+      return NextResponse.redirect(new URL('/login?error=missing_id_token', req.url));
+    }
+
+    // Créer la session Supabase via l'ID token Google
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,47 +76,46 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    // Échanger le code contre une session Supabase
-    const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error: sessionError } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: tokens.id_token,
+    });
 
-    if (sessionError) {
-      console.error('[auth-callback] Session exchange error:', sessionError);
-      return NextResponse.redirect(new URL('/login?error=session_exchange_failed', req.url));
+    if (sessionError || !data.user) {
+      console.error('[auth-callback] Supabase signInWithIdToken error:', sessionError);
+      return NextResponse.redirect(new URL('/login?error=session_creation_failed', req.url));
     }
 
     // Créer ou mettre à jour le profil utilisateur
-    if (data.user) {
-      const metadata = data.user.user_metadata || {};
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          email: data.user.email,
-          full_name: metadata.full_name || metadata.name || data.user.email?.split('@')[0] || 'Utilisateur',
-          avatar_url: metadata.avatar_url || metadata.picture,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
+    const metadata = data.user.user_metadata || {};
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: data.user.id,
+        email: data.user.email,
+        full_name: metadata.full_name || metadata.name || data.user.email?.split('@')[0] || 'Utilisateur',
+        avatar_url: metadata.avatar_url || metadata.picture,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
 
-      if (profileError) {
-        console.error('[auth-callback] Profile upsert error:', profileError);
-        // Ne pas bloquer la connexion si le profil échoue
-      }
+    if (profileError) {
+      console.error('[auth-callback] Profile upsert error:', profileError);
+      // Ne pas bloquer la connexion si le profil échoue
     }
 
     // Rediriger vers le dashboard ou l'onboarding selon le profil
     let redirectPath = '/dashboard';
-    if (data.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_done')
-        .eq('id', data.user.id)
-        .single();
-      if (!profile?.onboarding_done) {
-        redirectPath = '/onboarding/quick';
-      }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_done')
+      .eq('id', data.user.id)
+      .single();
+
+    if (!profile?.onboarding_done) {
+      redirectPath = '/onboarding/quick';
     }
 
     const redirectUrl = new URL(redirectPath, req.url);
