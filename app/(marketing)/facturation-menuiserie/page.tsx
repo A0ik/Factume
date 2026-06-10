@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Ruler, Euro, Shield, Clock, Camera, MessageSquare, Wrench } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Facturation Menuiserie – Créez Vos Factures Rapidement | Factu.me',
@@ -263,6 +264,12 @@ export default function MenuiseriePage() {
             3 factures gratuites par mois • Sans engagement
           </p>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
       <BreadcrumbSchema
         items={[

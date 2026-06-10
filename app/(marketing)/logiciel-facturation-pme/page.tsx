@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Users, BarChart3, Shield, Building2, Lock, ArrowRight } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation PME – La Solution Complète pour Votre Entreprise',
@@ -260,6 +261,12 @@ export default function LogicielFacturationPMEPage() {
             Multi-utilisateurs inclus &bull; Sans engagement &bull; Support dédié PME
           </p>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
       <BreadcrumbSchema
         items={[

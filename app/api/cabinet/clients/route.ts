@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +14,9 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    const cabinet = await getCabinetForUser(user.id);
+    // MONOLITH: Transmettre l'activeCabinetId pour résolution serveur intelligente
+    const activeCabinetId = req.headers.get('x-active-cabinet-id') || undefined;
+    const cabinet = await getCabinetForUser(user.id, activeCabinetId);
     if (!cabinet) {
       return NextResponse.json({ cabinet: null, clients: [] });
     }
@@ -130,14 +133,18 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // TOLL FIX B4: CRM features require Business plan or trial
-    const { data: subProfile } = await admin
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-    if (!subProfile || (!['business', 'trial'].includes(subProfile.subscription_tier) && subProfile.is_trial_active !== true)) {
-      return NextResponse.json({ error: 'Abonnement Business requis pour gérer des clients.' }, { status: 403 });
+    // Subscription gate: CRM client creation requires Pro plan or above
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'crmAccess');
+    } catch (err: any) {
+      const [, feature, message] = err.message.split(':');
+      return NextResponse.json({
+        error: message || 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        feature,
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
     const body = await req.json();

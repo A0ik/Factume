@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, UserCheck, BookOpen, Star } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Nos Experts & Partenaires — Factu.me',
@@ -145,6 +146,12 @@ export default function ExpertsPage() {
             Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
           </Link>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
 
       <BreadcrumbSchema

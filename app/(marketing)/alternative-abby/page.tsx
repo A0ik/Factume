@@ -146,7 +146,7 @@ export default function AlternativeAbbyPage() {
           },
           {
             question: 'Quelle est la différence de prix entre Factu.me et Abby ?',
-            answer: 'Factu.me propose un plan Pro à 14,99€/mois contre 39€/mois pour Abby. Le plan gratuit des deux permet de tester avant de s\'engager.',
+            answer: 'Factu.me propose un plan Pro à 14,99€/mois contre 9,75€/mois pour Abby. Le plan gratuit des deux permet de tester avant de s\'engager.',
           },
           {
             question: 'Factu.me est-il conforme à la facturation électronique 2026 ?',
@@ -162,6 +162,8 @@ export default function AlternativeAbbyPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
           { href: '/alternative-henrj', label: 'Alternative Henrri' },
           { href: '/alternative-tiime', label: 'Alternative Tiime' },
           { href: '/meilleur-logiciel-facture', label: 'Meilleur logiciel facture' },

@@ -1,9 +1,17 @@
 'use client';
 import { useAuthStore } from '@/stores/authStore';
 import { useMemo } from 'react';
+import {
+  type PlanTier,
+  type PlanConfig,
+  resolveEffectiveTier,
+  getPlanConfig,
+  hasFeature,
+  checkLimit,
+  PLANS,
+} from '@/lib/plans';
 
 export function useSubscription() {
-  // NOTE: Feature gating here is client-side for UX only. Actual enforcement is via Supabase RLS policies on each table.
   const profile = useAuthStore((s) => s.profile);
   const tier = profile?.subscription_tier || 'free';
   const isTrialActive = profile?.is_trial_active || false;
@@ -13,6 +21,10 @@ export function useSubscription() {
   const monthlyInvoiceCount = (profile?.invoice_month === currentMonth)
     ? (profile?.monthly_invoice_count || 0)
     : 0;
+
+  // Resolve effective plan using MONOLITH central config
+  const effectiveTier = useMemo(() => resolveEffectiveTier(tier, isTrialActive), [tier, isTrialActive]);
+  const plan: PlanConfig = useMemo(() => getPlanConfig(tier, isTrialActive), [tier, isTrialActive]);
 
   // Calculate remaining trial time
   const trialRemaining = useMemo(() => {
@@ -41,23 +53,32 @@ export function useSubscription() {
   const trialDocumentCount = profile?.trial_document_count || 0;
   const trialDocLimit = 3;
 
-  // Trial users get full Pro features but limited to 3 documents
-  const effectiveTier = isTrial ? 'pro' : tier;
-  const effectiveIsFree = isFree;
-  const effectiveIsPro = isTrial || isProOrAbove;
-  const effectiveIsBusiness = isBusiness;
+  // Voice usage tracking (free tier)
+  const voiceUsedThisMonth = isFree
+    ? (profile?.voice_usage_month === currentMonth ? (profile?.voice_usage_count || 0) : 0)
+    : 0;
+
+  // ── MONOLITH: Limit checks using central plan config ──
+  const invoiceLimit = useMemo(
+    () => checkLimit(tier, 'invoicesPerMonth', monthlyInvoiceCount, isTrialActive),
+    [tier, monthlyInvoiceCount, isTrialActive],
+  );
+
+  const maxInvoices = plan.limits.invoicesPerMonth ?? Infinity;
+  const invoicesRemaining = invoiceLimit.remaining;
+  const isAtLimit = !invoiceLimit.allowed;
 
   return {
+    // Tier info
     tier,
     effectiveTier,
-    effectiveIsPro,
-    effectiveIsBusiness,
+    plan,                          // Full plan config from lib/plans.ts
     isFree,
     isTrial,
     isSolo,
     isPro,
-    isProOrAbove,
     isBusiness,
+    isProOrAbove,
     isTrialActive,
     trialRemaining,
     trialEndDate,
@@ -66,20 +87,39 @@ export function useSubscription() {
     trialDocLimit,
     trialDocsRemaining: isTrialActive ? Math.max(0, trialDocLimit - trialDocumentCount) : null,
     isTrialAtDocLimit: isTrialActive && trialDocumentCount >= trialDocLimit,
-    canUseVoice:          isSolo || effectiveIsPro || effectiveIsBusiness, // Free: 1 voice/month enforced server-side via subscription-guard
-    voiceUsedThisMonth:   isFree ? (profile?.voice_usage_month === currentMonth ? (profile?.voice_usage_count || 0) : 0) : 0,
-    canUseCustomTemplate: effectiveIsPro || effectiveIsBusiness,
-    canUseRecurring:      effectiveIsPro || effectiveIsBusiness,
-    canEditInvoice:       isSolo || effectiveIsPro || effectiveIsBusiness,
+
+    // Computed flags (backward compat)
+    effectiveIsPro:       effectiveTier === 'pro' || effectiveTier === 'business',
+    effectiveIsBusiness:  effectiveTier === 'business',
+
+    // Feature gates (from central config)
+    canUseVoice:          plan.gates.voiceExpense || (isFree && voiceUsedThisMonth < (plan.limits.voiceCommandsPerMonth ?? 0)),
+    voiceUsedThisMonth,
+    canUseCustomTemplate: plan.gates.customTemplate,
+    canUseRecurring:      plan.gates.recurringInvoices,
+    canEditInvoice:       !isFree || isTrialActive,
     canDeleteInvoice:     !isFree && !isTrialActive,
-    canUseContracts:      effectiveIsPro || effectiveIsBusiness,
-    canUseCRM:            effectiveIsPro || effectiveIsBusiness,
-    maxInvoices:          isFree ? 3 : Infinity,
+    canUseContracts:      plan.gates.contracts,
+    canUseCRM:            plan.gates.crmAccess,
+    canUseURSSAF:         plan.gates.urssafOneClick,
+    canUseCopilot:        plan.gates.copilotFactu,
+    canUseComptableConnect: plan.gates.comptableConnect,
+    hasWatermark:         plan.gates.watermarkPDF,
+
+    // Limits
+    maxInvoices,
     invoiceCount:         monthlyInvoiceCount,
-    invoicesRemaining:    isFree ? Math.max(0, 3 - monthlyInvoiceCount) : null,
-    isAtLimit:            isFree ? monthlyInvoiceCount >= 3 : isTrialActive && trialDocumentCount >= trialDocLimit,
-    shouldNudgeUpgrade:   isFree && monthlyInvoiceCount >= 2,
-    maxWorkspaces:        effectiveIsBusiness ? Infinity : (effectiveIsPro || isTrial) ? 3 : 1,
-    canCreateWorkspace:   (count: number) => effectiveIsBusiness || ((effectiveIsPro || isTrial) && count < 3) || count < 1,
+    invoicesRemaining,
+    isAtLimit,
+    shouldNudgeUpgrade:   isFree && monthlyInvoiceCount >= 3,
+    maxCabinets:          plan.limits.maxCabinets,
+    maxClientsCRM:        plan.limits.maxClientsCRM ?? Infinity,
+    maxWorkspaces:        plan.limits.maxCabinets,   // Backward compat alias
+
+    // Utility
+    canCreateWorkspace:   (count: number) => count < plan.limits.maxCabinets,
+
+    // Feature gate helper — use in components: gated('urssafOneClick')
+    gated: (feature: keyof import('@/lib/plans').PlanConfig['gates']) => !plan.gates[feature],
   };
 }

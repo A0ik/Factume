@@ -5,26 +5,25 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Tag, Check, ShieldCheck } from 'lucide-react';
 import { Reveal } from './reveal';
-import { ShimmerButton } from './shimmer-button';
 import { cn } from '@/lib/cn';
 
 const plans = [
   {
-    name: 'Solo', monthlyPrice: '14,99€', yearlyPrice: '12€', yearlySavings: '36€',
-    tagline: 'Freelances & Auto-entrepreneurs',
-    features: ['Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'],
+    name: 'Starter', monthlyPrice: 'Gratuit', yearlyPrice: 'Gratuit', yearlySavings: '0€',
+    tagline: 'Pour démarrer et tester',
+    features: ['5 factures & devis/mois', 'E-facturation certifiée', '1 cabinet', '10 clients CRM', '5 commandes vocales/mois', 'Support email'],
     popular: false,
   },
   {
-    name: 'Pro', monthlyPrice: '29,99€', yearlyPrice: '24€', yearlySavings: '72€',
-    tagline: 'Contrats + Facturation',
-    features: ['Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail', 'Factures récurrentes'],
+    name: 'Pro', monthlyPrice: '14,99€', yearlyPrice: '12,42€', yearlySavings: '31€',
+    tagline: 'Le couteau suisse des indépendants',
+    features: ['Factures & devis illimités', 'URSSAF One-Click', 'Voice Expense illimité', 'Copilot Factu IA', 'Export FEC', 'Contrats & signatures', 'CRM illimité', 'Sans watermark'],
     popular: true,
   },
   {
-    name: 'Business', monthlyPrice: '59,99€', yearlyPrice: '48€', yearlySavings: '144€',
-    tagline: 'PME qui embauchent',
-    features: ['Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Support prioritaire', 'Multi-utilisateurs', 'Rapports avancés'],
+    name: 'Business', monthlyPrice: '39,99€', yearlyPrice: '33,25€', yearlySavings: '81€',
+    tagline: 'Pour les PME & experts-comptables',
+    features: ['Tout le plan Pro inclus', '5 cabinets', 'Comptable Connect', 'Copilot IA avancé', 'Multi-utilisateur (5)', 'API & Webhooks', 'Support dédié'],
     popular: false,
   },
 ];
@@ -53,7 +52,7 @@ export function Pricing() {
               <motion.div className="absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-md" animate={{ left: billing === 'yearly' ? 'calc(100% - 28px)' : '4px' }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
             </button>
             <button onClick={() => setBilling('yearly')} className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all', billing === 'yearly' ? 'bg-green-600 text-white shadow-md' : 'bg-green-100 text-green-700 hover:bg-green-200')}>
-              Annuel <span className="hidden sm:inline text-xs opacity-80">(-20%)</span>
+              Annuel <span className="hidden sm:inline text-xs opacity-80">(-17%)</span>
             </button>
           </div>
         </div>
@@ -81,9 +80,9 @@ export function Pricing() {
                       <p className="text-xs text-slate-500 mb-3">{plan.tagline}</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-extrabold tracking-tight">{billing === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}</span>
-                        <span className="text-sm text-slate-500">{billing === 'monthly' ? '/mois' : '/mois (annuel)'}</span>
+                        {plan.monthlyPrice !== 'Gratuit' && <span className="text-sm text-slate-500">{billing === 'monthly' ? '/mois' : '/mois (annuel)'}</span>}
                       </div>
-                      {billing === 'yearly' && <p className="text-xs text-green-600 font-medium mt-1">Économisez {plan.yearlySavings} par an</p>}
+                      {billing === 'yearly' && plan.yearlySavings !== '0€' && <p className="text-xs text-green-600 font-medium mt-1">Économisez {plan.yearlySavings} par an</p>}
                     </div>
                     <ul className="space-y-2.5 mb-6 flex-grow">
                       {plan.features.map((f, j) => (
@@ -91,13 +90,13 @@ export function Pricing() {
                       ))}
                     </ul>
                     <Link
-                      href={`/register?plan=${plan.name.toLowerCase()}&trial=4&billing=${billing}`}
+                      href={plan.name === 'Starter' ? '/register' : `/register?plan=${plan.name.toLowerCase()}&trial=14&billing=${billing}`}
                       className={cn(
                         'block text-center font-semibold py-3 rounded-xl transition-all text-sm active:scale-[0.97]',
                         plan.popular ? 'bg-brand-500 hover:bg-brand-600 text-white shadow-md shadow-brand-500/25' : 'bg-slate-900 hover:bg-slate-800 text-white'
                       )}
                     >
-                      Essai 7 jours gratuit
+                      {plan.name === 'Starter' ? 'Commencer gratuitement' : 'Essai 14 jours gratuit'}
                     </Link>
                   </div>
                 </div>

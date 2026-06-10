@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Droplets, Euro, Shield, Clock, Phone, MessageSquare, Wrench } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel de Facturation Plomberie – Simple & Mobile | Factu.me',
@@ -228,6 +229,12 @@ export default function PlomberiePage() {
             3 factures gratuites par mois • Sans engagement • Mobile-friendly
           </p>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
       <BreadcrumbSchema
         items={[

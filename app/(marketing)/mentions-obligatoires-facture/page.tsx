@@ -266,6 +266,8 @@ export default function MentionsObligatoiresPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
           { href: '/comment-facturer', label: 'Comment facturer selon votre statut' },
           { href: '/modeles-facture', label: 'Modèles de facture par métier' },
           { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },

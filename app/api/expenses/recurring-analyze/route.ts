@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,19 +50,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // TOLL FIX B4: Recurring analysis requires Pro plan or above
-    const { data: subProfile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-    const isProOrAbove = subProfile && ['pro', 'business'].includes(subProfile.subscription_tier || '');
-    const isTrial = subProfile?.is_trial_active === true;
-    if (!isProOrAbove && !isTrial) {
+    // Subscription gate: Recurring analysis requires Pro plan or above
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'recurringInvoices');
+    } catch (err: any) {
+      const [, feature, message] = err.message.split(':');
       return NextResponse.json({
-        error: 'L\'analyse des dépenses récurrentes est disponible avec les plans Pro et Business.',
-        code: 'SUBSCRIPTION_REQUIRED',
-        upgradeUrl: '/paywall?plan=pro',
+        error: message || 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        feature,
+        upgradeUrl: '/paywall',
       }, { status: 403 });
     }
 

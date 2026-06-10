@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const sub = await getUserSubscriptionStatus(user.id);
     if (!sub.canUseVoice) {
       return NextResponse.json({
-        error: 'Vous avez utilisé votre facture vocale gratuite ce mois-ci. Passez au plan Solo pour un usage illimité.',
+        error: 'Vous avez utilisé votre facture vocale gratuite ce mois-ci. Passez au plan Pro pour un usage illimité.',
         code: 'VOICE_LIMIT',
         upgradeUrl: '/paywall?plan=solo',
       }, { status: 403 });

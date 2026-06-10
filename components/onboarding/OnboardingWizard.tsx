@@ -47,7 +47,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'upgrade',
     title: 'Passez au niveau supérieur',
-    description: 'Débloquez des fonctionnalités avancées avec les plans Solo et Pro.',
+    description: 'Débloquez des fonctionnalités avancées avec les plans Pro et Business.',
     icon: Crown,
     skip: true,
   },

@@ -24,8 +24,8 @@ const PLAN_ORDER = ['free', 'solo', 'pro', 'business'];
 // Prix mensuels en euros (pour le calcul du prorata)
 const PRICES = {
   solo: 14.99,
-  pro: 29.99,
-  business: 59.99,
+  pro: 14.99,
+  business: 39.99,
 };
 
 /**

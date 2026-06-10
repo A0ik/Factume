@@ -291,6 +291,8 @@ export default function DeveloppeurPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
           { href: '/facturation-freelances', label: 'Facturation Freelances' },
           { href: '/logiciel-facture-gratuit', label: 'Logiciel Facture Gratuit' },
         ]}

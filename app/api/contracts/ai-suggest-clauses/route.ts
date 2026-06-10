@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { applyUserIdRateLimit } from '@/lib/rate-limit';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import OpenAI from 'openai';
 
 export async function POST(req: NextRequest) {
@@ -9,19 +10,17 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // TOLL FIX B5: AI contract clauses require Pro plan or above
-    const { data: subProfile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-    const hasPlan = subProfile && ['pro', 'business', 'trial'].includes(subProfile.subscription_tier || '');
-    const isTrial = subProfile?.is_trial_active === true;
-    if (!hasPlan && !isTrial) {
+    // Subscription gate: AI contract clauses require Pro plan or above
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'contracts');
+    } catch (err: any) {
+      const [, feature, message] = err.message.split(':');
       return NextResponse.json({
-        error: 'Les suggestions de clauses IA sont disponibles avec les plans Pro et Business.',
-        code: 'SUBSCRIPTION_REQUIRED',
-        upgradeUrl: '/paywall?plan=pro',
+        error: message || 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        feature,
+        upgradeUrl: '/paywall',
       }, { status: 403 });
     }
 

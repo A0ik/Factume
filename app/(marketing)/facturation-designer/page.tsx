@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Palette, Euro, Shield, Clock, PenTool, Layers, Sparkles } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Facturation Designer – Des Factures Aussi Belles Que Vos Créations | Factu.me',
@@ -263,6 +264,12 @@ export default function DesignerPage() {
             3 factures gratuites par mois • Sans engagement • Templates élégants inclus
           </p>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
       <BreadcrumbSchema
         items={[

@@ -176,9 +176,11 @@ export async function POST(req: NextRequest) {
         // TOLL FIX B6: Fallback — infer plan from price ID when metadata is missing
         if (!plan) {
           const priceId = sub.items.data[0]?.price?.id;
-          if (priceId === process.env.STRIPE_SOLO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_SOLO_YEARLY_PRICE_ID) plan = 'solo';
-          else if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) plan = 'pro';
+          // MONOLITH: Plus de plan Solo — 'solo' legacy → 'pro'
+          if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) plan = 'pro';
           else if (priceId === process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID) plan = 'business';
+          // Legacy: si quelqu'un avait encore un ancien prix Solo, le mapper vers Pro
+          else if (priceId === process.env.STRIPE_SOLO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_SOLO_YEARLY_PRICE_ID) plan = 'pro';
 
           if (plan) {
             console.warn('[webhook] metadata.plan missing, inferred from price:', plan, 'for sub', sub.id);

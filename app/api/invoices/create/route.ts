@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { calculateInvoiceTotals } from '@/lib/money';
 import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
+import { getUserSubscriptionStatus, requireLimit } from '@/lib/subscription-guard';
 import type { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -20,34 +21,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier le subscription tier pour les utilisateurs Free
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active, monthly_invoice_count, invoice_month')
-      .eq('id', user.id)
-      .single();
-
-    const tier = profile?.subscription_tier || 'free';
-    const isFree = tier === 'free' && !profile?.is_trial_active;
-    const isTrial = tier === 'trial' || profile?.is_trial_active === true;
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const monthlyCount = profile?.invoice_month === currentMonth ? (profile?.monthly_invoice_count || 0) : 0;
-
-    // Free tier: 3 invoices/month (aligned with RPC increment_invoice_count)
-    if (isFree && monthlyCount >= 3) {
-      return NextResponse.json(
-        { error: 'Limite atteinte. Passez au plan Solo pour créer des factures illimitées.', code: 'FREE_LIMIT' },
-        { status: 403 }
-      );
+    // Subscription gate: check invoicesPerMonth limit
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireLimit(sub, 'invoicesPerMonth', sub.monthlyInvoiceCount);
+    } catch (err: any) {
+      const [, limit, message] = err.message.split(':');
+      return NextResponse.json({
+        error: message || 'Limite atteinte.',
+        code: 'LIMIT_REACHED',
+        limit,
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
-    // Trial tier: 15 invoices/month (generous but prevents abuse)
-    if (isTrial && !isFree && monthlyCount >= 15) {
-      return NextResponse.json(
-        { error: 'Limite d\'essai atteinte pour ce mois. Passez au plan Solo pour des factures illimitées.', code: 'TRIAL_LIMIT' },
-        { status: 403 }
-      );
-    }
+    const tier = sub.tier;
 
     const body = await req.json();
     const {
@@ -244,8 +232,8 @@ export async function POST(req: NextRequest) {
         && (process.env.SUPER_PDP_CLIENT_SECRET || process.env.SUPER_PDP_SECRET_ID);
 
       if (hasPdpCredentials) {
-        const pdpTier = profile?.subscription_tier || 'free';
-        const hasPdpAccess = profile?.is_trial_active || pdpTier === 'pro' || pdpTier === 'business';
+        const pdpTier = sub.tier || 'free';
+        const hasPdpAccess = sub.isTrial || pdpTier === 'pro' || pdpTier === 'business';
 
         if (hasPdpAccess) {
           try {

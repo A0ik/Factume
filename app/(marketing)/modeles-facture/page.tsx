@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { FileText, ArrowRight, Zap, Search, Wrench, Laptop, Scale, Stethoscope, ShoppingCart } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 import { professions } from '@/lib/seo-data';
 
 export const metadata: Metadata = {
@@ -92,6 +93,12 @@ export default function ModelesFactureHub() {
             Commencer gratuitement
           </Link>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
 
       <BreadcrumbSchema

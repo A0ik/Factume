@@ -8,8 +8,12 @@ import { isDisposableEmail } from '@/lib/disposable-emails';
 
 let _authUnsubscribe: (() => void) | null = null;
 
-// Clés localStorage à conserver après déconnexion (thème, préférences UI)
-const PERSISTENT_KEYS = ['theme', 'facturme_shortcuts_disabled'];
+// Clés localStorage à conserver après déconnexion (thème, préférences UI + contexte cabinet)
+const PERSISTENT_KEYS = [
+  'theme',
+  'facturme_shortcuts_disabled',
+  'factume_active_cabinet_id',   // MONOLITH LOI 1: le cabinet actif survit à la déconnexion
+];
 
 interface AuthState {
   user: User | null;

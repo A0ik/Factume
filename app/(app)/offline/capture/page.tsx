@@ -1115,7 +1115,7 @@ export default function CapturePage() {
                     {!isPro && workspaces.length >= 1 && (
                       <div className="border-t border-gray-100 p-2">
                         <div className="px-3 py-2 text-[10px] text-gray-500 text-center">
-                          <span className="block mb-1"><Lock size={10} className="inline" /> Plan Solo - 1 dossier max</span>
+                          <span className="block mb-1"><Lock size={10} className="inline" /> Plan Starter - 1 cabinet max</span>
                           <span className="text-primary font-semibold">Passez à Pro</span> pour en créer d'autres
                         </div>
                       </div>

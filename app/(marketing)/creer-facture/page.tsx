@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Rocket, Bot, FileDown, Mail, CreditCard, ListChecks } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
+import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
 
 export const metadata: Metadata = {
   title: 'Créer une Facture – En 30 Secondes avec l\'IA',
@@ -117,7 +119,7 @@ export default function CreerFacturePage() {
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Créer une Facture – En <span className="text-green-600">30 Secondes</span> avec l&apos;IA
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
               L&apos;IA <strong>remplit les champs, génère le PDF et l&apos;envoie par email</strong>. Suivi de paiement et relances automatiques inclus.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -230,11 +232,20 @@ export default function CreerFacturePage() {
           </p>
         </div>
       </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[{ href: '/facture-ia', label: 'Facture IA — Créez par intelligence artificielle' }, { href: '/facture-voix', label: 'Facture Voix — Créez en parlant' }, { href: '/modeles-facture', label: 'Modèles de facture' }, { href: '/mentions-obligatoires-facture', label: 'Mentions obligatoires' }]} />
+      </section>
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
           { name: 'Créer une Facture', url: 'https://factu.me/creer-facture' },
         ]}
+      />
+      <SpeakableSchema
+        cssSelectors={['.speakable-section']}
+        url="https://factu.me/creer-facture"
+        name="Créer une facture — Guide et outil gratuit"
+        description="Comment créer une facture gratuitement avec Factu.me"
       />
     </div>
   );

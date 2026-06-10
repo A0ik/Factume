@@ -373,6 +373,8 @@ export default function BTPPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
           { href: '/facturation-artisans', label: 'Facturation Artisans' },
           { href: '/facturation-electricien', label: 'Facturation Electricien' },
           { href: '/facturation-plomberie', label: 'Facturation Plomberie' },

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { FAQSchema } from '@/components/seo/FAQSchema';
+import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Électronique Obligatoire 2026 – Guide Complet & Solution Conforme | Factu.me',
@@ -198,7 +199,7 @@ const faqItems = [
   },
   {
     question: 'Quel est le coût de la facturation électronique avec Factu.me ?',
-    answer: 'Factu.me propose un plan gratuit (Découverte) jusqu\'à 3 factures/mois. Le plan Solo à 14,99€/mois inclut les factures illimitées avec Factur-X. Le plan Pro à 29,99€/mois ajoute la connexion PDP complète et l\'export FEC comptable. Aucun frais caché de mise en conformité.',
+    answer: 'Factu.me propose un plan gratuit (Découverte) jusqu\'à 5 factures/mois. Le plan Pro à 14,99€/mois inclut les factures illimitées avec Factur-X. Le plan Business à 39,99€/mois ajoute la connexion PDP complète et l\'export FEC comptable. Aucun frais caché de mise en conformité.',
   },
   {
     question: 'Que se passe-t-il si je ne suis pas conforme en 2026 ?',
@@ -265,7 +266,7 @@ export default function FacturationElectroniquePage() {
       {/* Quick Answer - Passage Ranking Target */}
       <section className="py-12 bg-white border-y border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-indigo-50 rounded-3xl p-8">
+          <div className="bg-indigo-50 rounded-3xl p-8 speakable-section">
             <h2 className="text-2xl font-black text-gray-900 mb-4">
               Réforme facturation électronique 2026 : l&apos;essentiel en 30 secondes
             </h2>
@@ -514,7 +515,7 @@ export default function FacturationElectroniquePage() {
                   <h3 className="text-lg font-bold text-gray-900 pr-4">{faq.question}</h3>
                   <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-indigo-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
                 </summary>
-                <div className="px-6 pb-6">
+                <div className="px-6 pb-6 speakable-faq-answer">
                   <p className="text-gray-600">{faq.answer}</p>
                 </div>
               </details>
@@ -531,6 +532,8 @@ export default function FacturationElectroniquePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
+              { href: '/facture-ia', title: 'Facture IA — Intelligence Artificielle', desc: 'Créez vos factures par intelligence artificielle.' },
+              { href: '/facture-voix', title: 'Facture Voix — Dictée vocale IA', desc: 'Dictez vos factures vocalement grâce à la reconnaissance vocale.' },
               { href: '/facturation-factur-x', title: 'Format Factur-X détaillé', desc: 'Comprendre le format PDF/A-3 + XML et la norme EN 16931.' },
               { href: '/mentions-obligatoires-facture', title: 'Mentions légales obligatoires', desc: 'Toutes les mentions requises sur une facture française conforme.' },
               { href: '/facture-sans-tva', title: 'Facturer sans TVA', desc: 'Auto-entrepreneurs en franchise : comment émettre une facture électronique sans TVA.' },
@@ -587,6 +590,12 @@ export default function FacturationElectroniquePage() {
         ]}
       />
       <FAQSchema items={faqItems} />
+      <SpeakableSchema
+        cssSelectors={['.speakable-section', '.speakable-faq-answer']}
+        url="https://factu.me/facturation-electronique"
+        name="Facturation électronique — Guide complet réforme e-invoicing 2026"
+        description="Tout savoir sur la facturation électronique obligatoire en France et la réforme e-invoicing 2026 avec Factu.me"
+      />
     </div>
   );
 }

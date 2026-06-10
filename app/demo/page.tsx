@@ -812,7 +812,7 @@ export default function DemoPage() {
                     <span className="font-medium">Mode démo</span> - Filigrane visible sur le PDF - Document non contractuel
                   </p>
                   <Link
-                    href="/register?plan=solo&trial=4"
+                    href="/register?plan=pro&trial=4"
                     className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all group"
                   >
                     Commencer avec Factu.me

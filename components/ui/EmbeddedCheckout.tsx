@@ -206,17 +206,11 @@ const PLAN_CONFIG: Record<string, {
   lightRing: string;
   darkRing: string;
 }> = {
-  solo: {
+  pro: {
     icon: Zap, gradient: 'from-emerald-500 to-emerald-600', color: '#10B981',
     lightBg: 'bg-emerald-50', darkBg: 'bg-emerald-500/10',
     lightText: 'text-emerald-700', darkText: 'text-emerald-400',
     lightRing: 'ring-emerald-200', darkRing: 'ring-emerald-500/30',
-  },
-  pro: {
-    icon: Rocket, gradient: 'from-blue-600 to-blue-800', color: '#2563EB',
-    lightBg: 'bg-blue-50', darkBg: 'bg-blue-500/10',
-    lightText: 'text-blue-700', darkText: 'text-blue-400',
-    lightRing: 'ring-blue-200', darkRing: 'ring-blue-500/30',
   },
   business: {
     icon: Crown, gradient: 'from-purple-600 to-violet-700', color: '#9333EA',
@@ -247,7 +241,7 @@ function CheckoutForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.solo;
+  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.pro;
   const PlanIcon = config.icon;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -471,7 +465,7 @@ export default function EmbeddedCheckout({
   const { resolvedTheme } = useThemeStore();
   const isDark = resolvedTheme === 'dark';
 
-  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.solo;
+  const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.pro;
   const primaryColor = config.color;
 
   // LOI 8: Build Stripe Appearance dynamically

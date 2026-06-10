@@ -5,6 +5,7 @@ import {
   MessageSquare, Shield, Clock, HelpCircle, Sparkles
 } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 
 export const metadata: Metadata = {
@@ -286,6 +287,12 @@ export default function ModeleFacturePage() {
             Créer ma première facture
           </Link>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
 
       <BreadcrumbSchema

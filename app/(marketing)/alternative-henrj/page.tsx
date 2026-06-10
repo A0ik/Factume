@@ -260,6 +260,8 @@ export default function AlternativeHenrriPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale' },
           { href: '/alternative-tiime', label: 'Alternative Tiime' },
           { href: '/alternative-abby', label: 'Alternative Abby' },
           { href: '/logiciel-facture-gratuit', label: 'Logiciel facture gratuit' },

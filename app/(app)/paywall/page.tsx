@@ -36,62 +36,42 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'solo', name: 'Solo', price: '14,99€', yearlyPrice: '12€', yearlySavings: '36€', tagline: 'Idéal pour démarrer',
+    id: 'pro', name: 'Pro', price: '14,99€', yearlyPrice: '12,42€', yearlySavings: '31€', tagline: 'Le couteau suisse des indépendants',
     icon: Zap, iconColor: 'text-white', iconBg: 'from-emerald-500 to-emerald-600',
     gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
     gradientFrom: 'from-emerald-500', gradientTo: 'to-emerald-700',
     borderColor: 'emerald-500', glowColor: 'shadow-emerald-500',
-    cta: 'Choisir Solo', badge: 'Recommandé', features: [
-      { label: 'Factures illimitées', included: true },
-      { label: 'Clients illimités', included: true },
-      { label: 'Envoi par email', included: true },
-      { label: 'Paiement en ligne', included: true },
-      { label: '6 templates PDF', included: true },
-      { label: 'Logo & couleurs', included: true },
-      { label: 'Contrats de travail', included: false },
-      { label: 'IA & Automatisation', included: false },
-      { label: 'Pipeline CRM', included: false },
-      { label: 'FEC & Comptabilité', included: false },
-    ]
-  },
-  {
-    id: 'pro', name: 'Pro', price: '29,99€', yearlyPrice: '24€', yearlySavings: '72€', tagline: 'Pour grandir',
-    icon: Rocket, iconColor: 'text-white', iconBg: 'from-blue-800 to-indigo-900',
-    gradient: 'from-blue-800 via-blue-900 to-indigo-900',
-    gradientFrom: 'from-blue-800', gradientTo: 'to-indigo-900',
-    borderColor: 'blue-800', glowColor: 'shadow-blue-800',
     cta: 'Choisir Pro', badge: 'Populaire', features: [
-      { label: 'Tout dans Solo', included: true },
-      { label: 'Contrats avec signatures électroniques', included: true, highlight: true },
-      { label: 'Factures électroniques', included: true },
-      { label: 'IA & Relances', included: true },
+      { label: 'Factures & devis illimités', included: true },
+      { label: 'Clients illimités + CRM', included: true },
+      { label: 'URSSAF One-Click', included: true, highlight: true },
+      { label: 'Voice Expense illimité', included: true, highlight: true },
+      { label: 'Copilot Factu IA', included: true },
       { label: 'Export FEC', included: true },
-      { label: 'Factur-X (Conforme 2026)', included: true },
-      { label: 'Pipeline CRM', included: true },
-      { label: 'Notes de frais', included: true },
+      { label: 'E-facturation certifiée', included: true },
+      { label: 'Contrats & signatures', included: true },
       { label: 'Factures récurrentes', included: true },
-      { label: 'Signature client', included: true },
-      { label: 'Multi-espaces', included: false },
-      { label: 'API & Webhooks', included: false },
+      { label: 'Modèles personnalisés', included: true },
+      { label: 'Sans watermark PDF', included: true },
+      { label: 'Comptable Connect', included: false },
+      { label: 'Multi-utilisateur', included: false },
     ]
   },
   {
-    id: 'business', name: 'Business', price: '59,99€', yearlyPrice: '48€', yearlySavings: '144€', tagline: 'Accès total + Outils avancés',
+    id: 'business', name: 'Business', price: '39,99€', yearlyPrice: '33,25€', yearlySavings: '81€', tagline: 'Pour les PME & experts-comptables',
     icon: Crown, iconColor: 'text-white', iconBg: 'from-purple-600 to-violet-700',
     gradient: 'from-purple-600 via-violet-700 to-purple-800',
     gradientFrom: 'from-purple-600', gradientTo: 'to-purple-800',
     borderColor: 'purple-600', glowColor: 'shadow-purple-600',
     cta: 'Choisir Business', badge: 'Premium', features: [
       { label: 'Tout dans Pro', included: true },
-      { label: 'Outils avancés (OCR, Analyse IA)', included: true, highlight: true },
-      { label: 'Factur-X + Transmission PDP', included: true },
-      { label: '10 espaces de travail', included: true },
+      { label: '5 cabinets', included: true, highlight: true },
+      { label: 'Comptable Connect', included: true, highlight: true },
+      { label: 'Copilot Factu IA (avancé)', included: true },
+      { label: 'Multi-utilisateur (5)', included: true },
       { label: 'API & Webhooks', included: true },
-      { label: 'Multi-utilisateurs', included: true },
       { label: 'Rapports avancés', included: true },
-      { label: 'Support prioritaire', included: true },
-      { label: 'Onboarding dédié', included: true },
-      { label: 'SLA garanti', included: true },
+      { label: 'Support dédié', included: true },
     ]
   },
 ];
@@ -100,11 +80,11 @@ const PLANS: Plan[] = [
    HELPERS
    ═══════════════════════════════════════════════════════════════ */
 
-// LOI 2: Solo recommended for free users, upgrade suggestion for paid
+// LOI 2: Pro recommended for free users, Business for Pro users
 function getHighlightedPlan(tier: string): string {
-  if (tier === 'free') return 'solo';
-  if (tier === 'solo') return 'pro';
-  return 'business';
+  if (tier === 'free') return 'pro';
+  if (tier === 'pro' || tier === 'solo') return 'business';
+  return 'pro';
 }
 
 function getPriceNote(plan: Plan, yearly: boolean, trialMode = false): string {
@@ -206,12 +186,12 @@ export default function PaywallPage() {
       const res = await fetch('/api/trial/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'solo', fingerprint: fp }),
+        body: JSON.stringify({ plan: 'pro', fingerprint: fp }),
       });
       const data = await res.json();
 
       if (data.success) {
-        toast.success('Essai activé ! Profitez de Solo pendant 7 jours.');
+        toast.success('Essai activé ! Profitez de Pro pendant 7 jours.');
         setTimeout(() => { window.location.href = '/dashboard?trial=true'; }, 800);
       } else {
         toast.error(data.error || "Impossible d'activer l'essai");
@@ -417,7 +397,7 @@ export default function PaywallPage() {
                     "text-sm",
                     isDark ? "text-zinc-400" : "text-gray-600"
                   )}>
-                    Testez toutes les fonctionnalités Solo pendant 7 jours. Aucune carte requise.
+                    Testez toutes les fonctionnalités Pro pendant 7 jours. Aucune carte requise.
                   </p>
                   <div className={cn(
                     "flex items-center gap-2 text-sm font-semibold mt-1",
@@ -476,12 +456,12 @@ export default function PaywallPage() {
                   <p className={cn("text-sm mb-3", isDark ? "text-zinc-400" : "text-gray-700")}>
                     {remainingInvoices > 0
                       ? `Vous pouvez créer encore ${remainingInvoices} facture${remainingInvoices > 1 ? 's' : ''} ce mois-ci.`
-                      : 'Vous avez atteint votre limite de 3 factures mensuelles.'}
+                      : 'Vous avez atteint votre limite de 5 factures mensuelles.'}
                   </p>
                   <div className="mb-4">
                     <div className="flex justify-between text-xs mb-2">
                       <span className={cn("font-medium", isDark ? "text-zinc-500" : "text-gray-600")}>
-                        {sub.invoiceCount} / 3 factures
+                        {sub.invoiceCount} / 5 factures
                       </span>
                       <span className={cn(
                         "font-bold",
@@ -504,14 +484,14 @@ export default function PaywallPage() {
                             : "bg-gradient-to-r from-red-400 to-red-500"
                         )}
                         initial={{ width: 0 }}
-                        animate={{ width: `${(sub.invoiceCount / 3) * 100}%` }}
+                        animate={{ width: `${(sub.invoiceCount / 5) * 100}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { icon: InfinityIcon, text: 'Illimité avec Solo' },
+                      { icon: InfinityIcon, text: 'Illimité avec Pro' },
                       { icon: Sparkles, text: 'IA incluse' },
                     ].map((item, i) => (
                       <div key={i} className={cn(
@@ -951,7 +931,7 @@ export default function PaywallPage() {
               isDark ? "text-zinc-600 hover:text-zinc-400" : "text-gray-400 hover:text-gray-600"
             )}
           >
-            Continuer gratuitement (3 factures/mois)
+            Continuer gratuitement (5 factures/mois)
           </button>
         </motion.div>
       )}

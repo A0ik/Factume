@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Building2, Users, BarChart3, FileText, Shield, Clock, CheckCircle2, TrendingUp, Bell, Calendar, Landmark, Briefcase } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
   title: 'Logiciel Cabinet Comptable – Gerez Tous Vos Clients | Factu.me',
@@ -212,6 +213,12 @@ export default function LogicielCabinetComptablePage() {
             </Link>
           </div>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
       <BreadcrumbSchema
         items={[

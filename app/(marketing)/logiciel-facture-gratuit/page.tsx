@@ -270,6 +270,8 @@ export default function LogicielFactureGratuitPage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Essai gratuit' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale' },
           { href: '/facturation-auto-entrepreneur', label: 'Facturation Auto-entrepreneur' },
           { href: '/facturation-btp', label: 'Facturation BTP' },
           { href: '/demo', label: 'Voir une demo' },

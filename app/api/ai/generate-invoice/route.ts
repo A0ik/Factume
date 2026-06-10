@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { validateAIGenerateData, formatValidationError, ValidationError, DocumentType, AIGenerateSchema, validateRequest } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { z } from 'zod';
 
 type LocalDocumentType = DocumentType;
@@ -70,19 +71,17 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // TOLL FIX B5: AI invoice generation requires Solo plan or above
-    const { data: subProfile } = await supabaseAuth
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-    const hasPlan = subProfile && ['solo', 'pro', 'business', 'trial'].includes(subProfile.subscription_tier || '');
-    const isTrial = subProfile?.is_trial_active === true;
-    if (!hasPlan && !isTrial) {
+    // Subscription gate: Copilot Factu AI requires Pro plan or above
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch (err: any) {
+      const [, feature, message] = err.message.split(':');
       return NextResponse.json({
-        error: 'La génération IA de factures nécessite au minimum le plan Solo.',
-        code: 'SUBSCRIPTION_REQUIRED',
-        upgradeUrl: '/paywall?plan=solo',
+        error: message || 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        feature,
+        upgradeUrl: '/paywall',
       }, { status: 403 });
     }
 

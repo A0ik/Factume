@@ -15,9 +15,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 const PLAN_INFO: Record<string, { name: string; price: string; icon: any; color: string }> = {
-  solo: { name: 'Solo', price: '14,99€', icon: Zap, color: 'from-emerald-500 to-emerald-600' },
-  pro: { name: 'Pro', price: '29,99€', icon: Rocket, color: 'from-blue-800 to-indigo-900' },
-  business: { name: 'Business', price: '59,99€', icon: Crown, color: 'from-purple-600 to-violet-700' },
+  pro: { name: 'Pro', price: '14,99€', icon: Zap, color: 'from-emerald-500 to-emerald-600' },
+  business: { name: 'Business', price: '39,99€', icon: Crown, color: 'from-purple-600 to-violet-700' },
 };
 
 export default function TrialPage() {

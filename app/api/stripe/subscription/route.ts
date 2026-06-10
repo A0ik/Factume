@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
-// Tu gardes ta super structure de prix !
+// MONOLITH: Structure de prix centralisée — plus de plan Solo
 const PRICE_IDS: Record<string, Record<string, string>> = {
-  solo: {
-    monthly: process.env.STRIPE_SOLO_MONTHLY_PRICE_ID!,
-    yearly: process.env.STRIPE_SOLO_YEARLY_PRICE_ID!,
-  },
   pro: {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID!,
     yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID!,

@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
       { source: '/facturation-developpeur', destination: '/modeles-facture/developpeur', permanent: true },
       { source: '/facturation-designer', destination: '/modeles-facture/designer', permanent: true },
       { source: '/facturation-consultant', destination: '/modeles-facture/consultant', permanent: true },
+      /* ── Singularity: redirections sémantiques vers hubs IA/Voix ── */
+      { source: '/facture-vocale', destination: '/facture-voix', permanent: true },
+      { source: '/facture-intelligente', destination: '/facture-ia', permanent: true },
+      { source: '/facture-automatique', destination: '/facture-ia', permanent: true },
+      { source: '/facture-par-voix', destination: '/facture-voix', permanent: true },
+      { source: '/facture-par-ia', destination: '/facture-ia', permanent: true },
+      { source: '/logiciel-facture-ia', destination: '/facture-ia', permanent: true },
+      { source: '/logiciel-facture-voix', destination: '/facture-voix', permanent: true },
+      { source: '/facturation-ia', destination: '/facture-ia', permanent: true },
+      { source: '/facturation-intelligente', destination: '/facture-ia', permanent: true },
       // Canvas + Copilot unified creation page redirects
       { source: '/documents/factures/new', destination: '/documents/create?type=invoice', permanent: false },
       { source: '/documents/devis/new', destination: '/documents/create?type=quote', permanent: false },

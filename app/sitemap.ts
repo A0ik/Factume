@@ -74,6 +74,12 @@ const trustPages = [
   { url: `${baseUrl}/a-propos`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
 ];
 
+// ── Pages hub SEO Singularity (priorité maximale) ──
+const singularityHubPages = [
+  { url: `${baseUrl}/facture-ia`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
+  { url: `${baseUrl}/facture-voix`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
+];
+
 // Pages hub programmatiques
 const hubPages = [
   { url: `${baseUrl}/modeles-facture`, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 0.9 },
@@ -110,6 +116,14 @@ const professionPages = getAllProfessionSlugs().map((slug) => ({
   priority: 0.8,
 }));
 
+// ── Pages programmatiques Singularity : facture-ia/[profession] ──
+const factureIAProfessionPages = getAllProfessionSlugs().map((slug) => ({
+  url: `${baseUrl}/facture-ia/${slug}`,
+  lastModified: new Date('2026-06-10'),
+  changeFrequency: 'monthly' as const,
+  priority: 0.9,
+}));
+
 // Pages programmatiques statuts
 const statutPages = getAllStatutSlugs().map((slug) => ({
   url: `${baseUrl}/comment-facturer/${slug}`,
@@ -120,6 +134,7 @@ const statutPages = getAllStatutSlugs().map((slug) => ({
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
+    ...singularityHubPages,
     ...mainPages,
     ...segmentPages,
     ...featurePages,
@@ -127,6 +142,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...trustPages,
     ...hubPages,
     ...professionPages,
+    ...factureIAProfessionPages,
     ...statutPages,
     ...legalPages,
     ...blogPages,

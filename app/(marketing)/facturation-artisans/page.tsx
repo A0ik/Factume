@@ -4,6 +4,7 @@ import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Smartp
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
+import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Artisans – Simple, Rapide & Gratuit',
@@ -119,7 +120,7 @@ export default function ArtisanPage() {
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Logiciel de Facturation pour <span className="text-blue-600">Artisans</span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
               Créez vos factures et devis en <strong>30 secondes</strong> grâce à la dictée vocale. Gratuit jusqu\'à 3 factures/mois.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -258,6 +259,12 @@ export default function ArtisanPage() {
           { name: 'Facturation Artisans', url: 'https://factu.me/facturation-artisans' },
         ]}
       />
+      <SpeakableSchema
+        cssSelectors={['.speakable-section']}
+        url="https://factu.me/facturation-artisans"
+        name="Facturation artisans — Logiciel de facture pour artisans"
+        description="Logiciel de facturation pour artisans avec Factu.me"
+      />
       {/* Modèles par métier — Maillage Segment→Hub */}
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -291,6 +298,8 @@ export default function ArtisanPage() {
 
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale' },
           { href: '/modeles-facture', label: 'Tous les modèles de facture' },
           { href: '/comment-facturer', label: 'Guides par statut juridique' },
           { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },

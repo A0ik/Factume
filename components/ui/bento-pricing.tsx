@@ -18,72 +18,55 @@ type PlanConfig = {
 
 const PLANS: PlanConfig[] = [
   {
-    id: 'decouverte',
-    name: 'Découverte',
+    id: 'starter',
+    name: 'Starter',
     priceMonthly: 0,
-    description: "L'essentiel pour tester l'outil.",
+    description: "L'essentiel pour démarrer et tester.",
     recommended: false,
     features: [
-      '3 factures et devis par mois',
-      '10 clients enregistrés',
-      '1 template basique',
-      { label: 'Envoi par email', included: false },
-      { label: 'Lien de paiement en ligne', included: false },
+      '5 factures et devis par mois',
+      'E-facturation certifiée',
+      '1 cabinet, 10 clients CRM',
+      '5 commandes vocales/mois',
+      { label: 'URSSAF One-Click', included: false },
+      { label: 'Copilot Factu IA', included: false },
     ],
     ctaText: 'Commencer gratuitement',
     ctaVariant: 'outline',
   },
   {
-    id: 'solo',
-    name: 'Solo',
+    id: 'pro',
+    name: 'Pro',
     priceMonthly: 14.99,
-    description: 'Pour les freelances qui veulent être pros et sereins.',
+    description: 'Le couteau suisse des indépendants & TPE.',
     recommended: true,
     features: [
-      'Facturation & Devis illimités',
-      'Clients illimités',
-      'Tous les templates pro',
-      'Envoi par Email',
-      'Encaissez en ligne (Stripe/SumUp)',
-      'Relances automatiques',
+      'Factures & devis illimités',
+      'URSSAF One-Click',
+      'Voice Expense illimité',
+      'Copilot Factu IA',
+      'Export FEC & Comptabilité',
+      'Contrats & Signatures',
+      'CRM illimité',
+      'Sans watermark PDF',
     ],
     ctaText: "Démarrer l'essai gratuit",
     ctaVariant: 'default',
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    priceMonthly: 29.99,
-    description: 'Pour grandir avec l\'IA et les contrats.',
-    recommended: false,
-    features: [
-      'Tout le plan Solo inclus',
-      'Contrats & Signatures électroniques',
-      'Factur-X (Conforme 2026)',
-      'IA & Relances automatiques',
-      'Export FEC & Comptabilité',
-      'Pipeline CRM intégré',
-      'Factures récurrentes',
-      'Notes de frais',
-    ],
-    ctaText: 'Essayer Pro gratuitement',
-    ctaVariant: 'default',
-  },
-  {
     id: 'business',
     name: 'Business',
-    priceMonthly: 59.99,
-    description: "L'arsenal complet pour automatiser tout.",
+    priceMonthly: 39.99,
+    description: "Pour les PME & experts-comptables.",
     recommended: false,
     features: [
       'Tout le plan Pro inclus',
-      'Scan IA de reçus (Dext-like)',
-      'Export FEC automatique',
-      'CRM & Pipeline intégré',
-      '10 espaces de travail',
-      'Multi-utilisateurs & Équipes',
-      'API & Webhooks avancés',
-      'Support prioritaire',
+      '5 cabinets',
+      'Comptable Connect',
+      'Copilot IA avancé',
+      'Multi-utilisateur (5)',
+      'API & Webhooks',
+      'Support dédié',
     ],
     ctaText: 'Choisir Business',
     ctaVariant: 'outline',
@@ -137,11 +120,11 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
     onSelect?.(planId);
   };
 
-  const [decouverte, solo, pro, business] = PLANS;
+  const [starter, pro, business] = PLANS;
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-      {/* Découverte */}
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {/* Starter */}
       <div
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900',
@@ -149,7 +132,7 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
       >
         <div className="flex items-center gap-2 p-5 pb-3">
           <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-600 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
-            {decouverte.name.toUpperCase()}
+            {starter.name.toUpperCase()}
           </span>
         </div>
 
@@ -157,24 +140,24 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
           <div className="font-mono text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
             Gratuit
           </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{decouverte.description}</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{starter.description}</p>
         </div>
 
         <div className="flex-1 px-5 pb-5">
-          <FeatureList features={decouverte.features} />
+          <FeatureList features={starter.features} />
         </div>
 
         <div className="px-5 pb-5">
           <button
-            onClick={() => handleClick(decouverte.id)}
+            onClick={() => handleClick(starter.id)}
             className="w-full rounded-xl border-2 border-gray-300 dark:border-gray-600 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 transition-all hover:border-gray-900 dark:hover:border-gray-400 hover:text-gray-900 dark:hover:text-white"
           >
-            {decouverte.ctaText}
+            {starter.ctaText}
           </button>
         </div>
       </div>
 
-      {/* Solo (featured) */}
+      {/* Pro (featured) */}
       <div
         className={cn(
           'relative flex flex-col overflow-hidden rounded-2xl border border-primary/30 bg-gray-950 dark:bg-gray-950',
@@ -191,7 +174,7 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
 
         <div className="relative z-10 flex items-center gap-3 p-5 pb-3">
           <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-            {solo.name.toUpperCase()}
+            {pro.name.toUpperCase()}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-white">
             <Sparkles className="h-3 w-3 text-primary" />
@@ -202,57 +185,21 @@ export function BentoPricing({ onSelect }: { onSelect?: (planId: string) => void
         <div className="relative z-10 px-5 pb-3">
           <div className="flex items-end gap-1.5">
             <span className="font-mono text-4xl font-bold tracking-tight text-white">
-              {solo.priceMonthly}€
+              {pro.priceMonthly}€
             </span>
             <span className="pb-1.5 text-sm text-gray-400">/mois</span>
           </div>
-          <p className="mt-1 text-sm text-gray-400">{solo.description}</p>
+          <p className="mt-1 text-sm text-gray-400">{pro.description}</p>
         </div>
 
         <div className="relative z-10 flex-1 p-5">
-          <FeatureList features={solo.features} textClass="text-gray-300" />
+          <FeatureList features={pro.features} textClass="text-gray-300" />
         </div>
 
         <div className="relative z-10 px-5 pb-5">
           <button
-            onClick={() => handleClick(solo.id)}
-            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark active:scale-95"
-          >
-            {solo.ctaText}
-          </button>
-        </div>
-      </div>
-
-      {/* Pro */}
-      <div
-        className={cn(
-          'relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900',
-        )}
-      >
-        <div className="flex items-center gap-2 p-5 pb-3">
-          <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:text-blue-400">
-            {pro.name.toUpperCase()}
-          </span>
-        </div>
-
-        <div className="px-5 pb-3">
-          <div className="flex items-end gap-1.5">
-            <span className="font-mono text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-              {pro.priceMonthly}€
-            </span>
-            <span className="pb-1.5 text-sm text-gray-400 dark:text-gray-500">/mois</span>
-          </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{pro.description}</p>
-        </div>
-
-        <div className="flex-1 px-5 pb-5">
-          <FeatureList features={pro.features} />
-        </div>
-
-        <div className="px-5 pb-5">
-          <button
             onClick={() => handleClick(pro.id)}
-            className="w-full rounded-xl border-2 border-gray-900 dark:border-gray-100 px-6 py-2.5 text-sm font-bold text-gray-900 dark:text-gray-100 transition-all hover:bg-gray-900 dark:hover:bg-gray-100 hover:text-white dark:hover:text-gray-900 active:scale-95"
+            className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark active:scale-95"
           >
             {pro.ctaText}
           </button>

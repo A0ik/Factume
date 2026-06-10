@@ -4,6 +4,7 @@ import { CheckCircle2, Zap, FileText, MessageSquare, Euro, Shield, Clock, Globe,
 import { FAQSchema } from '@/components/seo/FAQSchema';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
+import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
 
 export const metadata: Metadata = {
   title: 'Logiciel Facturation Freelances – Simple, Rapide & Gratuit',
@@ -134,7 +135,7 @@ export default function FreelancePage() {
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Logiciel de Facturation pour <span className="text-purple-600">Freelances</span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
               Créez vos factures en <strong>30 secondes</strong> grâce à la dictée vocale. Concentrez-vous sur votre travail, pas sur l\'admin.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -290,6 +291,12 @@ export default function FreelancePage() {
           { name: 'Facturation Freelances', url: 'https://factu.me/facturation-freelances' },
         ]}
       />
+      <SpeakableSchema
+        cssSelectors={['.speakable-section']}
+        url="https://factu.me/facturation-freelances"
+        name="Facturation freelances — Logiciel de facture pour indépendants"
+        description="Logiciel de facturation pour freelances et indépendants avec Factu.me"
+      />
       {/* Modèles par métier — Maillage Segment→Hub */}
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -323,6 +330,8 @@ export default function FreelancePage() {
 
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale' },
           { href: '/modeles-facture', label: 'Tous les modèles de facture' },
           { href: '/comment-facturer', label: 'Guides par statut juridique' },
           { href: '/facture-gratuite', label: 'Facture gratuite en ligne' },

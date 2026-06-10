@@ -419,7 +419,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
         </div>
         <h1 className="text-2xl font-black text-gray-900 mb-2">Modification de facture</h1>
         <p className="text-gray-600 mb-6 max-w-md mx-auto">
-          La modification de factures est reservee aux abonnes payants. Passez a un plan Solo, Pro ou Business pour debloquer cette fonctionnalite.
+          La modification de factures est reservee aux abonnes payants. Passez a un plan Pro ou Business pour debloquer cette fonctionnalite.
         </p>
         <Button onClick={() => router.push('/paywall')} icon={<ArrowLeft size={16} />}>
           Voir les plans

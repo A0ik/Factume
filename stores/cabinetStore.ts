@@ -122,10 +122,14 @@ async function getAuthHeaders(maxRetries = 3): Promise<Record<string, string> | 
     if (session?.user) {
       // Share token with the fetch cache system
       setSessionToken(session.access_token);
-      return {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       };
+      // MONOLITH: Transmettre le cabinet actif pour résolution serveur
+      const activeId = localStorage.getItem(ACTIVE_CABINET_KEY);
+      if (activeId) headers['x-active-cabinet-id'] = activeId;
+      return headers;
     }
     await new Promise(r => setTimeout(r, 500));
   }
@@ -210,6 +214,23 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
           set({ clients, cabinet: resolvedCabinet });
           if (resolvedCabinet) {
             try { localStorage.setItem(CABINET_DATA_KEY, JSON.stringify(resolvedCabinet)); } catch {}
+            // MONOLITH: Sauvegarder active_cabinet_id en BDD + localStorage
+            const currentActive = get().activeCabinetId;
+            if (!currentActive || currentActive !== resolvedCabinet.id) {
+              localStorage.setItem(ACTIVE_CABINET_KEY, resolvedCabinet.id);
+              set({ activeCabinetId: resolvedCabinet.id });
+            }
+            // Sauvegarder en profil BDD (fire-and-forget)
+            try {
+              const supabase = getSupabaseClient();
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                supabase.from('profiles')
+                  .update({ active_cabinet_id: resolvedCabinet.id, updated_at: new Date().toISOString() })
+                  .eq('id', session.user.id)
+                  .then(() => {});
+              }
+            } catch {}
           } else if (!existingCabinet) {
             try { localStorage.removeItem(CABINET_DATA_KEY); } catch {}
           }
@@ -257,6 +278,16 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
         if (cabinet?.id) {
           localStorage.setItem(ACTIVE_CABINET_KEY, cabinet.id);
           set({ activeCabinetId: cabinet.id });
+          // MONOLITH: Sauvegarder en BDD aussi
+          try {
+            const supabase = getSupabaseClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              await supabase.from('profiles')
+                .update({ active_cabinet_id: cabinet.id, updated_at: new Date().toISOString() })
+                .eq('id', session.user.id);
+            }
+          } catch {}
           await get().fetchCabinets();
         }
         return cabinet;
@@ -270,6 +301,20 @@ export const useCabinetStore = create<CabinetState>((set, get) => ({
   switchCabinet: async (cabinetId) => {
     localStorage.setItem(ACTIVE_CABINET_KEY, cabinetId);
     set({ activeCabinetId: cabinetId });
+
+    // MONOLITH LOI 1: Persister le cabinet actif en BDD (survit à déconnexion)
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        supabase.from('profiles')
+          .update({ active_cabinet_id: cabinetId, updated_at: new Date().toISOString() })
+          .eq('id', session.user.id)
+          .then(({ error }) => {
+            if (error) console.warn('[switchCabinet] profile update failed:', error.message);
+          });
+      }
+    } catch {}
 
     // Refetch all data for the new cabinet
     const { fetchCabinet, fetchInvoices, fetchEmployees, fetchMissions, fetchLegalActs, fetchDeadlines } = get();

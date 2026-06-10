@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, Zap, FileText, Mic, AudioWaveform, MessageSquare, Clock, Sparkles, Volume2, Brain } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
+import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
 
 export const metadata: Metadata = {
   title: 'Facturation Vocale – Créez Vos Factures par la Voix | Factu.me',
@@ -135,7 +137,7 @@ export default function FacturationVocalePage() {
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Facturation Vocale – Créez Vos Factures par la <span className="text-violet-600">Voix</span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 mb-8">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
               Dictée vocale IA : dites <strong>&ldquo;5 jours de dev à 800€ pour Acme&rdquo;</strong> et votre facture est prête. <strong>80% de temps gagné</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -268,11 +270,20 @@ export default function FacturationVocalePage() {
           </p>
         </div>
       </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[{ href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' }, { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' }, { href: '/facturation-electronique', label: 'Facturation électronique 2026' }, { href: '/facturation-artisans', label: 'Facturation artisans' }, { href: '/facturation-freelances', label: 'Facturation freelances' }]} />
+      </section>
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
           { name: 'Facturation Vocale', url: 'https://factu.me/facturation-vocale' },
         ]}
+      />
+      <SpeakableSchema
+        cssSelectors={['.speakable-section']}
+        url="https://factu.me/facturation-vocale"
+        name="Facturation vocale — Créez vos factures à la voix"
+        description="Découvrez la facturation vocale avec Factu.me : dictez vos factures grâce à l'IA"
       />
     </div>
   );

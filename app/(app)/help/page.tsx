@@ -30,7 +30,7 @@ const CATEGORIES = [
     bg: 'bg-blue-50',
     description: 'Créer, envoyer et gérer vos factures',
     faqs: [
-      { q: 'Comment créer ma première facture ?', a: 'Cliquez sur "Factures" dans le menu, puis sur le bouton "Nouveau". Vous pouvez soit dicter votre facture à voix haute (plan Solo/Pro), soit la saisir manuellement. Renseignez le client, les prestations, les dates et cliquez sur "Créer la facture".' },
+      { q: 'Comment créer ma première facture ?', a: 'Cliquez sur "Factures" dans le menu, puis sur le bouton "Nouveau". Vous pouvez soit dicter votre facture à voix haute (plan Pro), soit la saisir manuellement. Renseignez le client, les prestations, les dates et cliquez sur "Créer la facture".' },
       { q: 'Comment envoyer une facture par email ?', a: 'Depuis la page de détail d\'une facture, utilisez le bouton "Envoyer par email". Votre client recevra un email professionnel avec la facture en PDF.' },
       { q: 'Comment relancer un client pour une facture impayée ?', a: 'Sur la page de détail d\'une facture au statut "Envoyée" ou "En retard", un bouton "Relancer" apparaît. Cliquez dessus pour envoyer automatiquement un email de relance poli à votre client.' },
       { q: 'Comment marquer une facture comme payée ?', a: 'Ouvrez la facture depuis la liste, puis utilisez le bouton "Marquer comme payée". Vous pouvez aussi filtrer par statut dans la liste pour retrouver rapidement vos factures impayées.' },
@@ -75,7 +75,7 @@ const CATEGORIES = [
     bg: 'bg-green-50',
     description: 'Dictée vocale et intelligence artificielle',
     faqs: [
-      { q: 'Comment fonctionne la dictée vocale ?', a: 'Disponible avec les plans Solo et Pro. Cliquez sur "Créer une facture" puis sur le microphone. Parlez naturellement ("Facture pour Dupont SA, développement site web, 5 jours à 500€"). L\'IA analyse votre audio et remplit automatiquement tous les champs.' },
+      { q: 'Comment fonctionne la dictée vocale ?', a: 'Disponible avec les plans Pro et Business. Cliquez sur "Créer une facture" puis sur le microphone. Parlez naturellement ("Facture pour Dupont SA, développement site web, 5 jours à 500€"). L\'IA analyse votre audio et remplit automatiquement tous les champs.' },
       { q: 'Dans quelle langue puis-je dicter ?', a: 'Factu.me comprend 7 langues : français, arabe, anglais, espagnol, allemand, italien et portugais. Dictez dans la langue de votre choix, l\'IA s\'adapte automatiquement.' },
       { q: 'Que faire si la dictée n\'est pas précise ?', a: 'Parlez clairement en articulant les chiffres et noms de clients. Après traitement, tous les champs restent modifiables avant de créer la facture.' },
       { q: 'Quelles autres fonctions IA sont disponibles ?', a: 'L\'IA peut aussi catégoriser vos dépenses, analyser vos documents, générer des suggestions de clauses contractuelles et analyser vos relevés bancaires pour un suivi comptabilité automatisé.' },
@@ -102,9 +102,9 @@ const CATEGORIES = [
     bg: 'bg-rose-50',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Découverte (Gratuit) : 3 factures/mois, clients illimités, templates de base.\nPlan Solo (14,99€/mois) : Factures illimitées, dictée vocale IA, OCR, CRM, calendrier, relances.\nPlan Pro (29,99€/mois) : Tout Solo + contrats CDI/CDD, multi-devises, export FEC, Factur-X, rapprochement bancaire.\nPlan Business (59,99€/mois) : Tout Pro + multi-utilisateurs, mode cabinet, API, support prioritaire.\n\nEssai gratuit de 7 jours disponible (carte bancaire requise).' },
-      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 7 jours sans engagement.' },
-      { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Découverte avec les limitations associées.' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 5 factures/mois, 1 cabinet, e-facturation certifiée, 5 commandes vocales/mois.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 14 jours disponible, sans carte bancaire.' },
+      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 14 jours sans carte bancaire.' },
+      { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Starter avec les limitations associées.' },
     ],
   },
   {

@@ -496,7 +496,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Les artisans du BTP ont des besoins spécifiques : facturation sur chantier, gestion des acomptes, autoliquidation, suivi des matériaux. Un logiciel de facturation généraliste ne suffit pas toujours. Il vous faut un outil qui comprend les particularités du secteur.',
           'Factu.me est parfaitement adapté aux artisans du batiment. La facturation vocale vous permet de dicter votre facture depuis le chantier (les mains dans le plâtre, pas le temps de taper). Les modèles pré-configurés gèrent l\'autoliquidation, la retenue de garantie et les situations de travaux.',
-          'En plus, Factu.me propose un CRM pour suivre vos prospects BTP, des relances automatiques pour les impayés (fréquents dans le batiment) et l\'export FEC pour votre comptable. Le plan Pro à 29,99€/mois inclut toutes ces fonctionnalités BTP.',
+          'En plus, Factu.me propose un CRM pour suivre vos prospects BTP, des relances automatiques pour les impayés (fréquents dans le batiment) et l\'export FEC pour votre comptable. Le plan Pro à 14,99€/mois inclut toutes ces fonctionnalités BTP.',
         ],
       },
     ],
@@ -584,7 +584,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'La saisie manuelle d\'un reçu prend en moyenne 2 minutes. Avec l\'OCR Factu.me, c\'est 10 secondes. Pour 50 reçus par mois, vous passez de 100 minutes a moins de 10 minutes. Sur un an, c\'est presque 20 heures économisées.',
           'Le taux d\'erreur de la saisie manuelle est estimé a 4-8% (chiffres transposés, catégories erronées). L\'OCR atteint un taux de précision supérieur a 95% sur les champs clés (montant, date, fournisseur). Vous gagnez en fiabilité comptable.',
-          'Factu.me rend l\'OCR accessible a tous les budgets. Le plan Business a 59,99€/mois inclut l\'OCR illimité, soit bien moins cher que les solutions dédiées comme Dext (a partir de 24£/mois) avec en plus la facturation, le CRM et les contrats de travail.',
+          'Factu.me rend l\'OCR accessible a tous les budgets. Le plan Business à 39,99€/mois inclut l\'OCR illimité, soit bien moins cher que les solutions dédiées comme Dext (a partir de 24£/mois) avec en plus la facturation, le CRM et les contrats de travail.',
         ],
       },
     ],
@@ -1253,7 +1253,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'A partir de septembre 2026, les grandes entreprises devront émettre des factures électroniques conformes. Dès septembre 2026, toutes les entreprises devront pouvoir les recevoir. Les PME seront soumises a l\'obligation d\'émission en septembre 2027.',
           'Ne attendez pas la dernière minute. Commencez a émettre des factures Factur-X dès maintenant pour vous familiariser avec le format et vérifier que vos clients peuvent les traiter. C\'est aussi un argument commercial : vous montrez votre anticipation.',
-          'Factu.me propose l\'export Factur-X dans le plan Pro (29,99€/mois). Vos factures sont automatiquement conformes a la norme EN 16931 et prêtes pour la transmission via PDP. Le passage a la facture électronique se fera sans friction pour vous.',
+          'Factu.me propose l\'export Factur-X dans le plan Pro (14,99€/mois). Vos factures sont automatiquement conformes a la norme EN 16931 et prêtes pour la transmission via PDP. Le passage a la facture électronique se fera sans friction pour vous.',
         ],
       },
     ],
@@ -1429,7 +1429,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Les artisans ont des besoins spécifiques : facturation sur chantier, signature de devis sur tablette, scan de reçus de matériaux, suivi des chantiers en cours. Un logiciel de facturation généraliste ne suffit pas toujours.',
           'Factu.me répond a ces besoins avec : facturation vocale (dictez votre facture les mains libres sur le chantier), application mobile PWA (fonctionne hors-ligne), signature électronique de devis (le client signe sur votre tablette), OCR pour les reçus de matériaux.',
-          'Le plan Solo a 14,99€/mois couvre les besoins de base. Le plan Pro a 29,99€/mois ajoute le CRM, l\'export Factur-X et les contrats de travail (pour les artisans qui embauchent). Le plan Business a 59,99€/mois inclut l\'OCR illimité pour scanner tous vos reçus de matériaux.',
+          'Le plan Starter est gratuit (5 factures/mois). Le plan Pro à 14,99€/mois inclut factures illimitées, URSSAF One-Click, Voice Expense et Copilot IA. Le plan Business à 39,99€/mois ajoute 5 cabinets, Comptable Connect et multi-utilisateur.',
         ],
       },
     ],

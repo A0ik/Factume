@@ -264,7 +264,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               légale. Testez gratuitement pendant 4 jours.
             </p>
             <Link
-              href="/register?plan=solo&trial=4"
+              href="/register?plan=pro&trial=4"
               className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-bold bg-white text-primary hover:bg-gray-100 shadow-xl transition-all group"
             >
               Essayer gratuitement

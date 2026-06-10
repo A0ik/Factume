@@ -162,13 +162,13 @@ const testimonials = [
 ];
 
 const plans = [
-  { name: 'Solo', price: '14,99€', yearly: '12€', tag: 'Freelances & Auto-entrepreneurs', features: ['Facture électronique conforme 2026', 'Factures illimitées', 'Dictée vocale IA', 'Templates personnalisables', 'Agenda intégré', 'Support email'], popular: false },
-  { name: 'Pro', price: '29,99€', yearly: '24€', tag: 'TPE & PME', features: ['Facture électronique conforme 2026', 'Tout Solo inclus', 'Contrats CDI/CDD intégrés', 'Signature électronique', 'CRM Pipeline', 'Notes de frais', '3 espaces de travail'], popular: true },
-  { name: 'Business', price: '59,99€', yearly: '48€', tag: 'PME en croissance', features: ['Facture électronique conforme 2026', 'Tout Pro inclus', 'OCR et analyse IA', 'Espaces illimités', 'API & Webhooks', 'Multi-utilisateurs', 'Rapports avancés'], popular: false },
+  { name: 'Starter', price: 'Gratuit', yearly: 'Gratuit', tag: 'Pour démarrer et tester', features: ['E-facturation certifiée', '5 factures & devis/mois', '1 cabinet, 10 clients', '5 commandes vocales/mois', 'Support email'], popular: false },
+  { name: 'Pro', price: '14,99€', yearly: '12,42€', tag: 'Indépendants & TPE', features: ['E-facturation certifiée', 'Factures & devis illimités', 'URSSAF One-Click', 'Voice Expense illimité', 'Copilot Factu IA', 'Export FEC', 'Sans watermark'], popular: true },
+  { name: 'Business', price: '39,99€', yearly: '33,25€', tag: 'PME & Experts-comptables', features: ['E-facturation certifiée', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'API & Webhooks', 'Support dédié'], popular: false },
 ];
 
 const faqItems = [
-  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Découverte est 100% gratuit (3 factures/mois). Pour tester les plans payants, profitez de 7 jours d\'essai complet, sans engagement.' },
+  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Starter est 100% gratuit (5 factures/mois). Pour tester les plans payants, profitez de 14 jours d\'essai gratuit, sans carte bancaire.' },
   { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données.' },
   { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA comprend parfaitement le français naturel. Dites "5 jours de dev à 600€" et elle crée la facture complète. Vous n\'avez qu\'à vérifier et envoyer.' },
   { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. Vos factures électroniques sont conformes et prêtes pour l\'obligation 2026. L\'export officiel pour les impôts est disponible sur tous les plans.' },
@@ -398,6 +398,71 @@ export default function LandingPageClient() {
       </section>
 
       <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
+
+      {/* ════════════ FACTURE IA & FACTURE VOIX — Hub SEO ════════════ */}
+      <section data-nav-theme="light" className="relative py-16 md:py-20 2xl:py-24 overflow-hidden bg-white">
+        <div className={LC}>
+          <R>
+            <div className="text-center mb-10 2xl:mb-14">
+              <p className="text-[11px] 2xl:text-xs text-emerald-600 uppercase tracking-[0.2em] font-medium mb-3">Propulsé par l'IA</p>
+              <h2 className="text-3xl md:text-4xl 2xl:text-5xl font-bold tracking-tight text-gray-900 leading-[1.1]">
+                Votre facture, par <span className="text-emerald-500">intelligence artificielle</span>
+              </h2>
+              <p className="text-sm 2xl:text-base text-gray-500 mt-3 max-w-lg mx-auto">Deux façons révolutionnaires de créer vos factures électroniques.</p>
+            </div>
+          </R>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 2xl:gap-7 max-w-4xl 2xl:max-w-5xl mx-auto">
+            <R delay={0.08}>
+              <Link href="/facture-ia" className="group block h-full">
+                <div className="relative h-full bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-7 2xl:p-9 transition-all duration-300 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/10 overflow-hidden">
+                  {/* Decorative glow */}
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 2xl:w-14 2xl:h-14 bg-gradient-to-br from-emerald-500 to-emerald-400 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+                      <Brain className="w-6 h-6 2xl:w-7 2xl:h-7 text-white" />
+                    </div>
+                    <h3 className="text-lg 2xl:text-xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors duration-300">
+                      Facture IA
+                    </h3>
+                    <p className="text-sm 2xl:text-base text-gray-500 leading-relaxed mb-5">
+                      Créez vos factures par intelligence artificielle. Décrivez votre besoin en langage naturel, l'IA génère une facture électronique conforme Factur-X en quelques secondes.
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 group-hover:text-emerald-500 transition-colors duration-300">
+                      Découvrir Facture IA
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </R>
+
+            <R delay={0.14}>
+              <Link href="/facture-voix" className="group block h-full">
+                <div className="relative h-full bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-7 2xl:p-9 transition-all duration-300 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-500/10 overflow-hidden">
+                  {/* Decorative glow */}
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors duration-500" />
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 2xl:w-14 2xl:h-14 bg-gradient-to-br from-emerald-600 to-emerald-400 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+                      <Mic className="w-6 h-6 2xl:w-7 2xl:h-7 text-white" />
+                    </div>
+                    <h3 className="text-lg 2xl:text-xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors duration-300">
+                      Facture Voix
+                    </h3>
+                    <p className="text-sm 2xl:text-base text-gray-500 leading-relaxed mb-5">
+                      Dictée vocale pour vos factures. Dites simplement ce que vous souhaitez facturer, Factu.me transcrit et remplit automatiquement tous les champs de votre facture.
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 group-hover:text-emerald-500 transition-colors duration-300">
+                      Découvrir Facture Voix
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </R>
+          </div>
+        </div>
+      </section>
 
       {/* ════════════ UNE SOLUTION POUR TOUS — Loi 2 ════════════ */}
       <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">

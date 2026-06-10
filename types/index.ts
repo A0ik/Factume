@@ -66,6 +66,8 @@ export interface Profile {
   voice_usage_count?: number;
   website?: string;
   referral_code?: string;
+  // MONOLITH LOI 1: Cabinet actif persisté en BDD
+  active_cabinet_id?: string;
   created_at: string;
 }
 

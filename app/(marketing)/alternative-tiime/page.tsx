@@ -244,7 +244,7 @@ export default function AlternativeTiimePage() {
           },
           {
             question: "Factu.me est-il moins cher que Tiime ?",
-            answer: "Oui, le plan Pro Factu.me est à 29,99€/mois avec plus de fonctionnalités que Tiime. Le plan gratuit permet de tester sans engagement."
+            answer: "Oui, le plan Pro Factu.me est à 14,99€/mois avec plus de fonctionnalités que Tiime. Le plan gratuit permet de tester sans engagement."
           },
           {
             question: "Puis-je migrer de Tiime vers Factu.me ?",
@@ -260,6 +260,8 @@ export default function AlternativeTiimePage() {
       />
       <RelatedPages
         pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
           { href: '/alternative-henrj', label: 'Alternative Henrri' },
           { href: '/alternative-abby', label: 'Alternative Abby' },
           { href: '/logiciel-facture-gratuit', label: 'Logiciel facture gratuit' },

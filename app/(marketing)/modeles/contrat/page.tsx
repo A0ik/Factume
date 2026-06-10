@@ -5,6 +5,7 @@ import {
   Shield, PenTool, Users, Scale
 } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
+import { RelatedPages } from '@/components/seo/RelatedPages';
 import { FAQSchema } from '@/components/seo/FAQSchema';
 
 export const metadata: Metadata = {
@@ -287,6 +288,12 @@ export default function ModeleContratPage() {
             Créer mon contrat
           </Link>
         </div>
+      </section>
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <RelatedPages pages={[
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+        ]} />
       </section>
 
       <BreadcrumbSchema
