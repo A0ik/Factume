@@ -202,9 +202,12 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // LOI 1 (SENTINEL) : Toujours utiliser getUser() côté serveur.
+  // getSession() lit le JWT du cookie SANS le valider avec le serveur Auth.
+  // Un JWT expiré/invalide passe quand même, causant des 404/401 silencieux.
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     // For API routes, return 401 JSON instead of redirecting
     if (isApiRoute) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -223,7 +226,7 @@ export async function middleware(req: NextRequest) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_done')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
 
       if (!profile || profile.onboarding_done !== true) {

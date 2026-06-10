@@ -30,14 +30,18 @@ export function clearCabinetCache(url?: string) {
 let _token: string | null = null;
 let _tokenExpiry = 0; // epoch ms
 
-async function getSessionToken(): Promise<string | null> {
+async function getSessionToken(forceRefresh = false): Promise<string | null> {
   const now = Date.now();
-  // Reuse token for 5 minutes
-  if (_token && now < _tokenExpiry) return _token;
+  // Reuse token for 5 minutes (unless forced refresh)
+  if (!forceRefresh && _token && now < _tokenExpiry) return _token;
 
   try {
     const supabase = getSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    // LOI 1 (SENTINEL) : Si le token est potentiellement expiré, forcer un refresh.
+    // On utilise refreshSession() au lieu de getSession() pour obtenir un token frais.
+    const { data: { session } } = forceRefresh
+      ? await supabase.auth.refreshSession()
+      : await supabase.auth.getSession();
     if (session?.access_token) {
       _token = session.access_token;
       _tokenExpiry = now + 5 * 60_000;
@@ -115,6 +119,14 @@ export async function cabinetFetch<T>(
       }
 
       if (!res.ok) {
+        // LOI 1 (SENTINEL) : Si 401, le token est expiré → forcer un refresh et retry
+        if (res.status === 401 && attempt < 2) {
+          const freshToken = await getSessionToken(true);
+          if (freshToken) {
+            headers.Authorization = `Bearer ${freshToken}`;
+            continue; // Retry with fresh token
+          }
+        }
         const { error } = await res.json().catch(() => ({ error: `Erreur ${res.status}` }));
         throw new Error(error || `Erreur ${res.status}`);
       }

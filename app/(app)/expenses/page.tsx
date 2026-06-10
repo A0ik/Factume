@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MultiInvoiceUpload } from '@/components/ui/MultiInvoiceUpload';
+import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
 
 interface Expense {
   id: string;
@@ -589,6 +590,11 @@ export default function ExpensesPage() {
           <p className="text-slate-500 mt-1 text-sm">Legal FR · IK · Plafonds repas</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* LOI 5 (SENTINEL) : Input vocal directement sur la page Notes de frais */}
+          <VoiceExpenseButton
+            onExpenseCreated={(expense) => setExpenses((prev) => [expense, ...prev])}
+            variant="inline"
+          />
           <button onClick={openCreate}
             className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
             <Plus size={16} />
