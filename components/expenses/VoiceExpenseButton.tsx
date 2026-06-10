@@ -33,7 +33,7 @@ export default function VoiceExpenseButton({
   className,
   variant = 'inline',
 }: VoiceExpenseButtonProps) {
-  const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'confirm'>('idle');
+  const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'confirm' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingExpense, setPendingExpense] = useState<VoiceExpenseResult | null>(null);
   const [langBadge, setLangBadge] = useState<{ flag: string; label: string } | null>(null);
