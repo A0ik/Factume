@@ -11,6 +11,7 @@ import MobileLayout from '@/components/layout/MobileLayout';
 import { Logo } from '@/components/ui/Logo';
 import dynamic from 'next/dynamic';
 const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
+const OnboardingWizard = dynamic(() => import('@/components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })), { ssr: false });
 import { TrialCountdown } from '@/components/ui/trial-countdown';
 import { InvoiceCounter } from '@/components/ui/invoice-counter';
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator';
@@ -93,14 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [initialized, user]);
 
-  // Redirect cabinet access
-  useEffect(() => {
-    if (pathname.startsWith('/cabinet') && !pathname.startsWith('/cabinets')) {
-      router.replace('/dashboard');
-    }
-  }, [pathname, router]);
-
-  const hideBanners = pathname === '/paywall' || pathname === '/trial' || pathname.startsWith('/cabinet');
+  const hideBanners = pathname === '/paywall' || pathname === '/trial';
 
   if (!initialized) {
     return (
@@ -123,6 +117,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Toaster position="top-right" richColors closeButton />
       <CommandPalette />
       <AutoSaveIndicator />
+      {/* ARBITER FIX: OnboardingWizard only in (app) layout — never on auth/onboarding/marketing pages */}
+      <OnboardingWizard />
 
       {isTrialActive && showTrialBanner && !hideBanners && (
         <TrialCountdown onClose={() => setShowTrialBanner(false)} trialDocumentCount={profile?.trial_document_count || 0} trialDocLimit={3} />

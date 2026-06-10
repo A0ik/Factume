@@ -5,7 +5,7 @@ import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
 import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { validateAndCorrectTVA, isB2CClient, getDefaultTVARate } from '@/lib/tva-validator';
+import { validateAndCorrectTVA, isB2CClient, getDefaultTVARate, detectTranscriptTaxHints, detectTTCMisinterpretation } from '@/lib/tva-validator';
 import { getUserSubscriptionStatus, incrementVoiceUsage } from '@/lib/subscription-guard';
 
 export const maxDuration = 60;
@@ -128,6 +128,19 @@ RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "TTC" → Toutes taxes comprises
 - "TVA" → Taxe sur la valeur ajoutée
 
+MULTILINGUAL TAX TERMINOLOGY — CRITICAL (le transcript peut être traduit de n'importe quelle langue) :
+TERMES SIGNIFIANT "HORS TAXES" (montant AVANT la taxe = unit_price à retourner) :
+  "HT" / "Hors taxes" / "Net" / "Netto" / "Sin IVA" / "Ohne MwSt" / "Senza IVA" / "Sem IVA" / "بدون ضريبة" / "不含税"
+TERMES SIGNIFIANT "TTC" (montant APRÈS la taxe = doit convertir en HT) :
+  "TTC" / "Toutes taxes comprises" / "Gross" / "Brutto" / "Con IVA" / "Com IVA" / "Inkl. MwSt" / "含税" / "شامل الضريبة"
+TERMES SIGNIFIANT "TVA" (la taxe elle-même) :
+  "TVA" / "VAT" / "MwSt" / "IVA" / "ضريبة القيمة المضافة"
+RÈGLE ABSOLUE : "Net/Netto/Sin IVA/Ohne MwSt" = TOUJOURS HT (avant taxe), JAMAIS TTC
+RÈGLE ABSOLUE : "Gross/Brutto/Lordo/Con IVA" = TOUJOURS TTC (après taxe), JAMAIS HT
+PAR DÉFAUT : En cas de doute, le montant indiqué EST le montant HT. Ne convertis TTC→HT QUE si l'utilisateur dit EXPLICITEMENT TTC/gross/brutto/with tax/toutes taxes comprises.
+CONVERSION TTC→HT : HT = TTC / (1 + taux_TVA/100)
+Exemples : "300 gross 10% VAT" → HT=272.73 | "300 HT 10%" → HT=300 | "300 brutto 19% MwSt" → HT=252.10 | "300 net 10%" → HT=300
+
 LIGNES EXISTANTES :
 ${existingList}
 
@@ -187,6 +200,19 @@ RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "HT" → Hors taxes
 - "TTC" → Toutes taxes comprises
 - "TVA" → Taxe sur la valeur ajoutée
+
+MULTILINGUAL TAX TERMINOLOGY — CRITICAL (le transcript peut être traduit de n'importe quelle langue) :
+TERMES SIGNIFIANT "HORS TAXES" (montant AVANT la taxe = unit_price à retourner) :
+  "HT" / "Hors taxes" / "Net" / "Netto" / "Sin IVA" / "Ohne MwSt" / "Senza IVA" / "Sem IVA" / "بدون ضريبة" / "不含税"
+TERMES SIGNIFIANT "TTC" (montant APRÈS la taxe = doit convertir en HT) :
+  "TTC" / "Toutes taxes comprises" / "Gross" / "Brutto" / "Con IVA" / "Com IVA" / "Inkl. MwSt" / "含税" / "شامل الضريبة"
+TERMES SIGNIFIANT "TVA" (la taxe elle-même) :
+  "TVA" / "VAT" / "MwSt" / "IVA" / "ضريبة القيمة المضافة"
+RÈGLE ABSOLUE : "Net/Netto/Sin IVA/Ohne MwSt" = TOUJOURS HT (avant taxe), JAMAIS TTC
+RÈGLE ABSOLUE : "Gross/Brutto/Lordo/Con IVA" = TOUJOURS TTC (après taxe), JAMAIS HT
+PAR DÉFAUT : En cas de doute, le montant indiqué EST le montant HT. Ne convertis TTC→HT QUE si l'utilisateur dit EXPLICITEMENT TTC/gross/brutto/with tax/toutes taxes comprises.
+CONVERSION TTC→HT : HT = TTC / (1 + taux_TVA/100)
+Exemples : "300 gross 10% VAT" → HT=272.73 | "300 HT 10%" → HT=300 | "300 brutto 19% MwSt" → HT=252.10 | "300 net 10%" → HT=300
 
 EXTRACTION OBLIGATOIRE :
 1. CLIENT: Toute mention de "client", "pour", "chez", "agence", "startup", "société", "entreprise"
@@ -255,6 +281,20 @@ RÈGLES POUR LES MONTANTS :
 - vat_rate par défaut = 20
 - CORRECT: unit_price: 363.64 (pour 400€ TTC avec TVA 10%)
 - FAUX: unit_price: 400 / 1.10
+
+EXEMPLES MULTILINGUES CRITIQUES (applique la taxonomie ci-dessus) :
+- "300 net 10% VAT" → unit_price: 300, vat_rate: 10 (net = HT, le montant EST le prix HT)
+- "300 TTC 10%" → unit_price: 272.73, vat_rate: 10 (TTC → HT = 300/1.10)
+- "300 brutto 19% MwSt" → unit_price: 252.10, vat_rate: 19 (brutto = TTC → HT = 300/1.19)
+- "300 sin IVA" → unit_price: 300, vat_rate: 0 (sin IVA = exonéré de taxe)
+- "300 con IVA 21%" → unit_price: 247.93, vat_rate: 21 (con IVA = TTC → HT = 300/1.21)
+- "300€ Netto" → unit_price: 300 (Netto = HT)
+- "300 lordo IVA 22%" → unit_price: 245.90, vat_rate: 22 (lordo = TTC)
+- "300 gross 20% VAT" → unit_price: 250, vat_rate: 20 (gross = TTC → HT = 300/1.20)
+- "300 HT 10% TVA" → unit_price: 300, vat_rate: 10 (HT = avant taxe, NE PAS soustraire)
+- "300 avec 10% de TVA" → unit_price: 300, vat_rate: 10 (montant de base = HT)
+- "300 tout compris 10%" → unit_price: 272.73, vat_rate: 10 (tout compris = TTC)
+ATTENTION : "300 10% TVA" sans précision HT/TTC → PAR DÉFAUT HT=300, TVA=10% (règle du doute = HT)
 
 CALCUL JOURNALIER CRITIQUE - À APPLIQUER EN PRIORITÉ :
 - "X jours à Y€/jour" ou "X jours à Y€ par jour" → quantity = X, unit_price = Y
@@ -403,6 +443,18 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
           }
         } catch (e) {
           console.error('[process-voice] TVA validation failed:', e);
+        }
+
+        // --- Secondary defense: detect TTC misinterpretation from multilingual input ---
+        try {
+          const taxHints = detectTranscriptTaxHints(transcript);
+          const misinterpretation = detectTTCMisinterpretation(parsed.items, taxHints);
+          if (misinterpretation.corrected) {
+            console.log('[process-voice] TTC misinterpretation corrected:', JSON.stringify(misinterpretation.corrections));
+            parsed.items = misinterpretation.items;
+          }
+        } catch (e) {
+          console.error('[process-voice] TTC misinterpretation check failed:', e);
         }
       }
 

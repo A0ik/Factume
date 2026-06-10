@@ -498,7 +498,15 @@ export default function SettingsPage() {
         const data = await res.json();
         throw new Error(data.error || 'Erreur lors de la suppression');
       }
-      await signOut();
+      // LOI 8: Déconnexion immédiate + redirection vers la landing.
+      // signOut() peut échouer car le user est déjà supprimé côté Supabase Auth,
+      // donc on nettoie manuellement le state et on redirige.
+      try { await signOut(); } catch { /* user already deleted — expected */ }
+      // Hard redirect as fallback (signOut may not redirect if user is gone)
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        window.location.href = '/';
+      }
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la suppression du compte');
       setDeleting(false);

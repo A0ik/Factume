@@ -243,7 +243,9 @@
       "Bash(where gh *)",
       "mcp__plugin_vercel_vercel__list_teams",
       "mcp__plugin_vercel_vercel__list_projects",
-      "mcp__plugin_vercel_vercel__list_deployments"
+      "mcp__plugin_vercel_vercel__list_deployments",
+      "Bash(dir /c/Users/salma/Desktop/FACTU.ME)",
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

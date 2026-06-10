@@ -3,7 +3,9 @@ import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from '@/components/Providers';
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+/* ARBITER FIX: OnboardingWizard déplacé vers (app)/layout.tsx
+   — il ne doit s'afficher que dans les pages protégées, jamais sur
+   le marketing, l'auth, ou l'onboarding lui-même. */
 import { GoogleAnalytics } from '@/components/seo/GoogleAnalytics';
 import { CookieConsent } from '@/components/legal/CookieConsent';
 
@@ -321,7 +323,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <GoogleAnalytics />
         <Providers>
           {children}
-          <OnboardingWizard />
         </Providers>
         <CookieConsent />
         <Analytics />

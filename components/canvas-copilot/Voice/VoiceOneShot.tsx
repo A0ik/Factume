@@ -37,6 +37,7 @@ interface VoiceOneShotProps {
 export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [langBadge, setLangBadge] = useState<{ flag: string; label: string } | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -118,6 +119,24 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
 
             // Apply parsed result — this also triggers doubt resolution if uncertain_fields exist
             applyAIParsedResult(data.parsed || data, 'voice');
+
+            // Show language detection badge (Loi 9: Feedback immédiat)
+            if (data.wasTranslated && data.originalLanguage) {
+              const langMap: Record<string, { flag: string; label: string }> = {
+                arabic: { flag: '🇲🇦', label: 'Arabe → FR' },
+                english: { flag: '🇬🇧', label: 'English → FR' },
+                spanish: { flag: '🇪🇸', label: 'Español → FR' },
+                german: { flag: '🇩🇪', label: 'Deutsch → FR' },
+                italian: { flag: '🇮🇹', label: 'Italiano → FR' },
+                portuguese: { flag: '🇵🇹', label: 'Português → FR' },
+              };
+              const detected = langMap[data.originalLanguage];
+              if (detected) {
+                setLangBadge(detected);
+                setTimeout(() => setLangBadge(null), 4000);
+              }
+            }
+
             setState('idle');
           } catch (fetchErr: any) {
             clearTimeout(fetchTimeout);
@@ -285,6 +304,21 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg"
           >
             {errorMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ LANGUAGE BADGE ═══ Loi 9: Feedback immédiat sur la langue détectée */}
+      <AnimatePresence>
+        {langBadge && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.9 }}
+            transition={SPRING}
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 dark:bg-zinc-700 text-zinc-200 text-[10px] font-semibold shadow-lg border border-white/10"
+          >
+            {langBadge.flag} {langBadge.label}
           </motion.div>
         )}
       </AnimatePresence>

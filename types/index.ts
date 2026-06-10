@@ -61,6 +61,9 @@ export interface Profile {
   trial_document_count?: number;
   trial_ip_address?: string;
   auto_contract_transitions?: boolean;
+  // Voice usage tracking (free tier)
+  voice_usage_month?: string;
+  voice_usage_count?: number;
   website?: string;
   referral_code?: string;
   created_at: string;

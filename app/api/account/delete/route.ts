@@ -13,6 +13,9 @@ const stripe = process.env.STRIPE_SECRET_KEY
  * LOI 5 (SÉCURITÉ) : Requiert le mot de passe + confirmation "SUPPRIMER".
  * LOI 7 (AUTH FIABLE) : Supprime l'identité via supabase.auth.admin.deleteUser.
  * LOI 9 (ANNULATION GRACIEUSE) : Si Stripe échoue, on logge mais on continue.
+ *
+ * FIX: Password verification uses admin client instead of signInWithPassword
+ * to avoid cookie session corruption in API route context.
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -30,8 +33,21 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Verify password by attempting to sign in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    // FIX: Use admin client to verify password instead of signInWithPassword.
+    // signInWithPassword on the server-side Supabase client mutates session cookies,
+    // which corrupts the auth state in API route context and can cause silent failures.
+    // admin.auth.admin.getUserById gives us the user, then we verify the password
+    // by attempting a fresh sign-in on a SEPARATE admin client that has no cookie side-effects.
+    const admin = createAdminClient();
+
+    // Verify password using a temporary Supabase client (no cookie persistence)
+    const { createClient } = await import('@supabase/supabase-js');
+    const verifyClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { error: signInError } = await verifyClient.auth.signInWithPassword({
       email: user.email!,
       password,
     });
@@ -43,12 +59,10 @@ export async function DELETE(req: NextRequest) {
     }
 
     const userId = user.id;
-    const admin = createAdminClient();
 
     // ── 1. Cancel Stripe subscription & customer ──────────────────────
     if (stripe) {
       try {
-        // Get profile to find Stripe IDs
         const { data: profile } = await admin
           .from('profiles')
           .select('stripe_customer_id, stripe_subscription_id, stripe_connect_account_id')
@@ -56,18 +70,15 @@ export async function DELETE(req: NextRequest) {
           .single();
 
         if (profile) {
-          // Cancel subscription if active
           if (profile.stripe_subscription_id) {
             try {
               await stripe.subscriptions.cancel(profile.stripe_subscription_id);
               console.log(`[account/delete] Stripe subscription ${profile.stripe_subscription_id} cancelled`);
             } catch (stripeErr: any) {
-              // Subscription may already be cancelled — log but continue
               console.warn(`[account/delete] Stripe subscription cancel warning: ${stripeErr.message}`);
             }
           }
 
-          // Delete Stripe customer
           if (profile.stripe_customer_id) {
             try {
               await stripe.customers.del(profile.stripe_customer_id);
@@ -77,7 +88,6 @@ export async function DELETE(req: NextRequest) {
             }
           }
 
-          // Disconnect Stripe Connect account (cannot delete — just revoke)
           if (profile.stripe_connect_account_id) {
             try {
               await stripe.oauth.deauthorize({
@@ -91,7 +101,6 @@ export async function DELETE(req: NextRequest) {
           }
         }
       } catch (stripeErr: any) {
-        // LOI 9: Don't block deletion if Stripe fails
         console.error(`[account/delete] Stripe cleanup error (non-blocking): ${stripeErr.message}`);
       }
     } else {
@@ -99,7 +108,6 @@ export async function DELETE(req: NextRequest) {
     }
 
     // ── 2. Anonymize personal data in profile ─────────────────────────
-    // LOI 4: On anonymise au lieu de supprimer (RGPD soft delete)
     const anonymousId = `anon_${userId.substring(0, 8)}_${Date.now()}`;
     try {
       await admin.from('profiles').update({
@@ -128,6 +136,7 @@ export async function DELETE(req: NextRequest) {
         sumup_access_token: null,
         sumup_refresh_token: null,
         sumup_merchant_id: null,
+        sumup_merchant_code: null,
         google_access_token: null,
         google_refresh_token: null,
         google_email: null,
@@ -190,11 +199,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     // ── 5. Delete auth user (Supabase Auth) ───────────────────────────
-    // LOI 7: Utilise la méthode officielle du provider
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
     if (deleteError) {
       console.error('[account/delete] Auth user deletion failed:', deleteError);
-      // LOI 9: Si l'auth delete échoue, le profil est déjà anonymisé — on informe
       return NextResponse.json(
         { error: 'Erreur lors de la suppression de l\'identité. Vos données ont été anonymisées.' },
         { status: 500 }

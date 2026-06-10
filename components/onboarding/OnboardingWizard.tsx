@@ -64,12 +64,14 @@ export function OnboardingWizard() {
   useEffect(() => {
     // ARBITER FIX: OnboardingWizard ne s'affiche qu'APRÈS que l'utilisateur
     // a complété le formulaire d'entreprise (onboarding_done === true en BDD).
-    // Avant, il apparaissait sur la page d'onboarding elle-même, bloquant le flux.
+    // Il ne s'affiche qu'une seule fois, puis est marqué comme vu dans localStorage.
     const hasSeenOnboarding = localStorage.getItem('onboarding_completed') === 'true';
 
     // Condition stricte : profil chargé + onboarding validé en BDD + pas déjà vu
     if (profile && profile.onboarding_done === true && !hasSeenOnboarding) {
-      setIsOpen(true);
+      // Petit délai pour laisser la page se stabiliser après la redirection post-onboarding
+      const timer = setTimeout(() => setIsOpen(true), 800);
+      return () => clearTimeout(timer);
     }
   }, [profile]);
 

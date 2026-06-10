@@ -191,3 +191,121 @@ export function isB2CClient(client: {
 export function getDefaultTVARate(isB2C: boolean): number {
   return isB2C ? 0 : 20;
 }
+
+// ---------------------------------------------------------------------------
+// Multilingual Tax Term Detection — Secondary Defense
+// ---------------------------------------------------------------------------
+
+/** Terms that indicate the user meant HT (before tax) */
+const HT_INDICATORS = [
+  /\bht\b/i, /\bhors\s*tax/i, /\bnet\b/i, /\bnetto\b/i,
+  /\bsin\s*iva\b/i, /\bohne\s*mwst\b/i, /\bsenza\s*iva\b/i,
+  /\bsem\s*iva\b/i, /\bavant\s*tax/i, /\bbefore\s*tax/i,
+  /\bexcl\s*tax/i, /\bexclusive\s*of\s*tax/i, /\btax\s*excluded/i,
+  /\bexon[eé]r/i, /\bfranchise/i,
+];
+
+/** Terms that indicate the user meant TTC (after tax) */
+const TTC_INDICATORS = [
+  /\bttc\b/i, /\btoutes\s*taxes\s*comprises/i, /\bgross\b/i,
+  /\bbrutto\b/i, /\bcon\s*iva\b/i, /\bcom\s*iva\b/i,
+  /\binkl\s*mwst/i, /\binclusive\s*tax/i, /\btax\s*included/i,
+  /\bwith\s*tax/i, /\btout\s*compris/i, /\blordo\b/i,
+];
+
+export interface TranscriptTaxHints {
+  mentionsHT: boolean;
+  mentionsTTC: boolean;
+  originalLanguage: string;
+}
+
+/**
+ * Detects whether the transcript suggests the user meant HT or TTC.
+ * Used as a hint for the secondary validation pass.
+ */
+export function detectTranscriptTaxHints(transcript: string): TranscriptTaxHints {
+  const lower = transcript.toLowerCase();
+  let mentionsHT = false;
+  let mentionsTTC = false;
+
+  for (const pattern of HT_INDICATORS) {
+    if (pattern.test(lower)) { mentionsHT = true; break; }
+  }
+  for (const pattern of TTC_INDICATORS) {
+    if (pattern.test(lower)) { mentionsTTC = true; break; }
+  }
+
+  return { mentionsHT, mentionsTTC, originalLanguage: '' };
+}
+
+/**
+ * Secondary defense: detect the classic AI bug where "300 HT 10%" produces
+ * unit_price=270 (TTC - TVA) instead of the correct unit_price=300 (the raw HT amount).
+ *
+ * Logic: If the user said "net/HT/Netto" but the unit_price equals what you'd get
+ * by SUBTRACTING tax from the stated amount (i.e. amount * (1 - rate/100)),
+ * that's the bug. Correct it back to the raw stated amount.
+ */
+export function detectTTCMisinterpretation(
+  items: InvoiceItem[],
+  hints: TranscriptTaxHints,
+): ValidationResult {
+  const corrections: TVACorrection[] = [];
+
+  // Only run secondary check if transcript suggests HT was intended
+  if (!hints.mentionsHT || hints.mentionsTTC) {
+    return { corrected: false, items, corrections };
+  }
+
+  const correctedItems = items.map((item, index) => {
+    const unitPrice = typeof item.unit_price === 'number' && Number.isFinite(item.unit_price)
+      ? item.unit_price : 0;
+    const vatRate = typeof item.vat_rate === 'number' && Number.isFinite(item.vat_rate)
+      ? item.vat_rate : 20;
+
+    if (unitPrice <= 0 || vatRate <= 0) return item;
+
+    // The AI bug: it interpreted HT amount as TTC and subtracted tax
+    // If the user said "300 HT 10%" and AI returned 270, that's 300 * (1 - 0.10) = 270
+    // The correct HT should be 300
+    const bugPrice = roundMoney(unitPrice / (1 - vatRate / 100));
+
+    // Also check if AI subtracted the tax amount instead of keeping the raw amount
+    // 300 - 30 = 270 instead of keeping 300
+    const rawAmount = roundMoney(unitPrice / (1 - vatRate / 100));
+
+    // Heuristic: if the raw amount is a round number (typical for human speech)
+    // and the unit_price is exactly rawAmount * (1 - vatRate/100), it's the bug
+    if (rawAmount > 0 && Number.isFinite(rawAmount)) {
+      const isRoundNumber = rawAmount % 1 === 0 && rawAmount >= 10;
+      const looksLikeBug = Math.abs(unitPrice - roundMoney(rawAmount * (1 - vatRate / 100))) < 0.02;
+
+      if (isRoundNumber && looksLikeBug && rawAmount !== unitPrice) {
+        corrections.push({
+          index,
+          field: 'unit_price',
+          original: unitPrice,
+          corrected: rawAmount,
+        });
+
+        const corrected = { ...item, unit_price: rawAmount };
+
+        // Recompute computed fields
+        const quantity = typeof item.quantity === 'number' && Number.isFinite(item.quantity) ? item.quantity : 1;
+        corrected.total_ht = roundMoney(quantity * rawAmount);
+        corrected.vat_amount = roundMoney(corrected.total_ht * (vatRate / 100));
+        corrected.total_ttc = roundMoney(corrected.total_ht + corrected.vat_amount);
+
+        return corrected;
+      }
+    }
+
+    return item;
+  });
+
+  return {
+    corrected: corrections.length > 0,
+    items: correctedItems,
+    corrections,
+  };
+}
