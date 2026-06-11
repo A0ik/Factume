@@ -36,29 +36,32 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'pro', name: 'Pro', price: '14,99€', yearlyPrice: '12,42€', yearlySavings: '31€', tagline: 'Le couteau suisse des indépendants',
+    id: 'pro', name: 'Pro', price: '14,99€', yearlyPrice: '12,50€', yearlySavings: '30€', tagline: 'Le couteau suisse des indépendants',
     icon: Zap, iconColor: 'text-white', iconBg: 'from-emerald-500 to-emerald-600',
     gradient: 'from-emerald-500 via-emerald-600 to-emerald-700',
     gradientFrom: 'from-emerald-500', gradientTo: 'to-emerald-700',
     borderColor: 'emerald-500', glowColor: 'shadow-emerald-500',
     cta: 'Choisir Pro', badge: 'Populaire', features: [
       { label: 'Factures & devis illimités', included: true },
-      { label: 'Clients illimités + CRM', included: true },
-      { label: 'URSSAF One-Click', included: true, highlight: true },
-      { label: 'Voice Expense illimité', included: true, highlight: true },
-      { label: 'Copilot Factu IA', included: true },
-      { label: 'Export FEC', included: true },
-      { label: 'E-facturation certifiée', included: true },
-      { label: 'Contrats & signatures', included: true },
-      { label: 'Factures récurrentes', included: true },
-      { label: 'Modèles personnalisés', included: true },
+      { label: 'Contrats de travail (CDI/CDD)', included: true, highlight: true },
+      { label: 'OCR analyse de reçus', included: true, highlight: true },
+      { label: 'Signature électronique', included: true },
+      { label: 'Notes de frais vocales', included: true },
+      { label: 'Gestion IK (indemnités kilométriques)', included: true },
+      { label: 'Tableau de bord analytique', included: true },
+      { label: 'Multi-modèles PDF (6 templates)', included: true },
+      { label: 'E-facturation certifiée Factur-X', included: true, highlight: true },
+      { label: 'URSSAF One-Click', included: true },
+      { label: 'Export comptable (FEC, CSV)', included: true },
+      { label: 'Rapprochement bancaire', included: true },
+      { label: 'CRM illimité', included: true },
       { label: 'Sans watermark PDF', included: true },
       { label: 'Comptable Connect', included: false },
       { label: 'Multi-utilisateur', included: false },
     ]
   },
   {
-    id: 'business', name: 'Business', price: '39,99€', yearlyPrice: '33,25€', yearlySavings: '81€', tagline: 'Pour les PME & experts-comptables',
+    id: 'business', name: 'Business', price: '39,99€', yearlyPrice: '33,33€', yearlySavings: '80€', tagline: 'Pour les PME & experts-comptables',
     icon: Crown, iconColor: 'text-white', iconBg: 'from-purple-600 to-violet-700',
     gradient: 'from-purple-600 via-violet-700 to-purple-800',
     gradientFrom: 'from-purple-600', gradientTo: 'to-purple-800',
@@ -83,7 +86,7 @@ const PLANS: Plan[] = [
 // LOI 2: Pro recommended for free users, Business for Pro users
 function getHighlightedPlan(tier: string): string {
   if (tier === 'free') return 'pro';
-  if (tier === 'pro' || tier === 'solo') return 'business';
+  if (tier === 'pro') return 'business';
   return 'pro';
 }
 
@@ -723,9 +726,9 @@ export default function PaywallPage() {
                   onClick={confirmPlanChange}
                   className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                   style={{
-                    background: confirmChange.plan.id === 'solo'
+                    background: confirmChange.plan.id === 'pro'
                       ? 'linear-gradient(135deg, #10b981, #059669)'
-                      : confirmChange.plan.id === 'pro'
+                      : 'linear-gradient(135deg, #9333ea, #6d28d9)'
                         ? 'linear-gradient(135deg, #1e40af, #3730a3)'
                         : 'linear-gradient(135deg, #9333ea, #6d28d9)'
                   }}

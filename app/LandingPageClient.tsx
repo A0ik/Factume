@@ -163,8 +163,8 @@ const testimonials = [
 
 const plans = [
   { name: 'Starter', price: 'Gratuit', yearly: 'Gratuit', tag: 'Pour démarrer et tester', features: ['E-facturation certifiée', '5 factures & devis/mois', '1 cabinet, 10 clients', '5 commandes vocales/mois', 'Support email'], popular: false },
-  { name: 'Pro', price: '14,99€', yearly: '12,42€', tag: 'Indépendants & TPE', features: ['E-facturation certifiée', 'Factures & devis illimités', 'URSSAF One-Click', 'Voice Expense illimité', 'Copilot Factu IA', 'Export FEC', 'Sans watermark'], popular: true },
-  { name: 'Business', price: '39,99€', yearly: '33,25€', tag: 'PME & Experts-comptables', features: ['E-facturation certifiée', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'API & Webhooks', 'Support dédié'], popular: false },
+  { name: 'Pro', price: '14,99€', yearly: '12,50€', tag: 'Indépendants & TPE', features: ['Factures & devis illimités', 'Contrats CDI/CDD', 'OCR reçus', 'Signature électronique', 'Voice Expense illimité', 'IK & notes de frais', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'], popular: true },
+  { name: 'Business', price: '39,99€', yearly: '33,33€', tag: 'PME & Experts-comptables', features: ['E-facturation certifiée', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
 ];
 
 const faqItems = [
@@ -397,6 +397,7 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      <Wave fromColor="#000000" toColor="#ffffff" variant={1} />
 
       {/* ════════════ UNE SOLUTION POUR TOUS — Loi 2 ════════════ */}
       <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
@@ -823,7 +824,7 @@ export default function LandingPageClient() {
                       <span className="text-4xl 2xl:text-5xl font-extrabold text-white tracking-tight">{billing === 'monthly' ? plan.price : plan.yearly}</span>
                       <span className="text-sm 2xl:text-base text-neutral-400">/mois</span>
                     </div>
-                    {billing === 'yearly' && <p className="text-xs 2xl:text-sm text-emerald-400 font-medium mt-1">Économisez sur l'annuel</p>}
+                    {billing === 'yearly' && plan.price !== 'Gratuit' && <p className="text-xs 2xl:text-sm text-emerald-400 font-medium mt-1">Économisez sur l'annuel</p>}
                   </div>
                   <ul className="space-y-2.5 mb-6 flex-grow">
                     {plan.features.map((f, j) => (

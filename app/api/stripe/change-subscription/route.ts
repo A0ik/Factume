@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
-// Structure des prix
+// Structure des prix — MONOLITH: Plus de plan Solo
 const PRICE_IDS: Record<string, Record<string, string>> = {
-  solo: {
-    monthly: process.env.STRIPE_SOLO_MONTHLY_PRICE_ID!,
-    yearly: process.env.STRIPE_SOLO_YEARLY_PRICE_ID!,
-  },
   pro: {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID!,
     yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID!,
@@ -19,7 +15,7 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 };
 
 // Mapping des plans pour l'ordre (pour calculer si c'est un upgrade ou downgrade)
-const PLAN_ORDER = ['free', 'solo', 'pro', 'business'];
+const PLAN_ORDER = ['free', 'pro', 'business'];
 
 // Prix mensuels en euros (pour le calcul du prorata)
 const PRICES = {

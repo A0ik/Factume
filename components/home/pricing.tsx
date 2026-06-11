@@ -15,13 +15,13 @@ const plans = [
     popular: false,
   },
   {
-    name: 'Pro', monthlyPrice: '14,99€', yearlyPrice: '12,42€', yearlySavings: '31€',
+    name: 'Pro', monthlyPrice: '14,99€', yearlyPrice: '12,50€', yearlySavings: '30€',
     tagline: 'Le couteau suisse des indépendants',
-    features: ['Factures & devis illimités', 'URSSAF One-Click', 'Voice Expense illimité', 'Copilot Factu IA', 'Export FEC', 'Contrats & signatures', 'CRM illimité', 'Sans watermark'],
+    features: ['Factures & devis illimités', 'Contrats CDI/CDD', 'OCR reçus', 'Signature électronique', 'Voice Expense illimité', 'IK & notes de frais', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'],
     popular: true,
   },
   {
-    name: 'Business', monthlyPrice: '39,99€', yearlyPrice: '33,25€', yearlySavings: '81€',
+    name: 'Business', monthlyPrice: '39,99€', yearlyPrice: '33,33€', yearlySavings: '80€',
     tagline: 'Pour les PME & experts-comptables',
     features: ['Tout le plan Pro inclus', '5 cabinets', 'Comptable Connect', 'Copilot IA avancé', 'Multi-utilisateur (5)', 'API & Webhooks', 'Support dédié'],
     popular: false,

@@ -41,21 +41,19 @@ interface OptimizedPricingCardProps {
    Plan Visual Config — per-plan colors for both themes
    ═══════════════════════════════════════════════════════════════ */
 
+// MONOLITH: Plus de plan Solo — Pro = emerald, Business = purple
 const PLAN_COLORS: Record<string, { dot: string; glow: string; meteor: string }> = {
-  solo: { dot: 'rgba(16, 185, 129, 0.5)', glow: 'rgba(16, 185, 129, 0.15)', meteor: '#10b981' },
-  pro: { dot: 'rgba(59, 130, 246, 0.5)', glow: 'rgba(59, 130, 246, 0.15)', meteor: '#3b82f6' },
+  pro: { dot: 'rgba(16, 185, 129, 0.5)', glow: 'rgba(16, 185, 129, 0.15)', meteor: '#10b981' },
   business: { dot: 'rgba(147, 51, 234, 0.5)', glow: 'rgba(147, 51, 234, 0.15)', meteor: '#9333ea' },
 };
 
 const PLAN_BUTTON: Record<string, string> = {
-  solo: 'linear-gradient(135deg, #10b981, #059669)',
-  pro: 'linear-gradient(135deg, #1e40af, #3730a3)',
+  pro: 'linear-gradient(135deg, #10b981, #059669)',
   business: 'linear-gradient(135deg, #9333ea, #6d28d9)',
 };
 
 const PLAN_HEADER: Record<string, string> = {
-  solo: 'linear-gradient(135deg, #10b981, #059669)',
-  pro: 'linear-gradient(135deg, #1e40af, #312e81)',
+  pro: 'linear-gradient(135deg, #10b981, #059669)',
   business: 'linear-gradient(135deg, #9333ea, #6d28d9)',
 };
 

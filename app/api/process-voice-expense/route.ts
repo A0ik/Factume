@@ -156,11 +156,15 @@ export async function POST(req: NextRequest) {
       if (code) accountCode = code;
     } catch {}
 
-    // 6. Insert into expenses table
-    const { data: expense, error: insertError } = await supabaseAuth
-      .from('expenses')
-      .insert({
-        user_id: user.id,
+    // LOI 2 FIX: Ne PAS insérer en base ici.
+    // Le frontend insère APRÈS confirmation utilisateur + upload justificatif obligatoire.
+    // L'API ne fait que transcrire et parser.
+    return NextResponse.json({
+      transcript,
+      originalTranscript: rawTranscript,
+      wasTranslated,
+      originalLanguage,
+      expense: {
         vendor,
         amount,
         vat_amount: vatAmount,
@@ -171,23 +175,7 @@ export async function POST(req: NextRequest) {
         date,
         payment_method: paymentMethod,
         is_recurring: isRecurring,
-        source: 'voice',
-        original_language: originalLanguage,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('[process-voice-expense] Insert error:', insertError);
-      return NextResponse.json({ error: 'Erreur lors de la sauvegarde' }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      transcript,
-      originalTranscript: rawTranscript,
-      wasTranslated,
-      originalLanguage,
-      expense,
+      },
     });
   } catch (error: unknown) {
     console.error('[process-voice-expense] Error:', error);

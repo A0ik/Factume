@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import {
   sanitizeString,
@@ -30,6 +31,18 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
+    // Subscription gate: OCR re-analysis requires Pro+ plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
     if (!process.env.OPENROUTER_API_KEY) {

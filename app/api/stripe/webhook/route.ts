@@ -180,7 +180,8 @@ export async function POST(req: NextRequest) {
           if (priceId === process.env.STRIPE_PRO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) plan = 'pro';
           else if (priceId === process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID) plan = 'business';
           // Legacy: si quelqu'un avait encore un ancien prix Solo, le mapper vers Pro
-          else if (priceId === process.env.STRIPE_SOLO_MONTHLY_PRICE_ID || priceId === process.env.STRIPE_SOLO_YEARLY_PRICE_ID) plan = 'pro';
+          // LOI 3 FIX: Plus de plan Solo — tout legacy est mappé vers Pro
+          // L'ancien STRIPE_SOLO_* n'est plus utilisé
 
           if (plan) {
             console.warn('[webhook] metadata.plan missing, inferred from price:', plan, 'for sub', sub.id);

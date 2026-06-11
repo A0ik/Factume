@@ -4,11 +4,8 @@ import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-se
 import { getClientIp } from '@/lib/rate-limit';
 import { isDisposableEmail } from '@/lib/disposable-emails';
 
+// MONOLITH: Plus de plan Solo — solo legacy → pro
 const PRICE_IDS: Record<string, Record<string, string>> = {
-  solo: {
-    monthly: process.env.STRIPE_SOLO_MONTHLY_PRICE_ID!,
-    yearly: process.env.STRIPE_SOLO_YEARLY_PRICE_ID!,
-  },
   pro: {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID!,
     yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID!,

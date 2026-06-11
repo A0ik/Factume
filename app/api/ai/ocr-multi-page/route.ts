@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import {
   type DetectionResult,
   type InvoiceSegment,
@@ -58,30 +59,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
-    }
-
-    const isBusiness = profile.subscription_tier === 'business';
-    const isTrial = profile.is_trial_active === true;
-
-    if (!isBusiness && !isTrial) {
-      return NextResponse.json(
-        {
-          error:
-            'L\'OCR multi-factures est disponible uniquement avec le plan Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
-          feature: 'ocr_multi_page',
-          requiredPlan: 'business',
-          upgradeUrl: '/paywall?plan=business',
-        },
-        { status: 402 }
-      );
+    // Subscription gate: OCR multi-page requires Pro+ plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
     // ------------------------------------------------------------------

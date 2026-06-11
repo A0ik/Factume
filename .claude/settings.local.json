@@ -245,7 +245,9 @@
       "mcp__plugin_vercel_vercel__list_projects",
       "mcp__plugin_vercel_vercel__list_deployments",
       "Bash(dir /c/Users/salma/Desktop/FACTU.ME)",
-      "mcp__plugin_vercel_vercel__get_deployment_build_logs"
+      "mcp__plugin_vercel_vercel__get_deployment_build_logs",
+      "mcp__stripe__search_stripe_resources",
+      "mcp__stripe__stripe_api_write"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

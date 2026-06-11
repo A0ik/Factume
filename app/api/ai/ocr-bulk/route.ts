@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import {
   generateStoragePath,
   buildOcrPrompt,
@@ -174,26 +175,15 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     // 2. Subscription check
     // ------------------------------------------------------------------
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
-    }
-
-    if (profile.subscription_tier !== 'business' && profile.is_trial_active !== true) {
-      return NextResponse.json(
-        {
-          error: "L'analyse OCR en masse est disponible uniquement avec le plan Business.",
-          feature: 'ocr',
-          requiredPlan: 'business',
-          upgradeUrl: '/paywall?plan=business',
-        },
-        { status: 402 },
-      );
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
     // ------------------------------------------------------------------

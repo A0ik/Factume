@@ -14,6 +14,18 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // Subscription gate: cabinet clients requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
+
     // MONOLITH: Transmettre l'activeCabinetId pour résolution serveur intelligente
     const activeCabinetId = req.headers.get('x-active-cabinet-id') || undefined;
     const cabinet = await getCabinetForUser(user.id, activeCabinetId);
@@ -38,6 +50,18 @@ export async function PUT(req: NextRequest) {
     const admin = createAdminClient();
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Subscription gate: cabinet creation requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     const { name, siret } = await req.json();
     if (!name) return NextResponse.json({ error: 'Nom du cabinet requis' }, { status: 400 });
@@ -73,6 +97,18 @@ export async function PATCH(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
+    // Subscription gate: cabinet update requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
+
     const updates = await req.json();
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
@@ -100,6 +136,18 @@ export async function DELETE(req: NextRequest) {
     const admin = createAdminClient();
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Subscription gate: cabinet client deletion requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     const { clientUserId, clientId } = await req.json();
 
@@ -133,10 +181,10 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // Subscription gate: CRM client creation requires Pro plan or above
+    // Subscription gate: cabinet client creation requires Business plan
     const sub = await getUserSubscriptionStatus(user.id);
     try {
-      requireFeature(sub, 'crmAccess');
+      requireFeature(sub, 'comptableConnect');
     } catch (err: any) {
       const [, feature, message] = err.message.split(':');
       return NextResponse.json({

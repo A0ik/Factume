@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { calculateInvoiceTotals } from '@/lib/money';
 
 export const runtime = 'nodejs';
@@ -386,6 +387,18 @@ export async function GET(request: NextRequest) {
     const supabase = await createRouteHandlerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Subscription gate: recurring invoices dashboard requires Pro+ plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'recurringInvoices');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     // FIX VULN-04: Filtrer par user_id pour ne pas fuiter les données des autres utilisateurs
     const { data: recurringInvoices, error } = await supabase

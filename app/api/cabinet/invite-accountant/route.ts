@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { Resend } from 'resend';
 
 // ---------------------------------------------------------------------------
@@ -12,6 +13,18 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Subscription gate: accountant invitation requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     const { email, role = 'accountant' } = await req.json();
     if (!email || !email.includes('@')) {

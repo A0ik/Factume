@@ -110,7 +110,7 @@ export default function VoiceExpenseButton({
       const fileExt = receiptFile.name.split('.').pop();
       const filePath = `${user.id}/receipts/${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
-        .from('expense-receipts')
+        .from('receipts')
         .upload(filePath, receiptFile, { upsert: false });
 
       if (uploadError) {
@@ -119,10 +119,10 @@ export default function VoiceExpenseButton({
         throw new Error('Erreur upload justificatif. Veuillez réessayer.');
       }
 
-      // 2. Get public URL
-      const { data: urlData } = supabase.storage
-        .from('expense-receipts')
-        .getPublicUrl(filePath);
+      // 2. Get public URL — signed URL since bucket is private
+      const { data: urlData } = await supabase.storage
+        .from('receipts')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
 
       // 3. Insert expense with receipt URL
       const { data, error } = await supabase.from('expenses').insert({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
 
 export async function POST(req: NextRequest) {
@@ -12,6 +13,18 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     const { data: { user } } = await admin.auth.getUser(authHeader.replace('Bearer ', ''));
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Subscription gate: cabinet invite requires Business plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'comptableConnect');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     const { email } = await req.json();
     if (!email) return NextResponse.json({ error: 'Email requis' }, { status: 400 });

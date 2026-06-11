@@ -37,10 +37,10 @@ const optionalEnvVars = {
   RESEND_FROM_NAME: 'Resend sender name',
 
   // Optional: Stripe Price IDs (can be set dynamically)
-  STRIPE_SOLO_MONTHLY_PRICE_ID: 'Stripe Solo Monthly Price ID',
-  STRIPE_SOLO_YEARLY_PRICE_ID: 'Stripe Solo Yearly Price ID',
   STRIPE_PRO_MONTHLY_PRICE_ID: 'Stripe Pro Monthly Price ID',
   STRIPE_PRO_YEARLY_PRICE_ID: 'Stripe Pro Yearly Price ID',
+  STRIPE_BUSINESS_MONTHLY_PRICE_ID: 'Stripe Business Monthly Price ID',
+  STRIPE_BUSINESS_YEARLY_PRICE_ID: 'Stripe Business Yearly Price ID',
   STRIPE_CLIENT_ID: 'Stripe Connect Client ID',
 
   // Optional: Sumup (alternative payment provider)

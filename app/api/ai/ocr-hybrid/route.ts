@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { extractWithTesseract, isTesseractResultReliable } from '@/lib/ocr-tesseract';
 import { convertPdfToImages } from '@/lib/pdf-to-image';
 import OpenAI from 'openai';
@@ -37,29 +38,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, is_trial_active')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
-    }
-
-    const isBusiness = profile.subscription_tier === 'business';
-    const isTrial = profile.is_trial_active === true;
-
-    if (!isBusiness && !isTrial) {
-      return NextResponse.json(
-        {
-          error: "L'analyse OCR hybride est disponible uniquement avec le plan Business.",
-          feature: 'ocr',
-          requiredPlan: 'business',
-          upgradeUrl: '/paywall?plan=business',
-        },
-        { status: 402 }
-      );
+    // Subscription gate: OCR hybrid requires Pro+ plan
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch (err: any) {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
     }
 
     // ------------------------------------------------------------------
