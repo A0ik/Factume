@@ -1,16 +1,20 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { CheckCircle2, Zap, FileText, Mic, AudioWaveform, MessageSquare, Clock, Sparkles, Volume2, Brain } from 'lucide-react';
+import { CheckCircle2, Zap, FileText, Mic, AudioWaveform, MessageSquare, Clock, Sparkles, Volume2, Brain, Shield, ArrowRight } from 'lucide-react';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
 import { SpeakableSchema } from '@/components/seo/SpeakableSchema';
+import { FAQSchema } from '@/components/seo/FAQSchema';
+import { HowToSchema } from '@/components/seo/HowToSchema';
+import { CollectionPageSchema } from '@/components/seo/CollectionPageSchema';
+import { ExpertBadge } from '@/components/seo/ExpertBadge';
 
 export const metadata: Metadata = {
-  title: 'Facturation Vocale – Créez Vos Factures par la Voix | Factu.me',
-  description: 'Créez vos factures en parlant grâce à la reconnaissance vocale IA. Dictée facture instantanée, transcription automatique, gain de temps 80%. Essayez gratuitement.',
+  title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix | Factu.me',
+  description: 'Qu\'est-ce que la facturation vocale ? Dictez vos factures grâce à l\'IA. Reconnaissance vocale française, transcription automatique, conforme facturation électronique 2026. Essai gratuit.',
   openGraph: {
-    title: 'Facturation Vocale – Créez Vos Factures par la Voix',
-    description: 'Dictée vocale IA pour créer vos factures en 10 secondes. Reconnaissance vocale française, transcription automatique.',
+    title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix',
+    description: 'Dictez vos factures en français grâce à l\'IA. Conforme réforme facturation électronique 2026. Essai gratuit Factu.me.',
     url: 'https://factu.me/facturation-vocale',
     siteName: 'Factu.me',
     images: [
@@ -21,6 +25,12 @@ export const metadata: Metadata = {
         alt: 'Facturation Vocale par Factu.me',
       },
     ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix | Factu.me',
+    description: 'Dictez vos factures grâce à l\'IA. Reconnaissance vocale française, conforme facturation électronique 2026.',
+    images: ['https://factu.me/og-facturation-vocale.png'],
   },
   alternates: {
     canonical: 'https://factu.me/facturation-vocale',
@@ -108,6 +118,41 @@ const testimonials = [
   },
 ];
 
+const faqItems = [
+  {
+    question: 'Qu\'est-ce que la facturation vocale ?',
+    answer: 'La facturation vocale est une méthode de création de factures par dictée orale. L\'utilisateur décrit sa prestation à voix haute (client, montant, durée), et une intelligence artificielle transcrit la parole en facture conforme, prête à être envoyée en PDF ou au format électronique Factur-X.',
+  },
+  {
+    question: 'Comment fonctionne la dictée vocale pour les factures ?',
+    answer: 'Vous appuyez sur le micro dans Factu.me, vous décrivez votre prestation en langage naturel (ex : "3 jours de consulting à 600 euros pour Dupont"), et l\'IA extrait automatiquement le client, le montant, la TVA et la description pour générer une facture complète en 10 secondes.',
+  },
+  {
+    question: 'La facturation vocale est-elle conforme à la réforme 2026 ?',
+    answer: 'Oui. Factu.me génère des factures au format Factur-X (Chor Facturation), le standard obligatoire de la facturation électronique en France à partir de septembre 2026. Les factures créées par dictée vocale sont conformes aux mentions légales et au format électronique requis.',
+  },
+  {
+    question: 'La reconnaissance vocale fonctionne-t-elle en français ?',
+    answer: 'Oui, la reconnaissance vocale de Factu.me est optimisée pour le français : elle comprend les montants en lettres, les termes commerciaux, les noms propres et les expressions courantes des professions indépendantes en France.',
+  },
+  {
+    question: 'Quels professionnels utilisent la facturation vocale ?',
+    answer: 'La facturation vocale est utilisée par les artisans, freelances, consultants, développeurs, coaches, auto-entrepreneurs et TPE qui créent des factures en déplacement ou entre deux rendez-vous, sans accès à un ordinateur.',
+  },
+  {
+    question: 'La facturation vocale est-elle gratuite ?',
+    answer: 'Factu.me propose 3 factures gratuites par mois, incluant la dictée vocale. Pour un usage illimité, les plans Pro et Business offrent la reconnaissance vocale illimitée avec toutes les fonctionnalités avancées.',
+  },
+  {
+    question: 'Peut-on dicter une facture depuis un smartphone ?',
+    answer: 'Oui, la facturation vocale fonctionne sur mobile et desktop. Vous pouvez dicter vos factures depuis votre smartphone en déplacement, le micro de votre appareil capture directement votre voix.',
+  },
+  {
+    question: 'Quelle est la différence entre facture vocale et facture IA ?',
+    answer: 'La facture vocale utilise votre voix comme input (dictée), tandis que la facture IA utilise du texte en langage naturel. Les deux exploitent l\'intelligence artificielle pour générer la facture. La facture vocale est idéale en déplacement, la facture IA en open-space.',
+  },
+];
+
 const steps = [
   {
     step: '1',
@@ -129,7 +174,7 @@ const steps = [
 export default function FacturationVocalePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero */}
+      {/* ═══ LOI 4 : Featured Snippet Killer — Définition H2/H3 ═══ */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -160,6 +205,66 @@ export default function FacturationVocalePage() {
               &bull; Reconnaissance vocale en français &bull; 3 factures gratuites par mois
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ LOI 4 : Section Définition — Featured Snippet Ready ═══ */}
+      <section className="py-16 sm:py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-6">
+            Qu&apos;est-ce que la facturation vocale ?
+          </h2>
+          <div className="speakable-section">
+            <p className="text-lg text-gray-700 leading-relaxed mb-4">
+              La <strong>facturation vocale</strong> est une technologie qui permet de créer une facture complète simplement en parlant. Grâce à la <strong>reconnaissance vocale couplée à l&apos;intelligence artificielle</strong>, l&apos;utilisateur dicte sa prestation en langage naturel et le système génère automatiquement une facture conforme aux normes françaises et au format électronique Factur-X requis par la réforme de septembre 2026.
+            </p>
+            <ExpertBadge
+              name="Équipe Factu.me"
+              title="Expert en facturation électronique"
+              organization="Factu.me"
+            />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mt-10 mb-4">
+            Pourquoi utiliser la facturation vocale en 2026 ?
+          </h3>
+          <ul className="space-y-3 text-gray-700">
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <span><strong>Gain de temps de 80%</strong> — passez de 30 minutes à 10 secondes par facture</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <span><strong>Conforme facturation électronique 2026</strong> — format Factur-X (Chor Facturation) obligatoire</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <span><strong>Utilisable en déplacement</strong> — dictez depuis votre smartphone entre deux rendez-vous</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <span><strong>Zéro saisie manuelle</strong> — l&apos;IA extrait client, montant, TVA et description automatiquement</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* ═══ LOI 8 : Réforme 2026 ═══ */}
+      <section className="py-12 sm:py-16 bg-gradient-to-r from-violet-50 to-purple-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Shield className="w-6 h-6 text-violet-600" />
+            <span className="text-sm font-semibold text-violet-600 uppercase tracking-wider">Conforme réforme 2026</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4">
+            Prêt pour la facturation électronique obligatoire
+          </h2>
+          <p className="text-gray-700 max-w-2xl mx-auto mb-6">
+            À partir de <strong>septembre 2026</strong>, toutes les entreprises françaises doivent émettre des factures électroniques au format Factur-X. Les factures créées par dictée vocale sur Factu.me sont automatiquement conformes à cette réglementation.
+          </p>
+          <Link href="/facturation-electronique" className="inline-flex items-center gap-2 text-violet-600 font-semibold hover:text-violet-700 transition-colors">
+            En savoir plus sur la facturation électronique 2026
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 
@@ -249,6 +354,26 @@ export default function FacturationVocalePage() {
         </div>
       </section>
 
+      {/* ═══ LOI 3 : FAQ Schema — Featured Snippet Trigger ═══ */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-black text-center text-gray-900 mb-12">
+            Questions fréquentes sur la facturation vocale
+          </h2>
+          <div className="space-y-6">
+            {faqItems.map((item, i) => (
+              <details key={i} className="group rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 hover:border-violet-200 transition-colors">
+                <summary className="flex items-center justify-between cursor-pointer list-none">
+                  <h3 className="text-lg font-bold text-gray-900 pr-4">{item.question}</h3>
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="mt-4 text-gray-600 leading-relaxed">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-16 sm:py-24 bg-gradient-to-br from-violet-600 to-purple-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -271,8 +396,17 @@ export default function FacturationVocalePage() {
         </div>
       </section>
       <section className="max-w-6xl mx-auto px-4 pb-16">
-        <RelatedPages pages={[{ href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' }, { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' }, { href: '/facturation-electronique', label: 'Facturation électronique 2026' }, { href: '/facturation-artisans', label: 'Facturation artisans' }, { href: '/facturation-freelances', label: 'Facturation freelances' }]} />
+        <RelatedPages pages={[
+          { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
+          { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
+          { href: '/facturation-electronique', label: 'Facturation électronique 2026' },
+          { href: '/facturation-artisans', label: 'Facturation artisans' },
+          { href: '/facturation-freelances', label: 'Facturation freelances' },
+          { href: '/facturation-auto-entrepreneur', label: 'Facturation auto-entrepreneur' },
+        ]} />
       </section>
+
+      {/* ═══ LOI 3 : JSON-LD Aggressif — 5 schemas ═══ */}
       <BreadcrumbSchema
         items={[
           { name: 'Accueil', url: 'https://factu.me' },
@@ -284,6 +418,28 @@ export default function FacturationVocalePage() {
         url="https://factu.me/facturation-vocale"
         name="Facturation vocale — Créez vos factures à la voix"
         description="Découvrez la facturation vocale avec Factu.me : dictez vos factures grâce à l'IA"
+      />
+      <FAQSchema items={faqItems} />
+      <HowToSchema
+        name="Comment créer une facture par la voix avec Factu.me"
+        description="Guide étape par étape pour dicter et générer une facture grâce à la reconnaissance vocale IA."
+        steps={[
+          { name: 'Appuyez sur le micro', text: 'Cliquez sur l\'icône micro dans l\'interface Factu.me et commencez à parler.' },
+          { name: 'Décrivez votre prestation', text: 'Dites simplement ce que vous avez facturé : client, durée, tarif, description.' },
+          { name: 'Vérifiez et envoyez', text: 'L\'IA génère votre facture. Relisez-la, ajustez si besoin et envoyez en PDF.' },
+        ]}
+      />
+      <CollectionPageSchema
+        name="Facturation Vocale — Guide Complet"
+        description="Ressources sur la facturation vocale : dictée IA, reconnaissance vocale, conformité 2026"
+        url="https://factu.me/facturation-vocale"
+        hasPart={[
+          { name: 'Facture Voix', url: 'https://factu.me/facture-voix', description: 'Page hub facture voix — dictée vocale IA' },
+          { name: 'Facture IA', url: 'https://factu.me/facture-ia', description: 'Page hub facture IA — intelligence artificielle' },
+          { name: 'Facturation électronique 2026', url: 'https://factu.me/facturation-electronique', description: 'Obligations et conformité facturation électronique' },
+          { name: 'Facturation artisans', url: 'https://factu.me/facturation-artisans', description: 'Solution facturation pour artisans' },
+          { name: 'Facturation freelances', url: 'https://factu.me/facturation-freelances', description: 'Solution facturation pour freelances' },
+        ]}
       />
     </div>
   );

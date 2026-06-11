@@ -167,6 +167,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  markTutorialSeen: () => {
+    const { profile } = get();
+    set({ profile: profile ? { ...profile, tutorial_wizard_seen: true } : null });
+    // OVERDRIVE FIX: Persister en BDD, pas localStorage — le tuto ne doit JAMAIS réapparaître
+    if (profile?.id) {
+      getSupabaseClient()
+        .from('profiles')
+        .update({ tutorial_wizard_seen: true, updated_at: new Date().toISOString() })
+        .eq('id', profile.id)
+        .then(({ error }) => {
+          if (error) console.error('[markTutorialSeen] DB save error:', error.message);
+        });
+    }
+  },
+
   fetchProfile: async (userId) => {
     const { data, error } = await getSupabaseClient().from('profiles').select('*').eq('id', userId).single();
     if (error && error.code !== 'PGRST116') return;

@@ -22,6 +22,7 @@ export interface Profile {
   invoice_prefix: string;
   currency?: string;
   onboarding_done: boolean;
+  tutorial_wizard_seen?: boolean;
   custom_template_html?: string;
   stripe_account_id?: string;
   stripe_customer_id?: string;

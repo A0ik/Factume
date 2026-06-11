@@ -55,21 +55,21 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 
 export function OnboardingWizard() {
   const router = useRouter();
-  const { profile, completeOnboarding } = useAuthStore();
+  const { profile, completeOnboarding, markTutorialSeen } = useAuthStore();
   const { clients, invoices } = useDataStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [skipped, setSkipped] = useState(false);
 
   useEffect(() => {
-    // ARBITER FIX: OnboardingWizard ne s'affiche qu'APRÈS que l'utilisateur
+    // OVERDRIVE FIX: Le tuto ne s'affiche qu'APRÈS que l'utilisateur
     // a complété le formulaire d'entreprise (onboarding_done === true en BDD).
-    // Il ne s'affiche qu'une seule fois, puis est marqué comme vu dans localStorage.
-    const hasSeenOnboarding = localStorage.getItem('onboarding_completed') === 'true';
+    // La vérification est 100% côté serveur via tutorial_wizard_seen en BDD.
+    // Plus AUCUN localStorage — le tuto ne réapparaît JAMAIS une fois validé.
+    const hasSeenTutorial = profile?.tutorial_wizard_seen === true;
 
-    // Condition stricte : profil chargé + onboarding validé en BDD + pas déjà vu
-    if (profile && profile.onboarding_done === true && !hasSeenOnboarding) {
-      // Petit délai pour laisser la page se stabiliser après la redirection post-onboarding
+    // Condition stricte : profil chargé + onboarding validé en BDD + tuto PAS encore vu en BDD
+    if (profile && profile.onboarding_done === true && !hasSeenTutorial) {
       const timer = setTimeout(() => setIsOpen(true), 800);
       return () => clearTimeout(timer);
     }
@@ -101,8 +101,8 @@ export function OnboardingWizard() {
   };
 
   const handleComplete = () => {
-    localStorage.setItem('onboarding_completed', 'true');
-    completeOnboarding();
+    // OVERDRIVE FIX: Persister côté serveur uniquement — plus de localStorage
+    markTutorialSeen();
     setIsOpen(false);
   };
 
