@@ -30,6 +30,7 @@ interface AuthState {
   fetchProfile: (userId: string) => Promise<void>;
   setProfile: (profile: Profile) => void;
   completeOnboarding: () => void;
+  markTutorialSeen: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -163,6 +164,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         .eq('id', profile.id)
         .then(({ error }) => {
           if (error) console.error('[completeOnboarding] DB save error:', error.message);
+        });
+    }
+  },
+
+  markTutorialSeen: () => {
+    const { profile } = get();
+    set({ profile: profile ? { ...profile, tutorial_wizard_seen: true } : null });
+    // OVERDRIVE FIX: Persister en BDD, pas localStorage — le tuto ne doit JAMAIS réapparaître
+    if (profile?.id) {
+      getSupabaseClient()
+        .from('profiles')
+        .update({ tutorial_wizard_seen: true, updated_at: new Date().toISOString() })
+        .eq('id', profile.id)
+        .then(({ error }) => {
+          if (error) console.error('[markTutorialSeen] DB save error:', error.message);
         });
     }
   },

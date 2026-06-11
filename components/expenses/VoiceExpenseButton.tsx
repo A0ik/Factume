@@ -2,10 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Loader2, Check, X } from 'lucide-react';
+import { Mic, MicOff, Loader2, Check, X, Camera, Upload, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+// LOI 1 (JUSTIFICATIF) : En France, une note de frais SANS justificatif (ticket, facture)
+// est ILLÉGALE et rejetée en contrôle fiscal (art. L123-22 Code de Commerce).
+// → L'application BLOQUE la soumission et EXIGE l'upload d'un justificatif.
 // LOI 5 (SENTINEL) : S'il y a un champ de texte pour créer une dépense,
 // il DOIT y avoir un bouton micro à côté.
 // LOI 9 (SENTINEL) : Le bouton vocal doit avoir un état "Écoute en cours" visuel.
@@ -33,15 +36,18 @@ export default function VoiceExpenseButton({
   className,
   variant = 'inline',
 }: VoiceExpenseButtonProps) {
-  const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'confirm' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'confirm' | 'uploading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingExpense, setPendingExpense] = useState<VoiceExpenseResult | null>(null);
   const [langBadge, setLangBadge] = useState<{ flag: string; label: string } | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const isRecordingRef = useRef(false);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -53,18 +59,72 @@ export default function VoiceExpenseButton({
     };
   }, []);
 
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Format accepté : JPG, PNG, WebP ou PDF');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Le justificatif ne doit pas dépasser 10 Mo');
+      return;
+    }
+
+    setReceiptFile(file);
+
+    // Generate preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setReceiptPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setReceiptPreview(null); // PDF — show icon instead
+    }
+  }, []);
+
   const confirmExpense = useCallback(async () => {
     if (!pendingExpense) return;
-    setState('processing');
+
+    // LOI 1 : BLOCAGE LÉGAL — Pas de justificatif = pas de sauvegarde
+    if (!receiptFile) {
+      toast.error('Justificatif obligatoire pour valider la note de frais');
+      return;
+    }
+
+    setState('uploading');
 
     try {
-      // Insert into expenses table via direct Supabase call
       const { getSupabaseClient } = await import('@/lib/supabase');
       const { useAuthStore } = await import('@/stores/authStore');
       const supabase = getSupabaseClient();
       const user = useAuthStore.getState().user;
       if (!user) throw new Error('Non authentifié');
 
+      // 1. Upload du justificatif dans Supabase Storage
+      const fileExt = receiptFile.name.split('.').pop();
+      const filePath = `${user.id}/receipts/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('expense-receipts')
+        .upload(filePath, receiptFile, { upsert: false });
+
+      if (uploadError) {
+        console.error('[VoiceExpense] Upload error:', uploadError.message);
+        // Fallback: create expense without receipt but mark as incomplete
+        throw new Error('Erreur upload justificatif. Veuillez réessayer.');
+      }
+
+      // 2. Get public URL
+      const { data: urlData } = supabase.storage
+        .from('expense-receipts')
+        .getPublicUrl(filePath);
+
+      // 3. Insert expense with receipt URL
       const { data, error } = await supabase.from('expenses').insert({
         user_id: user.id,
         vendor: pendingExpense.vendor,
@@ -76,22 +136,29 @@ export default function VoiceExpenseButton({
         payment_method: pendingExpense.payment_method || 'card',
         status: 'pending',
         source: 'voice',
+        receipt_url: urlData?.publicUrl || null,
+        receipt_file_path: filePath,
+        has_receipt: true,
       }).select().single();
 
       if (error) throw error;
 
       onExpenseCreated(data);
-      toast.success(`Dépense "${pendingExpense.vendor}" ajoutée`);
+      toast.success(`Dépense "${pendingExpense.vendor}" ajoutée avec justificatif`);
       setPendingExpense(null);
+      setReceiptFile(null);
+      setReceiptPreview(null);
       setState('idle');
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la création');
-      setState('idle');
+      setState('confirm');
     }
-  }, [pendingExpense, onExpenseCreated]);
+  }, [pendingExpense, receiptFile, onExpenseCreated]);
 
   const dismissExpense = useCallback(() => {
     setPendingExpense(null);
+    setReceiptFile(null);
+    setReceiptPreview(null);
     setState('idle');
   }, []);
 
@@ -169,24 +236,20 @@ export default function VoiceExpenseButton({
             }
           }
 
-          // The API already inserted the expense — pass it directly
-          if (data.expense) {
-            onExpenseCreated(data.expense);
-            toast.success(`Dépense "${data.expense.vendor || 'Fournisseur'}" ajoutée`);
-            setState('idle');
-          } else {
-            // Fallback: show confirmation dialog
-            setPendingExpense({
-              vendor: data.vendor || data.expense?.vendor || 'Fournisseur',
-              amount: data.amount || data.expense?.amount || 0,
-              vat_amount: data.vat_amount || data.expense?.vat_amount || 0,
-              category: data.category || data.expense?.category || 'other',
-              date: data.date || data.expense?.date || new Date().toISOString().slice(0, 10),
-              description: data.description || data.expense?.description || '',
-              payment_method: data.payment_method || data.expense?.payment_method || null,
-            });
-            setState('confirm');
-          }
+          // LOI 1 : ALWAYS show confirmation dialog with receipt upload requirement
+          // Never auto-insert without receipt — even if API returns expense data
+          setPendingExpense({
+            vendor: data.vendor || data.expense?.vendor || 'Fournisseur',
+            amount: data.amount || data.expense?.amount || 0,
+            vat_amount: data.vat_amount || data.expense?.vat_amount || 0,
+            category: data.category || data.expense?.category || 'other',
+            date: data.date || data.expense?.date || new Date().toISOString().slice(0, 10),
+            description: data.description || data.expense?.description || '',
+            payment_method: data.payment_method || data.expense?.payment_method || null,
+          });
+          setReceiptFile(null);
+          setReceiptPreview(null);
+          setState('confirm');
         } catch (err: any) {
           setState('error');
           setErrorMsg(err.message || 'Erreur lors du traitement');
@@ -223,7 +286,20 @@ export default function VoiceExpenseButton({
     }
   }, [state, startRecording, stopRecording]);
 
-  // ─── Confirmation Dialog ────────────────────────────────────────────
+  // Hidden file input for receipt upload
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/jpeg,image/png,image/webp,application/pdf"
+      className="hidden"
+      onChange={handleFileSelect}
+    />
+  );
+
+  // ─── Confirmation Dialog with MANDATORY receipt upload ──────────────
+  // LOI 1 : Justificatif OBLIGATOIRE — sans justificatif, le bouton "Confirmer"
+  // est désactivé et un avertissement légal s'affiche.
   if (state === 'confirm' && pendingExpense) {
     return (
       <motion.div
@@ -235,6 +311,7 @@ export default function VoiceExpenseButton({
           className,
         )}
       >
+        {fileInput}
         <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
             <Mic size={14} className="text-emerald-400" />
@@ -257,6 +334,58 @@ export default function VoiceExpenseButton({
             </div>
           )}
         </div>
+
+        {/* LOI 1 : Upload justificatif OBLIGATOIRE */}
+        <div className="mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={13} className={receiptFile ? 'text-emerald-400' : 'text-amber-400'} />
+            <p className={cn(
+              'text-xs font-semibold',
+              receiptFile ? 'text-emerald-400' : 'text-amber-400',
+            )}>
+              {receiptFile ? '✓ Justificatif ajouté' : 'Justificatif obligatoire'}
+            </p>
+          </div>
+          <p className="text-[10px] text-zinc-500 mb-2">
+            En France, une note de frais sans justificatif est irrecevable en contrôle fiscal (art. L123-22).
+          </p>
+
+          {/* Preview */}
+          {receiptPreview && (
+            <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
+              <img src={receiptPreview} alt="Aperçu justificatif" className="w-full h-24 object-cover" />
+            </div>
+          )}
+          {receiptFile && !receiptPreview && (
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+              <span className="text-xs">📄</span>
+              <span className="text-xs text-zinc-300 truncate">{receiptFile.name}</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'w-full py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2',
+              receiptFile
+                ? 'bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.06]'
+                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30',
+            )}
+          >
+            {receiptFile ? (
+              <>
+                <Camera size={13} />
+                Remplacer le justificatif
+              </>
+            ) : (
+              <>
+                <Upload size={13} />
+                Ajouter le ticket ou la facture (JPG, PDF)
+              </>
+            )}
+          </button>
+        </div>
+
         <div className="flex gap-2">
           <button
             onClick={dismissExpense}
@@ -267,10 +396,25 @@ export default function VoiceExpenseButton({
           </button>
           <button
             onClick={confirmExpense}
-            className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-400 transition-colors flex items-center justify-center gap-1.5"
+            disabled={!receiptFile}
+            className={cn(
+              'flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5',
+              receiptFile
+                ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                : 'bg-zinc-700 text-zinc-500 cursor-not-allowed',
+            )}
           >
-            <Check size={14} />
-            Confirmer
+            {!receiptFile ? (
+              <>
+                <Check size={14} />
+                Confirmer
+              </>
+            ) : (
+              <>
+                <Check size={14} />
+                Confirmer
+              </>
+            )}
           </button>
         </div>
       </motion.div>
@@ -285,12 +429,12 @@ export default function VoiceExpenseButton({
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
           onClick={toggleRecording}
-          disabled={state === 'processing'}
+          disabled={state === 'processing' || state === 'uploading'}
           className={cn(
             'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all',
             state === 'recording'
               ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
-              : state === 'processing'
+              : state === 'processing' || state === 'uploading'
               ? 'bg-blue-500/80 text-white'
               : 'bg-emerald-500 text-white hover:bg-emerald-400',
             className,
@@ -374,13 +518,13 @@ export default function VoiceExpenseButton({
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         onClick={toggleRecording}
-        disabled={state === 'processing'}
+        disabled={state === 'processing' || state === 'uploading'}
         className={cn(
           'relative z-10 flex items-center justify-center rounded-2xl transition-all duration-200',
           'w-14 h-14 lg:w-[68px] lg:h-[68px]',
           state === 'recording'
             ? 'bg-red-500 text-white shadow-xl shadow-red-500/40'
-            : state === 'processing'
+            : state === 'processing' || state === 'uploading'
             ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30'
             : 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/35 hover:shadow-emerald-500/55',
           className,
@@ -388,7 +532,7 @@ export default function VoiceExpenseButton({
       >
         {state === 'recording' ? (
           <MicOff size={22} strokeWidth={2.5} />
-        ) : state === 'processing' ? (
+        ) : state === 'processing' || state === 'uploading' ? (
           <Loader2 size={22} className="animate-spin" />
         ) : (
           <Mic size={22} strokeWidth={2.5} />
@@ -411,7 +555,7 @@ export default function VoiceExpenseButton({
         )}
 
         {/* Processing shimmer */}
-        {state === 'processing' && (
+        {(state === 'processing' || state === 'uploading') && (
           <motion.div
             className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
             animate={{ x: ['-100%', '100%'] }}
@@ -449,14 +593,14 @@ export default function VoiceExpenseButton({
 
       {/* Processing label */}
       <AnimatePresence>
-        {state === 'processing' && (
+        {(state === 'processing' || state === 'uploading') && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg"
           >
-            Analyse IA en cours...
+            {state === 'uploading' ? 'Upload justificatif...' : 'Analyse IA en cours...'}
           </motion.div>
         )}
       </AnimatePresence>

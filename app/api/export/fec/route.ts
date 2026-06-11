@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 // FEC (Fichier des Écritures Comptables) - Format réglementaire français
 // Norme DGFiP - Livre des procédures fiscales art. L47 A-I
+// LOI 6 : Le comptable est le juge final — tout export doit être validé par un expert-comptable
 function padNum(n: string, len: number) { return n.padStart(len, '0'); }
 function fecDate(d: string) { return d.replace(/-/g, ''); } // YYYYMMDD
 function fecAmount(n: number) { return n.toFixed(2).replace('.', ','); }
@@ -123,13 +124,24 @@ export async function GET(req: NextRequest) {
     ecritureSeq++;
   }
 
-  const fecContent = rows.join('\r\n');
+  // LOI 6 : Avertissement comptable en en-tête du fichier
+  const disclaimer = `# ATTENTION — Fichier FEC généré par Factu.me
+# Ce fichier est fourni à titre indicatif et ne remplace pas la validation
+# par un expert-comptable inscrit à l'Ordre des Experts-Comptables.
+# Vérifiez les écritures avec votre comptable avant toute transmission à l'administration fiscale.
+# Norme : DGFiP - Livre des procédures fiscales art. L47 A-I
+#`;
+
+  const fecContent = disclaimer + '\r\n' + rows.join('\r\n');
   const filename = `FEC${siren}${year}1231.txt`;
 
   return new NextResponse(fecContent, {
     headers: {
       'Content-Type': 'text/plain;charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`,
+      // LOI 6 : Métadonnée d'avertissement accessible programmatiquement
+      'X-Accountant-Validation-Required': 'true',
+      'X-FEC-Disclaimer': 'Ce fichier doit etre valide par un expert-comptable avant transmission fiscale',
     },
   });
 }
