@@ -191,6 +191,76 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
       };
     }
 
+    // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE
+    // Le Copilot génère un brouillon de relance mais N'ENVOIE JAMAIS automatiquement.
+    // L'utilisateur doit voir l'email et approuver manuellement l'envoi.
+    case 'send_reminder': {
+      // Find the most overdue unpaid invoice for the client
+      let query = supabase
+        .from('invoices')
+        .select('id, number, total_ttc, total, due_date, issue_date, status, client:clients(id, name, email)')
+        .eq('user_id', userId)
+        .in('status', ['sent', 'overdue'])
+        .order('due_date', { ascending: true })
+        .limit(5);
+
+      if (intent.client_name) {
+        query = query.ilike('client_name', `%${intent.client_name}%`);
+      }
+
+      const { data: overdueInvoices } = await query;
+
+      if (!overdueInvoices || overdueInvoices.length === 0) {
+        return {
+          type: 'reminder_draft',
+          status: 'no_overdue',
+          message: intent.client_name
+            ? `Aucune facture impayée trouvée pour "${intent.client_name}".`
+            : 'Aucune facture impayée en ce moment.',
+        };
+      }
+
+      // Get profile for company name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_name')
+        .eq('id', userId)
+        .single();
+
+      // Generate draft emails for ALL matching invoices (user picks which to send)
+      const drafts = overdueInvoices.map((inv: any) => {
+        const dueDate = new Date(inv.due_date || inv.issue_date);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+        const clientName = inv.client?.name || 'Client';
+        const subject = `Rappel : Facture ${inv.number} - ${profile?.company_name || 'Mon entreprise'}`;
+
+        const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${(inv.total || inv.total_ttc || 0).toFixed(2)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
+
+        return {
+          invoiceId: inv.id,
+          invoiceNumber: inv.number,
+          clientName,
+          clientEmail: inv.client?.email,
+          amount: inv.total || inv.total_ttc || 0,
+          daysOverdue,
+          subject,
+          body,
+          // LOI 3 : needsApproval = true — l'envoi DOIT être validé par l'utilisateur
+          needsApproval: true,
+          warning: '⚠️ Vérifiez que cette facture n\'a pas déjà été payée avant d\'envoyer la relance.',
+        };
+      });
+
+      return {
+        type: 'reminder_draft',
+        status: 'drafts_ready',
+        drafts,
+        message: `${drafts.length} facture(s) impayée(s) trouvée(s). Vérifiez et approuvez chaque relance avant envoi.`,
+      };
+    }
+
     default:
       return { type: 'unknown', message: 'Commande non reconnue. Essayez "Mes impayés", "Mon CA", ou "Relance Dupont".' };
   }

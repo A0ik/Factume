@@ -124,7 +124,12 @@ export default function URSSAFWidget() {
             <Shield size={15} className="text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-zinc-100">Réserve URSSAF</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-zinc-100">Réserve URSSAF</h3>
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 uppercase tracking-wider">
+                Estimation
+              </span>
+            </div>
             <p className="text-[10px] text-zinc-500">{data.regimeLabel} · {data.urssafRate}%</p>
           </div>
         </div>
@@ -174,6 +179,25 @@ export default function URSSAFWidget() {
             <p className="text-[11px] text-zinc-500">Aucun CA enregistré ce trimestre</p>
           </div>
         )}
+
+        {/* LOI 2 — Avertissement légal : estimation, pas vérité absolue */}
+        <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-500/[0.06] border border-amber-500/20">
+          <Info size={13} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-[10px] text-amber-300/80 leading-relaxed">
+            <span className="font-semibold text-amber-300">Estimation indicative.</span>{' '}
+            Basé sur le régime {data.regimeLabel} ({data.urssafRate}%).{' '}
+            Vérifiez sur{' '}
+            <a
+              href="https://www.urssaf.fr/accueil/outils-documentation/simulateurs/cotisations-auto-entrepeneur.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-amber-200 transition-colors"
+            >
+              urssaf.fr
+            </a>{' '}
+            et votre espace personnel. Ne remplace pas un conseil professionnel.
+          </p>
+        </div>
       </div>
     </motion.div>
   );

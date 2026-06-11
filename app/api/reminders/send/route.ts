@@ -26,10 +26,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { invoiceId, reminderLevel = 1 } = await req.json();
+    const { invoiceId, reminderLevel = 1, confirmed = false } = await req.json();
 
     if (!invoiceId) {
       return NextResponse.json({ error: 'invoiceId manquant' }, { status: 400 });
+    }
+
+    // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE
+    // L'envoi d'une relance DOIT être explicitement confirmé par l'utilisateur.
+    // Un email ne doit JAMAIS partir sans validation humaine (risque de relancer
+    // une facture déjà payée, ton inadapté, détérioration relation commerciale).
+    if (!confirmed) {
+      return NextResponse.json({
+        error: 'Confirmation requise',
+        message: 'Vous devez confirmer l\'envoi de cette relance. Passez confirmed: true dans le body.',
+        requiresConfirmation: true,
+      }, { status: 400 });
     }
 
     // Récupérer la facture avec les infos client

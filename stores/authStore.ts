@@ -30,6 +30,7 @@ interface AuthState {
   fetchProfile: (userId: string) => Promise<void>;
   setProfile: (profile: Profile) => void;
   completeOnboarding: () => void;
+  markTutorialSeen: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({

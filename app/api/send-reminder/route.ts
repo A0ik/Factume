@@ -7,8 +7,17 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    const { invoiceId, email, profile } = await req.json();
+    const { invoiceId, email, profile, confirmed = false } = await req.json();
     if (!invoiceId || !email) return NextResponse.json({ error: 'invoiceId and email required' }, { status: 400 });
+
+    // LOI 3 : Confirmation humaine obligatoire avant envoi de relance
+    if (!confirmed) {
+      return NextResponse.json({
+        error: 'Confirmation requise',
+        message: 'L\'envoi de relance doit être explicitement approuvé par l\'utilisateur.',
+        requiresConfirmation: true,
+      }, { status: 400 });
+    }
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-invoice`, {
       method: 'POST',
