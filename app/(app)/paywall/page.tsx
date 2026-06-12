@@ -728,7 +728,7 @@ export default function PaywallPage() {
                   style={{
                     background: confirmChange.plan.id === 'pro'
                       ? 'linear-gradient(135deg, #10b981, #059669)'
-                      : 'linear-gradient(135deg, #9333ea, #6d28d9)'
+                      : confirmChange.plan.id === 'business'
                         ? 'linear-gradient(135deg, #1e40af, #3730a3)'
                         : 'linear-gradient(135deg, #9333ea, #6d28d9)'
                   }}

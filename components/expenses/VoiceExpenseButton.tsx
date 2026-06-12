@@ -136,7 +136,7 @@ export default function VoiceExpenseButton({
         payment_method: pendingExpense.payment_method || 'card',
         status: 'pending',
         source: 'voice',
-        receipt_url: urlData?.publicUrl || null,
+        receipt_url: urlData?.signedUrl || null,
         receipt_file_path: filePath,
         has_receipt: true,
       }).select().single();
