@@ -24,10 +24,10 @@ const PLANS: PlanConfig[] = [
     description: "L'essentiel pour démarrer et tester.",
     recommended: false,
     features: [
-      '5 factures et devis par mois',
+      '3 factures et devis par mois',
       'E-facturation certifiée',
       '1 cabinet, 10 clients CRM',
-      '5 commandes vocales/mois',
+      'Dictée vocale IA activée',
       { label: 'URSSAF One-Click', included: false },
       { label: 'Copilot Factu IA', included: false },
     ],

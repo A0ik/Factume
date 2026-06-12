@@ -102,7 +102,7 @@ const CATEGORIES = [
     bg: 'bg-rose-50',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 5 factures/mois, 1 cabinet, e-facturation certifiée, 5 commandes vocales/mois.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 14 jours disponible, sans carte bancaire.' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 14 jours disponible, sans carte bancaire.' },
       { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 14 jours sans carte bancaire.' },
       { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Starter avec les limitations associées.' },
     ],

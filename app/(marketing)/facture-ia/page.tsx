@@ -86,7 +86,7 @@ const faqItems = [
   {
     question: 'Combien coûte un logiciel de facture IA ?',
     answer:
-      'Sur Factu.me, la facture IA est accessible dès 0 € (plan Starter, 5 factures/mois). Le plan Pro à 14,99 €/mois offre factures illimitées, URSSAF One-Click, Voice Expense et Copilot IA. Le plan Business à 39,99 €/mois ajoute Comptable Connect, 5 cabinets et multi-utilisateur.',
+      'Sur Factu.me, la facture IA est accessible dès 0 € (plan Starter, 3 factures/mois avec dictée vocale). Le plan Pro à 14,99 €/mois offre factures illimitées, URSSAF One-Click, Voice Expense et Copilot IA. Le plan Business à 39,99 €/mois ajoute Comptable Connect, 5 cabinets et multi-utilisateur.',
   },
   {
     question: 'Peut-on créer une facture IA gratuitement ?',

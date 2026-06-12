@@ -234,7 +234,7 @@ export default function DashboardPage() {
                   <Zap size={16} className="text-amber-400" />
                 </div>
                 <p className="text-sm text-amber-300 font-medium flex-1 truncate">
-                  {sub.isAtLimit ? 'Limite atteinte' : `${sub.invoiceCount}/5 factures ce mois`}
+                  {sub.isAtLimit ? 'Limite atteinte' : `${sub.invoiceCount}/3 factures ce mois`}
                 </p>
                 <ArrowUpRight size={14} className="text-amber-500 flex-shrink-0" />
               </Link>

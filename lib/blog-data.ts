@@ -1429,7 +1429,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Les artisans ont des besoins spécifiques : facturation sur chantier, signature de devis sur tablette, scan de reçus de matériaux, suivi des chantiers en cours. Un logiciel de facturation généraliste ne suffit pas toujours.',
           'Factu.me répond a ces besoins avec : facturation vocale (dictez votre facture les mains libres sur le chantier), application mobile PWA (fonctionne hors-ligne), signature électronique de devis (le client signe sur votre tablette), OCR pour les reçus de matériaux.',
-          'Le plan Starter est gratuit (5 factures/mois). Le plan Pro à 14,99€/mois inclut factures illimitées, URSSAF One-Click, Voice Expense et Copilot IA. Le plan Business à 39,99€/mois ajoute 5 cabinets, Comptable Connect et multi-utilisateur.',
+          'Le plan Starter est gratuit (3 factures/mois avec dictée vocale IA). Le plan Pro à 14,99€/mois inclut factures illimitées, URSSAF One-Click, Voice Expense et Copilot IA. Le plan Business à 39,99€/mois ajoute 5 cabinets, Comptable Connect et multi-utilisateur.',
         ],
       },
     ],

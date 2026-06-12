@@ -162,13 +162,13 @@ const testimonials = [
 ];
 
 const plans = [
-  { name: 'Starter', price: 'Gratuit', yearly: 'Gratuit', tag: 'Pour démarrer et tester', features: ['E-facturation certifiée', '5 factures & devis/mois', '1 cabinet, 10 clients', '5 commandes vocales/mois', 'Support email'], popular: false },
+  { name: 'Starter', price: 'Gratuit', yearly: 'Gratuit', tag: 'Pour démarrer et tester', features: ['E-facturation certifiée', '3 factures & devis/mois', '1 cabinet, 10 clients', 'Dictée vocale IA activée', 'Support email'], popular: false },
   { name: 'Pro', price: '14,99€', yearly: '12,50€', tag: 'Indépendants & TPE', features: ['Factures & devis illimités', 'Contrats CDI/CDD', 'OCR reçus', 'Signature électronique', 'Voice Expense illimité', 'IK & notes de frais', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'], popular: true },
   { name: 'Business', price: '39,99€', yearly: '33,33€', tag: 'PME & Experts-comptables', features: ['E-facturation certifiée', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
 ];
 
 const faqItems = [
-  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Starter est 100% gratuit (5 factures/mois). Pour tester les plans payants, profitez de 14 jours d\'essai gratuit, sans carte bancaire.' },
+  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Starter est 100% gratuit (3 factures/mois avec dictée vocale IA). Pour tester les plans payants, profitez de 14 jours d\'essai gratuit, sans carte bancaire.' },
   { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données.' },
   { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA comprend parfaitement le français naturel. Dites "5 jours de dev à 600€" et elle crée la facture complète. Vous n\'avez qu\'à vérifier et envoyer.' },
   { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. Vos factures électroniques sont conformes et prêtes pour l\'obligation 2026. L\'export officiel pour les impôts est disponible sur tous les plans.' },

@@ -11,7 +11,7 @@ const plans = [
   {
     name: 'Starter', monthlyPrice: 'Gratuit', yearlyPrice: 'Gratuit', yearlySavings: '0€',
     tagline: 'Pour démarrer et tester',
-    features: ['5 factures & devis/mois', 'E-facturation certifiée', '1 cabinet', '10 clients CRM', '5 commandes vocales/mois', 'Support email'],
+    features: ['3 factures & devis/mois', 'E-facturation certifiée', '1 cabinet', '10 clients CRM', 'Dictée vocale IA activée', 'Support email'],
     popular: false,
   },
   {

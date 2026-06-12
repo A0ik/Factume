@@ -198,18 +198,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         offers: [
           {
             '@type': 'Offer',
-            name: 'Plan Découverte',
-            price: '0',
-            priceCurrency: 'EUR',
-            description: 'Gratuit — jusqu\'à 3 factures par mois, sans carte bancaire',
-            availability: 'https://schema.org/InStock',
-          },
-          {
-            '@type': 'Offer',
             name: 'Plan Starter',
             price: '0',
             priceCurrency: 'EUR',
-            description: '5 factures/mois, e-facturation certifiée, 1 cabinet, Voice basique',
+            description: 'Gratuit — 3 factures/mois avec dictée vocale IA, e-facturation certifiée, 1 cabinet, sans carte bancaire',
             availability: 'https://schema.org/InStock',
           },
           {

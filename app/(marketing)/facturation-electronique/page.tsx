@@ -199,7 +199,7 @@ const faqItems = [
   },
   {
     question: 'Quel est le coût de la facturation électronique avec Factu.me ?',
-    answer: 'Factu.me propose un plan gratuit (Découverte) jusqu\'à 5 factures/mois. Le plan Pro à 14,99€/mois inclut les factures illimitées avec Factur-X. Le plan Business à 39,99€/mois ajoute la connexion PDP complète et l\'export FEC comptable. Aucun frais caché de mise en conformité.',
+    answer: 'Factu.me propose un plan gratuit (Découverte) jusqu\'à 3 factures/mois avec dictée vocale IA. Le plan Pro à 14,99€/mois inclut les factures illimitées avec Factur-X. Le plan Business à 39,99€/mois ajoute la connexion PDP complète et l\'export FEC comptable. Aucun frais caché de mise en conformité.',
   },
   {
     question: 'Que se passe-t-il si je ne suis pas conforme en 2026 ?',

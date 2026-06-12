@@ -459,12 +459,12 @@ export default function PaywallPage() {
                   <p className={cn("text-sm mb-3", isDark ? "text-zinc-400" : "text-gray-700")}>
                     {remainingInvoices > 0
                       ? `Vous pouvez créer encore ${remainingInvoices} facture${remainingInvoices > 1 ? 's' : ''} ce mois-ci.`
-                      : 'Vous avez atteint votre limite de 5 factures mensuelles.'}
+                      : 'Vous avez atteint votre limite de 3 factures mensuelles.'}
                   </p>
                   <div className="mb-4">
                     <div className="flex justify-between text-xs mb-2">
                       <span className={cn("font-medium", isDark ? "text-zinc-500" : "text-gray-600")}>
-                        {sub.invoiceCount} / 5 factures
+                        {sub.invoiceCount} / 3 factures
                       </span>
                       <span className={cn(
                         "font-bold",
@@ -934,7 +934,7 @@ export default function PaywallPage() {
               isDark ? "text-zinc-600 hover:text-zinc-400" : "text-gray-400 hover:text-gray-600"
             )}
           >
-            Continuer gratuitement (5 factures/mois)
+            Continuer gratuitement (3 factures/mois)
           </button>
         </motion.div>
       )}
