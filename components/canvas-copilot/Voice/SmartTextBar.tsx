@@ -47,6 +47,25 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
 
     try {
       const hasContent = items.some(i => i.description || i.unit_price > 0);
+      // LOI 3 (Arbiter) — on envoie l'état COMPLET du document (pas seulement les lignes)
+      // pour que l'IA modifie au lieu de recréer.
+      const s = useDocumentSessionStore.getState();
+      const formContext = {
+        document_type: s.documentType,
+        client_name: s.clientName || null,
+        client_email: s.clientEmail || null,
+        client_phone: s.clientPhone || null,
+        client_address: s.clientAddress || null,
+        client_city: s.clientCity || null,
+        client_postal_code: s.clientPostalCode || null,
+        client_siret: s.clientSiret || null,
+        client_vat_number: s.clientVatNumber || null,
+        items: s.items.map((i) => ({ description: i.description, quantity: i.quantity, unit_price: i.unit_price, vat_rate: i.vat_rate })),
+        notes: s.notes || null,
+        discount_percent: s.discountPercent || null,
+        due_days: s.paymentDays,
+        issue_date: s.issueDate || null,
+      };
       const res = await fetch('/api/ai/generate-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,6 +75,7 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
           isEdit: hasContent,
           existingItems: hasContent ? items : undefined,
           document_type: documentType,
+          formContext,
         }),
       });
 

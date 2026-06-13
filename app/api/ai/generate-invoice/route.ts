@@ -3,7 +3,6 @@ import OpenAI from 'openai';
 import { validateAIGenerateData, formatValidationError, ValidationError, DocumentType, AIGenerateSchema, validateRequest } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { z } from 'zod';
 
 type LocalDocumentType = DocumentType;
@@ -71,19 +70,9 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // Subscription gate: Copilot Factu AI requires Pro plan or above
-    const sub = await getUserSubscriptionStatus(user.id);
-    try {
-      requireFeature(sub, 'copilotFactu');
-    } catch (err: any) {
-      const [, feature, message] = err.message.split(':');
-      return NextResponse.json({
-        error: message || 'Plan supérieur requis.',
-        code: 'PLAN_REQUIRED',
-        feature,
-        upgradeUrl: '/paywall',
-      }, { status: 403 });
-    }
+    // LOI 3 (Arbiter) — l'IA (voix ET texte) est le cheval de Troie illimité.
+    // Cohérent avec /api/process-voice : on autorise tous les utilisateurs authentifiés.
+    // (Auparavant bloqué derrière copilotFactu = incohérent avec la voix, d'où le bug "écrire ne marche pas".)
 
     // Récupérer et valider le corps de la requête
     let body: unknown;
@@ -129,21 +118,30 @@ export async function POST(req: NextRequest) {
 
     let systemPrompt: string;
 
-    if (isEdit && existingItems?.length) {
+    const formContext = (body as any)?.formContext;
+    if (isEdit || formContext) {
       const existingList = (existingItems as any[])
         .map((item, i) =>
           `  ${i + 1}. "${item.description || '(sans description)'}" — qté: ${item.quantity}, prix HT: ${item.unit_price}€, TVA: ${item.vat_rate}%`
         )
         .join('\n');
+      const documentStateJson = formContext
+        ? JSON.stringify(formContext, null, 2)
+        : JSON.stringify({ items: existingItems }, null, 2);
 
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 TYPE DE DOCUMENT : ${docConfig.label.toUpperCase()}
 ${docConfig.promptHint}
 
-L'utilisateur a déjà un ${docConfig.label} en cours avec les lignes suivantes :
+CONTEXTE: L'utilisateur MODIFIE un ${docConfig.label} EXISTANT. Il ne crée pas un nouveau document.
+Retourne le document MODIFIÉ complet — ne supprime jamais les lignes/champs non mentionnés.
 
-LIGNES EXISTANTES :
-${existingList}
+=== ÉTAT ACTUEL DU DOCUMENT (JSON — source de vérité) ===
+${documentStateJson}
+=== FIN DE L'ÉTAT ACTUEL ===
+
+LIGNES EXISTANTES (rappel lisible) :
+${existingList || '(aucune ligne)'}
 
 L'utilisateur veut faire une modification. Analyse son intention précisément :
 
@@ -239,19 +237,55 @@ IMPORTANT — DEUX CHAMPS SÉPARÉS pour les conditions :
 - Si l'utilisateur ne mentionne pas de quantité, utilise 1`;
     }
 
-    const completion = await openrouter.chat.completions.create({
-      model: 'mistralai/mistral-small-24b-instruct-2501',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0, // Plus déterministe pour éviter les créations non demandées
-    });
+    const messages: { role: 'system' | 'user'; content: string }[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ];
+
+    let rawContent: string | null = null;
+
+    // 1) OpenRouter (mistral) — provider principal
+    try {
+      if (process.env.OPENROUTER_API_KEY) {
+        const completion = await openrouter.chat.completions.create({
+          model: 'mistralai/mistral-small-24b-instruct-2501',
+          messages,
+          response_format: { type: 'json_object' },
+          temperature: 0,
+        });
+        rawContent = completion.choices[0]?.message?.content || null;
+      }
+    } catch (e) {
+      console.error('[ai-generate-invoice] OpenRouter failed, fallback Groq:', (e as Error)?.message);
+    }
+
+    // 2) Groq (llama) — repli robuste (même provider que la voix, toujours fonctionnel)
+    if (!rawContent && process.env.GROQ_API_KEY) {
+      try {
+        const Groq = (await import('groq-sdk')).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          response_format: { type: 'json_object' },
+          temperature: 0,
+        });
+        rawContent = completion.choices[0]?.message?.content || null;
+      } catch (e) {
+        console.error('[ai-generate-invoice] Groq fallback failed:', (e as Error)?.message);
+      }
+    }
+
+    if (!rawContent) {
+      return NextResponse.json(
+        { error: "Aucun provider IA disponible. Configurez OPENROUTER_API_KEY ou GROQ_API_KEY." },
+        { status: 500 },
+      );
+    }
 
     let parsed: any = {};
     try {
-      parsed = JSON.parse(completion.choices[0].message.content || '{}');
+      parsed = JSON.parse(rawContent);
 
       // Post-processing : corriger les expressions mathématiques dans les items
       if (parsed.items && Array.isArray(parsed.items)) {

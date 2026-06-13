@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { toast } from 'sonner';
@@ -17,32 +17,25 @@ interface VoiceOneShotProps {
 /**
  * VoiceOneShot — HERO microphone button for voice-first document creation.
  *
- * ═══ DESIGN PHILOSOPHY (FLAW 4 — Voice-First UI) ═══
- * The voice button is the PRIMARY interaction point. It is always the most
- * visually prominent element in the creation bar. Manual text input is the
- * alternative, not the default.
+ * LOI 3 (Arbiter) — CONTEXTE COMPLET : on envoie l'état entier du document
+ *   (formContext) à l'IA pour qu'elle MODIFIE l'existant au lieu de recréer.
+ * LOI 4 (Arbiter) — FEEDBACK AU-DESSUS : la transcription et tous les retours
+ *   (traitement, langue, erreur) s'affichent AU-DESSUS du micro (bottom-full),
+ *   jamais en dessous — sinon le bas de l'écran les coupe.
  *
- * States:
- *  Idle       → Emerald glow pulse invites interaction
- *  Recording  → Red double-pulse ring + 12-bar audio waveform
- *  Processing → Blue shimmer indicates AI analysis
- *  Error      → Amber auto-dismisses after 3s
- *
- * ═══ UX LAWS APPLIED ═══
- * • Fitts's Law — Large touch target (56px mobile, 68px desktop)
- * • Aesthetic-Usability Effect — Beautiful glow animations invite use
- * • Shneiderman Rule 3 — Informative feedback on every state change
- * • Von Restorff Effect — Voice button stands out as the most distinctive element
+ * States: Idle → Recording → Processing → (Error | Done)
  */
 export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
   const [state, setState] = useState<'idle' | 'recording' | 'processing' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [transcript, setTranscript] = useState('');
   const [langBadge, setLangBadge] = useState<{ flag: string; label: string } | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const isRecordingRef = useRef(false);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     documentType,
@@ -51,13 +44,38 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
     setProcessingVoice,
   } = useDocumentSessionStore();
 
+  // LOI 3 — Construit l'état complet du document à envoyer à l'IA (lecture fraîche au moment de l'enregistrement)
+  const buildFormContext = useCallback(() => {
+    const s = useDocumentSessionStore.getState();
+    return {
+      document_type: s.documentType,
+      client_name: s.clientName || null,
+      client_email: s.clientEmail || null,
+      client_phone: s.clientPhone || null,
+      client_address: s.clientAddress || null,
+      client_city: s.clientCity || null,
+      client_postal_code: s.clientPostalCode || null,
+      client_siret: s.clientSiret || null,
+      client_vat_number: s.clientVatNumber || null,
+      items: s.items.map((i) => ({
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        vat_rate: i.vat_rate,
+      })),
+      notes: s.notes || null,
+      discount_percent: s.discountPercent || null,
+      due_days: s.paymentDays,
+      issue_date: s.issueDate || null,
+    };
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       mediaRecorderRef.current?.stop();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+      if (transcriptTimerRef.current) clearTimeout(transcriptTimerRef.current);
     };
   }, []);
 
@@ -66,6 +84,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
     isRecordingRef.current = true;
 
     setErrorMsg('');
+    setTranscript(''); // reset previous transcript
     setState('recording');
     chunksRef.current = [];
 
@@ -80,14 +99,11 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
       };
 
       mediaRecorder.onstop = async () => {
-        // Clear recording timeout
         if (recordingTimeoutRef.current) {
           clearTimeout(recordingTimeoutRef.current);
           recordingTimeoutRef.current = null;
         }
-
-        // Stop all tracks immediately
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
 
         if (chunksRef.current.length === 0) {
@@ -103,10 +119,13 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
         if (sector) formData.append('sector', sector);
-        if (items?.length) {
-          formData.append('existingItems', JSON.stringify(items));
-        }
         formData.append('mode', documentType);
+
+        // LOI 3 — On envoie TOUJOURS l'état complet du document (contexte + lignes)
+        const formContext = buildFormContext();
+        formData.append('formContext', JSON.stringify(formContext));
+        const hasContent = items?.some((i) => i.description || i.unit_price > 0);
+        if (hasContent) formData.append('existingItems', JSON.stringify(items));
 
         try {
           const controller = new AbortController();
@@ -117,10 +136,16 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erreur vocale');
 
-            // Apply parsed result — this also triggers doubt resolution if uncertain_fields exist
+            // LOI 4 — Transcription affichée AU-DESSUS du micro
+            if (data.transcript) {
+              setTranscript(data.transcript);
+              // Auto-masque après 8s pour ne pas encombrer
+              if (transcriptTimerRef.current) clearTimeout(transcriptTimerRef.current);
+              transcriptTimerRef.current = setTimeout(() => setTranscript(''), 8000);
+            }
+
             applyAIParsedResult(data.parsed || data, 'voice');
 
-            // Show language detection badge (Loi 9: Feedback immédiat)
             if (data.wasTranslated && data.originalLanguage) {
               const langMap: Record<string, { flag: string; label: string }> = {
                 arabic: { flag: '🇲🇦', label: 'Arabe → FR' },
@@ -145,7 +170,6 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         } catch (err: any) {
           setState('error');
           setErrorMsg(err.message || 'Erreur lors du traitement');
-          // Auto-dismiss error after 3s
           setTimeout(() => setState('idle'), 3000);
         } finally {
           setProcessingVoice(false);
@@ -157,10 +181,10 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
     } catch (err: any) {
       isRecordingRef.current = false;
       setState('error');
-      setErrorMsg('Acces au micro refuse');
+      setErrorMsg('Accès au micro refusé');
       setTimeout(() => setState('idle'), 3000);
     }
-  }, [documentType, items, sector, applyAIParsedResult, setProcessingVoice]);
+  }, [documentType, items, sector, applyAIParsedResult, setProcessingVoice, buildFormContext]);
 
   const stopRecording = useCallback(() => {
     isRecordingRef.current = false;
@@ -183,7 +207,47 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
 
   return (
     <div className={cn('relative flex flex-col items-center', className)}>
-      {/* ═══ IDLE GLOW RING ═══ Loi: Aesthetic-Usability Effect + Von Restorff */}
+      {/* ═══ LOI 4 — TRANSCRIPTION AU-DESSUS DU MICRO (jamais coupée en bas) ═══ */}
+      <AnimatePresence>
+        {transcript && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            transition={SPRING}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[min(80vw,22rem)] z-30 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-4 py-3 shadow-xl"
+          >
+            <div className="flex items-start gap-2">
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mb-0.5">
+                  Transcription
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-200 leading-snug line-clamp-4">
+                  {transcript}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ TOOLTIP LANGUE — AU-DESSUS ═══ */}
+      <AnimatePresence>
+        {langBadge && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.9 }}
+            transition={SPRING}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 dark:bg-zinc-700 text-zinc-100 text-[10px] font-semibold shadow-lg border border-white/10 z-30"
+          >
+            {langBadge.flag} {langBadge.label}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ IDLE GLOW RING ═══ */}
       {state === 'idle' && (
         <motion.div
           className="absolute inset-[-6px] rounded-[20px] lg:rounded-[22px] pointer-events-none"
@@ -197,7 +261,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         />
       )}
 
-      {/* ═══ MAIN BUTTON ═══ Fitts's Law: Large touch target */}
+      {/* ═══ MAIN BUTTON ═══ */}
       <motion.button
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
@@ -205,7 +269,6 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         disabled={state === 'processing'}
         className={cn(
           'relative z-10 flex items-center justify-center rounded-2xl transition-all duration-200',
-          // FLAW 4 FIX: Voice button is HERO — larger than everything else
           'w-14 h-14 lg:w-[68px] lg:h-[68px]',
           state === 'recording'
             ? 'bg-red-500 text-white shadow-xl shadow-red-500/40'
@@ -224,7 +287,6 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
           <Mic size={22} strokeWidth={2.5} />
         )}
 
-        {/* ═══ RECORDING: Double pulse rings ═══ */}
         {state === 'recording' && (
           <>
             <motion.div
@@ -240,7 +302,6 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
           </>
         )}
 
-        {/* ═══ PROCESSING: Shimmer overlay ═══ */}
         {state === 'processing' && (
           <motion.div
             className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
@@ -250,7 +311,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         )}
       </motion.button>
 
-      {/* ═══ WAVEFORM — Recording state ═══ Loi: Visibility of System Status (NN/g Heuristic 1) */}
+      {/* ═══ WAVEFORM — AU-DESSUS (recording) ═══ */}
       <AnimatePresence>
         {state === 'recording' && (
           <motion.div
@@ -258,27 +319,21 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, height: 24 }}
             exit={{ opacity: 0, height: 0 }}
             transition={SPRING}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-1 flex items-end justify-center gap-[2px]"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-end justify-center gap-[2px] z-30"
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="w-[2.5px] bg-red-400 rounded-full"
-                animate={{
-                  height: [3, 7 + Math.sin(i * 0.7) * 5, 4, 11 + Math.cos(i * 0.5) * 4, 5, 8, 3],
-                }}
-                transition={{
-                  duration: 0.55 + Math.sin(i * 0.3) * 0.12,
-                  repeat: Infinity,
-                  delay: i * 0.035,
-                }}
+                className="w-[2.5px] bg-red-500 dark:bg-red-400 rounded-full"
+                animate={{ height: [3, 7 + Math.sin(i * 0.7) * 5, 4, 11 + Math.cos(i * 0.5) * 4, 5, 8, 3] }}
+                transition={{ duration: 0.55 + Math.sin(i * 0.3) * 0.12, repeat: Infinity, delay: i * 0.035 }}
               />
             ))}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ═══ TOOLTIP: Processing ═══ */}
+      {/* ═══ TOOLTIP TRAITEMENT — AU-DESSUS ═══ */}
       <AnimatePresence>
         {state === 'processing' && (
           <motion.div
@@ -286,14 +341,14 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={SPRING}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg z-30"
           >
-            Analyse IA en cours...
+            Analyse IA en cours…
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ═══ TOOLTIP: Error ═══ */}
+      {/* ═══ TOOLTIP ERREUR — AU-DESSUS ═══ */}
       <AnimatePresence>
         {state === 'error' && errorMsg && (
           <motion.div
@@ -301,24 +356,9 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={SPRING}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg z-30"
           >
             {errorMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ LANGUAGE BADGE ═══ Loi 9: Feedback immédiat sur la langue détectée */}
-      <AnimatePresence>
-        {langBadge && (
-          <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.9 }}
-            transition={SPRING}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 dark:bg-zinc-700 text-zinc-200 text-[10px] font-semibold shadow-lg border border-white/10"
-          >
-            {langBadge.flag} {langBadge.label}
           </motion.div>
         )}
       </AnimatePresence>

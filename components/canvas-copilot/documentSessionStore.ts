@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { InvoiceItem, DocumentType, VoiceUncertainField } from '@/types';
 import { generateId } from '@/lib/utils';
+import { mergeInvoiceItems } from '@/lib/voice-merge';
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -366,9 +367,11 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     if (parsed?.client_siret) updates.clientSiret = parsed.client_siret;
     if (parsed?.client_vat_number) updates.clientVatNumber = parsed.client_vat_number;
 
-    // Items
+    // Items — LOI 3 (Arbiter) : on FUSIONNE au lieu d'écraser, pour que
+    // re-parler/re-écrire modifie au lieu de supprimer les articles existants.
     if (parsed?.items?.length) {
-      updates.items = parsed.items.map((item: any) => ({
+      const merged = mergeInvoiceItems(state.items as any, parsed.items as any, parsed?.action);
+      updates.items = merged.map((item: any) => ({
         id: generateId(),
         description: item.description || '',
         quantity: Number(item.quantity) || 1,

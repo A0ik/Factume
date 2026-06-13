@@ -1,220 +1,289 @@
 'use client';
+
 import * as React from 'react';
-import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import {
-  FileText, BarChart3, Shield, Clock, TrendingUp,
-  CheckCircle2, ArrowRight, Sparkles, Zap, Rocket, Crown,
-  Star, Award, Loader2,
-} from 'lucide-react';
-import Button from '@/components/ui/Button';
-import TiltCard from '@/components/ui/TiltCard';
-import { useSubscription } from '@/hooks/useSubscription';
-import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Check, Crown, ShieldCheck, Zap, Loader2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
 
-const PLAN_INFO: Record<string, { name: string; price: string; icon: any; color: string }> = {
-  pro: { name: 'Pro', price: '14,99€', icon: Zap, color: 'from-emerald-500 to-emerald-600' },
-  business: { name: 'Business', price: '39,99€', icon: Crown, color: 'from-purple-600 to-violet-700' },
-};
+/**
+ * LOI 5 + LOI 9 (Arbiter) — /trial est une COPIE CONFORME de la section Tarifs
+ * de la homepage (mêmes cartes, mêmes prix, même design dark). Une seule source
+ * de vérité tarifaire. Le CTA est contextuel pour convertir au maximum :
+ *  - essai actif  → bannière "essai en cours" + souscrire au plan choisi
+ *  - non connecté → /register
+ *  - déjà payant  → "Plan actuel"
+ * LOI 6 — souscription via Stripe Checkout Hosted (aucune friction ToS).
+ */
+
+const PLANS = [
+  {
+    name: 'Starter',
+    price: 'Gratuit',
+    yearly: 'Gratuit',
+    tag: 'Pour démarrer et tester',
+    features: [
+      'E-facturation certifiée',
+      '3 factures & devis/mois',
+      '1 cabinet, 10 clients',
+      'Dictée vocale IA activée',
+      'Support email',
+    ],
+    popular: false,
+  },
+  {
+    name: 'Pro',
+    price: '14,99€',
+    yearly: '12,50€',
+    tag: 'Indépendants & TPE',
+    features: [
+      'Factures & devis illimités',
+      'Contrats CDI/CDD',
+      'OCR reçus',
+      'Signature électronique',
+      'Voice Expense illimité',
+      'IK & notes de frais',
+      'URSSAF One-Click',
+      'Export FEC/CSV',
+      'Rapprochement bancaire',
+      'Sans watermark',
+    ],
+    popular: true,
+  },
+  {
+    name: 'Business',
+    price: '39,99€',
+    yearly: '33,33€',
+    tag: 'PME & Experts-comptables',
+    features: [
+      'E-facturation certifiée',
+      'Tout Pro inclus',
+      '5 cabinets',
+      'Comptable Connect',
+      'Multi-utilisateur (5)',
+      'Copilot IA avancé',
+      'Support dédié',
+    ],
+    popular: false,
+  },
+] as const;
 
 export default function TrialPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { profile } = useAuthStore();
   const sub = useSubscription();
-  const [isActivating, setIsActivating] = React.useState(false);
-  const [isActivated, setIsActivated] = React.useState(false);
 
-  const planId = searchParams.get('plan') || 'pro';
-  const planInfo = PLAN_INFO[planId] || PLAN_INFO.pro;
-  const PlanIcon = planInfo.icon;
+  const [billing, setBilling] = React.useState<'monthly' | 'yearly'>('monthly');
+  const [loadingPlan, setLoadingPlan] = React.useState<string | null>(null);
 
-  const handleActivateTrial = async () => {
-    if (!profile?.id) {
-      router.push('/login');
+  const currentTier = (profile?.subscription_tier || 'free').toLowerCase(); // free | pro | business …
+  const trialActive = !!sub?.isTrialActive;
+
+  // Souscription directe via Stripe Checkout Hosted (LOI 6 — sans friction ToS)
+  const subscribe = async (planName: string) => {
+    const plan = planName.toLowerCase();
+    if (plan === 'starter') {
+      router.push(profile?.id ? '/dashboard' : '/register');
       return;
     }
-    setIsActivating(true);
+    if (!profile?.id) {
+      router.push(`/register?plan=${plan}&billing=${billing}`);
+      return;
+    }
+
+    setLoadingPlan(planName);
     try {
-      const res = await fetch('/api/stripe/trial-subscription', {
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, userId: profile.id }),
+        body: JSON.stringify({ plan, yearly: billing === 'yearly' }),
       });
       const data = await res.json();
-
-      if (data.clientSecret) {
-        setIsActivated(true);
-        router.push(`/paywall?plan=${planId}&trial=true`);
-      } else {
-        toast.error(data.error || "Impossible de créer l'essai");
-        setIsActivating(false);
+      if (!res.ok) throw new Error(data?.error || 'Impossible de démarrer le paiement.');
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
       }
-    } catch (error) {
-      toast.error("Erreur lors de l'activation de l'essai");
-      setIsActivating(false);
+      throw new Error("Stripe n'a pas retourné d'URL de paiement.");
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur lors de la souscription.');
+      setLoadingPlan(null);
     }
   };
 
-  const features = [
-    { icon: FileText, title: 'Factures illimitées', description: 'Créez autant de factures que vous le souhaitez pendant 7 jours', color: 'from-blue-500 to-cyan-500' },
-    { icon: Sparkles, title: 'IA & Voix', description: 'Dictée vocale et génération de factures par intelligence artificielle', color: 'from-purple-500 to-pink-500' },
-    { icon: BarChart3, title: 'CRM & Recouvrement', description: 'Gérez vos clients et suivez vos opportunités commerciales', color: 'from-green-500 to-emerald-500' },
-    { icon: Shield, title: 'Signature électronique', description: 'Faites signer vos devis et contrats en ligne', color: 'from-orange-500 to-red-500' },
-    { icon: Clock, title: 'Factures récurrentes', description: 'Automatisez vos factures périodiques', color: 'from-indigo-500 to-violet-500' },
-    { icon: TrendingUp, title: 'Export comptabilité', description: 'Exportez vos données au format FEC pour votre comptable', color: 'from-teal-500 to-cyan-500' },
-  ];
-
-  const steps = [
-    { number: '01', icon: Zap, title: 'Activez votre essai', description: 'Démarrez votre essai gratuit de 7 jours en un clic', color: 'from-purple-500 to-violet-600' },
-    { number: '02', icon: Star, title: 'Profitez de toutes les fonctionnalités', description: 'Créez des factures, utilisez l\'IA, gérez votre CRM, et bien plus encore', color: 'from-blue-500 to-indigo-600' },
-    { number: '03', icon: Crown, title: 'Votre abonnement continue', description: `Après 7 jours, votre abonnement ${planInfo.name} continue automatiquement à ${planInfo.price}/mois`, color: 'from-emerald-500 to-teal-600' },
-  ];
+  const ctaFor = (planName: string): { label: string; disabled: boolean } => {
+    const plan = planName.toLowerCase();
+    if (plan === currentTier && !trialActive) return { label: 'Plan actuel', disabled: true };
+    if (plan === 'starter') return { label: profile?.id ? 'Continuer gratuitement' : 'Commencer gratuitement', disabled: false };
+    if (plan === currentTier && trialActive) return { label: `Passer en ${planName}`, disabled: false };
+    return { label: `Choisir ${planName}`, disabled: false };
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900">
-      {/* Hero */}
-      <section className="relative overflow-hidden py-16 md:py-24 lg:py-32 px-4">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }} className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-violet-400/10 rounded-full blur-3xl" />
-          <motion.div animate={{ scale: [1.2, 1, 1.2], rotate: [90, 0, 90] }} transition={{ duration: 25, repeat: Infinity, ease: 'linear' }} className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-black text-white">
+      {/* ════════════ PRICING — copie conforme homepage ════════════ */}
+      <section className="relative py-20 md:py-32 overflow-hidden">
+        {/* halo */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="container mx-auto max-w-6xl relative z-10">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, duration: 0.5 }} className="text-center mb-12">
-            <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold mb-8 shadow-lg">
-              <Sparkles className="w-4 h-4" />
-              Offre limitée
-            </motion.div>
+        <div className="relative z-[2] max-w-6xl mx-auto px-4 sm:px-6">
+          {/* Header */}
+          <div className="text-center mb-12">
+            {/* Bannière contextuelle (LOI 9) */}
+            {profile?.id && trialActive && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-6"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Votre essai est en cours — souscrivez pour garder toutes vos fonctionnalités
+              </motion.div>
+            )}
+            {profile?.id && !trialActive && !sub?.isFree && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-neutral-300 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-6"
+              >
+                <Crown className="w-3.5 h-3.5 text-emerald-400" />
+                Vous êtes déjà abonné — merci !
+              </motion.div>
+            )}
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-violet-600 to-purple-800 bg-clip-text text-transparent leading-tight">
-              Essai Gratuit {planInfo.name} 7 Jours
+            <p className="text-[11px] sm:text-xs text-emerald-400 uppercase tracking-[0.2em] font-medium mb-4">
+              Tarifs transparents
+            </p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+              Choisissez votre plan
             </h1>
+            <p className="text-base text-neutral-400">Sans engagement. Évoluez quand vous voulez.</p>
 
-            <p className="text-lg md:text-xl lg:text-2xl text-slate-600 dark:text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Découvrez toutes les fonctionnalités {planInfo.name} sans engagement.
-              Après l'essai, votre abonnement continuera automatiquement à {planInfo.price}/mois.
-            </p>
+            {/* Toggle mensuel / annuel */}
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <button
+                onClick={() => setBilling('monthly')}
+                className={cn(
+                  'px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200',
+                  billing === 'monthly' ? 'bg-white text-neutral-950' : 'bg-neutral-900 text-neutral-400 hover:text-white',
+                )}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setBilling('yearly')}
+                className={cn(
+                  'px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200',
+                  billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-neutral-900 text-neutral-400 hover:text-white',
+                )}
+              >
+                Annuel <span className="text-xs opacity-70">(-20%)</span>
+              </button>
+            </div>
+          </div>
 
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {isActivated ? (
-                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-full text-lg font-bold shadow-lg">
-                  <CheckCircle2 className="w-6 h-6" />
-                  Essai activé ! Redirection...
-                </div>
-              ) : (
-                <Button onClick={handleActivateTrial} disabled={isActivating} className="bg-gradient-to-r from-purple-600 to-violet-700 hover:from-purple-700 hover:to-violet-800 text-white px-10 py-5 rounded-full text-lg font-bold shadow-xl shadow-purple-500/30">
-                  {isActivating ? (
-                    <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="mr-3"><Loader2 className="w-5 h-5" /></motion.div>Redirection vers le paiement...</>
-                  ) : (
-                    <>Commencer mon essai {planInfo.name}<ArrowRight className="ml-2 w-5 h-5" /></>
+          {/* Cards — copie conforme homepage */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto items-start">
+            {PLANS.map((plan, i) => {
+              const cta = ctaFor(plan.name);
+              const busy = loadingPlan === plan.name;
+              return (
+                <motion.div
+                  key={plan.name}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className={cn(
+                    'relative rounded-2xl p-7 flex flex-col h-full transition-all duration-300',
+                    plan.popular
+                      ? 'border-2 border-emerald-500/70 scale-100 md:scale-105 z-10 bg-neutral-900/60 shadow-[0_0_50px_rgba(16,185,129,0.15)]'
+                      : 'bg-neutral-900/40 border border-white/[0.06] hover:border-white/10',
                   )}
-                </Button>
-              )}
-            </motion.div>
-
-            <p className="mt-6 text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
-              <Shield className="w-4 h-4" />
-              Carte bancaire requise · Essai 7 jours puis abonnement {planInfo.name} à {planInfo.price}/mois
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-7xl">
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-slate-800 dark:text-slate-100">Tout ce dont vous avez besoin</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">Accédez à toutes les fonctionnalités pendant votre essai</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {features.map((feature, index) => (
-              <motion.div key={index} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.1, duration: 0.5 }} whileHover={{ y: -5 }} className="h-full">
-                <TiltCard className="h-full">
-                  <div className="h-full bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow border border-slate-200 dark:border-slate-700">
-                    <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.color} text-white mb-6 shadow-lg`}>
-                      <feature.icon className="w-7 h-7" />
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-full shadow-lg shadow-emerald-500/30">
+                        <Crown className="w-3 h-3" />
+                        Recommandé
+                      </span>
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-slate-800 dark:text-slate-100">{feature.title}</h3>
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
+                  )}
+
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                      {plan.popular && (
+                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          TOP
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1 mb-4">{plan.tag}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-extrabold text-white tracking-tight">
+                        {billing === 'monthly' ? plan.price : plan.yearly}
+                      </span>
+                      <span className="text-sm text-neutral-400">/mois</span>
+                    </div>
+                    {billing === 'yearly' && plan.price !== 'Gratuit' && (
+                      <p className="text-xs text-emerald-400 font-medium mt-1">Économisez sur l'annuel</p>
+                    )}
                   </div>
-                </TiltCard>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* How it works */}
-      <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-slate-800 dark:text-slate-100">Comment ça marche ?</h2>
-          </motion.div>
-          <div className="space-y-8 md:space-y-12">
-            {steps.map((step, index) => (
-              <motion.div key={index} initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.2, duration: 0.5 }} className="flex flex-col md:flex-row items-start gap-6 md:gap-8">
-                <div className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-gradient-to-br shadow-xl flex items-center justify-center text-3xl md:text-4xl font-black text-white ${step.color}`}>
-                  <span>{step.number}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${step.color} text-white shadow-md`}><step.icon className="w-5 h-5" /></div>
-                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-100">{step.title}</h3>
-                  </div>
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{step.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+                  <ul className="space-y-2.5 mb-6 flex-grow">
+                    {plan.features.map((f, j) => (
+                      <li key={j} className="flex items-center gap-2.5 text-sm">
+                        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span className={cn('text-neutral-300', j === 0 && 'text-emerald-300 font-medium')}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-      {/* CTA */}
-      <section className="py-16 md:py-24 px-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="container mx-auto max-w-5xl">
-          <div className="bg-gradient-to-r from-purple-600 via-violet-600 to-purple-800 rounded-3xl md:rounded-[40px] p-8 md:p-12 lg:p-16 text-center text-white shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl" />
-            </div>
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-full text-sm font-semibold mb-6">
-                <Star className="w-4 h-4 fill-current" />Satisfaction garantie
-              </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Prêt à transformer votre facturation ?</h2>
-              <p className="text-lg md:text-xl opacity-90 mb-10 max-w-2xl mx-auto leading-relaxed">Rejoignez des milliers d'entrepreneurs qui font confiance à Factu.me</p>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button onClick={handleActivateTrial} disabled={isActivating || isActivated} className="bg-white text-purple-600 hover:bg-purple-50 px-10 py-5 rounded-full text-lg font-bold shadow-xl">
-                  {isActivated ? 'Essai déjà activé' : 'Démarrer maintenant'}
-                </Button>
-              </motion.div>
-            </div>
+                  <button
+                    onClick={() => subscribe(plan.name)}
+                    disabled={cta.disabled || busy}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 text-center font-semibold py-3.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed',
+                      plan.popular
+                        ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25 disabled:opacity-60'
+                        : 'bg-white/[0.05] hover:bg-white/[0.08] text-white border border-white/[0.08] disabled:opacity-50',
+                    )}
+                  >
+                    {busy ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Redirection…
+                      </>
+                    ) : (
+                      cta.label
+                    )}
+                  </button>
+                </motion.div>
+              );
+            })}
           </div>
-        </motion.div>
-      </section>
 
-      {/* Trust badges */}
-      <section className="py-12 md:py-16 px-4 border-t border-slate-200 dark:border-slate-800">
-        <div className="container mx-auto max-w-5xl">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <div className="flex items-center gap-4 justify-center">
-              <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-2xl"><Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
-              <div><p className="font-semibold text-slate-800 dark:text-slate-100">Paiement sécurisé</p><p className="text-sm text-slate-500 dark:text-slate-400">Crypté par Stripe</p></div>
+          {/* Reassurance */}
+          <p className="text-center text-xs sm:text-sm text-neutral-400 mt-8 flex items-center justify-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            Données en France · SSL · RGPD · Annulation en un clic
+          </p>
+
+          {profile?.id && (
+            <div className="text-center mt-6">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="text-xs sm:text-sm text-neutral-500 hover:text-neutral-300 transition-colors underline underline-offset-4"
+              >
+                Retour au tableau de bord
+              </button>
             </div>
-            <div className="flex items-center gap-4 justify-center">
-              <div className="p-3 bg-green-50 dark:bg-green-500/10 rounded-2xl"><CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" /></div>
-              <div><p className="font-semibold text-slate-800 dark:text-slate-100">Annulation facile</p><p className="text-sm text-slate-500 dark:text-slate-400">En 1 clic, sans engagement</p></div>
-            </div>
-            <div className="flex items-center gap-4 justify-center">
-              <div className="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-2xl"><Award className="w-6 h-6 text-purple-600 dark:text-purple-400" /></div>
-              <div><p className="font-semibold text-slate-800 dark:text-slate-100">Support dédié</p><p className="text-sm text-slate-500 dark:text-slate-400">Assistance 7j/7</p></div>
-            </div>
-          </div>
+          )}
         </div>
       </section>
     </div>

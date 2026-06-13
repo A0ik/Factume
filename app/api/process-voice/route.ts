@@ -97,18 +97,41 @@ export async function POST(req: NextRequest) {
     };
     const docLabel = modeLabel[mode || 'invoice'] || 'facture';
 
+    // LOI 3 (Arbiter) — État complet du document en cours d'édition (pas seulement les lignes).
+    // C'est ce qui transforme l'IA "one-shot" (recréation) en IA contextuelle (modification).
+    const formCtxRaw = formData.get('formContext') as string | null;
+    let formCtx: Record<string, unknown> | null = null;
+    try {
+      formCtx = formCtxRaw ? (JSON.parse(formCtxRaw) as Record<string, unknown>) : null;
+    } catch {
+      formCtx = null;
+    }
+    const isContextualEdit = !!(formCtx || (isEdit && existingItems.length));
+
     let systemPrompt: string;
 
-    if (isEdit && existingItems.length) {
+    if (isContextualEdit) {
       const existingList = existingItems
         .map((item, i) =>
           `  ${i + 1}. "${item.description || '(sans description)'}" — qté: ${item.quantity}, prix HT: ${item.unit_price}€, TVA: ${item.vat_rate}%`
         )
         .join('\n');
 
+      // État complet du document sérialisé (client, lignes, notes, remise, échéance…)
+      const documentStateJson = formCtx
+        ? JSON.stringify(formCtx, null, 2)
+        : JSON.stringify({ items: existingItems }, null, 2);
+
       systemPrompt = `Tu es un assistant expert en facturation française. ${sectorHint}
 
-CONTEXTE: L'utilisateur modifie un ${docLabel} existant par voix. Analyse avec précision son intention.
+CONTEXTE: L'utilisateur est en train de MODIFIER un ${docLabel} EXISTANT par voix. Il NE crée PAS un nouveau document : il modifie l'état courant ci-dessous. Analyse avec précision son intention et retourne le document MODIFIÉ.
+
+=== ÉTAT ACTUEL DU DOCUMENT (JSON — source de vérité) ===
+${documentStateJson}
+=== FIN DE L'ÉTAT ACTUEL ===
+
+LIGNES EXISTANTES (rappel lisible) :
+${existingList || '(aucune ligne)'}
 
 RACCOURCIS TECHNIQUES À COMPRENDRE :
 - "STC" ou "Solde tout compte" → Solde tout compte (final, sans suite)
@@ -155,25 +178,36 @@ MODIFICATIONS DE CHAMPS (hors lignes) — mets à jour si l'utilisateur le deman
 - "change le prix de la ligne N à X" / "mets la ligne 2 à 500" → MODIFIER uniquement cet item (quantity inchangée si non précisé)
 RÈGLE : si un champ n'est pas mentionné (client_name/due_days/notes = null), conserve sa valeur actuelle. Ne JAMAIS écraser un champ que l'utilisateur n'a pas demandé à modifier.
 
-Retourne UNIQUEMENT du JSON valide :
+Retourne UNIQUEMENT du JSON valide (le document MODIFIÉ complet) :
 {
   "action": "added" | "modified" | "removed" | "replaced",
   "summary": "Phrase courte décrivant la modification, ex: 'Ligne Design web ajoutée à 800€/j'",
   "client_name": null,
+  "client_email": null,
+  "client_phone": null,
+  "client_address": null,
+  "client_city": null,
+  "client_postal_code": null,
+  "client_siret": null,
+  "client_vat_number": null,
   "items": [
     { "description": "string", "quantity": number, "unit_price": number, "vat_rate": number }
   ],
   "due_days": null,
   "notes": null,
+  "discount_percent": null,
   "uncertain_fields": []
 }
 
 RÈGLES ABSOLUES :
-- "items" doit contenir la liste COMPLÈTE après application de la modification
+- "items" doit contenir la liste COMPLÈTE du document APRÈS application de la modification (anciennes lignes conservées + nouvelles). JAMAIS uniquement la nouvelle ligne.
+- CRITIQUE : un champ à "null" signifie "CONSERVER la valeur actuelle de l'état". Ne mets "null" QUE pour les champs que l'utilisateur n'a pas mentionnés.
+- Si l'utilisateur modifie (ex: "change le prix à 500", "passe la ligne 2 à 3 jours"), retourne TOUTES les lignes avec la modification appliquée.
+- Si l'utilisateur ajoute (ex: "ajoute un article", "et aussi"), retourne les anciennes lignes + la nouvelle.
 - unit_price est TOUJOURS HT (hors taxes) — DOIT être un nombre fini, jamais une expression
 - vat_rate par défaut = 20
 - CRITIQUE : Tous les nombres dans le JSON DOIVENT être des valeurs finales, jamais d'expressions mathématiques
-- Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique
+- Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique à partir de l'ÉTAT ACTUEL
 - summary doit être en français, court et précis
 
 INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :

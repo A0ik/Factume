@@ -13,6 +13,12 @@ interface VoiceRecordingProps {
   mode?: 'invoice' | 'quote' | 'credit_note' | 'order' | 'delivery' | 'deposit';
   existingItems?: Array<{ description: string; quantity: number; unit_price: number; vat_rate: number }>;
   sector?: string;
+  /**
+   * LOI 3 (Arbiter) — État COMPLET du document en cours d'édition.
+   * Passé à l'IA pour qu'elle MODIFIE l'existant plutôt que de recréer.
+   * Contient : client_name, items, notes, discount_percent, due_days, contact…
+   */
+  formContext?: Record<string, unknown>;
 }
 
 export interface VoiceUncertainField {
@@ -47,6 +53,7 @@ export function PulseVoiceRecorder({
   mode = 'invoice',
   existingItems = [],
   sector = '',
+  formContext,
 }: VoiceRecordingProps) {
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -171,6 +178,14 @@ export function PulseVoiceRecorder({
       if (hasContent) {
         formData.append('isEdit', 'true');
         formData.append('existingItems', JSON.stringify(existingItems));
+      }
+
+      // LOI 3 (Arbiter) — on envoie TOUJOURS l'état complet du formulaire (pas seulement les lignes)
+      // pour que l'IA modifie le document existant au lieu d'en créer un nouveau.
+      const ctx = formContext && Object.keys(formContext).length > 0 ? formContext : null;
+      if (ctx) {
+        formData.append('formContext', JSON.stringify(ctx));
+        if (!hasContent) formData.append('isEdit', 'true');
       }
 
       const controller = new AbortController();

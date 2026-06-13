@@ -93,7 +93,10 @@ export async function POST(req: NextRequest) {
         subscription_data: { metadata: { userId, plan } },
         allow_promotion_codes: true,
         tax_id_collection: { enabled: true },
-        consent_collection: { terms_of_service: 'required' },
+        // LOI 1 (Arbiter) : le consentement CGV ne doit JAMAIS bloquer le cash.
+        // On a déjà une case CGU à l'inscription — on ne redemande pas un ToS
+        // Stripe qui casse le checkout si l'URL n'est pas renseignée au Dashboard.
+        // (URL ToS Dashboard à renseigner manuellement : https://factu.me/legal/cgu)
         success_url: `${origin}/dashboard?upgraded=1&plan=${plan}`,
         cancel_url: `${origin}/paywall?canceled=1`,
       },
