@@ -471,6 +471,13 @@ export default function LandingPageClient() {
               </R>
             </div>
           </div>
+
+          {/* Sceau officiel — Solution compatible facturation électronique */}
+          <R delay={0.1}>
+            <div className="flex justify-center pt-10 2xl:pt-14">
+              <Image src="/images/solutioncompatible.png" alt="Solution compatible — Facturation électronique certifiée, République Française" width={1694} height={624} className="w-full max-w-[140px] h-auto" />
+            </div>
+          </R>
         </div>
       </section>
 
@@ -775,6 +782,13 @@ export default function LandingPageClient() {
               </div>
             </R>
           </div>
+
+          {/* Sceau officiel — Solution compatible facturation électronique */}
+          <R delay={0.15}>
+            <div className="flex justify-center pt-14 2xl:pt-20">
+              <Image src="/images/solutioncompatible.png" alt="Solution compatible — Facturation électronique certifiée, République Française" width={1694} height={624} className="w-full max-w-[160px] h-auto" />
+            </div>
+          </R>
         </div>
       </section>
 
@@ -935,6 +949,11 @@ export default function LandingPageClient() {
           <div className="border-t border-white/[0.04] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs 2xl:text-sm text-neutral-500">2026 Factu.me. Fait en France.</p>
             <div className="flex items-center gap-1.5 text-[11px] 2xl:text-xs text-neutral-500"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />Opérationnel</div>
+          </div>
+
+          {/* Sceau officiel — Solution compatible facturation électronique (tout en bas) */}
+          <div className="flex justify-center pt-8">
+            <Image src="/images/solutioncompatible.png" alt="Solution compatible — Facturation électronique certifiée, République Française" width={1694} height={624} className="w-full max-w-[120px] h-auto" />
           </div>
         </div>
       </footer>
