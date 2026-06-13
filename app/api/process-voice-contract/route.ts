@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting
-    const rl = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+    const rl = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 }); // LOI 9
     if (!rl.success) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, {
         status: 429,
@@ -23,15 +23,8 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // TOLL FIX B1: Subscription check — voice features require Solo+ or trial (free: 1/month)
+    // LOI 3 (Le Hook Libre) : voix illimitée pour tous les plans (sub gardé pour incrementVoiceUsage).
     const sub = await getUserSubscriptionStatus(user.id);
-    if (!sub.canUseVoice) {
-      return NextResponse.json({
-        error: 'Vous avez utilisé votre facture vocale gratuite ce mois-ci. Passez au plan Pro pour un usage illimité.',
-        code: 'VOICE_LIMIT',
-        upgradeUrl: '/paywall?plan=solo',
-      }, { status: 403 });
-    }
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });

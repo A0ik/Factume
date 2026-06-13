@@ -372,6 +372,30 @@ export function PulseVoiceRecorder({
 
   return (
     <div className="flex flex-col items-center gap-6 p-6 w-full max-w-md mx-auto">
+      {/* LOI 8 : transcription affichée AU-DESSUS du micro (feedback immédiat) */}
+      <AnimatePresence>
+        {transcript && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full p-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
+          >
+            <div className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">
+                  Transcription
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-4">
+                  {transcript}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Animated pulse rings */}
       <div className="relative">
         {recording && (
@@ -457,30 +481,6 @@ export function PulseVoiceRecorder({
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {recording ? 'Enregistrement en cours...' : 'Traitement en cours...'}
             </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Transcript display */}
-      <AnimatePresence>
-        {transcript && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="w-full p-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800"
-          >
-            <div className="flex items-start gap-2">
-              <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">
-                  Transcription
-                </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
-                  {transcript}
-                </p>
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -259,45 +259,26 @@ export const useDataStore = create<DataState>((set, get) => ({
     const { data: { session } } = await getSupabaseClient().auth.getSession();
     const user = session?.user; if (!user) throw new Error('Non authentifié');
 
-    // Block modification if invoice is no longer a draft
+    // Block modification if invoice is no longer a draft (client guard; server re-checks)
     const existing = get().invoices.find((inv) => inv.id === id);
     if (existing && IMMUTABLE_STATUSES.includes(existing.status)) {
       throw new Error('Impossible de modifier une facture déjà émise. Créez un avoir ou dupliquez-la.');
     }
 
-    let u: InvoiceUpdateData = { ...updates, updated_at: new Date().toISOString() } as InvoiceUpdateData;
-    if (updates.items) {
-      // Validate items
-      if (updates.items.length > 200) throw new Error('Maximum 200 lignes par facture.');
-      const items = updates.items.map((i) => {
-        const lineTotalCents = Math.round(cents(i.quantity) * cents(i.unit_price) / 100);
-        const lineDiscPct = (i as any).discount_percent || 0;
-        const lineDiscCents = lineDiscPct > 0 ? Math.round(lineTotalCents * cents(lineDiscPct) / 10000) : 0;
-        return { ...i, total: roundMoney(fromCents(lineTotalCents - lineDiscCents)) };
-      });
-      const subtotalAfterLineDiscountsCents = items.reduce((s, i) => s + cents(i.total), 0);
-      const discPct = updates.discount_percent ?? existing?.discount_percent ?? 0;
-      const discAmtCents = discPct > 0 ? Math.round(subtotalAfterLineDiscountsCents * cents(discPct) / 10000) : 0;
-      const discountedSubtotalCents = subtotalAfterLineDiscountsCents - discAmtCents;
-      const vatCents = items.reduce((s, i) => {
-        const lineNetCents = cents(i.total);
-        const afterGlobalDiscCents = discPct > 0
-          ? Math.round(lineNetCents * (10000 - cents(discPct)) / 10000)
-          : lineNetCents;
-        return s + Math.round(afterGlobalDiscCents * cents(i.vat_rate) / 10000);
-      }, 0);
-      u = {
-        ...u, items,
-        subtotal: roundMoney(fromCents(discountedSubtotalCents)),
-        vat_amount: roundMoney(fromCents(vatCents)),
-        discount_percent: discPct || null,
-        discount_amount: roundMoney(fromCents(discAmtCents)) || null,
-        total: roundMoney(fromCents(discountedSubtotalCents + vatCents)),
-      };
+    // LOI 7 (ADN Visuel Unique / cohérence create-edit) : route through the server PATCH
+    // endpoint so totals are re-validés et recalculés côté serveur, exactement comme create.
+    const response = await fetch(`/api/invoices/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Erreur lors de la mise à jour de la facture.');
     }
-    const { data, error } = await getSupabaseClient().from('invoices').update(u).eq('id', id).eq('user_id', user.id).select('*, client:clients(*)').single();
-    if (error) throw error;
-    set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) })); get().computeStats();
+    const data = await response.json();
+    set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) }));
+    get().computeStats();
   },
   /** Update a single invoice in the local list (no DB write). Used after payment link creation etc. */
   updateInvoiceInList: (updated: any) => {

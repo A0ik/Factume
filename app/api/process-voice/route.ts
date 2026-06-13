@@ -12,8 +12,8 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting : 10 requêtes/minute par IP ou user
-    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+    // LOI 9 : seuil entreprise — la voix est illimitée, on ne bride pas l'usage légitime (était 10/min)
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },
@@ -29,15 +29,9 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // TOLL FIX B1: Subscription check — voice features require Solo+ or trial (free: 1/month)
+    // LOI 3 (Le Hook Libre) : la dictée vocale est ILLIMITÉE pour tous les plans,
+    // y compris gratuit. La voix est le cheval de Troie de Factu.me — jamais bridée.
     const sub = await getUserSubscriptionStatus(user.id);
-    if (!sub.canUseVoice) {
-      return NextResponse.json({
-        error: 'Vous avez utilisé votre facture vocale gratuite ce mois-ci. Passez au plan Pro pour un usage illimité.',
-        code: 'VOICE_LIMIT',
-        upgradeUrl: '/paywall?plan=solo',
-      }, { status: 403 });
-    }
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
@@ -151,6 +145,15 @@ INTENTIONS POSSIBLES :
 - "modifie / change / mets à X€ / X jours / la ligne N / remplace la ligne" → MODIFIER uniquement l'item concerné
 - "supprime / enlève / retire la ligne N / supprime le premier" → SUPPRIMER l'item concerné
 - "remplace tout / nouvelle facture / efface tout / recommence" → REMPLACER toute la liste
+
+MODIFICATIONS DE CHAMPS (hors lignes) — mets à jour si l'utilisateur le demande explicitement :
+- "change le client à X" / "pour [Société]" / "facturé à X" → client_name = "X"
+- "délai de paiement X jours" / "échéance dans X jours" / "payable sous X jours" → due_days = X
+- "passe la TVA à X%" / "TVA à X sur tout" / "applique X% de TVA partout" → applique vat_rate = X à TOUTES les lignes dans items[]
+- "remise de X%" / "rabais X%" → inclus dans items[].discount_percent
+- "note : ..." / "ajoute la mention ..." → notes = "..."
+- "change le prix de la ligne N à X" / "mets la ligne 2 à 500" → MODIFIER uniquement cet item (quantity inchangée si non précisé)
+RÈGLE : si un champ n'est pas mentionné (client_name/due_days/notes = null), conserve sa valeur actuelle. Ne JAMAIS écraser un champ que l'utilisateur n'a pas demandé à modifier.
 
 Retourne UNIQUEMENT du JSON valide :
 {

@@ -110,6 +110,11 @@ export async function middleware(req: NextRequest) {
   const userAgent = req.headers.get('user-agent') || '';
   const isCrawler = /googlebot|bingbot|yandexbot|duckduckbot|slurp|baiduspider|facebot|ia_archiver|mj12bot|ahrefsbot|semrushbot/i.test(userAgent);
 
+  // LOI 9 (Rate-Limit Chirurgical) : un utilisateur AUTHENTIFIÉ est exempté du rate limit
+  // général. Le propriétaire du site ne doit JAMAIS se bannir. On exige le nom exact du
+  // cookie Supabase (sb-<ref>-auth-token) pour réduire la surface de spoofing.
+  const isAuthenticated = req.cookies.getAll().some((c) => /^sb-[a-z0-9]+-auth-token$/i.test(c.name));
+
   const ip = getClientFingerprint(req);
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
@@ -137,12 +142,19 @@ export async function middleware(req: NextRequest) {
     rlWindow = 900_000; // 30 per 15 minutes — brute-force protection + UX tolerance
   } else if (isApiRoute) {
     shouldRateLimit = true;
-    rlLimit = 200;
-    rlWindow = 60_000; // 200 per minute — generous for normal usage
+    rlLimit = 1000;
+    rlWindow = 60_000; // LOI 9 : 1000/min — seuil entreprise, ne bloque jamais l'usage normal
   }
   // Page requests (SSR/ISR): NO rate limiting — users browse freely
 
-  if (shouldRateLimit && !isCrawler) {
+  // LOI 9 : les routes SENSIBLES (brute-force auth, essai/abonnement Stripe) restent
+  // limitées pour TOUT LE MONDE, y compris les utilisateurs connectés.
+  const isSensitiveRoute = isAuthRoute
+    || pathname === '/api/stripe/trial-subscription'
+    || pathname === '/api/stripe/subscription';
+  const authedExempt = isAuthenticated && !isSensitiveRoute;
+
+  if (shouldRateLimit && !isCrawler && !authedExempt) {
     // Defensive: SSR pages should never reach this block
     if (isSsrPage) {
       console.error('[middleware] BUG: rate limiting triggered on SSR page:', pathname);

@@ -22,7 +22,7 @@ const TransmitSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   // Rate limiting : 10 requêtes/minute (transmission légale = plus sensible)
-  const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+  const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 120, windowMs: 60000 }); // LOI 9
   if (!rateLimitResult.success) {
     return NextResponse.json(
       { error: 'Trop de requêtes de transmission. Réessayez dans quelques instants.' },

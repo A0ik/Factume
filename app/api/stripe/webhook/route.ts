@@ -19,6 +19,17 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
 
+  // LOI 10 (Webhook Souverain) : idempotence ATOMIQUE par event.id.
+  // On "claim" l'événement via un INSERT ; la PK (event_id) rend le claim atomique
+  // → deux livraisons concurrentes du même event ne peuvent pas toutes deux le traiter.
+  // 23505 = doublon (déjà traité) → on skip. Autre erreur (table absente) → fail-open.
+  const { error: claimError } = await supabase
+    .from('stripe_webhook_events')
+    .insert({ event_id: event.id, event_type: event.type });
+  if (claimError && (claimError as { code?: string }).code === '23505') {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -396,8 +407,12 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const e = err as Error;
     console.error('[webhook]', e.message);
+    // LOI 10 : libérer le claim pour qu'un retry Stripe puisse retraiter l'événement
+    // (sinon l'event serait marqué traité sans l'être → event perdu).
+    try { await supabase.from('stripe_webhook_events').delete().eq('event_id', event.id); } catch { /* non-bloquant */ }
     return NextResponse.json({ error: 'Webhook processing error' }, { status: 500 });
   }
 
+  // LOI 10 : l'événement est déjà "claimé" (INSERT upfront) — traitement réussi → on garde le claim.
   return NextResponse.json({ received: true });
 }

@@ -74,7 +74,7 @@ EXEMPLES MULTILINGUES :
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 }); // LOI 9
     if (!rateLimitResult.success) {
       return NextResponse.json({ error: 'Trop de requêtes.' }, { status: 429 });
     }

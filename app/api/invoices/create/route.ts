@@ -8,8 +8,8 @@ import type { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    // BUG-22 fix: Rate limiting on the most critical endpoint
-    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 20, windowMs: 60000 });
+    // LOI 9 : seuil entreprise — ne pas bloquer la création légitime (était 20/min)
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
     }

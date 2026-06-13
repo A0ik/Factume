@@ -64,7 +64,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       'E-facturation certifiée',
       '1 cabinet',
       '10 clients CRM',
-      'Dictée vocale IA activée',
+      'Dictée vocale IA illimitée',
       'Accès mobile & web',
       'Support email',
     ],
@@ -74,11 +74,11 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       maxCabinets: 1,
       maxClientsCRM: 10,
       maxUsers: 1,
-      voiceCommandsPerMonth: 3,
+      voiceCommandsPerMonth: null, // LOI 3 : voix illimitée (cheval de Troie)
     },
     gates: {
       urssafOneClick: false,
-      voiceExpense: false,       // Limité à 5/mois, pas désactivé
+      voiceExpense: false,       // LOI 3 : la voix est gratuite & illimitée pour tous
       copilotFactu: false,
       comptableConnect: false,
       customTemplate: false,

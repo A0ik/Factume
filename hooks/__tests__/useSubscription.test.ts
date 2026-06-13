@@ -169,14 +169,14 @@ describe('useSubscription', () => {
       expect(proResult.current.canUseVoice).toBe(true);
     });
 
-    it('devrait refuser la voix pour free', () => {
+    it('devrait autoriser la voix pour free (LOI 3 : illimitée)', () => {
       vi.mocked(useAuthStore).mockReturnValue({
         profile: { subscription_tier: 'free', is_trial_active: false },
       });
 
       const { result } = renderHook(() => useSubscription());
 
-      expect(result.current.canUseVoice).toBe(false);
+      expect(result.current.canUseVoice).toBe(true);
     });
 
     it('devrait autoriser les templates personnalisés pour pro et business', () => {

@@ -54,7 +54,7 @@ export async function getUserSubscriptionStatus(userId: string) {
     isProOrAbove,
     isBusiness,
     voiceUsedThisMonth,
-    canUseVoice: plan.gates.voiceExpense || voiceLimit.allowed,
+    canUseVoice: true, // LOI 3 (Le Hook Libre) : voix illimitée pour tous, y compris gratuit
     monthlyInvoiceCount,
     canCreateInvoice: invoiceLimit.allowed,
     invoicesRemaining: invoiceLimit.remaining,

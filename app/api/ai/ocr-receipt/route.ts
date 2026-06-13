@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     // 1. Rate limiting (IP-based) - Première ligne de défense
     // ------------------------------------------------------------------
-    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 });
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 }); // LOI 9
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },

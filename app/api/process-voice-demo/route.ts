@@ -7,8 +7,8 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
-    // Strict rate limiting for demo: 5 req/min per IP
-    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 5, windowMs: 60000 });
+    // LOI 9 : démo publique, modéré (était 5 req/min)
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 60, windowMs: 60000 });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Trop de requêtes. Réessayez dans quelques instants.' },

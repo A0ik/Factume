@@ -93,7 +93,7 @@ export function useSubscription() {
     effectiveIsBusiness:  effectiveTier === 'business',
 
     // Feature gates (from central config)
-    canUseVoice:          plan.gates.voiceExpense || (isFree && voiceUsedThisMonth < (plan.limits.voiceCommandsPerMonth ?? 0)),
+    canUseVoice:          true, // LOI 3 : voix illimitée pour tous les plans
     voiceUsedThisMonth,
     canUseCustomTemplate: plan.gates.customTemplate,
     canUseRecurring:      plan.gates.recurringInvoices,

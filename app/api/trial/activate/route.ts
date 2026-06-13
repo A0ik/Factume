@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
 
     // 2. Parse body
-    const { plan = 'solo', fingerprint } = await req.json();
+    // MONOLITH: Plus de plan Solo — 'solo' legacy → 'pro'
+    const { plan = 'pro', fingerprint } = await req.json();
 
     // Validate plan
-    const validPlans = ['solo', 'pro', 'business'];
+    const validPlans = ['pro', 'business'];
     if (!validPlans.includes(plan)) {
       return NextResponse.json({ error: 'Plan invalide.' }, { status: 400 });
     }

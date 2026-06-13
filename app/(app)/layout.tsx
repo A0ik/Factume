@@ -54,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, initialized, profile } = useAuthStore();
   const fetchInvoices = useDataStore(state => state.fetchInvoices);
   const fetchClients = useDataStore(state => state.fetchClients);
-  const { isFree, isTrialActive, invoiceCount } = useSubscription();
+  const { isFree, isTrialActive, invoiceCount, maxInvoices } = useSubscription();
   const pathname = usePathname();
   const sidebarMode = useSidebarState(state => state.mode);
   const [showTrialBanner, setShowTrialBanner] = useState(true);
@@ -125,7 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {isFree && showInvoiceCounter && !hideBanners && (
-        <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={5} onClose={() => setShowInvoiceCounter(false)} />
+        <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={Number.isFinite(maxInvoices) ? maxInvoices : 3} onClose={() => setShowInvoiceCounter(false)} />
       )}
 
       <div className="flex min-h-screen bg-background">

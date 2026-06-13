@@ -143,6 +143,21 @@ export async function PATCH(
       userAgent: req.headers.get('user-agent') || '',
     });
 
+    // LOI 2 (Métrique-à-Valeur) : une facture annulée rend son slot au free tier.
+    // Les brouillons dictés puis annulés ne doivent JAMAIS bloquer l'utilisateur.
+    if (validatedData.status === 'cancelled') {
+      const currentMonthIso = new Date().toISOString().slice(0, 7);
+      const { data: prof } = await admin.from('profiles')
+        .select('subscription_tier, is_trial_active, monthly_invoice_count, invoice_month')
+        .eq('id', user.id).single();
+      const isFreeUser = prof && (prof.subscription_tier === 'free' || !prof.subscription_tier) && !prof.is_trial_active;
+      if (prof && isFreeUser && prof.invoice_month === currentMonthIso && (prof.monthly_invoice_count || 0) > 0) {
+        await admin.from('profiles')
+          .update({ monthly_invoice_count: (prof.monthly_invoice_count || 0) - 1 })
+          .eq('id', user.id);
+      }
+    }
+
     // Récupérer la facture mise à jour
     const { data: updatedInvoice, error: fetchError } = await admin
       .from('invoices')
