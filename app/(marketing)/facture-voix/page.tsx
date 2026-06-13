@@ -704,6 +704,7 @@ export default function FactureVoixPage() {
       <section className="max-w-6xl mx-auto px-4 pb-16">
         <RelatedPages
           pages={[
+            { href: '/facture-rapide', label: 'Facture rapide — En moins de 60 secondes' },
             { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
             { href: '/facturation-vocale', label: 'Facturation vocale' },
             { href: '/facturation-electronique', label: 'Facturation électronique 2026' },
@@ -744,6 +745,7 @@ export default function FactureVoixPage() {
         description="Toutes les ressources sur la facturation vocale avec Factu.me"
         url="https://factu.me/facture-voix"
         hasPart={[
+          { name: 'Facture rapide — En moins de 60 secondes', url: 'https://factu.me/facture-rapide', description: 'Créer une facture rapide avec l\'IA' },
           { name: 'Facture IA — Intelligence Artificielle', url: 'https://factu.me/facture-ia', description: 'Facture par intelligence artificielle' },
           { name: 'Facturation vocale', url: 'https://factu.me/facturation-vocale', description: 'Facturation à la voix' },
           { name: 'Facturation électronique 2026', url: 'https://factu.me/facturation-electronique', description: 'Réforme e-invoicing' },

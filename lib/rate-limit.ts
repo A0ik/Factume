@@ -47,7 +47,7 @@ function getLimiter(limit: number, windowSeconds: number): Ratelimit | null {
   if (!limiter) {
     limiter = new Ratelimit({
       redis,
-      limiter: Ratelimit.fixedWindow(limit, `${windowSeconds} s`),
+      limiter: Ratelimit.slidingWindow(limit, `${windowSeconds} s`),
     });
     _limiterCache.set(cacheKey, limiter);
   }
@@ -131,14 +131,21 @@ export async function rateLimitAsync(options: {
         remaining: result.remaining,
         resetTime: result.reset,
       };
-    } catch {
-      // Redis error — fall back to in-memory (graceful degradation)
+    } catch (err) {
+      // Redis error — fail open (allow request) rather than blocking all users
+      console.error('[rate-limit] Redis error, allowing request through (fail-open):', err);
+      return { success: true, remaining: 999, resetTime: Date.now() + options.windowMs };
     }
   }
 
-  // No Redis or Redis error — use in-memory fallback
-  console.warn('[rate-limit] ⚠️ Upstash Redis unavailable — falling back to in-memory (ineffective in serverless). Set UPSTASH_REDIS_REST_URL for production.');
-  if (process.env.NODE_ENV === 'production') console.error('[rate-limit] CRITICAL: No Redis in production — rate limiting is DISABLED.');
+  // No Redis configured
+  if (process.env.NODE_ENV === 'production') {
+    // CRITICAL: Fail open in production — better to lose rate limiting than block all users
+    console.error('[rate-limit] CRITICAL: No Redis in production — rate limiting DISABLED (fail-open). Set UPSTASH_REDIS_REST_URL.');
+    return { success: true, remaining: 999, resetTime: Date.now() + options.windowMs };
+  }
+
+  // Development: use in-memory fallback (works locally, unreliable in serverless)
   return rateLimit(options);
 }
 
@@ -200,6 +207,35 @@ export function getClientIp(req: { headers: { get: (name: string) => string | nu
   if (vff) return vff;
 
   return 'unknown';
+}
+
+/**
+ * Generate a stable fingerprint for rate limiting when IP is unavailable.
+ *
+ * Priority: real IP > header-based fingerprint > fallback.
+ * The fingerprint uses user-agent, accept-language, sec-ch-ua and accept-encoding
+ * to distinguish different users sharing the same network (VPN, proxy, CDN).
+ * Uses djb2 hash — fast, no crypto dependency, sufficient for bucketing.
+ */
+export function getClientFingerprint(req: { headers: { get: (name: string) => string | null } }): string {
+  const ip = getClientIp(req);
+  if (ip !== 'unknown') return ip;
+
+  // Build fingerprint from available headers
+  const ua = req.headers.get('user-agent') || '';
+  const lang = req.headers.get('accept-language') || '';
+  const secUa = req.headers.get('sec-ch-ua') || '';
+  const encoding = req.headers.get('accept-encoding') || '';
+
+  const raw = `${ua}|${lang}|${secUa}|${encoding}`;
+  if (!raw.replace(/\|/g, '')) return 'fp:fallback'; // truly empty headers
+
+  // djb2 hash — fast non-cryptographic hash for bucketing
+  let hash = 5381;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash + raw.charCodeAt(i)) & 0xffffffff;
+  }
+  return `fp:${Math.abs(hash).toString(36)}`;
 }
 
 /**

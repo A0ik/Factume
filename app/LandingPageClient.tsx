@@ -312,7 +312,7 @@ export default function LandingPageClient() {
               {/* H1 — UN headline, RIEN d'autre au-dessus */}
               <R delay={0.08}>
                 <h1 className="text-3xl sm:text-5xl md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
-                  Dictez votre facture<br />électronique.{' '}
+                  Dictez votre facture<br />par IA.{' '}
                   <span className="text-emerald-400">
                     <span className="relative inline">
                       Encaissez

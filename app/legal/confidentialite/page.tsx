@@ -237,7 +237,7 @@ export default function Confidentialite() {
                 US
               </span>
             </div>
-            <p class="text-sm text-zinc-400">Mesure d'audience et analyse du trafic. Hébergé aux États-Unis. Transfert encadré par les clauses contractuelles types et protocole Privacy Shield. Données anonymisées le cas échéant.</p>
+            <p class="text-sm text-zinc-400">Mesure d'audience et analyse du trafic. Hébergé aux États-Unis. Transfert encadré par les clauses contractuelles types (SCCs) et le EU-US Data Privacy Framework (DPF, 2023). Données anonymisées le cas échéant.</p>
           </div>
         </div>
       `
@@ -357,7 +357,7 @@ export default function Confidentialite() {
 
           <div className="flex items-center gap-2 text-sm text-zinc-500">
             <Zap className="w-4 h-4" />
-            Dernière mise à jour : mai 2026
+            Dernière mise à jour : juin 2026
           </div>
         </motion.div>
 
@@ -382,6 +382,184 @@ export default function Confidentialite() {
                 conformément au <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj" target="_blank" rel="noopener noreferrer" className="text-white hover:underline">Règlement Général sur la Protection des Données (RGPD)</a> et à la loi Informatique et Libertés.
               </p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* ── GOOGLE DATA TRANSPARENCY BLOCK (conforme Google API Services User Data Policy) ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-12 bg-gradient-to-br from-blue-950/40 to-white/[0.02] backdrop-blur border border-blue-400/20 rounded-3xl p-6 sm:p-8"
+        >
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center flex-shrink-0">
+              <Shield className="w-6 h-6 text-blue-300" />
+            </div>
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
+                Vos données Google — Transparence complète
+              </h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                Factu.me vous propose l&rsquo;option <strong className="text-white">&laquo;&nbsp;Se connecter avec Google&nbsp;&raquo;</strong> pour
+                une inscription et une connexion simplifiées. Conformément à la{' '}
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-300 hover:underline"
+                >
+                  Google API Services User Data Policy
+                </a>, cette section décrit de manière explicite comment nous interagissons avec les données
+                de votre compte Google.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            {/* 1. Data Accessed */}
+            <div className="bg-white/[0.04] rounded-2xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-2">
+                <Database className="w-4 h-4 text-blue-300" />
+                <p className="text-sm font-bold text-white uppercase tracking-wide">
+                  1. Données auxquelles nous accédons
+                </p>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Lors de la connexion &laquo;&nbsp;Se connecter avec Google&nbsp;&raquo;, nous demandons uniquement
+                l&rsquo;accès aux informations suivantes, via les scopes OpenID Connect standards
+                (<code className="text-blue-300">openid</code>,{' '}
+                <code className="text-blue-300">email</code>,{' '}
+                <code className="text-blue-300">profile</code>) :
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Votre <strong className="text-white">adresse e-mail Google</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Votre <strong className="text-white">nom et prénom publics</strong> (profil Google)</span>
+                </li>
+              </ul>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
+                Nous <strong className="text-white">n&rsquo;accédons pas</strong> à vos e-mails, contacts, documents
+                Drive, photos, agenda personnel, historique ou à toute autre donnée privée de votre compte Google.
+              </p>
+            </div>
+
+            {/* 2. Data Usage */}
+            <div className="bg-white/[0.04] rounded-2xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="w-4 h-4 text-blue-300" />
+                <p className="text-sm font-bold text-white uppercase tracking-wide">
+                  2. Utilisation de ces données
+                </p>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Vos données Google servent exclusivement à :
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Créer et authentifier votre compte Factu.me (connexion unique)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Pré-remplir votre profil Factu.me (nom, adresse e-mail)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Vous adresser des e-mails transactionnels (confirmation, notifications de service)</span>
+                </li>
+              </ul>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
+                Nous <strong className="text-white">n&rsquo;utilisons jamais</strong> vos données Google à des fins
+                publicitaires, de profilage, d&rsquo;analyse commerciale ou de revente.
+              </p>
+            </div>
+
+            {/* 3. Data Sharing */}
+            <div className="bg-white/[0.04] rounded-2xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-blue-300" />
+                <p className="text-sm font-bold text-white uppercase tracking-wide">
+                  3. Partage des données
+                </p>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Vos données Google <strong className="text-white">ne sont jamais partagées, vendues, louées
+                ou transférées</strong> à un tiers. Elles demeurent strictement internes à Factu.me et ne font
+                l&rsquo;objet d&rsquo;aucune communication externe. Aucun partenaire, annonceur ou tiers n&rsquo;y
+                accède.
+              </p>
+            </div>
+
+            {/* 4. Data Storage & Protection */}
+            <div className="bg-white/[0.04] rounded-2xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-2">
+                <Lock className="w-4 h-4 text-blue-300" />
+                <p className="text-sm font-bold text-white uppercase tracking-wide">
+                  4. Stockage et protection
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 mt-2">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-zinc-300"><strong className="text-white">Stockage</strong> : base de données Supabase hébergée en Union européenne (Francfort, Allemagne)</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-zinc-300"><strong className="text-white">Chiffrement en transit</strong> : TLS 1.3</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-zinc-300"><strong className="text-white">Chiffrement au repos</strong> : AES-256</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-zinc-300"><strong className="text-white">Isolation</strong> : Row Level Security (RLS), vos données ne sont accessibles que par vous</span>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
+                Les jetons d&rsquo;authentification (tokens) émis par Google sont chiffrés (AES-256-GCM) avant
+                tout stockage en base.
+              </p>
+            </div>
+
+            {/* 5. Data Retention & Deletion */}
+            <div className="bg-white/[0.04] rounded-2xl p-5 border border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-blue-300" />
+                <p className="text-sm font-bold text-white uppercase tracking-wide">
+                  5. Conservation et suppression
+                </p>
+              </div>
+              <ul className="space-y-1 text-sm text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Vos données Google (e-mail, nom) sont conservées <strong className="text-white">tant que votre compte est actif</strong>.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>À la suppression de votre compte — ou sur simple demande à <a href="mailto:contact@factu.me" className="text-blue-300 hover:underline">contact@factu.me</a> — l&rsquo;ensemble de vos données est <strong className="text-white">supprimé sous 30 jours</strong>.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 text-blue-300 flex-shrink-0 mt-0.5" />
+                  <span>Vous pouvez <strong className="text-white">révoquer à tout moment</strong> l&rsquo;accès de Factu.me à votre compte Google depuis votre <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:underline">Google Account &rarr; Autorisations</a>.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-start gap-3 bg-white/[0.03] rounded-xl p-4 border border-white/[0.06]">
+            <AlertCircle className="w-5 h-5 text-blue-300 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Conformément aux <strong className="text-white">exigences d&rsquo;utilisation limitée</strong> de Google
+              (Limited Use), l&rsquo;usage que nous faisons de vos données Google se limite strictement aux
+              finalités décrites ci-dessus, nécessaires au fonctionnement de l&rsquo;application. Le transfert de
+              ces données vers d&rsquo;autres applications, à des fins autres que celles-ci, est proscrit.
+            </p>
           </div>
         </motion.div>
 

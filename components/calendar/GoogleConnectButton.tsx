@@ -89,24 +89,28 @@ export function GoogleConnectButton({ className }: GoogleConnectButtonProps) {
     );
   }
 
+  // ⚠️ Synchronisation agenda Google désactivée temporairement.
+  // Aucune connexion (donc aucun scope Google Calendar) n'est déclenchée tant que
+  // ce bloc reste dans cet état "Bientôt disponible". L'authentification
+  // "Se connecter avec Google" (scopes openid/email/profile) n'est PAS concernée.
   return (
-    <motion.button
-      onClick={connect}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <div
+      title="La synchronisation Google Agenda sera bientôt disponible."
       className={cn(
         'flex items-center gap-3 px-4 py-2.5 rounded-xl min-h-[44px]',
-        'bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl',
-        'border border-white/30 dark:border-white/10 shadow-lg',
-        'hover:bg-white/80 dark:hover:bg-slate-800/80 hover:shadow-xl',
-        'transition-all duration-300 cursor-pointer',
+        'bg-white/30 dark:bg-slate-900/30 backdrop-blur-sm',
+        'border border-dashed border-white/20 dark:border-white/10',
+        'opacity-70 cursor-not-allowed select-none',
         className
       )}
     >
-      <GoogleIcon className="w-5 h-5" />
-      <span className="text-sm font-medium text-gray-900 dark:text-white">
-        Connecter Google Calendar
+      <GoogleIcon className="w-5 h-5 opacity-50 grayscale" />
+      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        Agenda Google — Bientôt disponible
       </span>
-    </motion.button>
+      <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-white/10 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+        Soon
+      </span>
+    </div>
   );
 }

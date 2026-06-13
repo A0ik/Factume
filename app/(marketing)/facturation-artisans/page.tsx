@@ -298,6 +298,7 @@ export default function ArtisanPage() {
 
       <RelatedPages
         pages={[
+          { href: '/facture-rapide', label: 'Facture rapide — En moins de 60 secondes' },
           { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
           { href: '/facture-voix', label: 'Facture Voix — Dictée vocale' },
           { href: '/modeles-facture', label: 'Tous les modèles de facture' },

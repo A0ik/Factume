@@ -50,6 +50,7 @@ const featurePages = [
 
 // Pages de comparaison (SEO)
 const comparisonPages = [
+  { url: `${baseUrl}/comparatif-pdp`, lastModified: new Date('2026-06-12'), changeFrequency: 'weekly' as const, priority: 0.95 },
   { url: `${baseUrl}/logiciel-facture-gratuit`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
   { url: `${baseUrl}/logiciel-facture-simple`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.85 },
   { url: `${baseUrl}/logiciel-facture-francais`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.8 },
@@ -78,6 +79,7 @@ const trustPages = [
 const singularityHubPages = [
   { url: `${baseUrl}/facture-ia`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
   { url: `${baseUrl}/facture-voix`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
+  { url: `${baseUrl}/facture-rapide`, lastModified: new Date('2026-06-13'), changeFrequency: 'weekly' as const, priority: 1 },
 ];
 
 // Pages hub programmatiques

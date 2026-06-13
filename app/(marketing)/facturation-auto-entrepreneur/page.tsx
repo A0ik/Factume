@@ -372,6 +372,7 @@ export default function AutoEntrepreneurPage() {
       </section>
       <section className="max-w-6xl mx-auto px-4 pb-16">
         <RelatedPages pages={[
+          { href: '/facture-rapide', label: 'Facture rapide — En moins de 60 secondes' },
           { href: '/facture-ia', label: 'Facture IA — Intelligence Artificielle' },
           { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
         ]} />

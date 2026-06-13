@@ -69,6 +69,11 @@ const faqItems = [
       "Une facture IA est une facture générée automatiquement par un logiciel d'intelligence artificielle. L'IA analyse vos données clients, produits et services pour créer une facture complète, conforme aux normes légales françaises et au standard Factur-X (EN 16931), sans saisie manuelle.",
   },
   {
+    question: 'Comment faire une facture avec l\'IA ?',
+    answer:
+      "Pour faire une facture avec l'IA sur Factu.me, créez un compte gratuit, puis dictez ou décrivez votre prestation en langage naturel (ex. : « Facture Acme, 2 jours de conseil à 500 € »). L'IA génère une facture complète et conforme en moins de 60 secondes — TVA, mentions légales et format Factur-X inclus. Aucune saisie manuelle, aucune compétence technique requise.",
+  },
+  {
     question: 'Comment fonctionne la facturation par intelligence artificielle ?',
     answer:
       "La facturation par IA utilise des modèles de langage (LLM) et la reconnaissance vocale pour comprendre vos instructions — par texte ou par la voix. Vous dictez « Facture Dupont, 3 heures de plomberie à 45 € de l'heure » et l'IA génère la facture complète avec TVA, mentions légales et format Factur-X.",
@@ -137,6 +142,16 @@ const faqItems = [
     question: 'Pourquoi utiliser l\'IA pour la facturation plutôt qu\'un tableur Excel ?',
     answer:
       'L\'IA automatise ce que Excel ne peut pas faire : reconnaissance vocale, pré-remplissage intelligent, vérification légale automatique, signature électronique, format Factur-X, relances automatiques, et connexion PDP. Vous gagnez en moyenne 30 à 50 minutes par facture.',
+  },
+  {
+    question: 'Facture IA : mieux vaut créer ou scanner ses factures ?',
+    answer:
+      "Créer ses factures par IA est plus puissant que les scanner. Les solutions qui « scannent » (comme Dext, SmartFacture AI ou certains outils de pré-comptabilité) extraient les données de factures déjà existantes — utile en réception comptable. Factu.me crée la facture à partir de rien : vous dictez votre prestation et l'IA génère une facture complète et conforme. C'est l'usage le plus direct pour un indépendant, un artisan ou une TPE qui émet ses propres factures.",
+  },
+  {
+    question: 'Factu.me est-il un vrai logiciel de facture IA ou un simple générateur ?',
+    answer:
+      "Factu.me est une plateforme complète de facturation par IA, pas un simple générateur. Elle combine la dictée vocale, la génération automatique de factures Factur-X conformes (norme EN 16931), la signature eIDAS gratuite, la mémoire des clients récurrents, la connexion aux Plateformes de Dématérialisation Partenaire (PDP) pour la réforme 2026, et la gestion des devis et contrats. C'est un logiciel de facturation IA de bout en bout, conçu pour le marché français.",
   },
 ];
 
@@ -341,9 +356,10 @@ export default function FactureIAPage() {
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mb-8 leading-relaxed">
             La première solution de <strong>facturation par IA</strong> conçue pour les indépendants,
-            artisans et TPE françaises. Dites simplement ce que vous voulez facturer,
-            l&apos;intelligence artificielle fait le reste — dictée vocale, conformité Factur-X,
-            signature eIDAS. <strong>Essai gratuit sans carte bancaire.</strong>
+            artisans et TPE françaises. <strong>Faites une facture avec l&apos;IA</strong> en moins de
+            60 secondes : dites simplement ce que vous voulez facturer, l&apos;intelligence artificielle
+            fait le reste — dictée vocale, conformité Factur-X, signature eIDAS.
+            <strong> Essai gratuit sans carte bancaire.</strong>
           </p>
           <div className="flex flex-wrap gap-4">
             <Link
@@ -792,6 +808,7 @@ export default function FactureIAPage() {
       <section className="max-w-6xl mx-auto px-4 pb-16">
         <RelatedPages
           pages={[
+            { href: '/facture-rapide', label: 'Facture rapide — En moins de 60 secondes' },
             { href: '/facture-voix', label: 'Facture Voix — Dictée vocale IA' },
             { href: '/facturation-vocale', label: 'Facturation vocale' },
             { href: '/facturation-electronique', label: 'Facturation électronique 2026' },
@@ -832,6 +849,7 @@ export default function FactureIAPage() {
         description="Toutes les ressources sur la facturation par intelligence artificielle avec Factu.me"
         url="https://factu.me/facture-ia"
         hasPart={[
+          { name: 'Facture rapide — En moins de 60 secondes', url: 'https://factu.me/facture-rapide', description: 'Créez une facture rapide avec l\'IA' },
           { name: 'Facture Voix — Dictée vocale IA', url: 'https://factu.me/facture-voix', description: 'Créez vos factures en parlant' },
           { name: 'Facturation électronique 2026', url: 'https://factu.me/facturation-electronique', description: 'Guide réforme e-invoicing' },
           { name: 'Facturation artisans', url: 'https://factu.me/facturation-artisans', description: 'Facture IA pour artisans' },

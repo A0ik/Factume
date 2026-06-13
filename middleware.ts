@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { rateLimitAsync, getClientIp } from '@/lib/rate-limit';
+import { rateLimitAsync, getClientFingerprint } from '@/lib/rate-limit';
 
 // Routes publiques explicites (pas besoin d'auth)
 const PUBLIC_PATHS = [
@@ -110,9 +110,11 @@ export async function middleware(req: NextRequest) {
   const userAgent = req.headers.get('user-agent') || '';
   const isCrawler = /googlebot|bingbot|yandexbot|duckduckbot|slurp|baiduspider|facebot|ia_archiver|mj12bot|ahrefsbot|semrushbot/i.test(userAgent);
 
-  const ip = getClientIp(req);
+  const ip = getClientFingerprint(req);
   const isApiRoute = pathname.startsWith('/api/');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
+  // SAFETY: SSR pages (non-API, non-auth) are NEVER rate limited.
+  const isSsrPage = !isApiRoute && !isAuthRoute;
 
   // ── Rate Limiting (optimisé pour UX SaaS) ────────────────────────────────
   // RULE: Navigation pages (SSR) = NO rate limit. A user refreshing 30 times
@@ -131,8 +133,8 @@ export async function middleware(req: NextRequest) {
     rlWindow = 86_400_000; // 3 per day — anti-double-charge
   } else if (isAuthRoute) {
     shouldRateLimit = true;
-    rlLimit = 10;
-    rlWindow = 900_000; // 10 per 15 minutes — brute-force protection
+    rlLimit = 30;
+    rlWindow = 900_000; // 30 per 15 minutes — brute-force protection + UX tolerance
   } else if (isApiRoute) {
     shouldRateLimit = true;
     rlLimit = 200;
@@ -140,25 +142,30 @@ export async function middleware(req: NextRequest) {
   }
   // Page requests (SSR/ISR): NO rate limiting — users browse freely
 
-  if (shouldRateLimit) {
-    const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
-      : isApiRoute ? 'api'
-      : 'auth';
+  if (shouldRateLimit && !isCrawler) {
+    // Defensive: SSR pages should never reach this block
+    if (isSsrPage) {
+      console.error('[middleware] BUG: rate limiting triggered on SSR page:', pathname);
+    } else {
+      const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
+        : isApiRoute ? 'api'
+        : 'auth';
 
-    const rl = await rateLimitAsync({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit!, windowMs: rlWindow! });
+      const rl = await rateLimitAsync({ key: `mw:${ip}:${rlGroup}`, limit: rlLimit!, windowMs: rlWindow! });
 
-    if (!rl.success) {
-      const retryAfter = Math.max(1, Math.ceil((rl.resetTime - Date.now()) / 1000));
-      return new Response(JSON.stringify({
-        error: 'Too Many Requests',
-        message: `Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`,
-      }), {
-        status: 429,
-        headers: {
-          'Retry-After': String(retryAfter),
-          'Content-Type': 'application/json',
-        },
-      });
+      if (!rl.success) {
+        const retryAfter = Math.max(1, Math.ceil((rl.resetTime - Date.now()) / 1000));
+        return new Response(JSON.stringify({
+          error: 'Too Many Requests',
+          message: `Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`,
+        }), {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfter),
+            'Content-Type': 'application/json',
+          },
+        });
+      }
     }
   }
 
