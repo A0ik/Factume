@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { invoiceId } = await req.json();
+    const { invoiceId, force } = await req.json();
 
     if (!invoiceId) {
       return NextResponse.json({ error: 'ID de facture requis' }, { status: 400 });
@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
 
-    // If a Stripe payment link already exists for this invoice, return it
+    // FIXER (BUG 1) — cache court-circuité quand l'utilisateur force la régénération
+    // (changement de prestataire Stripe ↔ SumUp, ou lien expiré à recréer).
     const existingStripeUrl = invoice.stripe_payment_url || invoice.stripe_payment_link_url;
-    if (existingStripeUrl) {
+    if (existingStripeUrl && !force) {
       return NextResponse.json({
         paymentLinkUrl: existingStripeUrl,
         shortUrl: existingStripeUrl,

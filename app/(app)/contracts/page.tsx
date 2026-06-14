@@ -38,9 +38,16 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
 
 export default function ContractsPage() {
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const { canUseContracts } = useSubscription();
   const { contracts, stats, loading, fetchContracts, deleteContract, duplicateContract } = useContractStore();
+
+  // FIXER (BUG 3) : ne PAS évaluer canUseContracts tant que le profil n'est pas chargé.
+  // useSubscription fait défaillir le tier à 'free' quand profile === null (authStore
+  // debounce fetchProfile de 300ms). Résultat : flash paywall + redirect /paywall au
+  // premier rendu client, qui se corrige tout seul après résolution — d'où l'erreur
+  // « au premier chargement » qui disparaît au refresh (le refresh force le bootstrap auth).
+  const subscriptionReady = initialized && profile !== null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -53,14 +60,31 @@ export default function ContractsPage() {
   const [sortBy, setSortBy] = useState<'date' | 'salary' | 'name' | 'status'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // FIXER (AUDIT) — confirmation de suppression via modal au lieu du window.confirm() natif.
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: 'single'; id: string; type: ContractType; label: string }
+    | { kind: 'bulk' }
+    | null
+  >(null);
+  const [deletingContract, setDeletingContract] = useState(false);
 
   useEffect(() => { fetchContracts(); }, []);
 
   useEffect(() => {
-    if (!canUseContracts) {
+    if (subscriptionReady && !canUseContracts) {
       router.push('/paywall');
     }
-  }, [canUseContracts, router]);
+  }, [subscriptionReady, canUseContracts, router]);
+
+  // Tant que le profil n'est pas résolu, on affiche un loader plutôt que le paywall
+  // (évite le flash paywall + le redirect prématuré vers /paywall).
+  if (!subscriptionReady) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+      </div>
+    );
+  }
 
   if (!canUseContracts) {
     return (
@@ -119,14 +143,11 @@ export default function ContractsPage() {
       }
     });
 
-  const handleDelete = async (id: string, type: ContractType) => {
-    if (!confirm('Supprimer ce contrat ?')) return;
-    try {
-      await deleteContract(id, type);
-      toast.success('Contrat supprime');
-    } catch (e) {
-      toast.error('Erreur lors de la suppression');
-    }
+  // FIXER (AUDIT) — on ouvre un modal de confirmation au lieu du confirm() natif
+  // (bloquant pour le main thread, peu accessible, et cassant l'identité visuelle).
+  const handleDelete = (id: string, type: ContractType) => {
+    const c = contracts.find(x => x.id === id);
+    setDeleteTarget({ kind: 'single', id, type, label: c?.employee_name || c?.contract_number || 'ce contrat' });
   };
 
   const handleDuplicate = async (id: string, type: ContractType) => {
@@ -138,17 +159,31 @@ export default function ContractsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (!confirm(`Supprimer ${selectedIds.size} contrat(s) ?`)) return;
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    setDeleteTarget({ kind: 'bulk' });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeletingContract(true);
     try {
-      for (const id of selectedIds) {
-        const c = contracts.find(c => c.id === id);
-        if (c) await deleteContract(id, c.contract_type);
+      if (deleteTarget.kind === 'single') {
+        await deleteContract(deleteTarget.id, deleteTarget.type);
+        toast.success('Contrat supprime');
+      } else {
+        for (const id of selectedIds) {
+          const c = contracts.find(x => x.id === id);
+          if (c) await deleteContract(id, c.contract_type);
+        }
+        setSelectedIds(new Set());
+        toast.success('Contrats supprimes');
       }
-      setSelectedIds(new Set());
-      toast.success('Contrats supprimes');
+      setDeleteTarget(null);
     } catch {
       toast.error('Erreur lors de la suppression');
+    } finally {
+      setDeletingContract(false);
     }
   };
 
@@ -171,13 +206,16 @@ export default function ContractsPage() {
   };
 
   const handleBulkExportCSV = () => {
-    const headers = ['Numero', 'Type', 'Salarie', 'Entreprise', 'Poste', 'Debut', 'Fin', 'Statut'];
+    // FIXER (AUDIT) — l'ancien mapping plaçait le salaire sous la colonne « Salarie »
+    // et omettait le nom du salarié. Colonnes réalignées sur les données réelles.
+    const headers = ['Numero', 'Type', 'Salarie', 'Entreprise', 'Poste', 'Salaire', 'Debut', 'Fin', 'Statut'];
     const rows = filtered.map(c => [
       c.contract_number || '',
       c.contract_type,
-      String(c.salary_amount),
+      c.employee_name,
       c.company_name,
       c.job_title,
+      String(c.salary_amount),
       c.start_date,
       c.end_date || '',
       c.status,
@@ -616,6 +654,60 @@ export default function ContractsPage() {
             </>
           )}
         </div>
+
+        {/* FIXER (AUDIT) — modal de confirmation de suppression (remplace window.confirm) */}
+        <AnimatePresence>
+          {deleteTarget && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end lg:items-center justify-center p-0 lg:p-4"
+              onClick={() => !deletingContract && setDeleteTarget(null)}
+            >
+              <motion.div
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 40, opacity: 0 }}
+                transition={{ duration: 0.25, ease }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-slate-900 border-t lg:border border-gray-200 dark:border-white/10 rounded-t-3xl lg:rounded-2xl w-full lg:max-w-sm p-6 space-y-4 lg:shadow-2xl"
+              >
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Trash2 size={22} className="text-red-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {deleteTarget.kind === 'bulk' ? `Supprimer ${selectedIds.size} contrat(s) ?` : 'Supprimer le contrat ?'}
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    {deleteTarget.kind === 'bulk'
+                      ? 'Cette action est irreversible. Les contrats selectionnes seront definitivement supprimes.'
+                      : <>Cette action est irreversible. Le contrat <strong className="text-gray-700 dark:text-slate-200">{deleteTarget.label}</strong> sera definitivement supprime.</>}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteTarget(null)}
+                    disabled={deletingContract}
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-slate-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deletingContract}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-400 transition-colors disabled:opacity-50"
+                  >
+                    {deletingContract ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                    Supprimer
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </>
   );

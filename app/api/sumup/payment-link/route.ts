@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { invoiceId } = await req.json();
+    const { invoiceId, force } = await req.json();
     if (!invoiceId) {
       return NextResponse.json({ error: 'invoiceId requis' }, { status: 400 });
     }
@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    // If checkout already exists, return existing URL
-    if (invoice.sumup_checkout_id) {
+    // FIXER (BUG 1) — cache court-circuité quand l'utilisateur force la régénération.
+    if (invoice.sumup_checkout_id && !force) {
       const existingUrl = invoice.payment_link || `https://checkout.sumup.com/${invoice.sumup_checkout_id}`;
       return NextResponse.json({ url: existingUrl, checkoutId: invoice.sumup_checkout_id });
     }

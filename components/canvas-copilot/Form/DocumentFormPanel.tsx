@@ -230,8 +230,9 @@ export default function DocumentFormPanel({
   // null = ajout multiple (bulk) ; sinon id de la ligne à remplacer.
   const [catalogReplaceId, setCatalogReplaceId] = useState<string | null>(null);
 
+  // FIXER (BUG 2) : description fidèle au catalogue, sans concaténer le nom.
   const productDesc = useCallback(
-    (p: Product) => p.name + (p.description ? `\n${p.description}` : ''),
+    (p: Product) => p.description?.trim() || p.name,
     [],
   );
 

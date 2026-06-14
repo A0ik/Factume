@@ -32,7 +32,25 @@ import { getSupabaseClient } from '@/lib/supabase';
 
 const TYPE_LABELS: Record<ContractType, string> = { cdi: 'CDI', cdd: 'CDD', other: 'Autre' };
 
+// FIXER (BUG 3) — Next.js 15 exige une <Suspense> autour de useSearchParams(), sinon la
+// page déopte en rendu client et peut flasher/erreur au premier chargement. On wrappe.
 export default function ContractDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <React.Suspense fallback={<ContractDetailFallback />}>
+      <ContractDetailContent params={params} />
+    </React.Suspense>
+  );
+}
+
+function ContractDetailFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+    </div>
+  );
+}
+
+function ContractDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
   const contractType = (searchParams.get('type') || 'cdi') as ContractType;

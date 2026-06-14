@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import React from 'react';
 import { Invoice, Profile } from '@/types';
+import { withQrDataUrl } from '@/lib/pdf';
 
 interface PdfPreviewModalProps {
   invoice: Invoice;
@@ -63,6 +64,9 @@ export function PdfPreviewModal({
     let cancelled = false;
 
     const loadAndRender = async () => {
+      // FIXER (BUG 1) : enrichir le QR côté client avant tout rendu @react-pdf/renderer,
+      // sinon l'aperçu affiche le fallback texte au lieu du QR code.
+      const pdfInvoice = await withQrDataUrl(invoice);
       // === LEVEL 1: Canvas rendering via pdfjs-dist ===
       try {
         const pdfjsLib = await import('pdfjs-dist');
@@ -82,7 +86,7 @@ export function PdfPreviewModal({
           const { pdf } = await import('@react-pdf/renderer');
           const { PdfDocument } = await import('@/components/pdf-document');
           const element = React.createElement(PdfDocument, {
-            invoice,
+            invoice: pdfInvoice,
             profile: profile || ({} as Profile),
           });
           const blob = await (pdf as any)(element).toBlob();
@@ -144,7 +148,7 @@ export function PdfPreviewModal({
         const { pdf } = await import('@react-pdf/renderer');
         const { PdfDocument } = await import('@/components/pdf-document');
         const element = React.createElement(PdfDocument, {
-          invoice,
+          invoice: pdfInvoice,
           profile: profile || ({} as Profile),
         });
         const blob = await (pdf as any)(element).toBlob();

@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Building2, Calendar, User, Euro, Trash2, Eye, FileEdit, Copy, Send, Clock, RefreshCw } from 'lucide-react';
+import { FileText, Building2, Calendar, User, Euro, Trash2, Eye, FileEdit, Copy, Send, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { ContractSummary, ContractType } from '@/types';
 import { ContractStatusBadge, ContractTypeBadge } from './ContractStatusBadge';
 import Link from 'next/link';
@@ -20,6 +20,15 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
   const expiresAt = contract.signing_token_expires_at;
   const hasActiveSigning = expiresAt ? new Date(expiresAt) > new Date() : false;
   const signingExpires = hasActiveSigning && expiresAt ? new Date(expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+
+  // FIXER (AUDIT) — suivi de l'échéance du contrat (CDD arrivant à expiration).
+  // Rend visible une donnée qui n'était qu'au niveau data-layer (cron d'expiration).
+  const liveStatuses = ['active', 'signed', 'pending_signature'];
+  const endDaysLeft = contract.end_date
+    ? Math.ceil((new Date(contract.end_date).getTime() - Date.now()) / 86400000)
+    : null;
+  const isEndingSoon = endDaysLeft !== null && endDaysLeft >= 0 && endDaysLeft <= 30 && liveStatuses.includes(contract.status);
+  const isExpired = endDaysLeft !== null && endDaysLeft < 0 && (contract.status === 'active' || contract.status === 'signed');
 
   return (
     <motion.div
@@ -45,6 +54,18 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
               <RefreshCw className="w-3 h-3" />
               R{(contract.renewal_count || 0)}
+            </span>
+          )}
+          {isEndingSoon && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+              <Clock className="w-3 h-3" />
+              {endDaysLeft === 0 ? "Expire aujourd'hui" : `Expire dans ${endDaysLeft} j`}
+            </span>
+          )}
+          {isExpired && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+              <AlertCircle className="w-3 h-3" />
+              Échéance dépassée
             </span>
           )}
         </div>
@@ -102,12 +123,12 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
           <FileEdit className="w-4 h-4" />Éditer
         </Link>
         {onDuplicate && (
-          <button onClick={() => onDuplicate(contract.id, contract.contract_type)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" title="Dupliquer">
+          <button onClick={() => onDuplicate(contract.id, contract.contract_type)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" title="Dupliquer" aria-label={`Dupliquer le contrat de ${contract.employee_name}`}>
             <Copy className="w-4 h-4" />
           </button>
         )}
         {onDelete && (
-          <button onClick={() => onDelete(contract.id, contract.contract_type)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Supprimer">
+          <button onClick={() => onDelete(contract.id, contract.contract_type)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Supprimer" aria-label={`Supprimer le contrat de ${contract.employee_name}`}>
             <Trash2 className="w-4 h-4" />
           </button>
         )}

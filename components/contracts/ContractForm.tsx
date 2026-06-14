@@ -64,16 +64,21 @@ interface Props {
 
 export function ContractForm({ contractType, mode, initialData, contractId, onSaved }: Props) {
   const router = useRouter();
-  const { profile } = useAuthStore();
+  const { profile, initialized } = useAuthStore();
   const { canUseContracts } = useSubscription();
   const { createContract, updateContract } = useContractStore();
 
-  // Vérifier les droits d'accès aux contrats
+  // FIXER (BUG 3) : attendre que le profil soit chargé avant d'évaluer canUseContracts.
+  // Sinon le tier défaille à 'free' (profile null) → redirect /paywall prématuré
+  // au premier rendu client, qui se corrige après résolution du profil.
+  const subscriptionReady = initialized && profile !== null;
+
+  // Vérifier les droits d'accès aux contrats (uniquement une fois le profil résolu)
   useEffect(() => {
-    if (!canUseContracts) {
+    if (subscriptionReady && !canUseContracts) {
       router.push('/paywall');
     }
-  }, [canUseContracts, router]);
+  }, [subscriptionReady, canUseContracts, router]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

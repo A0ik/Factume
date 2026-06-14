@@ -48,18 +48,53 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
 }
 
 /**
+ * FIXER (BUG 1) — Résout l'URL de paiement depuis tous les champs possibles
+ * (Stripe, SumUp, générique). Centralise une logique auparavant dupliquée et
+ * incomplète côté client : le bouton ne lisait que `payment_link`, ignorant
+ * `stripe_payment_url` / `sumup_checkout_id` → le lien apparaissait non persisté.
+ */
+export function getPaymentUrl(invoice: Invoice): string {
+  const inv = invoice as any;
+  return (
+    inv.payment_link ||
+    inv.stripe_payment_url ||
+    inv.stripe_payment_link_url ||
+    (inv.sumup_checkout_id ? `https://checkout.sumup.com/${inv.sumup_checkout_id}` : '')
+  );
+}
+
+/** Un lien de paiement existe-t-il, quel que soit le fournisseur ? */
+export function hasPaymentLink(invoice: Invoice): boolean {
+  return !!getPaymentUrl(invoice);
+}
+
+/**
+ * FIXER (BUG 1) — Enrichit une facture de son QR code (data URL) pour le rendu
+ * @react-pdf/renderer côté client. Le moteur pdf-lib (serveur) régénère lui-même
+ * le QR, mais le chemin client (downloadInvoicePdf + PdfPreviewModal) ne le faisait
+ * JAMAIS — d'où l'absence systématique du QR sur le PDF téléchargé et l'aperçu.
+ */
+export async function withQrDataUrl(invoice: Invoice): Promise<Invoice> {
+  const url = getPaymentUrl(invoice);
+  if (!url || (invoice as any).qr_data_url) return invoice;
+  try {
+    const { generateQrDataUrl } = await import('./qr-generate');
+    const qr = await generateQrDataUrl(url);
+    if (qr) return { ...invoice, qr_data_url: qr } as Invoice;
+  } catch {
+    // QR échoué — on rend quand même le PDF (sans QR).
+  }
+  return invoice;
+}
+
+/**
  * Generate a real PDF buffer for preview and download.
  *
  * Strategy: pdf-lib first (reliable in serverless), @react-pdf/renderer as fallback.
  * pdf-lib works everywhere (Vercel, Node, etc.) without CSP or WASM issues.
  */
 export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
-  // Resolve payment URL from all possible fields (Stripe, SumUp, or generic)
-  const paymentUrl =
-    (invoice as any).payment_link ||
-    (invoice as any).stripe_payment_url ||
-    (invoice as any).stripe_payment_link_url ||
-    ((invoice as any).sumup_checkout_id ? `https://checkout.sumup.com/${(invoice as any).sumup_checkout_id}` : '');
+  const paymentUrl = getPaymentUrl(invoice);
 
   // Pre-generate QR code data URL for payment links (used by @react-pdf/renderer fallback)
   if (paymentUrl) {
@@ -112,7 +147,10 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
   try {
     const { pdf } = await import('@react-pdf/renderer');
     const { PdfDocument } = await import('@/components/pdf-document');
-    const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
+    // FIXER (BUG 1) : génère le QR côté client AVANT le rendu @react-pdf/renderer,
+    // sinon PdfDocument affiche le fallback texte au lieu de l'image QR code.
+    const invoiceWithQr = await withQrDataUrl(invoice);
+    const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
     const blob = await pdf(element as any).toBlob();
 
     // Try native share on iOS first

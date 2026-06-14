@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import Button from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -19,6 +20,19 @@ import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
 import Link from 'next/link';
 
 const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
+// FIXER (BUG 4) : surcouche Obsidian injectée dans le document isolé de l'<iframe>
+// d'aperçu. Les templates s'appuient sur des variables CSS (--paper, --bg, --text…)
+// qu'on redéfinit ici, + neutralisation des fonds clairs inline (#fff, #fafafa…) et
+// des bordures claires. Le PDF/impression reste intact (cette feuille ne vit que dans
+// l'aperçu écran).
+const DARK_PREVIEW_STYLE = `<style data-dark-preview>
+:root{--bg:#0a0a0b;--paper:#16161c;--text:#fafafa;--text-secondary:#d4d4d8;--text-muted:#a1a1aa;--border:#27272a;--border-strong:#3f3f46;--row-alt:#1d1d24;--success:#4a9e7d;--danger:#d96565;}
+html,body{background:#0a0a0b !important;color:#fafafa !important;color-scheme:dark;}
+[style*="#fff" i],[style*="#ffffff" i],[style*="#fafafa" i],[style*="#f8f8fc" i],[style*="#f9f9f9" i],[style*="#f0fdf4" i],[style*="#f5f0eb" i],[style*="#f8fafc" i],[style*="#faf8f6" i],[style*="#fffdf9" i]{background-color:#1d1d24 !important;color:#d4d4d8 !important;}
+td[style*="#eee" i],th[style*="#eee" i],td[style*="#e8e2db" i],tr[style*="#eee" i]{border-color:rgba(255,255,255,0.08) !important;}
+a{color:#6ee7b7 !important;}
+</style>`;
 
 const CURRENCY_OPTS = CURRENCIES.map((c) => ({ value: c.code, label: `${c.symbol} ${c.label}` }));
 const LANG_OPTS = [{ value: 'fr', label: '🇫🇷 Français' }, { value: 'en', label: '🇬🇧 English' }];
@@ -63,6 +77,10 @@ export default function SettingsPage() {
   const router = useRouter();
   const { profile, updateProfile, signOut, fetchProfile } = useAuthStore();
   const sub = useSubscription();
+  // FIXER (BUG 4) : l'aperçu du template vit dans un <iframe> isolé qui n'hérite pas
+  // de la classe .dark du document parent. On lit le thème résolu pour injecter une
+  // surcouche Obsidian directement dans le document de l'iframe.
+  const isDarkPreview = useThemeStore((s) => s.resolvedTheme) === 'dark';
   const fileRef = useRef<HTMLInputElement>(null);
   const sigFileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
@@ -143,7 +161,7 @@ export default function SettingsPage() {
 
   const forceUpdate = () => setShortcutsUpdateKey(prev => prev + 1);
 
-  const buildPreviewHtml = (html: string): string => {
+  const buildPreviewHtml = (html: string, isDark = false): string => {
     const p = profile;
     const sampleRows = `
       <tr><td style="padding:10px 14px;border-bottom:1px solid #eee">Prestation de service</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">3</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">500,00 €</td><td style="padding:10px 14px;text-align:center;border-bottom:1px solid #eee">20%</td><td style="padding:10px 14px;text-align:right;border-bottom:1px solid #eee">1 500,00 €</td></tr>
@@ -199,6 +217,8 @@ export default function SettingsPage() {
     for (const [key, val] of Object.entries(demo)) {
       result = result.split(key).join(val);
     }
+    // FIXER (BUG 4) : surcouche Obsidian quand l'app est en mode sombre.
+    if (isDark) result += DARK_PREVIEW_STYLE;
     return result;
   };
 
@@ -1697,9 +1717,9 @@ export default function SettingsPage() {
           >
             {analyzedTemplateHtml && (
               <div className="space-y-3">
-                <div className="bg-gray-100 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
+                <div className="bg-gray-100 dark:bg-slate-900/60 rounded-xl overflow-hidden" style={{ maxHeight: '70vh' }}>
                   <iframe
-                    srcDoc={buildPreviewHtml(analyzedTemplateHtml)}
+                    srcDoc={buildPreviewHtml(analyzedTemplateHtml, isDarkPreview)}
                     className="w-full border-0"
                     style={{ height: '600px', minWidth: '600px', transform: 'scale(0.6)', transformOrigin: 'top left', width: '166.6%' }}
                     title="Template preview"

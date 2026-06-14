@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, ExternalLink, X, Download, Loader2 } from 'lucide-react';
+import { Check, Copy, ExternalLink, X, Download, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PaymentLinkSuccessModalProps {
@@ -11,6 +11,8 @@ interface PaymentLinkSuccessModalProps {
   invoiceNumber: string;
   invoiceTotal: number;
   onDownloadPdf?: () => Promise<void>;
+  /** FIXER (BUG 1) — permet de changer de prestataire (Stripe ↔ SumUp) ou de régénérer. */
+  onChangeProvider?: () => void;
 }
 
 /**
@@ -24,6 +26,7 @@ export function PaymentLinkSuccessModal({
   invoiceNumber,
   invoiceTotal,
   onDownloadPdf,
+  onChangeProvider,
 }: PaymentLinkSuccessModalProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -143,6 +146,16 @@ export function PaymentLinkSuccessModal({
               <ExternalLink size={18} />
               Ouvrir le lien
             </button>
+
+            {onChangeProvider && (
+              <button
+                onClick={onChangeProvider}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors"
+              >
+                <RefreshCw size={14} />
+                Changer de prestataire / recréer le lien
+              </button>
+            )}
           </div>
         </div>
 

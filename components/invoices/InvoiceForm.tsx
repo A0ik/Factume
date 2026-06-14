@@ -444,7 +444,10 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
     }
   };
 
-  const productDesc = (p: Product) => p.name + (p.description ? `\n${p.description}` : '');
+  // FIXER (BUG 2) : la description importée doit être fidèle à la description
+  // du produit catalogue — pas une concaténation nom + description.
+  // Repli sur le nom uniquement si la description est vide (évite une ligne vide).
+  const productDesc = (p: Product) => p.description?.trim() || p.name;
 
   // Ouvre la modale catalogue pour remplir une ligne précise.
   const openProductCatalog = (itemIndex: number) => {

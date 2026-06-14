@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useInvoiceRealtime } from '@/hooks/use-invoice-realtime';
 import { formatCurrency } from '@/lib/utils';
-import { downloadInvoicePdf } from '@/lib/pdf';
+import { downloadInvoicePdf, hasPaymentLink, getPaymentUrl } from '@/lib/pdf';
 import { Invoice, InvoiceStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -84,6 +84,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
   const [paymentSuccessUrl, setPaymentSuccessUrl] = useState('');
+  // FIXER (BUG 1) — drapeau one-shot pour forcer la régénération du lien quand
+  // l'utilisateur change de prestataire (contourne le verrou early-return des routes).
+  const forcePaymentSwitchRef = useRef(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [isReminder, setIsReminder] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
@@ -220,7 +223,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleCreatePaymentLink = async () => {
+  const handleCreatePaymentLink = async (force = false) => {
     if (!profile?.stripe_connect_account_id) {
       toast.error('Stripe non connecté. Configurez votre compte dans les paramètres.');
       return;
@@ -230,7 +233,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const res = await fetch('/api/stripe-connect/create-payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId: invoice.id }),
+        body: JSON.stringify({ invoiceId: invoice.id, force }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -239,11 +242,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
-      if (updatedInvoice) {
-        setInvoice(updatedInvoice);
-        // Also update Zustand store so PDF generation picks up new data
-        useDataStore.getState().updateInvoiceInList(updatedInvoice);
-      }
+
+      // FIXER (BUG 1) — si l'écriture DB a échoué silencieusement (loguée, non thrown),
+      // on patche l'état local avec l'URL retournée : le bouton reflète le lien actif et
+      // le QR est généré côté client depuis cette URL.
+      const merged =
+        updatedInvoice && (updatedInvoice.stripe_payment_url || updatedInvoice.payment_link)
+          ? updatedInvoice
+          : { ...invoice, stripe_payment_url: data.paymentLinkUrl, payment_link: data.paymentLinkUrl, sumup_checkout_id: null };
+      setInvoice(merged);
+      useDataStore.getState().updateInvoiceInList(merged);
 
       setPaymentSuccessUrl(data.paymentLinkUrl);
       setShowPaymentSuccessModal(true);
@@ -255,13 +263,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleSumUpLink = async () => {
+  const handleSumUpLink = async (force = false) => {
     setGeneratingSumUpLink(true);
     try {
       const res = await fetch('/api/sumup/payment-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId: invoice.id }),
+        body: JSON.stringify({ invoiceId: invoice.id, force }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -270,11 +278,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       const { getSupabaseClient } = await import('@/lib/supabase');
       const supabase = getSupabaseClient();
       const { data: updatedInvoice } = await supabase.from('invoices').select('*, client:clients(*)').eq('id', invoice.id).single();
-      if (updatedInvoice) {
-        setInvoice(updatedInvoice);
-        // Also update Zustand store so PDF generation picks up new data
-        useDataStore.getState().updateInvoiceInList(updatedInvoice);
-      }
+
+      // FIXER (BUG 1) — même garde-fou qu'au-dessus : patch local si la BDD n'a pas persisté.
+      const merged =
+        updatedInvoice && (updatedInvoice.sumup_checkout_id || updatedInvoice.payment_link)
+          ? updatedInvoice
+          : { ...invoice, sumup_checkout_id: data.checkoutId, payment_link: data.url, stripe_payment_url: null };
+      setInvoice(merged);
+      useDataStore.getState().updateInvoiceInList(merged);
 
       setPaymentSuccessUrl(data.url);
       setShowPaymentSuccessModal(true);
@@ -290,11 +301,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   };
 
   const handleSelectPaymentProvider = async (provider: 'stripe' | 'sumup') => {
+    // FIXER (BUG 1) — force la régénération quand l'utilisateur change de prestataire.
+    const force = forcePaymentSwitchRef.current;
+    forcePaymentSwitchRef.current = false;
     if (provider === 'stripe') {
-      await handleCreatePaymentLink();
+      await handleCreatePaymentLink(force);
     } else {
-      await handleSumUpLink();
+      await handleSumUpLink(force);
     }
+  };
+
+  // FIXER (BUG 1) — permet de changer de prestataire depuis le modal « Voir le lien ».
+  const handleChangePaymentProvider = () => {
+    forcePaymentSwitchRef.current = true;
+    setShowPaymentSuccessModal(false);
+    setShowPaymentModal(true);
   };
 
   const handleMarkPaid = async () => {
@@ -741,8 +762,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             {invoice.document_type === 'invoice' && invoice.status !== 'paid' && (
               <button
                 onClick={() => {
-                  if (invoice.payment_link) {
-                    setPaymentSuccessUrl(invoice.payment_link);
+                  if (hasPaymentLink(invoice)) {
+                    setPaymentSuccessUrl(getPaymentUrl(invoice));
                     setShowPaymentSuccessModal(true);
                   } else {
                     setShowPaymentModal(true);
@@ -751,7 +772,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 hover:bg-gray-200 text-slate-300 text-sm font-semibold transition-colors"
               >
                 <CreditCard size={16} className="text-emerald-400" />
-                {invoice.payment_link ? 'Voir le lien de paiement' : 'Créer un lien de paiement'}
+                {hasPaymentLink(invoice) ? 'Voir le lien de paiement' : 'Créer un lien de paiement'}
               </button>
             )}
 
@@ -959,16 +980,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           },
           ...(invoice.document_type === 'invoice' && invoice.status !== 'paid' ? [{
             icon: CreditCard,
-            label: invoice.payment_link ? 'Lien de paiement' : 'Encaisser',
+            label: hasPaymentLink(invoice) ? 'Lien de paiement' : 'Encaisser',
             onClick: () => {
-              if (invoice.payment_link) {
-                setPaymentSuccessUrl(invoice.payment_link);
+              if (hasPaymentLink(invoice)) {
+                setPaymentSuccessUrl(getPaymentUrl(invoice));
                 setShowPaymentSuccessModal(true);
               } else {
                 setShowPaymentModal(true);
               }
             },
-            description: invoice.payment_link ? 'Voir le lien de paiement' : 'Créer un lien de paiement',
+            description: hasPaymentLink(invoice) ? 'Voir le lien de paiement' : 'Créer un lien de paiement',
           }] : []),
           ...(invoice.status !== 'paid' ? [{
             icon: CheckCircle,
@@ -1055,6 +1076,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           invoiceNumber={invoice.number}
           invoiceTotal={invoice.total}
           onDownloadPdf={handleDownloadPdf}
+          onChangeProvider={handleChangePaymentProvider}
         />
       )}
 
