@@ -20,6 +20,8 @@ interface CanvasCopilotLayoutProps {
   onPaywall: () => void;
   onSave: () => void;
   onBack: () => void;
+  /** 'create' (défaut) ou 'edit'. Pilote le label du bouton + le préfixe du titre. */
+  mode?: 'create' | 'edit';
 }
 
 /**
@@ -46,6 +48,7 @@ export default function CanvasCopilotLayout({
   onPaywall,
   onSave,
   onBack,
+  mode = 'create',
 }: CanvasCopilotLayoutProps) {
   const {
     documentType,
@@ -61,6 +64,8 @@ export default function CanvasCopilotLayout({
 
   const config = DOC_TYPE_CONFIGS[documentType];
   const hasContent = items.some(i => i.description || i.unit_price > 0);
+  const isEdit = mode === 'edit';
+  const saveLabel = isEdit ? 'Enregistrer' : 'Créer';
 
   // Negative margins break out of app layout py-5/px-5 padding
   // Mobile: 100dvh - top bar (3.5rem) - BottomTabBar (4rem) | Desktop: full viewport
@@ -89,7 +94,7 @@ export default function CanvasCopilotLayout({
               <config.icon size={12} className="text-white" />
             </div>
             <h1 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-              {config.label}
+              {isEdit ? 'Modifier ' : ''}{config.label}
             </h1>
           </div>
         </div>
@@ -151,7 +156,7 @@ export default function CanvasCopilotLayout({
           ) : (
             <>
               <Save size={14} />
-              <span>Cr&eacute;er</span>
+              <span>{saveLabel}</span>
             </>
           )}
         </motion.button>

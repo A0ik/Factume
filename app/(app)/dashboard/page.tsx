@@ -1,7 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import PullToRefresh from '@/components/ui/PullToRefresh';
 import { useAuthStore } from '@/stores/authStore';
@@ -10,26 +9,21 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { formatCurrency, cn } from '@/lib/utils';
 import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
 import {
-  FileText, Plus, TrendingUp, ArrowUpRight, Clock, AlertTriangle,
-  Users, Sparkles, Receipt, Zap,
+  Plus, ArrowUpRight, AlertTriangle,
+  Users, Sparkles, Receipt, Zap, TrendingUp, Hourglass,
 } from 'lucide-react';
 
 /**
  * Dashboard ZENITH — "Le Chiffre est Roi"
  *
- * Le point focal absolu : "À encaisser" en grand.
- * L'utilisateur ouvre l'app pour UNE question : combien on me doit ?
- * Le reste est secondaire et accessible en scrollant.
- *
- * Gardé : À encaisser (hero) + Documents action + Top clients
- * Supprimé : Chart recharts, Quick actions grid, Stats strip
+ * PC : centre de commande asymétrique — focal "À encaisser" + triade de tuiles KPI,
+ * grille 3+2 (Action requise élargie + Top clients). Charte Obsidian (dark natif).
  */
 
 const springTransition = { type: 'spring' as const, damping: 25, stiffness: 200 };
 const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { profile } = useAuthStore();
   const { invoices, stats, fetchInvoices } = useDataStore();
   const sub = useSubscription();
@@ -44,7 +38,7 @@ export default function DashboardPage() {
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
 
   // ─── À encaisser ──────────────────────────────────────────────
-  const { toCollect, toCollectOverdue, toCollectPending } = useMemo(() => {
+  const { toCollect, toCollectOverdue, toCollectPending, sentCount } = useMemo(() => {
     const actualInvoices = invoices.filter(i => !i.document_type || i.document_type === 'invoice');
     const sent = actualInvoices.filter(i => i.status === 'sent' || i.status === 'overdue');
     const overdue = sent.filter(i => i.status === 'overdue');
@@ -53,6 +47,7 @@ export default function DashboardPage() {
       toCollect: sent.reduce((s, i) => s + i.total, 0),
       toCollectOverdue: overdue.reduce((s, i) => s + i.total, 0),
       toCollectPending: pending.reduce((s, i) => s + i.total, 0),
+      sentCount: sent.length,
     };
   }, [invoices]);
 
@@ -63,12 +58,11 @@ export default function DashboardPage() {
     return invoices
       .filter(i => (!i.document_type || i.document_type === 'invoice') && (i.status === 'overdue' || i.status === 'sent'))
       .sort((a, b) => {
-        // Overdue first
         if (a.status === 'overdue' && b.status !== 'overdue') return -1;
         if (b.status === 'overdue' && a.status !== 'overdue') return 1;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       })
-      .slice(0, 5);
+      .slice(0, 6);
   }, [invoices]);
 
   // ─── Top clients ──────────────────────────────────────────────
@@ -153,7 +147,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <motion.div whileTap={{ scale: 0.95 }} className="flex-1">
-                    <Link href="/documents/factures/new"
+                    <Link href="/documents/create?type=invoice"
                       className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
                       <Plus size={16} strokeWidth={2.5} /> Facturer
                     </Link>
@@ -170,12 +164,12 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* ══════════════════════════════════════════════════════════
-              HERO — DESKTOP
+              HERO — DESKTOP (centre de commande)
               ══════════════════════════════════════════════════════════ */}
           <motion.div variants={itemVariants} className="hidden lg:block">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">{greeting}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{greeting}</p>
                 <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white mt-0.5">
                   {profile?.company_name || 'Mon entreprise'}
                 </h2>
@@ -187,40 +181,48 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {/* Desktop hero card */}
+            {/* Desktop hero — focal + triade KPI */}
             <div className="mt-4 relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6">
               <div className="absolute inset-0 opacity-10">
-                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gray-200" />
+                <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/30 blur-2xl" />
+                <div className="absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-white/20 blur-2xl" />
               </div>
-              <div className="relative flex items-center gap-8">
-                <div className="flex-1">
+              <div className="relative flex flex-col xl:flex-row xl:items-stretch gap-6">
+                {/* Focal — À encaisser */}
+                <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold text-emerald-200/60 uppercase tracking-widest mb-1">À encaisser</p>
                   <motion.p key={toCollect} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={springTransition}
-                    className="text-4xl font-bold text-white tracking-tight">
+                    className="text-4xl xl:text-5xl font-bold text-white tracking-tight">
                     {formatCurrency(toCollect)}
                   </motion.p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <span className="text-xs text-emerald-200/50">
-                      CA ce mois : <span className="font-semibold text-emerald-200/80">{formatCurrency(stats?.mrr || 0)}</span>
-                      {monthOverMonthGrowth !== 0 && (
-                        <span className={cn('ml-1', monthOverMonthGrowth > 0 ? 'text-emerald-200' : 'text-red-200')}>
-                          ({monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}%)
-                        </span>
-                      )}
-                    </span>
-                    {overdueCount > 0 && (
-                      <Link href="/documents?type=invoice" className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse" />
-                        <span className="text-xs text-emerald-200/70 font-medium">{formatCurrency(toCollectOverdue)} en retard</span>
-                      </Link>
-                    )}
-                    {toCollectPending > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-200/50" />
-                        <span className="text-xs text-emerald-200/70 font-medium">{formatCurrency(toCollectPending)} en attente</span>
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-xs text-emerald-200/70 mt-2">
+                    {sentCount > 0 ? `${sentCount} facture${sentCount > 1 ? 's' : ''} en cours` : 'Aucune facture en attente'}
+                  </p>
+                </div>
+
+                {/* Triade KPI */}
+                <div className="xl:w-[520px] grid grid-cols-3 gap-3">
+                  <KpiTile
+                    icon={<TrendingUp size={14} />}
+                    label="CA ce mois"
+                    value={formatCurrency(stats?.mrr || 0)}
+                    delta={monthOverMonthGrowth}
+                  />
+                  <Link href="/documents?type=invoice" className="block">
+                    <KpiTile
+                      icon={<AlertTriangle size={14} />}
+                      label="En retard"
+                      value={formatCurrency(toCollectOverdue)}
+                      accent={overdueCount > 0 ? 'danger' : 'neutral'}
+                      pulse={overdueCount > 0}
+                    />
+                  </Link>
+                  <KpiTile
+                    icon={<Hourglass size={14} />}
+                    label="En attente"
+                    value={formatCurrency(toCollectPending)}
+                    accent="soft"
+                  />
                 </div>
               </div>
             </div>
@@ -242,56 +244,56 @@ export default function DashboardPage() {
           )}
 
           {/* ══════════════════════════════════════════════════════════
-              2 COLONNES : Documents action + Top clients
+              GRILLE PC 3+2 : Action requise (élargie) + Top clients
               ══════════════════════════════════════════════════════════ */}
-          <div className="lg:grid lg:grid-cols-2 gap-5 space-y-5 lg:space-y-0">
+          <div className="lg:grid lg:grid-cols-5 gap-5 space-y-5 lg:space-y-0">
 
             {/* Documents nécessitant une action */}
-            <motion.div variants={itemVariants} className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <motion.div variants={itemVariants} className="lg:col-span-3 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/[0.06]">
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
                   <AlertTriangle size={14} className={overdueCount > 0 ? 'text-red-400' : 'text-amber-400'} />
                   Action requise
                 </h2>
                 <Link href="/documents?type=invoice" className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5 hover:underline">
-                  Tout <ArrowUpRight size={10} />
+                  Tout voir <ArrowUpRight size={10} />
                 </Link>
               </div>
 
               {actionDocs.length === 0 ? (
                 <div className="text-center py-10 px-4">
-                  <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Receipt size={22} className="text-gray-400" />
+                  <div className="w-12 h-12 bg-gray-50 dark:bg-white/[0.04] rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Receipt size={22} className="text-gray-400 dark:text-zinc-500" />
                   </div>
-                  <p className="text-sm text-slate-400">Tout est à jour</p>
-                  <p className="text-xs text-gray-400 mt-0.5 mb-4">Aucune facture en attente</p>
-                  <Link href="/documents/factures/new" className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors active:scale-95">
+                  <p className="text-sm text-zinc-400 dark:text-zinc-500">Tout est à jour</p>
+                  <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5 mb-4">Aucune facture en attente</p>
+                  <Link href="/documents/create?type=invoice" className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors active:scale-95">
                     <Plus size={13} /> Créer une facture
                   </Link>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-200 dark:divide-white/[0.05]">
                   {actionDocs.map((inv, i) => (
                     <motion.div key={inv.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ type: 'spring', damping: 25, stiffness: 200, delay: i * 0.04 }}>
-                      <Link href={`/invoices/${inv.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-100 transition-colors group">
-                        <div className="relative w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                          <Receipt size={14} className="text-slate-500 group-hover:text-emerald-400 transition-colors" />
-                          <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-slate-900 ${
-                            inv.status === 'overdue' ? 'bg-red-400' : 'bg-blue-400'
+                      <Link href={`/invoices/${inv.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors group">
+                        <div className="relative w-9 h-9 rounded-lg bg-gray-50 dark:bg-white/[0.05] flex items-center justify-center flex-shrink-0">
+                          <Receipt size={14} className="text-slate-500 dark:text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                          <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 ${
+                            inv.status === 'overdue' ? 'bg-red-400 border-white dark:border-[#0f0f12]' : 'bg-blue-400 border-white dark:border-[#0f0f12]'
                           }`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-emerald-400 transition-colors">
                             {inv.client?.name || inv.client_name_override || 'Sans client'}
                           </p>
-                          <p className="text-[11px] text-slate-500 font-mono mt-0.5">{inv.number}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-zinc-500 font-mono mt-0.5">{inv.number}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className={cn("text-sm font-bold", inv.status === 'overdue' ? 'text-red-400' : 'text-gray-900 dark:text-white')}>
                             {formatCurrency(inv.total)}
                           </p>
-                          <p className={cn("text-[10px] font-medium", inv.status === 'overdue' ? 'text-red-400' : 'text-slate-500')}>
+                          <p className={cn("text-[10px] font-medium", inv.status === 'overdue' ? 'text-red-400' : 'text-slate-500 dark:text-zinc-500')}>
                             {inv.status === 'overdue' ? 'En retard' : 'En attente'}
                           </p>
                         </div>
@@ -304,7 +306,7 @@ export default function DashboardPage() {
 
             {/* Top clients */}
             {topClients.length > 0 && (
-              <motion.div variants={itemVariants} className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+              <motion.div variants={itemVariants} className="lg:col-span-2 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
                     <Users size={14} className="text-emerald-400" /> Top clients
@@ -324,7 +326,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
-                          <div className="h-1 bg-gray-50 rounded-full overflow-hidden mt-1">
+                          <div className="h-1 bg-gray-100 dark:bg-white/[0.06] rounded-full overflow-hidden mt-1">
                             <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, delay: i * 0.05 }} className="h-full rounded-full" style={{ backgroundColor: COLORS[i] }} />
                           </div>
                         </div>
@@ -343,5 +345,40 @@ export default function DashboardPage() {
 
       <DocumentTypeSheet open={showDocTypeSheet} onClose={() => setShowDocTypeSheet(false)} />
     </>
+  );
+}
+
+// ─── KPI Tile (sur le hero gradient émeraude) ───────────────────
+function KpiTile({
+  icon, label, value, delta, accent = 'neutral', pulse = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  delta?: number;
+  accent?: 'neutral' | 'danger' | 'soft';
+  pulse?: boolean;
+}) {
+  return (
+    <div className="h-full flex flex-col justify-between rounded-xl bg-white/10 hover:bg-white/[0.16] backdrop-blur-sm border border-white/10 p-3 transition-colors">
+      <div className="flex items-center gap-1.5">
+        <span className={cn(
+          'flex items-center justify-center w-5 h-5 rounded-md',
+          accent === 'danger' ? 'bg-red-400/20 text-red-100' : 'bg-white/15 text-emerald-50',
+        )}>
+          {icon}
+        </span>
+        {pulse && <span className="w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse" />}
+        <span className="text-[10px] font-semibold text-emerald-50/70 uppercase tracking-wider truncate">{label}</span>
+      </div>
+      <div className="mt-2">
+        <p className="text-lg font-bold text-white tabular-nums leading-tight truncate">{value}</p>
+        {delta !== undefined && delta !== 0 && (
+          <p className={cn('text-[10px] font-semibold mt-0.5', delta > 0 ? 'text-emerald-50' : 'text-red-100')}>
+            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

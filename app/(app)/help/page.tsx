@@ -26,8 +26,8 @@ const CATEGORIES = [
     id: 'facturation',
     icon: FileText,
     label: 'Facturation',
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-500/10',
     description: 'Créer, envoyer et gérer vos factures',
     faqs: [
       { q: 'Comment créer ma première facture ?', a: 'Cliquez sur "Factures" dans le menu, puis sur le bouton "Nouveau". Vous pouvez soit dicter votre facture à voix haute (plan Pro), soit la saisir manuellement. Renseignez le client, les prestations, les dates et cliquez sur "Créer la facture".' },
@@ -44,8 +44,8 @@ const CATEGORIES = [
     id: 'devis',
     icon: FileText,
     label: 'Devis',
-    color: 'text-violet-600',
-    bg: 'bg-violet-50',
+    color: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-500/10',
     description: 'Créer et convertir vos devis',
     faqs: [
       { q: 'Comment créer un devis ?', a: 'Allez dans la section "Devis" du menu, puis cliquez sur "Nouveau". Le processus est identique à la création d\'une facture. Remplissez les informations client et les lignes de prestations.' },
@@ -58,8 +58,8 @@ const CATEGORIES = [
     id: 'contrats',
     icon: FileText,
     label: 'Contrats',
-    color: 'text-orange-600',
-    bg: 'bg-orange-50',
+    color: 'text-orange-600 dark:text-orange-400',
+    bg: 'bg-orange-50 dark:bg-orange-500/10',
     description: 'Gestion des contrats et documents',
     faqs: [
       { q: 'Comment créer un contrat ?', a: 'Accédez à la section "Contrats" dans le menu. Cliquez sur "Nouveau contrat", choisissez un modèle ou créez-le de zéro. Vous pouvez utiliser la dictée vocale pour générer le contenu automatiquement.' },
@@ -71,8 +71,8 @@ const CATEGORIES = [
     id: 'ia',
     icon: Mic,
     label: 'IA & Voix',
-    color: 'text-green-600',
-    bg: 'bg-green-50',
+    color: 'text-green-600 dark:text-green-400',
+    bg: 'bg-green-50 dark:bg-green-500/10',
     description: 'Dictée vocale et intelligence artificielle',
     faqs: [
       { q: 'Comment fonctionne la dictée vocale ?', a: 'Disponible avec les plans Pro et Business. Cliquez sur "Créer une facture" puis sur le microphone. Parlez naturellement ("Facture pour Dupont SA, développement site web, 5 jours à 500€"). L\'IA analyse votre audio et remplit automatiquement tous les champs.' },
@@ -85,8 +85,8 @@ const CATEGORIES = [
     id: 'paiements',
     icon: CreditCard,
     label: 'Paiements',
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
     description: 'Encaissement et suivi des paiements',
     faqs: [
       { q: 'Comment accepter les paiements en ligne ?', a: 'Connectez votre compte Stripe ou SumUp dans Paramètres > Paiements. Vos clients pourront alors payer directement depuis le lien de facture par carte bancaire.' },
@@ -98,8 +98,8 @@ const CATEGORIES = [
     id: 'abonnements',
     icon: CreditCard,
     label: 'Abonnements',
-    color: 'text-rose-600',
-    bg: 'bg-rose-50',
+    color: 'text-rose-600 dark:text-rose-400',
+    bg: 'bg-rose-50 dark:bg-rose-500/10',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
       { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 14 jours disponible, sans carte bancaire.' },
@@ -111,8 +111,8 @@ const CATEGORIES = [
     id: 'comptabilite',
     icon: Download,
     label: 'Comptabilité',
-    color: 'text-gray-700',
-    bg: 'bg-gray-100',
+    color: 'text-gray-700 dark:text-zinc-300',
+    bg: 'bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04]',
     description: 'Exports comptables et FEC',
     faqs: [
       { q: 'Qu\'est-ce que l\'export FEC ?', a: 'Le Fichier des Écritures Comptables (FEC) est un format réglementaire français que votre expert-comptable peut importer directement. Il contient toutes vos écritures de ventes et encaissements, conformément aux exigences de la DGFiP.' },
@@ -124,8 +124,8 @@ const CATEGORIES = [
     id: 'technique',
     icon: Settings,
     label: 'Technique',
-    color: 'text-slate-600',
-    bg: 'bg-slate-100',
+    color: 'text-slate-600 dark:text-slate-400',
+    bg: 'bg-slate-100 dark:bg-slate-500/10',
     description: 'Sécurité, données et intégrations',
     faqs: [
       { q: 'Où sont stockées mes données ?', a: 'Vos données sont hébergées sur Supabase (infrastructure AWS), dans des datacenters situés en Europe (eu-west-3, Paris). Toutes les communications sont chiffrées via TLS.' },
@@ -141,8 +141,8 @@ const CATEGORIES = [
     id: 'ocr',
     icon: ScanLine,
     label: 'Scan OCR',
-    color: 'text-cyan-600',
-    bg: 'bg-cyan-50',
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bg: 'bg-cyan-50 dark:bg-cyan-500/10',
     description: 'Numérisation intelligente de documents',
     faqs: [
       { q: 'Comment scanner une facture ou un reçu ?', a: 'Allez dans la section "Scan OCR" (plan Business) ou utilisez le bouton d\'import dans la liste des factures. Uploadez un PDF ou une photo de votre document. L\'IA extrait automatiquement les informations : fournisseur, montant, TVA, date, lignes de prestation.' },
@@ -154,8 +154,8 @@ const CATEGORIES = [
     id: 'banque',
     icon: Landmark,
     label: 'Banque',
-    color: 'text-indigo-600',
-    bg: 'bg-indigo-50',
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bg: 'bg-indigo-50 dark:bg-indigo-500/10',
     description: 'Rapprochement bancaire et transactions',
     faqs: [
       { q: 'Comment connecter mon compte bancaire ?', a: 'Allez dans la section "Banque" (plan Pro ou supérieur). Cliquez sur "Connecter une banque" pour accéder au portail sécurisé Nordigen/GoCardless. Sélectionnez votre banque, authentifiez-vous, et vos transactions seront importées automatiquement.' },
@@ -167,8 +167,8 @@ const CATEGORIES = [
     id: 'facturx',
     icon: FileText,
     label: 'Factur-X',
-    color: 'text-teal-600',
-    bg: 'bg-teal-50',
+    color: 'text-teal-600 dark:text-teal-400',
+    bg: 'bg-teal-50 dark:bg-teal-500/10',
     description: 'Facturation électronique 2026',
     faqs: [
       { q: 'Qu\'est-ce que Factur-X ?', a: 'Factur-X est le standard français de facturation électronique (norme EN 16931). À partir de septembre 2026, toutes les entreprises françaises devront émettre et recevoir des factures électroniques en B2B. Factu.me génère automatiquement des factures conformes Factur-X.' },
@@ -179,25 +179,25 @@ const CATEGORIES = [
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Basse', color: 'text-gray-500', bg: 'bg-gray-100' },
-  { value: 'normal', label: 'Normale', color: 'text-blue-600', bg: 'bg-blue-50' },
-  { value: 'high', label: 'Haute', color: 'text-orange-600', bg: 'bg-orange-50' },
-  { value: 'urgent', label: 'Urgente', color: 'text-red-600', bg: 'bg-red-50' },
+  { value: 'low', label: 'Basse', color: 'text-gray-500 dark:text-zinc-400', bg: 'bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04]' },
+  { value: 'normal', label: 'Normale', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
+  { value: 'high', label: 'Haute', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10' },
+  { value: 'urgent', label: 'Urgente', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
 ];
 
 function FAQItem({ faq }: { faq: FAQ }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={cn('border-b border-gray-100 last:border-0', open && 'bg-gray-50/50')}>
+    <div className={cn('border-b border-gray-100 dark:border-white/[0.06] last:border-0', open && 'bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]')}>
       <button
-        className="w-full flex items-start justify-between gap-3 px-5 py-4 text-left group hover:bg-gray-50/80 transition-colors"
+        className="w-full flex items-start justify-between gap-3 px-5 py-4 text-left group hover:bg-gray-50/80 dark:hover:bg-white/[0.03] transition-colors"
         onClick={() => setOpen(!open)}
       >
-        <span className={cn('text-sm font-semibold transition-colors', open ? 'text-primary' : 'text-gray-800 group-hover:text-gray-900')}>
+        <span className={cn('text-sm font-semibold transition-colors', open ? 'text-primary' : 'text-gray-800 dark:text-zinc-200 group-hover:text-gray-900 dark:text-white')}>
           {faq.q}
         </span>
         <motion.span
-          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors bg-gray-100 text-gray-400"
+          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04] text-gray-400 dark:text-zinc-500"
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
@@ -214,7 +214,7 @@ function FAQItem({ faq }: { faq: FAQ }) {
             className="overflow-hidden"
           >
             <div className="px-5 pb-4">
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{faq.a}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">{faq.a}</p>
             </div>
           </motion.div>
         )}
@@ -278,14 +278,14 @@ function ContactForm() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+    <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]">
         <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
           <Headphones size={15} className="text-primary" />
         </div>
         <div>
-          <h3 className="font-bold text-gray-900 text-sm">Contacter le support</h3>
-          <p className="text-xs text-gray-400">Nous répondons sous 24h en moyenne</p>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Contacter le support</h3>
+          <p className="text-xs text-gray-400 dark:text-zinc-500">Nous répondons sous 24h en moyenne</p>
         </div>
       </div>
 
@@ -299,10 +299,10 @@ function ContactForm() {
             className="p-8 text-center"
           >
             <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 size={28} className="text-emerald-600" />
+              <CheckCircle2 size={28} className="text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h4 className="font-bold text-gray-900 mb-1">Message envoyé !</h4>
-            <p className="text-sm text-gray-500 mb-4">
+            <h4 className="font-bold text-gray-900 dark:text-white mb-1">Message envoyé !</h4>
+            <p className="text-sm text-gray-500 dark:text-zinc-400 mb-4">
               Votre ticket a été créé. Vous pouvez le suivre dans la section{" "}
               <Link href="/help/tickets" className="text-primary font-semibold hover:underline">
                 Mes tickets
@@ -326,39 +326,39 @@ function ContactForm() {
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Nom</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5">Nom</label>
                 <input
                   type="text"
                   value={profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : ''}
                   disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white dark:bg-white/[0.03]/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Email</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-500 cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white dark:bg-white/[0.03]/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sujet</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5">Sujet</label>
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Résumez votre demande..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Priorité</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5">Priorité</label>
               <div className="flex gap-2">
                 {PRIORITY_OPTIONS.map((opt) => (
                   <button
@@ -369,7 +369,7 @@ function ContactForm() {
                       'flex-1 px-3 py-2 rounded-xl border text-xs font-semibold transition-all',
                       priority === opt.value
                         ? `${opt.bg} ${opt.color} border-current/20 ring-2 ring-current/10`
-                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                        : 'border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-gray-500 dark:text-zinc-400 hover:border-gray-300'
                     )}
                   >
                     {opt.label}
@@ -379,13 +379,13 @@ function ContactForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Message</label>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-zinc-400 mb-1.5">Message</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Décrivez votre problème ou votre question en détail..."
                 rows={4}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
                 required
               />
             </div>
@@ -396,7 +396,7 @@ function ContactForm() {
               className={cn(
                 'w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white transition-all',
                 sending
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-gray-400 dark:bg-zinc-700 cursor-not-allowed'
                   : 'bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/30'
               )}
             >
@@ -442,9 +442,9 @@ export default function HelpPage() {
   const totalFaqs = CATEGORIES.reduce((s, c) => s + c.faqs.length, 0);
 
   const stats = [
-    { icon: BookOpen, label: 'Articles d\'aide', value: totalFaqs.toString(), color: 'text-blue-600' },
-    { icon: Clock, label: 'Temps de réponse', value: '< 24h', color: 'text-emerald-600' },
-    { icon: MessageSquare, label: 'Satisfaction', value: '98%', color: 'text-violet-600' },
+    { icon: BookOpen, label: 'Articles d\'aide', value: totalFaqs.toString(), color: 'text-blue-600 dark:text-blue-400' },
+    { icon: Clock, label: 'Temps de réponse', value: '< 24h', color: 'text-emerald-600 dark:text-emerald-400' },
+    { icon: MessageSquare, label: 'Satisfaction', value: '98%', color: 'text-violet-600 dark:text-violet-400' },
   ];
 
   return (
@@ -462,8 +462,8 @@ export default function HelpPage() {
             <HelpCircle size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900">Centre d&apos;aide</h1>
-            <p className="text-sm text-gray-400">{totalFaqs} questions pour maîtriser Factu.me</p>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Centre d&apos;aide</h1>
+            <p className="text-sm text-gray-400 dark:text-zinc-500">{totalFaqs} questions pour maîtriser Factu.me</p>
           </div>
         </div>
       </motion.div>
@@ -478,13 +478,13 @@ export default function HelpPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
-              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', stat.color === 'text-blue-600' ? 'bg-blue-50' : stat.color === 'text-emerald-600' ? 'bg-emerald-50' : 'bg-violet-50')}>
+            <div key={stat.label} className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm p-4 flex items-center gap-3">
+              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', stat.color === 'text-blue-600 dark:text-blue-400' ? 'bg-blue-50 dark:bg-blue-500/10' : stat.color === 'text-emerald-600 dark:text-emerald-400' ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-violet-50 dark:bg-violet-500/10')}>
                 <Icon size={16} className={stat.color} />
               </div>
               <div>
-                <p className="text-lg font-black text-gray-900 leading-tight">{stat.value}</p>
-                <p className="text-[11px] text-gray-400">{stat.label}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">{stat.value}</p>
+                <p className="text-[11px] text-gray-400 dark:text-zinc-500">{stat.label}</p>
               </div>
             </div>
           );
@@ -498,13 +498,13 @@ export default function HelpPage() {
         transition={{ duration: 0.3, delay: 0.1 }}
         className="relative"
       >
-        <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
         <input
           type="text"
           placeholder="Rechercher dans l'aide..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setActiveCategory(null); }}
-          className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+          className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
         />
       </motion.div>
 
@@ -526,17 +526,17 @@ export default function HelpPage() {
                   'flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all',
                   activeCategory === cat.id
                     ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20'
-                    : 'border-gray-100 bg-white hover:border-primary/30 hover:shadow-sm',
+                    : 'border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] hover:border-primary/30 hover:shadow-sm',
                 )}
               >
                 <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0', cat.bg)}>
                   <Icon size={14} className={cat.color} />
                 </div>
                 <div className="min-w-0">
-                  <span className={cn('text-xs font-semibold block', activeCategory === cat.id ? 'text-primary' : 'text-gray-700')}>
+                  <span className={cn('text-xs font-semibold block', activeCategory === cat.id ? 'text-primary' : 'text-gray-700 dark:text-zinc-300')}>
                     {cat.label}
                   </span>
-                  <span className="text-[10px] text-gray-400 truncate block">{cat.faqs.length} question{cat.faqs.length !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-zinc-500 truncate block">{cat.faqs.length} question{cat.faqs.length !== 1 ? 's' : ''}</span>
                 </div>
               </button>
             );
@@ -555,14 +555,14 @@ export default function HelpPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden"
             >
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 bg-gray-50/50">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]">
                 <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0', cat.bg)}>
                   <Icon size={15} className={cat.color} />
                 </div>
-                <h3 className="font-bold text-gray-900 text-sm">{cat.label}</h3>
-                <span className="ml-auto text-[11px] font-semibold text-gray-400">{cat.faqs.length} question{cat.faqs.length !== 1 ? 's' : ''}</span>
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm">{cat.label}</h3>
+                <span className="ml-auto text-[11px] font-semibold text-gray-400 dark:text-zinc-500">{cat.faqs.length} question{cat.faqs.length !== 1 ? 's' : ''}</span>
               </div>
               <div>
                 {cat.faqs.map((faq, idx) => (
@@ -579,9 +579,9 @@ export default function HelpPage() {
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <HelpCircle size={36} className="text-gray-200 mx-auto mb-3" />
-            <p className="font-semibold text-gray-400">Aucun résultat pour &laquo; {search} &raquo;</p>
-            <p className="text-sm text-gray-300 mt-1">Essayez d&apos;autres mots-clés ou contactez le support</p>
+            <HelpCircle size={36} className="text-gray-200 dark:text-zinc-700 mx-auto mb-3" />
+            <p className="font-semibold text-gray-400 dark:text-zinc-500">Aucun résultat pour &laquo; {search} &raquo;</p>
+            <p className="text-sm text-gray-300 dark:text-zinc-600 mt-1">Essayez d&apos;autres mots-clés ou contactez le support</p>
           </motion.div>
         )}
       </div>
@@ -594,7 +594,7 @@ export default function HelpPage() {
         className="space-y-4"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-gray-900">Besoin d&apos;aide ?</h2>
+          <h2 className="text-lg font-black text-gray-900 dark:text-white">Besoin d&apos;aide ?</h2>
           <Link
             href="/help/tickets"
             className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
@@ -609,32 +609,32 @@ export default function HelpPage() {
           <div className="space-y-3">
             <a
               href="mailto:contact@factu.me"
-              className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
+              className="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
             >
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Mail size={17} className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-sm">Email support</p>
-                <p className="text-xs text-gray-400 mt-0.5">contact@factu.me</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Email support</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">contact@factu.me</p>
               </div>
-              <ChevronRight size={14} className="text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight size={14} className="text-gray-300 dark:text-zinc-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
             </a>
 
             <a
               href="https://github.com/A0ik/FacturmeWeb/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
+              className="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
             >
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <BookOpen size={17} className="text-gray-600" />
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04] flex items-center justify-center flex-shrink-0">
+                <BookOpen size={17} className="text-gray-600 dark:text-zinc-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-sm">Signaler un bug</p>
-                <p className="text-xs text-gray-400 mt-0.5">GitHub Issues</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Signaler un bug</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">GitHub Issues</p>
               </div>
-              <ArrowUpRight size={13} className="text-gray-300 group-hover:text-primary transition-colors" />
+              <ArrowUpRight size={13} className="text-gray-300 dark:text-zinc-600 group-hover:text-primary transition-colors" />
             </a>
 
             <button
@@ -643,17 +643,17 @@ export default function HelpPage() {
                 'w-full flex items-center gap-3 rounded-2xl border p-4 transition-all group shadow-sm',
                 showForm
                   ? 'border-primary/30 bg-primary/5'
-                  : 'border-gray-100 bg-white hover:border-primary/30 hover:shadow-md'
+                  : 'border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] hover:border-primary/30 hover:shadow-md'
               )}
             >
-              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                <MessageSquare size={17} className="text-violet-600" />
+              <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                <MessageSquare size={17} className="text-violet-600 dark:text-violet-400" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="font-bold text-gray-900 text-sm">Ouvrir un ticket</p>
-                <p className="text-xs text-gray-400 mt-0.5">Formulaire de contact</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Ouvrir un ticket</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">Formulaire de contact</p>
               </div>
-              <ChevronRight size={14} className={cn('text-gray-300 transition-all', showForm ? 'rotate-90 text-primary' : 'group-hover:text-primary group-hover:translate-x-0.5')} />
+              <ChevronRight size={14} className={cn('text-gray-300 dark:text-zinc-600 transition-all', showForm ? 'rotate-90 text-primary' : 'group-hover:text-primary group-hover:translate-x-0.5')} />
             </button>
 
             <button
@@ -661,18 +661,18 @@ export default function HelpPage() {
               className={cn(
                 'w-full flex items-center gap-3 rounded-2xl border p-4 transition-all group shadow-sm',
                 showAIChat
-                  ? 'border-purple-300 bg-purple-50'
-                  : 'border-gray-100 bg-white hover:border-purple-300 hover:shadow-md'
+                  ? 'border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10'
+                  : 'border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] hover:border-purple-300 dark:border-purple-500/30 hover:shadow-md'
               )}
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-100 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={17} className="text-purple-600" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-100 dark:to-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={17} className="text-purple-600 dark:text-purple-400 dark:text-purple-400" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="font-bold text-gray-900 text-sm">Assistant IA</p>
-                <p className="text-xs text-gray-400 mt-0.5">Posez votre question en direct</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Assistant IA</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5">Posez votre question en direct</p>
               </div>
-              <ChevronRight size={14} className={cn('text-gray-300 transition-all', showAIChat ? 'rotate-90 text-purple-500' : 'group-hover:text-purple-500 group-hover:translate-x-0.5')} />
+              <ChevronRight size={14} className={cn('text-gray-300 dark:text-zinc-600 transition-all', showAIChat ? 'rotate-90 text-purple-500 dark:text-purple-400' : 'group-hover:text-purple-500 dark:text-purple-400 group-hover:translate-x-0.5')} />
             </button>
 
             <div className="flex items-center gap-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/15 p-4 shadow-sm">
@@ -680,7 +680,7 @@ export default function HelpPage() {
                 <Zap size={17} className="text-primary" />
               </div>
               <div>
-                <p className="font-bold text-gray-900 text-sm">Version actuelle</p>
+                <p className="font-bold text-gray-900 dark:text-white text-sm">Version actuelle</p>
                 <p className="text-xs text-primary font-semibold mt-0.5">v2.0 -- Mai 2026</p>
               </div>
             </div>
@@ -696,13 +696,13 @@ export default function HelpPage() {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="lg:col-span-1"
               >
-                <div className="rounded-2xl border border-purple-200 bg-white overflow-hidden shadow-md">
+                <div className="rounded-2xl border border-purple-200 dark:border-purple-500/20 bg-white dark:bg-white/[0.03] overflow-hidden shadow-md">
                   <div className="flex items-center justify-between bg-gradient-to-r from-primary to-purple-600 px-4 py-3 text-white">
                     <div className="flex items-center gap-2">
                       <Bot size={18} />
                       <span className="font-semibold text-sm">Assistant Factu.me</span>
                     </div>
-                    <button onClick={() => setShowAIChat(false)} className="rounded-full hover:bg-white/20 p-1 transition-colors">
+                    <button onClick={() => setShowAIChat(false)} className="rounded-full hover:bg-white dark:bg-white/[0.03]/20 p-1 transition-colors">
                       <ChevronDown size={16} />
                     </button>
                   </div>

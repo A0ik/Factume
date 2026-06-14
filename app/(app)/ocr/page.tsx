@@ -141,7 +141,7 @@ function ConfidenceRing({ value, size = 48, strokeWidth = 4 }: { value: number; 
 
   return (
     <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={center} cy={center} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-gray-200 dark:text-gray-700" />
+      <circle cx={center} cy={center} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-gray-200 dark:text-white/[0.08]" />
       <motion.circle
         cx={center} cy={center} r={radius} fill="none"
         strokeWidth={strokeWidth} strokeLinecap="round"
@@ -150,6 +150,7 @@ function ConfidenceRing({ value, size = 48, strokeWidth = 4 }: { value: number; 
         initial={{ strokeDashoffset: circumference }}
         animate={{ strokeDashoffset: offset }}
         transition={{ duration: 1.2, ease: 'easeOut' }}
+        style={{ filter: 'drop-shadow(0 0 4px currentColor)' }}
       />
     </svg>
   );
@@ -170,7 +171,7 @@ const DOCUMENT_TYPES: Record<string, { label: string; color: string; bg: string 
   invoice: { label: 'Facture', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30' },
   receipt: { label: 'Reçu', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
   credit_note: { label: 'Note de crédit', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30' },
-  delivery_note: { label: 'Bon de livraison', color: 'text-gray-700 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800/50' },
+  delivery_note: { label: 'Bon de livraison', color: 'text-gray-700 dark:text-zinc-400', bg: 'bg-gray-50 dark:bg-white/[0.03]' },
   quote: { label: 'Devis', color: 'text-violet-700 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/30' },
   expense_report: { label: 'Note de frais', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/30' },
   purchase_order: { label: 'Bon de commande', color: 'text-teal-700 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/30' },
@@ -254,7 +255,7 @@ const DEXT_TABS: { key: DextTab; label: string; icon: typeof Inbox }[] = [
 // ---------- Paywall for non-Business users ----------
 function PaywallSection() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#09090B] dark:via-[#0C0C0F] dark:to-[#09090B] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -264,7 +265,7 @@ function PaywallSection() {
         {/* Glow effect */}
         <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 via-green-500/20 to-teal-500/20 rounded-[2rem] blur-2xl" />
 
-        <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl overflow-hidden">
+        <div className="relative bg-white/80 dark:bg-white/[0.05] backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 shadow-2xl overflow-hidden">
           {/* Gradient header bar */}
           <div className="h-2 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500" />
 
@@ -282,7 +283,7 @@ function PaywallSection() {
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-3">
               Scan intelligent
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-gray-500 dark:text-zinc-400 mb-2">
               Analysez vos justificatifs en un clic avec l'IA
             </p>
 
@@ -310,7 +311,7 @@ function PaywallSection() {
                   <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center flex-shrink-0">
                     <Check size={14} className="text-white" strokeWidth={3} />
                   </div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{feature}</span>
+                  <span className="text-sm text-gray-700 dark:text-zinc-300 font-medium">{feature}</span>
                 </motion.div>
               ))}
             </div>
@@ -328,7 +329,7 @@ function PaywallSection() {
               </motion.button>
             </Link>
 
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
+            <p className="text-xs text-gray-400 dark:text-zinc-500 mt-4">
               Essai gratuit de 7 jours inclus
             </p>
           </div>
@@ -1088,12 +1089,12 @@ export default function OCRPage() {
 
   // ---------- Render ----------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#09090B] dark:via-[#0C0C0F] dark:to-[#09090B] p-4 md:p-6 lg:p-8">
       {/* ===== Header ===== */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8 overflow-hidden"
+        className="relative bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8 overflow-hidden"
       >
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full" />
@@ -1115,7 +1116,7 @@ export default function OCRPage() {
                 Propulsé par Gemini
               </motion.span>
             </div>
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-gray-500 dark:text-zinc-400">
               Analysez vos justificatifs en un clic avec l'IA
             </p>
           </div>
@@ -1125,7 +1126,7 @@ export default function OCRPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl border border-gray-200 dark:border-white/[0.06] text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
               >
                 <Eye size={16} />
                 Mes dépenses
@@ -1151,7 +1152,7 @@ export default function OCRPage() {
             whileHover={{ y: -4 }}
             className="relative group"
           >
-            <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
+            <div className="relative bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
               <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', color)} />
               <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5" />
               <div className="relative">
@@ -1159,7 +1160,7 @@ export default function OCRPage() {
                   <Icon size={18} className="text-white" />
                 </div>
                 <p className="text-xl font-black text-gray-900 dark:text-white group-hover:text-white transition-colors">{value}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-white/70 transition-colors mt-1">{label}</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 group-hover:text-white/70 transition-colors mt-1">{label}</p>
               </div>
             </div>
           </motion.div>
@@ -1185,8 +1186,8 @@ export default function OCRPage() {
                 'relative cursor-pointer group rounded-3xl border-2 border-dashed transition-all duration-300 overflow-hidden',
                 isDragging
                   ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 scale-[1.01]'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10',
-                'bg-white/50 dark:bg-slate-800/50'
+                  : 'border-gray-300 dark:border-white/[0.08] hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10',
+                'bg-white/50 dark:bg-white/[0.03]'
               )}
               style={{ minHeight: '280px' }}
             >
@@ -1221,14 +1222,14 @@ export default function OCRPage() {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                   {isDragging ? 'Déposez vos fichiers ici' : 'Glissez vos justificatifs ici'}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                <p className="text-gray-500 dark:text-zinc-400 text-sm mb-4">
                   ou <span className="text-emerald-600 dark:text-emerald-400 font-semibold">cliquez pour parcourir</span>
                 </p>
 
                 {/* File type badges */}
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   {['JPG', 'PNG', 'WEBP', 'HEIC', 'PDF'].map(type => (
-                    <span key={type} className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-slate-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <span key={type} className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.04] text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
                       {type}
                     </span>
                   ))}
@@ -1295,7 +1296,7 @@ export default function OCRPage() {
                 </div>
 
                 {/* Dext-style Tabs */}
-                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-slate-800 rounded-2xl overflow-x-auto">
+                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/[0.06] rounded-2xl overflow-x-auto">
                   {DEXT_TABS.map(tab => {
                     const count = tabCounts[tab.key];
                     const isActive = activeTab === tab.key;
@@ -1306,8 +1307,8 @@ export default function OCRPage() {
                         className={cn(
                           'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap',
                           isActive
-                            ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-gray-300'
                         )}
                       >
                         <tab.icon size={13} className={cn(tab.key === 'processing' && count > 0 && 'animate-spin')} />
@@ -1315,7 +1316,7 @@ export default function OCRPage() {
                         {count > 0 && (
                           <span className={cn(
                             'ml-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black',
-                            isActive ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+                            isActive ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400' : 'bg-gray-200 dark:bg-white/[0.04] text-gray-500 dark:text-zinc-400'
                           )}>
                             {count}
                           </span>
@@ -1338,7 +1339,7 @@ export default function OCRPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         className={cn(
-                          'relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-2xl border shadow-lg overflow-hidden',
+                          'relative bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-2xl border shadow-lg overflow-hidden',
                           dextStatus === 'to_review' ? 'border-amber-300/60 dark:border-amber-700/60' :
                           dextStatus === 'ready' ? 'border-emerald-300/60 dark:border-emerald-700/60' :
                           dextStatus === 'error' ? 'border-red-300/60 dark:border-red-700/60' :
@@ -1348,7 +1349,7 @@ export default function OCRPage() {
                         <div className="p-4">
                           <div className="flex items-start gap-3">
                             {/* Thumbnail */}
-                            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                            <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-white/[0.04] flex items-center justify-center overflow-hidden flex-shrink-0 relative">
                               {scannedFile.preview ? (
                                 <img src={scannedFile.preview} alt="" className="w-full h-full object-cover" />
                               ) : scannedFile.receiptUrl || scannedFile.result?.receipt_url ? (
@@ -1378,7 +1379,7 @@ export default function OCRPage() {
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <DocumentTypeBadge type={scannedFile.documentType || (scannedFile.result?.extracted as any)?.document_type} />
                                 {scannedFile.sourcePdfName && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-gray-100 dark:bg-white/[0.04] text-gray-500 dark:text-zinc-400">
                                     <FileText size={8} />
                                     {scannedFile.sourcePdfName.length > 20 ? scannedFile.sourcePdfName.substring(0, 17) + '...' : scannedFile.sourcePdfName}
                                   </span>
@@ -1387,7 +1388,7 @@ export default function OCRPage() {
                               {/* Montant et date pour factures complètes */}
                               {scannedFile.status === 'complete' && scannedFile.result?.extracted && (
                                 <div className="mt-1 flex flex-wrap items-center gap-x-2">
-                                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                  <span className="text-sm font-semibold text-gray-700 dark:text-zinc-300">
                                     {formatCurrency(scannedFile.result.extracted.amount || 0)}
                                   </span>
                                   {scannedFile.result.extracted.date && (
@@ -1465,7 +1466,7 @@ export default function OCRPage() {
 
                               {/* Progress bar */}
                               {(scannedFile.status === 'uploading' || scannedFile.status === 'analyzing' || scannedFile.status === 'segmenting') && (
-                                <div className="mt-2 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div className="mt-2 h-1.5 bg-gray-200 dark:bg-white/[0.04] rounded-full overflow-hidden">
                                   <motion.div
                                     initial={{ width: '0%' }}
                                     animate={{ width: `${scannedFile.progress}%` }}
@@ -1527,7 +1528,7 @@ export default function OCRPage() {
                                 whileHover={{ scale: 1.1, rotate: 90 }}
                                 whileTap={{ scale: 0.9 }}
                                 onClick={() => removeFile(scannedFile.id)}
-                                className="p-2 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors"
+                                className="p-2 rounded-lg bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors"
                               >
                                 <X size={14} />
                               </motion.button>
@@ -1591,10 +1592,10 @@ export default function OCRPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden"
+                className="bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden"
               >
                 {/* Review header */}
-                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+                <div className="p-5 border-b border-gray-100 dark:border-white/[0.06]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -1615,7 +1616,7 @@ export default function OCRPage() {
                   {/* Thumbnail preview */}
                   {(reviewingFile.preview || reviewingFile.receiptUrl || reviewingFile.result?.receipt_url) && (
                     <div
-                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
+                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/[0.04] cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
                       onClick={() => setPreviewImage({
                         url: reviewingFile.preview || reviewingFile.receiptUrl || reviewingFile.result?.receipt_url || '',
                         title: reviewingFile.result?.extracted?.vendor || reviewingFile.sourcePdfName || 'Document'
@@ -1676,7 +1677,7 @@ export default function OCRPage() {
                     </div>
                   )}
 
-                  <div className="h-px bg-gray-100 dark:bg-gray-700" />
+                  <div className="h-px bg-gray-100 dark:bg-white/[0.04]" />
 
                   {/* Vendor */}
                   <div>
@@ -1685,7 +1686,7 @@ export default function OCRPage() {
                       <input
                         value={editData?.vendor || ''}
                         onChange={(e) => setEditData(prev => prev ? { ...prev, vendor: e.target.value } : null)}
-                        className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                        className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                       />
                     ) : (
                       <p className="text-base font-bold text-gray-900 dark:text-white mt-0.5">
@@ -1714,7 +1715,7 @@ export default function OCRPage() {
                             step="0.01"
                             value={editData?.amount ?? ''}
                             onChange={(e) => setEditData(prev => prev ? { ...prev, amount: parseFloat(e.target.value) || 0 } : null)}
-                            className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                            className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                           />
                         </div>
                       ) : (
@@ -1733,11 +1734,11 @@ export default function OCRPage() {
                             step="0.01"
                             value={editData?.vat_amount ?? ''}
                             onChange={(e) => setEditData(prev => prev ? { ...prev, vat_amount: parseFloat(e.target.value) || 0 } : null)}
-                            className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                            className="w-full pl-7 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                           />
                         </div>
                       ) : (
-                        <p className="text-base font-bold text-gray-700 dark:text-gray-300 mt-0.5">
+                        <p className="text-base font-bold text-gray-700 dark:text-zinc-300 mt-0.5">
                           {reviewingFile.result.extracted.vat_amount > 0
                             ? formatCurrency(reviewingFile.result.extracted.vat_amount)
                             : 'Non détecté'}
@@ -1754,7 +1755,7 @@ export default function OCRPage() {
                         type="date"
                         value={editData?.date || ''}
                         onChange={(e) => setEditData(prev => prev ? { ...prev, date: e.target.value } : null)}
-                        className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                        className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm font-semibold focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                       />
                     ) : (
                       <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">
@@ -1779,7 +1780,7 @@ export default function OCRPage() {
                               'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all',
                               editData?.category === cat.value
                                 ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                                : 'border-gray-200 dark:border-white/[0.08] text-gray-600 dark:text-zinc-400 hover:border-gray-300'
                             )}
                           >
                             <cat.Icon size={14} />
@@ -1792,7 +1793,7 @@ export default function OCRPage() {
                         {(() => {
                           const cat = CATEGORIES.find(c => c.value === reviewingFile.result!.extracted.category);
                           return cat ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-sm font-bold text-gray-900 dark:text-white">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/[0.04] text-sm font-bold text-gray-900 dark:text-white">
                               <cat.Icon size={14} />
                               {cat.label}
                             </span>
@@ -1808,7 +1809,7 @@ export default function OCRPage() {
                   {(reviewingFile.result.extracted.ht_amount ?? 0) > 0 && (
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Montant HT</label>
-                      <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-0.5">
+                      <p className="text-sm font-bold text-gray-700 dark:text-zinc-300 mt-0.5">
                         {formatCurrency(reviewingFile.result.extracted.ht_amount)}
                       </p>
                     </div>
@@ -1826,21 +1827,21 @@ export default function OCRPage() {
                           value={editData?.accounting_code || ''}
                           onChange={(e) => setEditData(prev => prev ? { ...prev, accounting_code: e.target.value } : null)}
                           placeholder="Code PCG (ex: 606400)"
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                         />
                         <input
                           type="text"
                           value={editData?.account_label || ''}
                           onChange={(e) => setEditData(prev => prev ? { ...prev, account_label: e.target.value } : null)}
                           placeholder="Libellé du compte"
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-white/[0.04] text-gray-900 dark:text-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                         />
                       </div>
                     ) : (
                       <p className="text-sm font-bold text-gray-900 dark:text-white">
                         {editData?.accounting_code || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.code || 'Non assigné'}
                         {((editData?.account_label || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.label)) && (
-                          <span className="font-normal text-gray-500 dark:text-gray-400 ml-1">
+                          <span className="font-normal text-gray-500 dark:text-zinc-400 ml-1">
                             — {editData?.account_label || CATEGORY_ACCOUNTING[reviewingFile.result.extracted.category]?.label}
                           </span>
                         )}
@@ -1888,8 +1889,8 @@ export default function OCRPage() {
                             className="mt-2 space-y-2"
                           >
                             {reviewingFile.result.extracted.line_items.map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-slate-700/50 rounded-xl text-xs">
-                                <span className="text-gray-700 dark:text-gray-300 flex-1 truncate">
+                              <div key={idx} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-white/[0.02] rounded-xl text-xs">
+                                <span className="text-gray-700 dark:text-zinc-300 flex-1 truncate">
                                   {item.description}
                                 </span>
                                 <span className="font-bold text-gray-900 dark:text-white ml-2">
@@ -1913,10 +1914,10 @@ export default function OCRPage() {
                           onChange={(e) => setEditData(prev => prev ? { ...prev, description: e.target.value } : null)}
                           rows={2}
                           placeholder="Ajouter une description..."
-                          className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
+                          className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
                         />
                       ) : (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                        <p className="text-sm text-gray-600 dark:text-zinc-400 mt-0.5">
                           {reviewingFile.result.extracted.description}
                         </p>
                       )}
@@ -1933,7 +1934,7 @@ export default function OCRPage() {
                     <select
                       value={selectedClientId}
                       onChange={(e) => setSelectedClientId(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm font-medium focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm font-medium focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                     >
                       <option value="">Aucun client</option>
                       {clients.map(c => (
@@ -1950,7 +1951,7 @@ export default function OCRPage() {
                       value={projectCode}
                       onChange={(e) => setProjectCode(e.target.value)}
                       placeholder="Ex: PROJ-2024-001"
-                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+                      className="w-full mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.08] text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
                     />
                   </div>
                 </div>
@@ -1966,7 +1967,7 @@ export default function OCRPage() {
                 )}
 
                 {/* Actions */}
-                <div className="p-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                <div className="p-5 border-t border-gray-100 dark:border-white/[0.06] space-y-3">
                   {editMode ? (
                     <>
                       <motion.button
@@ -1983,7 +1984,7 @@ export default function OCRPage() {
                           setEditData(reviewingFile.result?.extracted || null);
                           setEditMode(false);
                         }}
-                        className="w-full py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                        className="w-full py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-300 transition-colors"
                       >
                         Annuler
                       </button>
@@ -2006,7 +2007,7 @@ export default function OCRPage() {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setEditMode(true)}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.06] text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                         >
                           <Edit2 size={14} />
                           Corriger
@@ -2016,7 +2017,7 @@ export default function OCRPage() {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => removeFile(reviewingFile.id)}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.06] text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <Trash2 size={14} />
                           Rejeter
@@ -2043,9 +2044,9 @@ export default function OCRPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden"
+                className="bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden"
               >
-                <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+                <div className="p-5 border-b border-gray-100 dark:border-white/[0.06]">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Détail de la dépense</h3>
                     <motion.button
@@ -2060,7 +2061,7 @@ export default function OCRPage() {
                   </div>
                   {reviewingDbExpense.receipt_url && (
                     <div
-                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
+                      className="mt-3 h-32 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/[0.04] cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all relative group"
                       onClick={() => setPreviewImage({ url: reviewingDbExpense.receipt_url!, title: reviewingDbExpense.vendor || 'Document' })}
                     >
                       <img src={reviewingDbExpense.receipt_url} alt={`Justificatif: ${reviewingDbExpense.vendor || 'Document'}`} className="w-full h-full object-cover" />
@@ -2074,7 +2075,7 @@ export default function OCRPage() {
                   <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold',
                     reviewingDbExpense.status === 'reviewed' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
                     reviewingDbExpense.status === 'ready' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
-                    reviewingDbExpense.status === 'validated' || reviewingDbExpense.status === 'exported' ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' :
+                    reviewingDbExpense.status === 'validated' || reviewingDbExpense.status === 'exported' ? 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-zinc-400' :
                     'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
                   )}>
                     {reviewingDbExpense.status === 'reviewed' ? 'Vérifié' :
@@ -2092,7 +2093,7 @@ export default function OCRPage() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TVA</label>
-                      <p className="text-base font-bold text-gray-700 dark:text-gray-300 mt-0.5">{reviewingDbExpense.vat_amount > 0 ? formatCurrency(reviewingDbExpense.vat_amount) : 'Non détecté'}</p>
+                      <p className="text-base font-bold text-gray-700 dark:text-zinc-300 mt-0.5">{reviewingDbExpense.vat_amount > 0 ? formatCurrency(reviewingDbExpense.vat_amount) : 'Non détecté'}</p>
                     </div>
                   </div>
                   <div>
@@ -2101,23 +2102,23 @@ export default function OCRPage() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Catégorie</label>
-                    <div className="mt-0.5">{(() => { const cat = CATEGORIES.find(c => c.value === reviewingDbExpense.category); return cat ? (<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-700 text-sm font-bold text-gray-900 dark:text-white"><cat.Icon size={14} />{cat.label}</span>) : (<p className="text-sm text-gray-500">Non catégorisé</p>); })()}</div>
+                    <div className="mt-0.5">{(() => { const cat = CATEGORIES.find(c => c.value === reviewingDbExpense.category); return cat ? (<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/[0.04] text-sm font-bold text-gray-900 dark:text-white"><cat.Icon size={14} />{cat.label}</span>) : (<p className="text-sm text-gray-500">Non catégorisé</p>); })()}</div>
                   </div>
                   <div className="p-3 bg-amber-50/80 dark:bg-amber-900/20 rounded-xl border border-amber-200/60 dark:border-amber-800/60">
                     <label className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1 mb-1"><Sparkles size={10} /> Compte de charge</label>
                     <p className="text-sm font-bold text-gray-900 dark:text-white">
                       {reviewingDbExpense.account_code || 'Non assigné'}
-                      {reviewingDbExpense.account_label && (<span className="font-normal text-gray-500 dark:text-gray-400 ml-1">— {reviewingDbExpense.account_label}</span>)}
+                      {reviewingDbExpense.account_label && (<span className="font-normal text-gray-500 dark:text-zinc-400 ml-1">— {reviewingDbExpense.account_label}</span>)}
                     </p>
                   </div>
                   {reviewingDbExpense.description && (
                     <div>
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Description</label>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{reviewingDbExpense.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-zinc-400 mt-0.5">{reviewingDbExpense.description}</p>
                     </div>
                   )}
                 </div>
-                <div className="p-5 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                <div className="p-5 border-t border-gray-100 dark:border-white/[0.06] space-y-3">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Workflow</p>
                     <div className="flex gap-2">
@@ -2129,7 +2130,7 @@ export default function OCRPage() {
                       ].map(s => (
                         <button key={s.key} onClick={() => updateExpenseStatus(reviewingDbExpense.id, s.key)}
                           className={cn('flex-1 py-2 rounded-xl text-[11px] font-bold transition-colors',
-                            reviewingDbExpense.status === s.key ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600'
+                            reviewingDbExpense.status === s.key ? 'bg-gray-900 dark:bg-white text-white dark:text-white' : 'bg-gray-100 dark:bg-white/[0.04] text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-slate-600'
                           )}>
                           {s.label}
                         </button>
@@ -2150,7 +2151,7 @@ export default function OCRPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-8 text-center"
+                className="bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-8 text-center"
               >
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-100 dark:from-violet-900/30 dark:to-fuchsia-900/30 flex items-center justify-center mx-auto mb-4">
                   <FileImage size={28} className="text-violet-400 dark:text-violet-500" />
@@ -2190,9 +2191,9 @@ export default function OCRPage() {
             <Loader2 size={24} className="animate-spin text-violet-500" />
           </div>
         ) : dbExpenses.length === 0 ? (
-          <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-12 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-6">
-              <Clock size={36} className="text-gray-300 dark:text-gray-600" />
+          <div className="bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-12 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-[#0C0C0F] dark:to-white/[0.04] flex items-center justify-center mx-auto mb-6">
+              <Clock size={36} className="text-gray-300 dark:text-zinc-600" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Aucun scan récent</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
@@ -2209,7 +2210,7 @@ export default function OCRPage() {
             </motion.button>
           </div>
         ) : (
-          <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden">
+          <div className="bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 overflow-hidden">
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {dbExpenses.slice(0, 30).map((expense, idx) => (
                 <motion.div
@@ -2226,7 +2227,7 @@ export default function OCRPage() {
                   )}
                 >
                   {/* Thumbnail */}
-                  <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/[0.04] flex items-center justify-center overflow-hidden flex-shrink-0">
                     {expense.receipt_url ? (
                       <img src={expense.receipt_url} alt={`Miniature: ${expense.vendor || 'Document'}`} className="w-full h-full object-cover" />
                     ) : (
@@ -2263,7 +2264,7 @@ export default function OCRPage() {
                   {/* Category icon */}
                   {(() => {
                     const cat = CATEGORIES.find(c => c.value === expense.category);
-                    return cat ? <cat.Icon size={16} className="text-gray-500 dark:text-gray-400" /> : null;
+                    return cat ? <cat.Icon size={16} className="text-gray-500 dark:text-zinc-400" /> : null;
                   })()}
 
                   {/* Amount */}
@@ -2291,7 +2292,7 @@ export default function OCRPage() {
                      expense.status === 'reviewed' ? 'Vérifié' : 'Attente'}
                   </span>
 
-                  <ChevronRight size={16} className="text-gray-300 dark:text-gray-600" />
+                  <ChevronRight size={16} className="text-gray-300 dark:text-zinc-600" />
                 </motion.div>
               ))}
             </div>
@@ -2342,7 +2343,7 @@ export default function OCRPage() {
                     <div key={idx} className={cn('rounded-xl border-2 p-4', colorClass)}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center text-sm font-black text-gray-700 dark:text-gray-300 shadow-sm">
+                          <div className="w-8 h-8 rounded-lg bg-white dark:bg-white/[0.06] flex items-center justify-center text-sm font-black text-gray-700 dark:text-zinc-300 shadow-sm">
                             {idx + 1}
                           </div>
                           <div>
@@ -2374,7 +2375,7 @@ export default function OCRPage() {
                 </motion.button>
                 <button
                   onClick={() => setPendingSegments(null)}
-                  className="px-6 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  className="px-6 py-3 rounded-2xl border border-gray-200 dark:border-white/[0.06] text-sm font-bold text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   Annuler
                 </button>
@@ -2396,20 +2397,20 @@ export default function OCRPage() {
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => setPreviewZoom(z => Math.max(0.25, z - 0.25))}
-              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/[0.04] hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               <ZoomOut size={14} />
             </button>
             <span className="text-xs font-bold text-gray-500 w-12 text-center">{Math.round(previewZoom * 100)}%</span>
             <button
               onClick={() => setPreviewZoom(z => Math.min(3, z + 0.25))}
-              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/[0.04] hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               <ZoomIn size={14} />
             </button>
             <button
               onClick={() => setPreviewZoom(1)}
-              className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-xs font-bold text-gray-500"
+              className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/[0.04] hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-xs font-bold text-gray-500"
             >
               Reset
             </button>

@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { InvoiceItem, DocumentType, VoiceUncertainField } from '@/types';
+import { Invoice, InvoiceItem, DocumentType, VoiceUncertainField } from '@/types';
 import { generateId } from '@/lib/utils';
 import { mergeInvoiceItems } from '@/lib/voice-merge';
 
@@ -90,6 +90,10 @@ export interface DocumentSessionState {
 
   // ─── Lifecycle ───────────────────────────────────────
   reset: () => void;
+
+  // ─── Edition ─────────────────────────────────────────
+  /** Hydrate la session depuis une facture existante (mode édition). */
+  hydrate: (invoice: Invoice) => void;
 }
 
 export interface InitParams {
@@ -521,5 +525,61 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       sessionId: generateId(),
       issueDate: new Date().toISOString().split('T')[0],
     });
+  },
+
+  // ─── Edition — hydratation depuis une facture existante ───
+  hydrate: (invoice) => {
+    const issueDate = invoice.issue_date || new Date().toISOString().split('T')[0];
+    const initialDays = invoice.due_date
+      ? Math.max(0, Math.round((new Date(invoice.due_date).getTime() - new Date(issueDate).getTime()) / (1000 * 60 * 60 * 24)))
+      : 30;
+    const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
+
+    const rawItems = (invoice.items?.length ? invoice.items : []).map((i) => {
+      const base: Omit<InvoiceItem, 'total'> = {
+        id: generateId(),
+        description: i.description || '',
+        quantity: i.quantity ?? 1,
+        unit_price: i.unit_price ?? 0,
+        vat_rate: i.vat_rate ?? 20,
+      };
+      if (i.discount_percent != null) (base as any).discount_percent = i.discount_percent;
+      return base;
+    });
+    const items = rawItems.length > 0
+      ? rawItems
+      : [{ id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 }] as Omit<InvoiceItem, 'total'>[];
+
+    const discountPercent = invoice.discount_percent || 0;
+    const computed = computeFromItems(items, discountPercent);
+
+    set({
+      ...initialState,
+      documentType: (invoice.document_type as DocumentType) || 'invoice',
+      sessionId: generateId(),
+      clientId: invoice.client_id || null,
+      clientName: invoice.client?.name || invoice.client_name_override || '',
+      clientEmail: (invoice as any).client_email || invoice.client?.email || '',
+      clientPhone: (invoice as any).client_phone || invoice.client?.phone || '',
+      clientAddress: (invoice as any).client_address || invoice.client?.address || '',
+      clientCity: (invoice as any).client_city || invoice.client?.city || '',
+      clientPostalCode: (invoice as any).client_postal_code || invoice.client?.postal_code || '',
+      clientSiret: invoice.client?.siret || '',
+      clientVatNumber: invoice.client?.vat_number || '',
+      clientType: (invoice as any).client_type || null,
+      items,
+      notes: invoice.notes || '',
+      discountPercent,
+      issueDate,
+      paymentDays: initialDays,
+      paymentTermId: termMap[initialDays] || `custom-${initialDays}`,
+      linkedInvoiceId: invoice.linked_invoice_id || null,
+      ...computed,
+      dueDate: computeDueDate(issueDate, initialDays),
+      canUndo: false,
+      canRedo: false,
+    });
+    history.past = [];
+    history.future = [];
   },
 }));

@@ -6,7 +6,7 @@ import {
   Plus, Trash2, ChevronDown,
   Building2, User, Search, Percent,
   CalendarDays, MessageSquare,
-  Clock, CheckCircle2, Receipt,
+  Clock, CheckCircle2, Receipt, Package, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CompanySearch } from '@/components/ui/CompanySearch';
@@ -14,6 +14,12 @@ import { useDocumentSessionStore } from '../documentSessionStore';
 import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
 import InlineDoubtCard from '../DoubtResolution/InlineDoubtCard';
 import TemplateSelector from './TemplateSelector';
+import PaymentTermsSelector from '@/components/ui/PaymentTermsSelector';
+import FacturXWarnings from '@/components/ui/FacturXWarnings';
+import { PDPValidator } from '@/components/ui/PDPValidator';
+import { ProductCatalogModal } from '@/components/invoices/ProductCatalogModal';
+import { Product } from '@/types';
+import { toast } from 'sonner';
 
 const springFast = { type: 'spring' as const, damping: 25, stiffness: 400 };
 const springSmooth = { type: 'spring' as const, damping: 28, stiffness: 300 };
@@ -199,6 +205,7 @@ export default function DocumentFormPanel({
     discountPercent,
     issueDate,
     paymentDays,
+    paymentTermId,
     subtotal,
     vatAmount,
     globalDiscountAmount,
@@ -211,11 +218,80 @@ export default function DocumentFormPanel({
     updateItem,
     addItem,
     removeItem,
+    dueDate,
   } = store;
 
   const config = DOC_TYPE_CONFIGS[documentType];
   const [showClientTypeModal, setShowClientTypeModal] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // ─── Catalogue produits (modal partagé) ───────────────
+  const [showCatalog, setShowCatalog] = useState(false);
+  // null = ajout multiple (bulk) ; sinon id de la ligne à remplacer.
+  const [catalogReplaceId, setCatalogReplaceId] = useState<string | null>(null);
+
+  const productDesc = useCallback(
+    (p: Product) => p.name + (p.description ? `\n${p.description}` : ''),
+    [],
+  );
+
+  const openCatalogBulk = useCallback(() => {
+    setCatalogReplaceId(null);
+    setShowCatalog(true);
+  }, []);
+
+  const openCatalogReplace = useCallback((itemId: string) => {
+    setCatalogReplaceId(itemId);
+    setShowCatalog(true);
+  }, []);
+
+  const handleCatalogApply = useCallback((prods: Product[]) => {
+    if (catalogReplaceId && prods.length === 1) {
+      const p = prods[0];
+      const desc = productDesc(p);
+      updateItem(catalogReplaceId, 'description', desc);
+      updateItem(catalogReplaceId, 'unit_price', p.unit_price);
+      updateItem(catalogReplaceId, 'vat_rate', p.vat_rate);
+      toast.success('Article importé depuis le catalogue');
+    } else {
+      const queue = [...prods];
+      // Remplit la première ligne vide s'il y en a une.
+      const firstEmpty = store.items.find((i) => !i.description && i.unit_price === 0);
+      if (firstEmpty) {
+        const p = queue.shift()!;
+        updateItem(firstEmpty.id, 'description', productDesc(p));
+        updateItem(firstEmpty.id, 'unit_price', p.unit_price);
+        updateItem(firstEmpty.id, 'vat_rate', p.vat_rate);
+      }
+      for (const p of queue) {
+        addItem({
+          description: productDesc(p),
+          quantity: 1,
+          unit_price: p.unit_price,
+          vat_rate: p.vat_rate,
+        });
+      }
+      toast.success(`${prods.length} article${prods.length > 1 ? 's' : ''} ajouté${prods.length > 1 ? 's' : ''} depuis le catalogue`);
+    }
+    setShowCatalog(false);
+    setCatalogReplaceId(null);
+  }, [catalogReplaceId, store.items, updateItem, addItem, productDesc]);
+
+  // ─── Objet facture pour la conformité (Factur-X / PDP) ───
+  const complianceInvoice = useMemo(() => ({
+    issue_date: issueDate,
+    due_date: dueDate || undefined,
+    document_type: documentType,
+    client_name_override: clientName || undefined,
+    client_email: clientEmail || undefined,
+    client_phone: clientPhone || undefined,
+    client_address: clientAddress || undefined,
+    client_city: clientCity || undefined,
+    client_postal_code: clientPostalCode || undefined,
+    client_siret: clientSiret || undefined,
+    client_vat_number: clientVatNumber || undefined,
+    items,
+  }), [issueDate, dueDate, documentType, clientName, clientEmail, clientPhone, clientAddress, clientCity, clientPostalCode, clientSiret, clientVatNumber, items]);
 
   // ─── Field Ref Map for Doubt Resolution ────────────
   const fieldRefMap = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -455,9 +531,19 @@ export default function DocumentFormPanel({
           title="Lignes"
           icon={<Receipt size={14} className="text-emerald-500" />}
           badge={
-            <span className="text-[10px] font-bold text-gray-400">
-              {items.length} ligne{items.length > 1 ? 's' : ''}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); openCatalogBulk(); }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                title="Ajouter plusieurs articles depuis le catalogue"
+              >
+                <Package size={12} /> Catalogue
+              </button>
+              <span className="text-[10px] font-bold text-gray-400">
+                {items.length} ligne{items.length > 1 ? 's' : ''}
+              </span>
+            </div>
           }
           defaultOpen={true}
         >
@@ -488,16 +574,26 @@ export default function DocumentFormPanel({
                       hasDoubt={hasDoubtFor(`items[${idx}].description`)}
                     />
                   </div>
-                  {items.length > 1 && (
+                  <div className="mt-6 flex items-center gap-0.5 flex-shrink-0">
                     <motion.button
                       whileTap={{ scale: 0.85 }}
-                      onClick={() => removeItem(item.id)}
-                      className="mt-6 w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
-                      title="Supprimer cette ligne"
+                      onClick={() => openCatalogReplace(item.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                      title="Importer depuis le catalogue"
                     >
-                      <Trash2 size={13} />
+                      <Package size={13} />
                     </motion.button>
-                  )}
+                    {items.length > 1 && (
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => removeItem(item.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                        title="Supprimer cette ligne"
+                      >
+                        <Trash2 size={13} />
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Qty, Price, TVA */}
@@ -649,17 +745,15 @@ export default function DocumentFormPanel({
                   <Clock size={9} className="text-gray-400" />
                   Delai paiement
                 </label>
-                <select
+                <PaymentTermsSelector
+                  termId={paymentTermId}
                   value={paymentDays}
-                  onChange={(e) => updateField('paymentDays', parseInt(e.target.value))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all appearance-none cursor-pointer"
-                >
-                  <option value={0}>A reception</option>
-                  <option value={15}>15 jours</option>
-                  <option value={30}>30 jours</option>
-                  <option value={45}>45 jours</option>
-                  <option value={60}>60 jours</option>
-                </select>
+                  onChange={(days, id) => {
+                    updateField('paymentDays', days);
+                    updateField('paymentTermId', id);
+                  }}
+                  issueDate={issueDate}
+                />
               </div>
             </div>
 
@@ -676,6 +770,29 @@ export default function DocumentFormPanel({
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 dark:focus:border-emerald-500 transition-all resize-none"
               />
             </div>
+          </div>
+        </FormSection>
+
+        {/* ═══════════ CONFORMITÉ (Factur-X / PDP) ═══════════ */}
+        <FormSection
+          title="Conformité"
+          icon={<ShieldCheck size={14} className="text-amber-500" />}
+          defaultOpen={false}
+          badge={clientType === 'b2b' ? (
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">B2B</span>
+          ) : undefined}
+        >
+          <div className="space-y-3">
+            <FacturXWarnings
+              invoice={complianceInvoice}
+              profile={profile}
+              variant="accordion"
+            />
+            <PDPValidator
+              invoice={complianceInvoice}
+              profile={profile}
+              mode="accordion"
+            />
           </div>
         </FormSection>
       </div>
@@ -697,6 +814,15 @@ export default function DocumentFormPanel({
           );
         })}
       </AnimatePresence>
+
+      {/* ─── Catalogue produits (modal partagé) ─── */}
+      <ProductCatalogModal
+        open={showCatalog}
+        onClose={() => setShowCatalog(false)}
+        onApply={handleCatalogApply}
+        replaceMode={catalogReplaceId !== null}
+        userId={profile?.id}
+      />
     </div>
   );
 }

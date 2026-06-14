@@ -1,9 +1,12 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
-export default function Redirect() {
-  const router = useRouter();
-  useEffect(() => { router.replace('/contacts?tab=crm'); }, [router]);
-  return null;
+import CrmKanbanView from '@/components/crm/CrmKanbanView';
+
+/**
+ * /crm — route canonique du véritable Pipeline CRM (Kanban drag & drop).
+ * Auparavant un stub qui redirigeait (avec un bug) vers /contacts?tab=crm.
+ * Désormais le vrai Kanban s'affiche ici directement.
+ */
+export default function CrmPage() {
+  return <CrmKanbanView />;
 }

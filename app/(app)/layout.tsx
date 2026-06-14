@@ -162,7 +162,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 : "mx-auto px-5 lg:px-8",
               pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
                 ? "max-w-[1800px]"
-                : pathname.startsWith('/contracts')
+                : pathname.startsWith('/contracts') || pathname === '/dashboard' || pathname === '/'
                 ? "max-w-[1400px]"
                 : !pathname.startsWith('/cabinet')
                 ? "max-w-7xl"
