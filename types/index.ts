@@ -187,6 +187,11 @@ export interface Invoice {
   stripe_payment_link_id?: string;
   stripe_payment_link_url?: string;
   sumup_checkout_id?: string;
+  // INSPECTOR (BUG 2 + BUG 3) — source de vérité unique du lien de paiement.
+  payment_provider?: 'stripe' | 'sumup' | null;
+  payment_link_amount?: number | null;
+  payment_link_stale?: boolean;
+  qr_data_url?: string;
   partial_payments?: PartialPayment[];
   amount_paid?: number;
   voice_transcript?: string;

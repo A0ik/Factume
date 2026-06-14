@@ -7,6 +7,7 @@
 import React from 'react';
 import { Document, Page, Text, View, Image, Link } from '@react-pdf/renderer';
 import { Invoice, Profile } from '@/types';
+import { resolvePaymentLink } from '@/lib/payment-link';
 
 // ── Document type metadata ────────────────────────────────────────────────────
 
@@ -168,12 +169,14 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
 
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client';
   const companyName = profile.company_name || '';
-  // Payment link detection: check all possible fields for Stripe and SumUp
-  const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
-  // Provider detection: explicit check using sumup_checkout_id to avoid ambiguity
-  const isStripePayment = !!(invoice.stripe_payment_link_url || invoice.stripe_payment_url);
-  const isSumUpPayment = !!invoice.sumup_checkout_id || (!isStripePayment && !!invoice.payment_link);
-  const paymentMethod = isStripePayment ? 'Stripe' : isSumUpPayment ? 'SumUp' : '';
+  // INSPECTOR (BUG 2 + BUG 3) — résolveur unique : url vide si stale, provider
+  // depuis payment_provider. Remplace l'ancienne inférence par colonnes qui
+  // priorisait stripe_payment_link_url (jamais nettoyée au switch → BUG 2).
+  const resolvedPayment = resolvePaymentLink(invoice);
+  const paymentUrl = resolvedPayment.url;
+  const isStripePayment = resolvedPayment.provider === 'stripe';
+  const isSumUpPayment = resolvedPayment.provider === 'sumup';
+  const paymentMethod = resolvedPayment.provider === 'stripe' ? 'Stripe' : resolvedPayment.provider === 'sumup' ? 'SumUp' : '';
 
   // Company info lines
   const senderInfo: string[] = [];

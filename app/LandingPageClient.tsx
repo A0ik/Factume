@@ -297,6 +297,7 @@ const faqItems = [
 export default function LandingPageClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showSticky, setShowSticky] = useState(false);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [confettiFire, setConfettiFire] = useState(0);
   const [navLight, setNavLight] = useState(false);
@@ -308,8 +309,12 @@ export default function LandingPageClient() {
   }, []);
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
+    const fn = () => {
+      setScrolled(window.scrollY > 40);
+      setShowSticky(window.scrollY > 600);
+    };
     window.addEventListener('scroll', fn, { passive: true });
+    fn();
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
@@ -374,10 +379,10 @@ export default function LandingPageClient() {
             <Link href="/login" className={cn('hidden sm:inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors duration-300 hover:text-emerald-500', navText)}>
               <LogIn className="w-3.5 h-3.5" />Connexion
             </Link>
-            <Link href="/register" className="inline-flex items-center gap-1 text-[11px] sm:text-[13px] font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-colors duration-200 active:scale-[0.97] whitespace-nowrap">
-              <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <Link href="/register" className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-400 px-4 sm:px-5 py-2.5 rounded-full transition-colors duration-200 active:scale-[0.97] whitespace-nowrap min-h-[44px]">
+              <span className="hidden sm:inline">Commencer gratuitement</span><span className="sm:hidden">Commencer</span><ArrowRight className="w-3.5 h-3.5" />
             </Link>
-            <button onClick={() => setMenuOpen(!menuOpen)} className={cn('md:hidden p-1 transition-colors duration-300', navLight ? 'text-neutral-700' : 'text-white')}>
+            <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Ouvrir le menu" className={cn('md:hidden -mr-1 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg transition-colors duration-300', navLight ? 'text-neutral-700 hover:bg-black/5' : 'text-white hover:bg-white/10')}>
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
@@ -405,12 +410,12 @@ export default function LandingPageClient() {
           <div className="absolute bottom-[-10%] left-[-10%] w-[800px] h-[800px] bg-emerald-500/[0.06] rounded-full blur-[180px] animate-[blob_15s_ease-in-out_infinite]" style={{ animationDelay: '-5s' }} />
         </div>
 
-        <div className={`relative z-10 ${LC} py-16 sm:py-24 md:py-32 2xl:py-40 w-full`}>
+        <div className={`relative z-10 ${LC} py-16 sm:py-16 sm:py-24 md:py-32 2xl:py-40 w-full`}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 2xl:gap-20 items-center">
             <div className="lg:col-span-7 space-y-8 2xl:space-y-10">
               {/* H1 — UN headline, RIEN d'autre au-dessus */}
               <R delay={0.08}>
-                <h1 className="text-3xl sm:text-5xl md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
+                <h1 className="text-[clamp(2rem,8vw,3rem)] md:text-7xl 2xl:text-[6.5rem] font-bold tracking-tight text-white leading-[1.05]">
                   Dictez votre facture<br />par IA.{' '}
                   <span className="text-emerald-400">
                     <span className="relative inline">
@@ -492,16 +497,16 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={1} />
 
       {/* ════════════ UNE SOLUTION POUR TOUS — Bento asymétrique ════════════ */}
-      <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className={LC}>
           <div className="max-w-2xl mb-12 md:mb-16 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">Un outil, tous les métiers</p></R>
-            <R delay={0.06}><h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.08]">Une solution pour <span className="text-emerald-500">tous</span></h2></R>
+            <R delay={0.06}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.08]">Une solution pour <span className="text-emerald-500">tous</span></h2></R>
             <R delay={0.12}><p className="text-base sm:text-lg text-gray-500 mt-5 max-w-xl leading-relaxed">Quel que soit votre métier, Factu.me s'adapte à votre quotidien — et à votre façon de travailler.</p></R>
           </div>
 
           {/* Bento — 4 colonnes desktop, diagonale sombre (auto TL / agence BR) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(210px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
+          <div className="grid grid-cols-2 max-[374px]:grid-cols-1 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(210px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
 
             {/* ── AUTO-ENTREPRENEUR — carte héro (2×2, sombre) ── */}
             <R delay={0.04} className="col-span-2 lg:row-span-2">
@@ -546,7 +551,7 @@ export default function LandingPageClient() {
 
             {/* ── FREELANCE (1×1) ── */}
             <R delay={0.16} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-5 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <span className="absolute -bottom-6 -right-2 text-[7rem] sm:text-[8rem] leading-none font-mono font-bold text-emerald-500/[0.06] select-none">{'{ }'}</span>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-700 to-emerald-600 flex items-center justify-center"><Code2 className="w-5 h-5 text-white" /></div>
@@ -558,7 +563,7 @@ export default function LandingPageClient() {
 
             {/* ── TPE / PME (1×1, emerald) ── */}
             <R delay={0.22} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
+              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
                 <svg className="absolute -bottom-2 -right-3 w-28 h-28 text-emerald-600/10" viewBox="0 0 100 100" fill="currentColor"><path d="M20 40 L20 80 L80 80 L80 40 Z M15 40 L85 40 L82 28 L18 28 Z" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Store className="w-5 h-5 text-white" /></div>
@@ -609,11 +614,11 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={2} />
 
       {/* ════════════ CORE FEATURE — Facture électronique + IA ════════════ */}
-      <section data-nav-theme="dark" id="features" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="features" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
         <div className={`${LC} relative z-10`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-4">Facturation électronique</p></R>
-            <R delay={0.05}><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Votre facture,<br /><span className="text-emerald-400">dictée et conforme</span></h2></R>
+            <R delay={0.05}><h2 className="text-[clamp(2rem,6vw,2.75rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1]">Votre facture,<br /><span className="text-emerald-400">dictée et conforme</span></h2></R>
           </div>
 
           {/* Hero Feature — 2 colonnes */}
@@ -668,14 +673,14 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={2} />
 
       {/* ════════════ SECONDARY FEATURES — Bento ════════════ */}
-      <section data-nav-theme="light" className="relative py-24 md:py-32 2xl:py-40 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-32 2xl:py-40 overflow-hidden bg-white">
         <div className={LC}>
           <div className="max-w-2xl mb-12 md:mb-16 2xl:mb-20">
             <R delay={0.1}><p className="text-xs sm:text-sm text-gray-400 uppercase tracking-[0.2em] font-semibold mb-4">Et aussi</p></R>
-            <R delay={0.15}><h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-6xl font-bold tracking-tight text-gray-900 leading-[1.08]">Tout ce qu'il vous faut, <span className="text-emerald-500">au-delà de la facture</span></h2></R>
+            <R delay={0.15}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-6xl font-bold tracking-tight text-gray-900 leading-[1.08]">Tout ce qu'il vous faut, <span className="text-emerald-500">au-delà de la facture</span></h2></R>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(200px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
+          <div className="grid grid-cols-2 max-[374px]:grid-cols-1 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(200px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
 
             {/* ── ENCAISSEMENT — hero (2×2, sombre) ── */}
             <R delay={0.05} className="col-span-2 lg:row-span-2">
@@ -736,7 +741,7 @@ export default function LandingPageClient() {
 
             {/* ── CONTRATS (1×1) ── */}
             <R delay={0.16} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-5 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <svg className="absolute -bottom-2 -right-3 w-32 h-20 text-emerald-500/15" viewBox="0 0 200 60" fill="none" preserveAspectRatio="none"><path d="M6 44 C34 8 56 50 86 28 C112 10 150 46 194 18" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center"><FileText className="w-5 h-5 text-emerald-400" /></div>
@@ -748,7 +753,7 @@ export default function LandingPageClient() {
 
             {/* ── NOTES DE FRAIS (1×1, emerald) ── */}
             <R delay={0.22} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
+              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
                 <svg className="absolute -bottom-3 -right-4 w-24 h-28 text-emerald-600/15" viewBox="0 0 80 100" fill="none"><path d="M14 6 H54 L66 18 V92 a4 4 0 0 1 -4 4 H14 a4 4 0 0 1 -4 -4 V10 a4 4 0 0 1 4 -4 Z" stroke="currentColor" strokeWidth="3" /><path d="M22 30 H54 M22 42 H54 M22 54 H40" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /><line x1="8" y1="64" x2="68" y2="64" stroke="#10b981" strokeWidth="3" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Calculator className="w-5 h-5 text-white" /></div>
@@ -814,11 +819,11 @@ export default function LandingPageClient() {
       </section>
 
       {/* ════════════ INTÉGRATIONS — mur de logos officiels ════════════ */}
-      <section data-nav-theme="light" className="relative py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-20 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className={LC}>
           <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">Connecté à votre stack</p></R>
-            <R delay={0.06}><h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-6xl font-bold tracking-tight text-gray-900 leading-[1.1]">Vos outils préférés, <span className="text-emerald-500">en natif</span></h2></R>
+            <R delay={0.06}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-6xl font-bold tracking-tight text-gray-900 leading-[1.1]">Vos outils préférés, <span className="text-emerald-500">en natif</span></h2></R>
             <R delay={0.12}><p className="text-base sm:text-lg text-gray-500 mt-5 leading-relaxed">Paiement, identité, conformité, exports. Factu.me parle déjà le langage de votre quotidien.</p></R>
           </div>
 
@@ -869,13 +874,13 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={3} />
 
       {/* ════════════ CONTRATS — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
         <div className={`${LC} relative z-[2]`}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <div className="space-y-8">
               <R x={-30} y={0}>
                 <p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-3">Contrats de travail</p>
-                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-6">
+                <h2 className="text-[clamp(2rem,6vw,2.75rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.1] mb-6">
                   Même vos contrats, dictés et signés en <span className="text-emerald-400">5 minutes</span>
                 </h2>
                 <ul className="space-y-4">
@@ -907,8 +912,8 @@ export default function LandingPageClient() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 bg-white/[0.05] text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 border border-white/[0.08]"><Eye className="w-4 h-4 text-neutral-400" />Aperçu</div>
-                  <div className="flex-1 bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2"><Share2 className="w-4 h-4" />Faire signer</div>
+                  <div className="flex-1 bg-white/[0.05] text-white font-semibold py-3.5 min-h-[48px] rounded-xl text-sm flex items-center justify-center gap-2 border border-white/[0.08]"><Eye className="w-4 h-4 text-neutral-400" />Aperçu</div>
+                  <div className="flex-1 bg-emerald-500 text-white font-semibold py-3.5 min-h-[48px] rounded-xl text-sm flex items-center justify-center gap-2"><Share2 className="w-4 h-4" />Faire signer</div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-white/[0.06]">
                   <div className="flex items-center gap-2 text-xs text-neutral-500"><Shield className="w-3.5 h-3.5 text-emerald-500" />Signature eIDAS Avancé gratuite</div>
@@ -922,7 +927,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
 
       {/* ════════════ ENCAISSEMENT — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
         <div className={`${LC}`}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <R x={-30} y={0}>
@@ -956,7 +961,7 @@ export default function LandingPageClient() {
             <div className="space-y-8">
               <R x={30} y={0}>
                 <p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-3">Encaissement</p>
-                <h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-4">
+                <h2 className="text-[clamp(2rem,6vw,2.75rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.1] mb-4">
                   De la facture à votre compte bancaire en <span className="text-emerald-500">1 lien</span>
                 </h2>
                 <p className="text-base sm:text-lg text-gray-500 mb-8 max-w-md leading-relaxed">
@@ -995,11 +1000,11 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
 
       {/* ════════════ TIMELINE — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
         <div className={`${LC} relative z-[2]`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 md:mb-24 2xl:mb-32">
             <R><p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-4">Comment ça marche</p></R>
-            <R delay={0.06}><h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.08]">3 étapes. <span className="text-emerald-400">C'est tout.</span></h2></R>
+            <R delay={0.06}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.08]">3 étapes. <span className="text-emerald-400">C'est tout.</span></h2></R>
             <R delay={0.12}><p className="text-base sm:text-lg text-neutral-400 mt-5 max-w-xl leading-relaxed">De votre voix à votre compte bancaire, sans aucun intermédiaire fastidieux. Voici le voyage complet d'une facture Factu.me.</p></R>
           </div>
           <div className="relative max-w-4xl 2xl:max-w-5xl mx-auto">
@@ -1031,11 +1036,11 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={2} />
 
       {/* ════════════ TESTIMONIALS — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
         <div className={`${LC}`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-14 md:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">Témoignages</p></R>
-            <R delay={0.06}><h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.08]">Ils ont arrêté de <span className="text-emerald-500">perdre leur temps</span></h2></R>
+            <R delay={0.06}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900 leading-[1.08]">Ils ont arrêté de <span className="text-emerald-500">perdre leur temps</span></h2></R>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 2xl:gap-7">
             {testimonials.map((t, i) => (
@@ -1061,13 +1066,13 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={0} />
 
       {/* ════════════ PRICING — DARK (confetti + compteurs) ════════════ */}
-      <section data-nav-theme="dark" id="pricing" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="pricing" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
         <Confetti fire={confettiFire} />
         <div className={`${LC} relative z-[2]`}>
           <div className="text-center mb-12 md:mb-16 2xl:mb-20">
             <R>
               <p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-4">Tarifs transparents</p>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white mb-4">Choisissez votre plan</h2>
+              <h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-white mb-4">Choisissez votre plan</h2>
               <p className="text-base sm:text-lg text-neutral-400">Sans engagement. Évoluez quand vous voulez.</p>
             </R>
 
@@ -1080,8 +1085,8 @@ export default function LandingPageClient() {
                     animate={{ x: billing === 'yearly' ? '100%' : 0 }}
                     transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                   />
-                  <button onClick={() => switchBilling('monthly')} className={cn('relative z-10 px-7 sm:px-9 py-2.5 text-sm sm:text-base font-bold rounded-full transition-colors duration-200', billing === 'monthly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>Mensuel</button>
-                  <button onClick={() => switchBilling('yearly')} className={cn('relative z-10 px-7 sm:px-9 py-2.5 text-sm sm:text-base font-bold rounded-full transition-colors duration-200 inline-flex items-center gap-2', billing === 'yearly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>
+                  <button onClick={() => switchBilling('monthly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200', billing === 'monthly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>Mensuel</button>
+                  <button onClick={() => switchBilling('yearly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200 inline-flex items-center gap-2', billing === 'yearly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>
                     Annuel
                     <span className={cn('text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full', billing === 'yearly' ? 'bg-neutral-950/15 text-neutral-950' : 'bg-emerald-500/15 text-emerald-400')}>−20%</span>
                   </button>
@@ -1161,11 +1166,11 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
 
       {/* ════════════ FAQ — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
         <div className="max-w-3xl 2xl:max-w-4xl mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32">
           <div className="mb-14 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">FAQ</p></R>
-            <R><h2 className="text-4xl md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900">Questions fréquentes</h2></R>
+            <R><h2 className="text-[clamp(2rem,6vw,2.75rem)] md:text-5xl 2xl:text-7xl font-bold tracking-tight text-gray-900">Questions fréquentes</h2></R>
           </div>
           <div className="space-y-3 2xl:space-y-4">
             {faqItems.map((item, i) => (
@@ -1178,7 +1183,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
 
       {/* ════════════ CTA FINAL — DARK ════════════ */}
-      <section data-nav-theme="dark" id="ai" className="relative py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="ai" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] lg:w-[1000px] h-[600px] sm:h-[800px] lg:h-[1000px] bg-emerald-500/8 rounded-full blur-[180px] lg:blur-[250px]" />
         </div>
@@ -1199,7 +1204,7 @@ export default function LandingPageClient() {
               </div>
             </div>
             <div className="max-w-xs mx-auto mb-8"><VoiceWaveform /></div>
-            <h2 className="text-4xl md:text-6xl 2xl:text-8xl font-bold tracking-tight text-white leading-[1.1] mb-10 2xl:mb-12">
+            <h2 className="text-[clamp(2rem,7vw,3.5rem)] md:text-6xl 2xl:text-8xl font-bold tracking-tight text-white leading-[1.1] mb-10 2xl:mb-12">
               Votre facture électronique<br />est à <span className="text-emerald-400">un mot.</span>
             </h2>
             <Link href="/register" className="group inline-flex items-center justify-center gap-3 font-bold text-white bg-emerald-500 hover:bg-emerald-400 rounded-full px-10 py-5 2xl:px-12 2xl:py-6 text-base 2xl:text-lg transition-all duration-300 active:scale-[0.97] shadow-[0_0_50px_rgba(16,185,129,0.35)] hover:shadow-[0_0_70px_rgba(16,185,129,0.45)]">
@@ -1224,7 +1229,7 @@ export default function LandingPageClient() {
               <p className="text-xs 2xl:text-sm text-neutral-400 max-w-xs leading-relaxed mb-4">L'assistant IA vocal pour votre facturation électronique. 100% français.</p>
               <div className="flex gap-2">
                 {[Twitter, Linkedin, Github].map((Icon, i) => (
-                  <a key={i} href="#" className="w-8 h-8 2xl:w-9 2xl:h-9 bg-neutral-900 hover:bg-neutral-800 rounded-lg flex items-center justify-center transition-colors duration-200"><Icon className="w-3.5 h-3.5 text-neutral-400" /></a>
+                  <a key={i} href="#" aria-label="Réseau social" className="w-10 h-10 2xl:w-11 2xl:h-11 bg-neutral-900 hover:bg-neutral-800 rounded-lg flex items-center justify-center transition-colors duration-200 active:scale-95"><Icon className="w-4 h-4 text-neutral-400" /></a>
                 ))}
               </div>
             </div>
@@ -1236,7 +1241,7 @@ export default function LandingPageClient() {
             ].map((col) => (
               <div key={col.title}>
                 <h4 className="font-semibold text-xs 2xl:text-sm text-neutral-300 mb-3">{col.title}</h4>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {col.links.map(([label, href]) => (
                     <li key={label}>
                       {href.startsWith('#') ? (
@@ -1261,6 +1266,28 @@ export default function LandingPageClient() {
           </div>
         </div>
       </footer>
+
+      {/* ═══ STICKY MOBILE CTA — Thumb Zone (MOBIUS · Loi 7) ═══
+          Apparaît après 600px de scroll, full-width, safe-area-aware.
+          sm:hidden → desktop garde sa nav flottante. */}
+      <AnimatePresence>
+        {showSticky && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-0 inset-x-0 z-40 sm:hidden"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          >
+            <div className="px-3 pt-8 pb-3 bg-gradient-to-t from-black via-black/85 to-transparent">
+              <Link href="/register" className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 min-h-[52px] rounded-2xl shadow-[0_0_40px_rgba(16,185,129,0.4)] text-base active:scale-[0.97] transition-all duration-200">
+                <Mic className="w-5 h-5" />Commencer gratuitement<ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

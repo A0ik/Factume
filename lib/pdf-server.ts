@@ -490,12 +490,13 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // ── PAYMENT LINK ─────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // Resolve payment URL from all possible fields (Stripe, SumUp, or generic)
-  const paymentUrl =
-    (invoice as any).payment_link ||
-    (invoice as any).stripe_payment_url ||
-    (invoice as any).stripe_payment_link_url ||
-    ((invoice as any).sumup_checkout_id ? `https://checkout.sumup.com/${(invoice as any).sumup_checkout_id}` : '');
+  // INSPECTOR (BUG 2 + BUG 3) — résolveur unique : url vide si lien stale (aucun
+  // QR obsolète), provider lu depuis payment_provider (source de vérité), repli
+  // legacy pour les lignes pré-migration. Voir lib/payment-link.ts.
+  const { resolvePaymentLink } = await import('./payment-link');
+  const resolvedPayment = resolvePaymentLink(invoice as any);
+  const paymentUrl = resolvedPayment.url;
+  const providerName = resolvedPayment.provider === 'stripe' ? 'Stripe' : resolvedPayment.provider === 'sumup' ? 'SumUp' : '';
 
   if (paymentUrl) {
     needPage();
@@ -531,14 +532,10 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     const boxH = qrImage ? 70 : 48;
     page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
 
-    // Provider detection: explicit check using DB fields
-    const isStripe = !!(invoice as any).stripe_payment_url || !!(invoice as any).stripe_payment_link_url;
-    const isSumUp = !!(invoice as any).sumup_checkout_id || (!isStripe && !!(invoice as any).payment_link);
-    const methodLabel = isStripe ? 'PAIEMENT EN LIGNE (STRIPE)' : isSumUp ? 'PAIEMENT EN LIGNE (SUMUP)' : 'PAIEMENT EN LIGNE';
+    const methodLabel = providerName ? `PAIEMENT EN LIGNE (${providerName.toUpperCase()})` : 'PAIEMENT EN LIGNE';
     drawText(page, methodLabel, margin + 14, y - 8, 7, bold, accent);
 
     if (qrImage) {
-      const providerName = isStripe ? 'Stripe' : isSumUp ? 'SumUp' : '';
       const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
       drawText(page, btnLabel, margin + 14, y - 22, 10, bold, accent);
 
@@ -555,7 +552,6 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         height: qrSize,
       });
     } else {
-      const providerName = isStripe ? 'Stripe' : isSumUp ? 'SumUp' : '';
       const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
       centreText(page, btnLabel, margin, contentW, y - 22, 10, bold, accent);
 

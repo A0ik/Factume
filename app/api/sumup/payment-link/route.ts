@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getValidSumUpToken } from '@/lib/sumup/oauth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { buildFreshLinkUpdate } from '@/lib/payment-link';
 
 export async function POST(req: NextRequest) {
   try {
@@ -133,10 +134,17 @@ export async function POST(req: NextRequest) {
         const existingCheckoutId = err.id || err.checkout_id;
         if (existingCheckoutId) {
           const existingUrl = `https://checkout.sumup.com/${existingCheckoutId}`;
-          // Re-save to DB in case it was lost
+          // INSPECTOR (BUG 2) — ré-écriture via le builder : nullifie aussi les
+          // colonnes Stripe legacy (stripe_payment_link_url/_id) + pose provider/amount.
           await supabase
             .from('invoices')
-            .update({ sumup_checkout_id: existingCheckoutId, payment_link: existingUrl, stripe_payment_url: null })
+            .update(
+              buildFreshLinkUpdate('sumup', {
+                url: existingUrl,
+                amount,
+                sumupId: existingCheckoutId,
+              }),
+            )
             .eq('id', invoiceId);
           return NextResponse.json({ url: existingUrl, checkoutId: existingCheckoutId });
         }
@@ -150,9 +158,16 @@ export async function POST(req: NextRequest) {
             const existing = Array.isArray(listData) ? listData[0] : listData?.items?.[0];
             if (existing?.id) {
               const existingUrl = existing.hosted_checkout_url || `https://checkout.sumup.com/${existing.id}`;
+              // INSPECTOR (BUG 2) — même nettoyage complet que ci-dessus.
               await supabase
                 .from('invoices')
-                .update({ sumup_checkout_id: existing.id, payment_link: existingUrl, stripe_payment_url: null })
+                .update(
+                  buildFreshLinkUpdate('sumup', {
+                    url: existingUrl,
+                    amount,
+                    sumupId: existing.id,
+                  }),
+                )
                 .eq('id', invoiceId);
               return NextResponse.json({ url: existingUrl, checkoutId: existing.id });
             }
@@ -184,10 +199,20 @@ export async function POST(req: NextRequest) {
 
     const paymentUrl = checkout.hosted_checkout_url || `https://checkout.sumup.com/${checkout.id}`;
 
-    // Save checkout to invoice
+    // INSPECTOR (BUG 2) — source de vérité unique : payment_provider='sumup',
+    // payment_link_amount = montant figé dans le checkout, et nullification de
+    // TOUTES les colonnes Stripe (url ET legacy link) via le builder. Avant, seul
+    // stripe_payment_url était nettoyé → stripe_payment_link_url/_id survivaient
+    // et corrompaient les résolveurs du PDF (QR/libellé en désaccord).
     const { error: saveErr } = await supabase
       .from('invoices')
-      .update({ sumup_checkout_id: checkout.id, payment_link: paymentUrl, stripe_payment_url: null })
+      .update(
+        buildFreshLinkUpdate('sumup', {
+          url: paymentUrl,
+          amount,
+          sumupId: checkout.id,
+        }),
+      )
       .eq('id', invoiceId);
 
     if (saveErr) {

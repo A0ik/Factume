@@ -87,6 +87,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   // FIXER (BUG 1) — drapeau one-shot pour forcer la régénération du lien quand
   // l'utilisateur change de prestataire (contourne le verrou early-return des routes).
   const forcePaymentSwitchRef = useRef(false);
+  // INSPECTOR (BUG 3) — anti-boucle pour l'auto-régén silencieuse : on ne retente
+  // qu'une fois par facture (clé = invoice.id) tant que le drapeau stale est levé.
+  const autoRegenAttemptedRef = useRef<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [isReminder, setIsReminder] = useState(false);
   const [generatingPaymentLink, setGeneratingPaymentLink] = useState(false);
@@ -223,7 +226,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleCreatePaymentLink = async (force = false) => {
+  const handleCreatePaymentLink = async (force = false, silent = false) => {
     if (!profile?.stripe_connect_account_id) {
       toast.error('Stripe non connecté. Configurez votre compte dans les paramètres.');
       return;
@@ -253,8 +256,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       setInvoice(merged);
       useDataStore.getState().updateInvoiceInList(merged);
 
-      setPaymentSuccessUrl(data.paymentLinkUrl);
-      setShowPaymentSuccessModal(true);
+      // INSPECTOR (BUG 3) — silent = régénération automatique après édition de
+      // prix : on ne pop pas le modal de succès, juste un toast discret.
+      if (silent) {
+        toast.success('Lien de paiement recréé avec le nouveau montant.');
+      } else {
+        setPaymentSuccessUrl(data.paymentLinkUrl);
+        setShowPaymentSuccessModal(true);
+      }
       setShowPaymentModal(false);
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de la création du lien.');
@@ -263,7 +272,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  const handleSumUpLink = async (force = false) => {
+  const handleSumUpLink = async (force = false, silent = false) => {
     setGeneratingSumUpLink(true);
     try {
       const res = await fetch('/api/sumup/payment-link', {
@@ -287,8 +296,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       setInvoice(merged);
       useDataStore.getState().updateInvoiceInList(merged);
 
-      setPaymentSuccessUrl(data.url);
-      setShowPaymentSuccessModal(true);
+      // INSPECTOR (BUG 3) — même garde-fou silencieux que Stripe.
+      if (silent) {
+        toast.success('Lien de paiement recréé avec le nouveau montant.');
+      } else {
+        setPaymentSuccessUrl(data.url);
+        setShowPaymentSuccessModal(true);
+      }
       setShowPaymentModal(false);
       if (data.warning) {
         toast.info(data.warning, { duration: 4000 });
@@ -317,6 +331,31 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     setShowPaymentSuccessModal(false);
     setShowPaymentModal(true);
   };
+
+  // INSPECTOR (BUG 3) — Auto-régén silencieuse : quand une édition de prix a
+  // invalidé le lien (payment_link_stale), on recrée immédiatement le lien au
+  // même prestataire, sans intervention utilisateur. En cas d'échec (prestataire
+  // déconnecté, réseau), le drapeau reste levé → la bannière ci-dessous invite à
+  // recréer manuellement. Le PDF n'affiche AUCUN QR tant que stale = true.
+  useEffect(() => {
+    if (!invoice) return;
+    if (
+      invoice.payment_link_stale &&
+      invoice.payment_provider &&
+      autoRegenAttemptedRef.current !== invoice.id
+    ) {
+      autoRegenAttemptedRef.current = invoice.id;
+      const provider = invoice.payment_provider;
+      (provider === 'stripe' ? handleCreatePaymentLink(true, true) : handleSumUpLink(true, true)).catch(() => {
+        toast.error('Lien de paiement obsolète — recréez-le via « Lien de paiement ».');
+      });
+    }
+    // Le lien n'est plus stale (régén réussie) → on réarme le verrou.
+    if (!invoice.payment_link_stale && autoRegenAttemptedRef.current === invoice.id) {
+      autoRegenAttemptedRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider]);
 
   const handleMarkPaid = async () => {
     setStatusLoading(true);
@@ -380,6 +419,34 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="max-w-5xl mx-auto pb-32 lg:pb-0">
+      {/* INSPECTOR (BUG 3) — bannière de lien de paiement désynchronisé.
+          Le lien a été invalidé (montant modifié) et la régénération auto a
+          échoué (prestataire déconnecté, réseau…). Aucun QR obsolète n'est rendu
+          tant que stale = true ; on invite explicitement à recréer le lien. */}
+      {invoice.payment_link_stale && invoice.payment_provider && (
+        <div className="mt-3 mx-4 lg:mx-6 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Lien de paiement désynchronisé
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">
+              Le montant de la facture a changé. L&apos;ancien lien ({invoice.payment_provider === 'stripe' ? 'Stripe' : 'SumUp'}) a été invalidé par sécurité — recréez-le avec le montant à jour.
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              invoice.payment_provider === 'stripe'
+                ? handleCreatePaymentLink(true)
+                : handleSumUpLink(true)
+            }
+            disabled={generatingPaymentLink || generatingSumUpLink}
+            className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-2 transition-colors"
+          >
+            {generatingPaymentLink || generatingSumUpLink ? 'Création…' : 'Recréer le lien'}
+          </button>
+        </div>
+      )}
 
       {/* ========== HEADER ========== */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b border-gray-200">

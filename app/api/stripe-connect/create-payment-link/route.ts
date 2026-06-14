@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import { buildFreshLinkUpdate } from '@/lib/payment-link';
 
 export async function POST(req: NextRequest) {
   try {
@@ -110,14 +111,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Update invoice with Stripe payment info
+    // INSPECTOR (BUG 2) — source de vérité unique : on pose payment_provider +
+    // payment_link_amount, et on nullifie TOUTES les colonnes adverses (legacy
+    // stripe_payment_link_url/_id ET sumup_checkout_id) via buildFreshLinkUpdate.
+    // Avant, seul sumup_checkout_id était nettoyé → la legacy Stripe survécût
+    // et corrompait les résolveurs.
     const { error: updateErr } = await admin
       .from('invoices')
-      .update({
-        stripe_payment_url: session.url,
-        payment_link: session.url,
-        sumup_checkout_id: null,
-      })
+      .update(
+        buildFreshLinkUpdate('stripe', {
+          url: session.url as string,
+          amount: Number(invoice.total ?? 0),
+        }),
+      )
       .eq('id', invoiceId);
 
     if (updateErr) {

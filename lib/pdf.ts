@@ -1,5 +1,6 @@
 import { Invoice, Profile } from '@/types';
 import { prepareTemplateData, templateMinimaliste, templateClassique, templateModerne, templateElegant, templateCorporate, templateNature, templatePurchaseOrder, templateDeliveryNote, applyCustomTemplate } from './templates';
+import { resolvePaymentLink } from './payment-link';
 
 export function getDocLabel(invoice: Invoice, language = 'fr'): string {
   const labels: Record<string, Record<string, string>> = {
@@ -48,24 +49,18 @@ export function generateInvoiceHtml(invoice: Invoice, profile?: Profile | null):
 }
 
 /**
- * FIXER (BUG 1) — Résout l'URL de paiement depuis tous les champs possibles
- * (Stripe, SumUp, générique). Centralise une logique auparavant dupliquée et
- * incomplète côté client : le bouton ne lisait que `payment_link`, ignorant
- * `stripe_payment_url` / `sumup_checkout_id` → le lien apparaissait non persisté.
+ * INSPECTOR (BUG 2 + BUG 3) — Résout l'URL de paiement via la source de vérité
+ * unique (lib/payment-link.ts). Délègue entièrement : url vide si lien stale,
+ * provider lu depuis payment_provider, repli legacy. Centralise une logique
+ * auparavant dupliquée et divergente entre 4 fichiers.
  */
 export function getPaymentUrl(invoice: Invoice): string {
-  const inv = invoice as any;
-  return (
-    inv.payment_link ||
-    inv.stripe_payment_url ||
-    inv.stripe_payment_link_url ||
-    (inv.sumup_checkout_id ? `https://checkout.sumup.com/${inv.sumup_checkout_id}` : '')
-  );
+  return resolvePaymentLink(invoice).url;
 }
 
-/** Un lien de paiement existe-t-il, quel que soit le fournisseur ? */
+/** Un lien de paiement ACTIF existe-t-il (pas stale, URL résolue) ? */
 export function hasPaymentLink(invoice: Invoice): boolean {
-  return !!getPaymentUrl(invoice);
+  return !!resolvePaymentLink(invoice).url;
 }
 
 /**

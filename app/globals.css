@@ -688,3 +688,18 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   60%       { transform: translateY(-2px); }
   80%       { transform: translateY(0); }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBIUS — prefers-reduced-motion (Loi 8 : anti-saccade)
+   Coupe les animations lourdes (blobs, bentoGlow, sheen, flottants,
+   confetti, waveform, marquee) pour l'accessibilité vestibulaire et
+   les appareils mobiles moins puissants. Le contenu reste lisible.
+   ══════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

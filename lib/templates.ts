@@ -1,5 +1,6 @@
 import { Invoice, Profile } from '@/types';
 import { getDocLabel } from './pdf';
+import { resolvePaymentLink } from './payment-link';
 
 // ─────────────────────────────────────────────
 // LOCALISATION & TRADUCTIONS
@@ -515,8 +516,11 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
     ? `<div style="margin-bottom:20px;padding:16px 20px;background:#f0fdf4;border-radius:10px;border-left:3px solid var(--accent-color)"><div style="font-size:9px;font-weight:700;color:var(--accent-color);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">${t.invoice.bankDetails}</div><div style="font-size:12px;color:#374151;line-height:1.9">${p.bank_name ? `<div><strong>${isFR(locale) ? 'Banque' : 'Bank'} :</strong> ${p.bank_name}</div>` : ''}${p.iban ? `<div><strong>IBAN :</strong> ${p.iban}</div>` : ''}${p.bic ? `<div><strong>BIC :</strong> ${p.bic}</div>` : ''}</div></div>`
     : '';
 
-  const paymentUrl = invoice.stripe_payment_link_url || invoice.stripe_payment_url || invoice.payment_link || '';
-  const paymentMethod = invoice.stripe_payment_link_url || invoice.stripe_payment_url ? 'Stripe' : (invoice.payment_link ? 'SumUp' : '');
+  // INSPECTOR (BUG 2 + BUG 3) — résolveur unique : url vide si stale (aucun QR
+  // obsolète dans l'email), provider depuis payment_provider.
+  const resolvedPayment = resolvePaymentLink(invoice);
+  const paymentUrl = resolvedPayment.url;
+  const paymentMethod = resolvedPayment.provider === 'stripe' ? 'Stripe' : resolvedPayment.provider === 'sumup' ? 'SumUp' : '';
 
   const qrDataUrl = (invoice as any).qr_data_url || '';
   const qrBlock = paymentUrl

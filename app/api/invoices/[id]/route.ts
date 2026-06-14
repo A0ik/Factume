@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 import { calculateInvoiceTotals } from '@/lib/money';
+import { buildVoidLinkUpdate } from '@/lib/payment-link';
 
 // ---------------------------------------------------------------------------
 // DELETE /api/invoices/[id] — Delete an invoice (CASCADE handles related records)
@@ -88,8 +89,10 @@ export async function PATCH(
     const admin = createAdminClient();
 
     // Appartenance + immuabilité (une facture émise ne se modifie pas — Art. L.441-9)
+    // INSPECTOR (BUG 3) — on récupère aussi le total courant + l'état du lien pour
+    // détecter une désynchronisation monétaire après édition.
     const { data: existing } = await admin.from('invoices')
-      .select('user_id, status').eq('id', id).single();
+      .select('user_id, status, total, payment_provider, payment_link_amount').eq('id', id).single();
     if (!existing || existing.user_id !== user.id) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
@@ -103,9 +106,17 @@ export async function PATCH(
     const body = await req.json();
     const { items, discount_percent, ...rest } = body;
 
-    // Colonnes protégées : jamais éditables via PATCH
+    // Colonnes protégées : jamais éditables via PATCH.
+    // INSPECTOR (BUG 3) — les colonnes de lien de paiement sont protégées : seul
+    // le serveur (PATCH via buildVoidLinkUpdate, ou les routes dédiées) peut les
+    // muter. Un client ne peut PAS forger payment_link_stale=false pour cacher un
+    // lien désynchronisé, ni réécrire un payment_link obsolète.
     const update: Record<string, unknown> = { ...rest, updated_at: new Date().toISOString() };
-    for (const key of ['id', 'user_id', 'number', 'document_type', 'status', 'stripe_payment_intent_id', 'paid_at', 'sent_at']) {
+    for (const key of [
+      'id', 'user_id', 'number', 'document_type', 'status', 'stripe_payment_intent_id', 'paid_at', 'sent_at',
+      'payment_link', 'payment_method', 'stripe_payment_url', 'stripe_payment_link_id', 'stripe_payment_link_url',
+      'sumup_checkout_id', 'payment_provider', 'payment_link_amount', 'payment_link_stale',
+    ]) {
       delete update[key];
     }
 
@@ -137,6 +148,23 @@ export async function PATCH(
       update.vat_amount = totals.vatAmount;
       update.discount_amount = totals.discountAmount || null;
       update.total = totals.total;
+
+      // ── INSPECTOR (BUG 3) — Intégrité monétaire ───────────────────────────
+      // Le montant est FIGÉ dans le checkout/session prestataire au moment de la
+      // création du lien. Une édition qui change le total doit invalider l'ancien
+      // lien, sinon le client paie un montant obsolète. On ne déclenche ce void
+      // QUE pour les liens post-migration (payment_link_amount renseigné) : les
+      // anciens liens (amount NULL) conservent le comportement historique et ne
+      // sont pas invalidés en masse. payment_provider est CONSERVÉ pour que le
+      // client régénère le bon lien (auto-régén silencieuse côté UI).
+      const oldLinkAmount = typeof existing.payment_link_amount === 'number' ? existing.payment_link_amount : null;
+      if (
+        existing.payment_provider &&
+        oldLinkAmount !== null &&
+        Math.abs(totals.total - oldLinkAmount) > 0.01
+      ) {
+        Object.assign(update, buildVoidLinkUpdate());
+      }
     }
 
     const { data, error } = await admin.from('invoices')
