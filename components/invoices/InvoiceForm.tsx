@@ -24,19 +24,19 @@ import FacturXWarnings from '@/components/ui/FacturXWarnings';
 import { PDPValidator } from '@/components/ui/PDPValidator';
 import { formatCurrency, generateId, cn } from '@/lib/utils';
 import { mergeInvoiceItems } from '@/lib/voice-merge';
-import { getSupabaseClient } from '@/lib/supabase';
-import { Invoice, InvoiceItem, DocumentType } from '@/types';
+import { Invoice, InvoiceItem, DocumentType, Product } from '@/types';
 import {
   Mic, Plus, Trash2, Zap, FileText, Clipboard,
   RefreshCw, ChevronUp, ChevronDown, Sparkles, Calendar as CalendarIcon,
   User, AlignLeft, Receipt, AlertCircle, CheckCircle2,
   ArrowLeft, ShoppingCart, Truck, Banknote, Wand2, Percent, X,
-  Send, Loader2, Package, Search, Eye, Lock, Save,
+  Send, Loader2, Package, Search, Eye, Lock, Save, Link2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PulseVoiceRecorder, VoiceAnalysisResult } from '@/components/ui/voice-recording';
 import InvoiceMobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
 import ClientTypeModal from '@/components/invoices/ClientTypeModal';
+import { ProductCatalogModal } from '@/components/invoices/ProductCatalogModal';
 import { useToast } from '@/components/ui/SuccessToast';
 
 const VAT_RATES = [
@@ -80,20 +80,6 @@ function getDocNewPath(type: string): string {
   return map[type] ?? '/documents/factures/new';
 }
 
-interface Product {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string;
-  unit_price: number;
-  unit: string;
-  vat_rate: number;
-  category: string;
-  reference: string;
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface InvoiceFormProps {
   /** null/undefined = création. Objet = édition (pré-rempli). */
   invoice?: Invoice | null;
@@ -102,9 +88,11 @@ export interface InvoiceFormProps {
   /** Pré-remplissage client en création (depuis ?clientId=…&clientName=…). */
   initialClientId?: string | null;
   initialClientName?: string;
+  /** Pré-sélection facture d'origine pour avoir/acompte (depuis ?invoiceId=…). */
+  initialLinkedInvoiceId?: string | null;
 }
 
-export default function InvoiceForm({ invoice, docType: docTypeProp, initialClientId, initialClientName }: InvoiceFormProps) {
+export default function InvoiceForm({ invoice, docType: docTypeProp, initialClientId, initialClientName, initialLinkedInvoiceId }: InvoiceFormProps) {
   const router = useRouter();
   const { profile } = useAuthStore();
   const { clients, invoices, createInvoice, updateInvoice } = useDataStore();
@@ -190,12 +178,22 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
   );
   const pendingIdRef = useRef<string | null>(null);
 
-  // ─── Catalogue produits ───
+  // ─── Catalogue produits (modal partagé) ───
   const [showProductCatalog, setShowProductCatalog] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productSearch, setProductSearch] = useState('');
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
+  const [catalogMode, setCatalogMode] = useState<'append' | 'replace'>('append');
+
+  // ─── Facture d'origine (avoir obligatoire / acompte optionnel) ───
+  const [linkedInvoiceId, setLinkedInvoiceId] = useState<string | null>(
+    (invoice as any)?.linked_invoice_id || initialLinkedInvoiceId || null,
+  );
+  const [depositPercent, setDepositPercent] = useState<number>(0);
+  const showLinkedInvoice = docType === 'credit_note' || docType === 'deposit';
+  const needsLinkedInvoice = docType === 'credit_note';
+  const linkedInvoice = linkedInvoiceId ? invoices.find((i) => i.id === linkedInvoiceId) || null : null;
+  const eligibleInvoices = invoices.filter(
+    (i) => i.document_type === 'invoice' && ['sent', 'paid', 'partial', 'overdue'].includes(i.status),
+  );
 
   // Pré-remplir les détails client si client lié (création depuis page client)
   useEffect(() => {
@@ -429,44 +427,68 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
     });
   };
 
-  const fetchProducts = async () => {
-    if (!profile?.id) return;
-    setLoadingProducts(true);
-    try {
-      const { data, error } = await getSupabaseClient().from('products').select('*').eq('user_id', profile.id).eq('is_active', true).order('name');
-      if (error) throw error;
-      setProducts(data || []);
-    } catch {
-      toast.error('Erreur lors du chargement du catalogue');
-    } finally {
-      setLoadingProducts(false);
+  // Pré-remplit la ligne d'acompte à partir du % choisi et de la facture liée (création seule).
+  const applyDepositPercent = (pct: number) => {
+    const safe = Math.min(100, Math.max(0, pct));
+    setDepositPercent(safe);
+    if (safe > 0 && linkedInvoice && !isEdit) {
+      const depositHT = Math.round(((linkedInvoice.subtotal ?? 0) * (safe / 100)) * 100) / 100;
+      const vat = linkedInvoice.items?.[0]?.vat_rate ?? 20;
+      setItems([{
+        id: generateId(),
+        description: `Acompte de ${safe}% sur ${linkedInvoice.number}`,
+        quantity: 1,
+        unit_price: depositHT,
+        vat_rate: vat,
+      }]);
     }
   };
+
+  const productDesc = (p: Product) => p.name + (p.description ? `\n${p.description}` : '');
+
+  // Ouvre la modale catalogue pour remplir une ligne précise.
   const openProductCatalog = (itemIndex: number) => {
+    setCatalogMode('replace');
     setCurrentItemIndex(itemIndex);
     setShowProductCatalog(true);
-    if (products.length === 0) fetchProducts();
   };
-  const selectProduct = (product: Product) => {
-    if (currentItemIndex === null) return;
-    const updatedItems = [...items];
-    updatedItems[currentItemIndex] = {
-      ...updatedItems[currentItemIndex],
-      description: product.name + (product.description ? `\n${product.description}` : ''),
-      unit_price: product.unit_price,
-      vat_rate: product.vat_rate,
-    };
-    setItems(updatedItems);
+  // Ouvre la modale catalogue pour ajouter plusieurs articles d'un coup.
+  const openCatalogBulk = () => {
+    setCatalogMode('append');
+    setCurrentItemIndex(null);
+    setShowProductCatalog(true);
+  };
+
+  // Recoit les produits choisis dans la modale (1 en remplacement de ligne, N en ajout).
+  const handleCatalogApply = (prods: Product[]) => {
+    if (catalogMode === 'replace' && currentItemIndex != null && prods.length === 1) {
+      const p = prods[0];
+      setItems((prev) => {
+        const next = [...prev];
+        next[currentItemIndex] = { ...next[currentItemIndex], description: productDesc(p), unit_price: p.unit_price, vat_rate: p.vat_rate };
+        return next;
+      });
+      toast.success('Article importé depuis le catalogue');
+    } else {
+      setItems((prev) => {
+        const next = [...prev];
+        const queue = [...prods];
+        // Remplit la première ligne vide s'il y en a une.
+        const firstEmpty = next.findIndex((i) => !i.description && i.unit_price === 0);
+        if (firstEmpty !== -1) {
+          const p = queue.shift()!;
+          next[firstEmpty] = { ...next[firstEmpty], description: productDesc(p), unit_price: p.unit_price, vat_rate: p.vat_rate };
+        }
+        for (const p of queue) {
+          next.push({ id: generateId(), description: productDesc(p), quantity: 1, unit_price: p.unit_price, vat_rate: p.vat_rate });
+        }
+        return next;
+      });
+      toast.success(`${prods.length} article${prods.length > 1 ? 's' : ''} ajouté${prods.length > 1 ? 's' : ''} depuis le catalogue`);
+    }
     setShowProductCatalog(false);
     setCurrentItemIndex(null);
-    setProductSearch('');
-    toast.success('Produit importé depuis le catalogue');
   };
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.description?.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.reference?.toLowerCase().includes(productSearch.toLowerCase()),
-  );
 
   // ─── Sauvegarde (branchée create / update) ───
   const doSaveCreate = async () => {
@@ -485,6 +507,10 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
       setError('Profil introuvable. Veuillez vous reconnecter.');
       savingRef.current = false; setSaving(false); return;
     }
+    if (needsLinkedInvoice && !linkedInvoiceId) {
+      setError('Sélectionnez la facture d’origine (requise pour un avoir).');
+      savingRef.current = false; setSaving(false); return;
+    }
     if (!pendingIdRef.current) pendingIdRef.current = crypto.randomUUID();
     const currentIdempotencyId = pendingIdRef.current;
     setError('');
@@ -494,6 +520,7 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           client_id: clientId || undefined,
           client_name_override: clientId ? undefined : clientName || undefined,
           document_type: docType,
+          linked_invoice_id: (needsLinkedInvoice || docType === 'deposit') ? (linkedInvoiceId || undefined) : undefined,
           issue_date: issueDate,
           due_date: dueDate || undefined,
           items: items,
@@ -567,6 +594,7 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           client_id: clientId || undefined,
           client_name_override: clientId ? undefined : clientName || undefined,
           document_type: docType,
+          linked_invoice_id: (needsLinkedInvoice || docType === 'deposit') ? (linkedInvoiceId || undefined) : undefined,
           issue_date: issueDate,
           due_date: dueDate || undefined,
           items: items as InvoiceItem[],
@@ -683,6 +711,89 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           );
         })}
       </div>
+
+      {/* Facture d'origine (avoir obligatoire / acompte avec auto-%) */}
+      <AnimatePresence>
+        {showLinkedInvoice && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
+                <Link2 size={15} className="text-gray-400 dark:text-gray-500" />
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Facture d'origine</h3>
+                {needsLinkedInvoice && <span className="ml-auto text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Requis</span>}
+                {docType === 'deposit' && linkedInvoice && <span className="ml-auto text-[11px] text-teal-600 dark:text-teal-400 font-semibold">{depositPercent > 0 ? `${depositPercent}%` : 'lié'}</span>}
+              </div>
+              <div className="p-4 space-y-3">
+                {!linkedInvoice ? (
+                  <>
+                    {eligibleInvoices.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Aucune facture éligible.{needsLinkedInvoice ? ' Créez d\'abord une facture pour générer cet avoir.' : ''}
+                      </p>
+                    ) : (
+                      <Select
+                        value={linkedInvoiceId || ''}
+                        onChange={(e) => { setLinkedInvoiceId(e.target.value || null); setDepositPercent(0); }}
+                        options={[
+                          { value: '', label: 'Sélectionner la facture d’origine…' },
+                          ...eligibleInvoices.map((inv) => ({
+                            value: inv.id,
+                            label: `${inv.number} — ${inv.client?.name || inv.client_name_override || 'Client'} — ${formatCurrency(inv.total)}`,
+                          })),
+                        ]}
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {needsLinkedInvoice
+                        ? 'Un avoir doit être lié à la facture qu’il corrige (Art. L.441-9 du Code de commerce).'
+                        : 'Liez cet acompte à sa facture pour pré-remplir automatiquement le montant.'}
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{linkedInvoice.number}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {linkedInvoice.client?.name || linkedInvoice.client_name_override || 'Client'} — {formatCurrency(linkedInvoice.total)}
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => { setLinkedInvoiceId(null); setDepositPercent(0); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-colors shrink-0" title="Changer de facture">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Pourcentage d'acompte (création seule) */}
+                {docType === 'deposit' && !isEdit && linkedInvoice && (
+                  <div className="pt-1">
+                    <label className="text-[11px] text-gray-400 dark:text-gray-500 font-medium block mb-2">Pourcentage d’acompte</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {[10, 20, 30, 40, 50].map((p) => (
+                        <button key={p} type="button" onClick={() => applyDepositPercent(p)} className={cn('px-3 py-1.5 rounded-lg text-sm font-semibold transition-all', depositPercent === p ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-teal-500/10 hover:text-teal-600')}>{p}%</button>
+                      ))}
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <input type="number" min={0} max={100} step={1} value={depositPercent || ''} onChange={(e) => applyDepositPercent(parseFloat(e.target.value) || 0)} placeholder="Perso" className="w-20 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 text-sm text-center bg-white dark:bg-gray-100 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500/20" />
+                        <span className="text-sm text-gray-400">%</span>
+                      </div>
+                    </div>
+                    {depositPercent > 0 && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        Acompte HT : <span className="font-semibold text-gray-600 dark:text-gray-300">{formatCurrency((linkedInvoice.subtotal ?? 0) * (depositPercent / 100))}</span>
+                        {' — '}solde restant : <span className="font-semibold text-gray-600 dark:text-gray-300">{formatCurrency((linkedInvoice.subtotal ?? 0) * (1 - depositPercent / 100))}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mode toggle */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex gap-1.5 bg-gray-100 dark:bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
@@ -907,7 +1018,12 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-gray-100/50">
                   <AlignLeft size={15} className="text-gray-400 dark:text-gray-500" />
                   <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">Prestations</h3>
-                  <span className="ml-auto text-[11px] text-gray-300 dark:text-gray-600 font-medium">{items.length} ligne{items.length !== 1 ? 's' : ''}</span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button type="button" onClick={openCatalogBulk} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors" title="Ajouter plusieurs articles depuis le catalogue">
+                      <Package size={13} /> Catalogue
+                    </button>
+                    <span className="text-[11px] text-gray-300 dark:text-gray-600 font-medium">{items.length} ligne{items.length !== 1 ? 's' : ''}</span>
+                  </div>
                 </div>
                 <div className="p-4 space-y-2">
                   {items.map((item, idx) => (
@@ -1111,57 +1227,14 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
         { icon: Send, label: 'Envoyer par email', onClick: () => toast.info('Envoi disponible après enregistrement'), description: 'Envoyer au client' },
       ]} />
 
-      {/* Product Catalog Modal */}
-      <AnimatePresence>
-        {showProductCatalog && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowProductCatalog(false)}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center"><Package size={20} className="text-white" /></div>
-                  <div><h3 className="text-lg font-bold text-gray-900 dark:text-white">Catalogue de produits</h3><p className="text-xs text-gray-500">Sélectionnez un produit à importer</p></div>
-                </div>
-                <button onClick={() => setShowProductCatalog(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"><X size={20} className="text-gray-500" /></button>
-              </div>
-              <div className="p-4 border-b border-gray-200 dark:border-white/10">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input type="text" placeholder="Rechercher par nom, référence, description…" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                {loadingProducts ? (
-                  <div className="flex items-center justify-center py-12"><Loader2 size={32} className="text-blue-500 animate-spin" /></div>
-                ) : filteredProducts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Package className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400">{productSearch ? 'Aucun produit trouvé' : 'Votre catalogue est vide'}</p>
-                    {!productSearch && <button onClick={() => { setShowProductCatalog(false); router.push('/products'); }} className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl text-sm font-semibold hover:shadow-lg transition-all">Créer des produits</button>}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredProducts.map((product) => (
-                      <button key={product.id} onClick={() => selectProduct(product)} className="w-full p-4 bg-gray-50 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-500/10 border border-gray-200 dark:border-white/10 hover:border-blue-200 dark:hover:border-blue-500/30 rounded-2xl transition-all text-left group">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-gray-900 dark:text-white">{product.name}</p>
-                              {product.reference && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-semibold rounded-full">{product.reference}</span>}
-                            </div>
-                            {product.description && <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{product.description}</p>}
-                            <div className="flex items-center gap-3 text-xs text-gray-400"><span className="px-2 py-1 bg-white dark:bg-gray-100 rounded-lg">{product.unit}</span><span>TVA {product.vat_rate}%</span></div>
-                          </div>
-                          <div className="flex-shrink-0 text-right"><p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(product.unit_price)}</p><p className="text-xs text-gray-400">HT/unité</p></div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Catalogue d'articles (modal partagé) */}
+      <ProductCatalogModal
+        open={showProductCatalog}
+        onClose={() => setShowProductCatalog(false)}
+        onApply={handleCatalogApply}
+        replaceMode={catalogMode === 'replace'}
+        userId={profile?.id}
+      />
 
       {/* Client Type Modal (création) */}
       {!isEdit && (

@@ -36,10 +36,10 @@ export async function GET(
       return NextResponse.json({ error: 'already_signed' }, { status: 400 });
     }
 
-    // Récupérer le devis séparément
+    // Récupérer le devis séparément (champs complets pour l'aperçu ligne à ligne)
     const { data: quote, error: quoteError } = await admin
       .from('invoices')
-      .select('id, number, issue_date, due_date, total, status, notes, client_id, user_id')
+      .select('id, number, issue_date, due_date, total, subtotal, vat_amount, discount_percent, discount_amount, status, notes, items, document_type, currency, client_id, user_id')
       .eq('id', tokenRecord.quote_id)
       .single();
 
@@ -75,10 +75,10 @@ export async function GET(
       .update({ view_count: (tokenRecord.view_count || 0) + 1 })
       .eq('id', tokenRecord.id);
 
-    // Récupérer le profil de l'utilisateur pour les couleurs
+    // Récupérer le profil de l'utilisateur pour les couleurs + logo
     const { data: profile } = await admin
       .from('profiles')
-      .select('accent_color, company_name')
+      .select('accent_color, company_name, logo_url, email')
       .eq('id', quote.user_id)
       .single();
 

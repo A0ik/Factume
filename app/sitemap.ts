@@ -95,8 +95,9 @@ const hubPages = [
 const mainPages = [
   { url: baseUrl, lastModified: may2026, changeFrequency: 'weekly' as const, priority: 1 },
   { url: `${baseUrl}/demo`, lastModified: may2026, changeFrequency: 'monthly' as const, priority: 0.9 },
-  { url: `${baseUrl}/login`, lastModified: new Date('2026-03-01'), changeFrequency: 'yearly' as const, priority: 0.5 },
-  { url: `${baseUrl}/register`, lastModified: new Date('2026-03-01'), changeFrequency: 'yearly' as const, priority: 0.5 },
+  // GATEKEEPER : /login et /register sont noindex (funnels d'auth, pas cibles SEO).
+  // Une page noindex ne doit JAMAIS figurer dans le sitemap — c'est un signal
+  // contradictoire qui alimente le rapport "Exclue par la balise noindex" (GSC).
 ];
 
 // Blog

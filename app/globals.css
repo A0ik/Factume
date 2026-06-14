@@ -478,6 +478,25 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   to { stroke-dashoffset: 0; }
 }
 
+/* Confetti burst — triggered on annual pricing toggle */
+@keyframes confettiFall {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg)    scale(1);   opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translate3d(var(--cx, 0), var(--cy, 120px), 0) rotate(var(--cr, 540deg)) scale(0.6); opacity: 0; }
+}
+
+/* Subtle floating sheen for premium cards */
+@keyframes sheen {
+  0%   { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%)  skewX(-12deg); }
+}
+
+/* Bento ambient glow drift */
+@keyframes bentoGlow {
+  0%, 100% { transform: translate(0, 0) scale(1);   opacity: 0.55; }
+  50%      { transform: translate(6%, -4%) scale(1.15); opacity: 0.8; }
+}
+
 /* ═══════════════════════════════════════════════════════════
    LOI 6 : CHROMÉTRIE PSYCHOLOGIQUE
    - Base: slate-950 (sombre, apaisant, professionnel)

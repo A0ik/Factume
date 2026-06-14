@@ -73,6 +73,19 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
+  // GATEKEEPER — Loi du Domaine Souverain : www → apex (308 permanent).
+  // Sans ce redirect, Google indexe www.factu.me ET factu.me comme deux sites
+  // distincts → "Page en double sans URL canonique sélectionnée" (GSC). L'apex
+  // (sans www) est l'unique domaine canonique du site. Les routes /api/ sont
+  // exclues : un webhook (Stripe / Supabase / Pennylane) doit toucher son host
+  // exact et ne jamais suivre une redirection.
+  const host = req.headers.get('host') || '';
+  if (host.startsWith('www.') && !pathname.startsWith('/api/')) {
+    const apex = req.nextUrl.clone();
+    apex.host = host.slice(4);
+    return NextResponse.redirect(apex, 308);
+  }
+
   // Security headers
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');

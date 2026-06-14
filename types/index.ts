@@ -143,6 +143,22 @@ export interface InvoiceItem {
   discount_percent?: number;
 }
 
+/** Article du catalogue produits (table `products`). Réutilisable dans tout document. */
+export interface Product {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  unit_price: number;
+  unit: string;
+  vat_rate: number;
+  category: string;
+  reference?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type DocumentType = 'invoice' | 'quote' | 'credit_note' | 'purchase_order' | 'delivery_note' | 'deposit';
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'accepted' | 'refused' | 'cancelled' | 'refunded' | 'rejected' | 'expired' | 'pending' | 'partial' | 'delivered';
 

@@ -97,28 +97,30 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
 
   const handleBulkExport = async () => {
     setActionLoading('export');
+    let ok = 0;
     try {
-      // Générer un PDF pour chaque facture
+      // Route d'export authentifiée (GET, cookie-based). Une à la fois pour laisser
+      // le navigateur enchaîner les téléchargements sans se saturer.
       for (const id of selectedIds) {
-        const res = await fetch('/api/invoices/pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ invoiceId: id }),
-        });
-
+        const res = await fetch(`/api/download/pdf/${id}`);
         if (res.ok) {
           const blob = await res.blob();
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `facture_${id}.pdf`;
+          const disp = res.headers.get('Content-Disposition') || '';
+          const m = /filename="?([^"]+)"?/.exec(disp);
+          a.download = m?.[1] || `document_${id}.pdf`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           URL.revokeObjectURL(url);
+          ok++;
+          await new Promise((r) => setTimeout(r, 250));
         }
       }
-
-      toast.success(`${selectedIds.length} facture(s) exportée(s)`);
-    } catch (err) {
+      toast.success(ok > 0 ? `${ok} document(s) exporté(s)` : 'Aucun export possible');
+    } catch {
       toast.error('Erreur lors de l\'export');
     } finally {
       setActionLoading(null);
