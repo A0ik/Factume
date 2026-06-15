@@ -108,20 +108,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ loading: true });
     try {
-      // BASTION: Direct Google OAuth — bypasses Supabase redirect
-      // so the user sees "Factu.me" instead of "ggrwyfhptxwpahwkeoyj.supabase.co"
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId) throw new Error('Google OAuth non configuré');
-      const redirectUri = `${window.location.origin}/auth/callback`;
-      const params = new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        response_type: 'code',
-        scope: 'openid email profile',
-        prompt: 'select_account',
+      // PHOENIX FIX (CRISE 2) : l'ancien flux contournait Supabase (OAuth Google
+      // direct avec redirect_uri=/auth/callback + response_type=code), MAIS la page
+      // /auth/callback n'échangeait JAMAIS ce code → getSession() retournait null →
+      // redirect /login → connexion Google totalement cassée.
+      // On revient à l'OAuth Supabase natif : Supabase gère PKCE + échange + session.
+      // La marque « Factu.me » reste visible sur l'écran de consentement Google
+      // (configuré dans Google Cloud Console > OAuth consent screen) ; l'URL
+      // supabase.co n'apparaît que comme un flash de redirection serveur.
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { error } = await getSupabaseClient().auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: 'select_account',
+            access_type: 'offline',
+          },
+        },
       });
-      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-      // Don't reset loading — navigating away
+      if (error) throw error;
+      // Pas de reset loading : le navigateur s'apprête à naviguer vers Google.
     } catch (error) {
       set({ loading: false });
       throw error;

@@ -5,7 +5,12 @@ import Script from 'next/script';
 
 const GA_ID = 'G-WHKB8Y57YS';
 
-export function GoogleAnalytics() {
+interface GoogleAnalyticsProps {
+  /** Nonce CSP issu du middleware (x-nonce) — requis pour les scripts inline en strict CSP. */
+  nonce?: string;
+}
+
+export function GoogleAnalytics({ nonce }: GoogleAnalyticsProps) {
   const [consented, setConsented] = useState(false);
 
   useEffect(() => {
@@ -33,8 +38,9 @@ export function GoogleAnalytics() {
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
         strategy="afterInteractive"
+        nonce={nonce}
       />
-      <Script id="google-analytics" strategy="afterInteractive">
+      <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}

@@ -149,9 +149,13 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   color: rgb(250 250 250);
 }
 
-/* ─── Loi 2: Background elevation — light creates depth ─── */
+/* ─── Loi 2: Background elevation — light creates depth ───
+   PHOENIX FIX (CRISE 4) : bg-gray-50 était remappé sur #09090B — STRICTEMENT
+   identique au fond body. Les cartes/sections en bg-gray-50 posées sur le body
+   étaient donc INVISIBLES (le symptôme « gris sur gris, illisible »). On monte
+   bg-gray-50 d'un cran vers la surface (#111113) pour restaurer l'élévation. */
 .dark :not(#landing *).bg-white { background-color: rgb(17 17 19) !important; }
-.dark :not(#landing *).bg-gray-50 { background-color: rgb(9 9 11) !important; }
+.dark :not(#landing *).bg-gray-50 { background-color: rgb(17 17 19) !important; }
 .dark :not(#landing *).bg-gray-100 { background-color: rgb(17 17 19) !important; }
 .dark :not(#landing *).bg-gray-200 { background-color: rgb(27 27 29) !important; }
 .dark :not(#landing *).bg-gray-300 { background-color: rgb(39 39 42) !important; }
@@ -165,8 +169,24 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 .dark :not(#landing *).bg-slate-900 { background-color: rgb(17 17 19) !important; }
 .dark :not(#landing *).bg-slate-950 { background-color: rgb(9 9 11) !important; }
 
-/* Opacity-modified backgrounds */
-.dark :not(#landing *)[class*="bg-gray-50\\/"] { background-color: rgba(9, 9, 11, 0.5) !important; }
+/* PHOENIX FIX (CRISE 4) : couverture des variants `dark:` préfixés utilisés par
+   les composants partagés (Modal, Button, Input, Badge, DocPickerModal,
+   InvoiceMobileActionBar). Le sélecteur `.bg-slate-800` ci-dessus ne cible PAS
+   la classe Tailwind `dark:bg-slate-800` (noms de classes différents) → ces
+   composants restaient au slate natif BLEUTÉ (#1E293B), violant « Loi 1 : pas de
+   bleu marine ». On les remappe vers le zinc neutre Obsidian. */
+.dark :not(#landing *).dark\:bg-slate-700 { background-color: rgb(39 39 42) !important; }
+.dark :not(#landing *).dark\:bg-slate-800 { background-color: rgb(27 27 29) !important; }
+.dark :not(#landing *).dark\:bg-slate-900 { background-color: rgb(17 17 19) !important; }
+.dark :not(#landing *).dark\:bg-gray-700 { background-color: rgb(39 39 42) !important; }
+.dark :not(#landing *).dark\:bg-gray-800 { background-color: rgb(27 27 29) !important; }
+.dark :not(#landing *).dark\:bg-gray-900 { background-color: rgb(17 17 19) !important; }
+.dark :not(#landing *).dark\:border-slate-700 { border-color: rgba(255, 255, 255, 0.10) !important; }
+.dark :not(#landing *).dark\:border-slate-800 { border-color: rgba(255, 255, 255, 0.08) !important; }
+
+/* Opacity-modified backgrounds
+   PHOENIX FIX (CRISE 4) : bg-gray-50/ opacité aussi remontée vers la surface. */
+.dark :not(#landing *)[class*="bg-gray-50\\/"] { background-color: rgba(17, 17, 19, 0.6) !important; }
 .dark :not(#landing *)[class*="bg-gray-100\\/"] { background-color: rgba(17, 17, 19, 0.5) !important; }
 .dark :not(#landing *)[class*="bg-gray-200\\/"] { background-color: rgba(27, 27, 29, 0.5) !important; }
 .dark :not(#landing *)[class*="bg-gray-800\\/"] { background-color: rgba(27, 27, 29, 0.85) !important; }
@@ -195,7 +215,7 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 .dark :not(#landing *).text-gray-600 { color: rgb(212 212 216) !important; }   /* ~9.9:1  */
 .dark :not(#landing *).text-gray-500 { color: rgb(161 161 170) !important; }   /* ~8.0:1  ✓ AAA */
 .dark :not(#landing *).text-gray-400 { color: rgb(161 161 170) !important; }   /* ~8.0:1  ✓ AAA — WAS BROKEN */
-.dark :not(#landing *).text-gray-300 { color: rgb(113 113 122) !important; }   /* ~4.2:1  — decorative only */
+.dark :not(#landing *).text-gray-300 { color: rgb(161 161 170) !important; }   /* ~8:1  ✓ AAA — PHOENIX (CRISE 4) : was 113 113 122 (~4.2:1, FAIL) utilisé pour email/notes métier */
 
 .dark :not(#landing *).text-slate-900 { color: rgb(250 250 250) !important; }
 .dark :not(#landing *).text-slate-800 { color: rgb(244 244 245) !important; }
@@ -203,7 +223,7 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 .dark :not(#landing *).text-slate-600 { color: rgb(212 212 216) !important; }
 .dark :not(#landing *).text-slate-500 { color: rgb(161 161 170) !important; }
 .dark :not(#landing *).text-slate-400 { color: rgb(161 161 170) !important; }  /* ✓ AAA — WAS BROKEN */
-.dark :not(#landing *).text-slate-300 { color: rgb(113 113 122) !important; }
+.dark :not(#landing *).text-slate-300 { color: rgb(161 161 170) !important; }  /* ✓ AAA — PHOENIX (CRISE 4) : was 113 113 122 (~4.2:1, FAIL) */
 
 /* ─── Dividers ─── */
 .dark :not(#landing *).divide-gray-50 > * + * { border-color: rgba(255, 255, 255, 0.06) !important; }

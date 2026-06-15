@@ -130,6 +130,17 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   // Memoized computed data
   const clientInvoices = useMemo(() => invoices.filter((inv) => inv.client_id === id), [invoices, id]);
+  // PHOENIX FIX (CRISE 4) : l'onglet « Documents » dupliquait « Factures » (il
+  // utilisait clientInvoices). On sépare désormais : les « Documents » regroupent
+  // les devis, avoirs, acomptes, commandes et bons de livraison (tout document_type
+  // ≠ invoice), « Factures » reste les factures.
+  const clientDocuments = useMemo(
+    () => clientInvoices.filter((inv) => (inv as any).document_type && (inv as any).document_type !== 'invoice'),
+    [clientInvoices],
+  );
+  // PHOENIX FIX (CRISE 4) : les dépenses ne sont PAS chargées dans useDataStore —
+  // l'onglet affichait un faux « Aucune depense » trompeur. On garde un tableau vide
+  // et un message honnête (cf. onglet expenses) en attendant le câblage de la source.
   const clientExpenses = useMemo(() => [] as any[], [id]);
   const totalRevenue = useMemo(() => clientInvoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0), [clientInvoices]);
   const clientTags = useMemo(() => client?.tags ?? [], [client?.tags]);
@@ -557,7 +568,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <ShoppingBag size={28} className="text-slate-500" />
                       </div>
-                      <p className="text-sm text-slate-400">Aucune depense pour ce client</p>
+                      <p className="text-sm text-slate-400">Le suivi des depenses par client arrive bientot.</p>
+                      <p className="text-xs text-slate-500 mt-1">Retrouvez deja toutes vos depenses dans l'onglet Depenses.</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-200">
@@ -588,16 +600,16 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       <Plus size={14} />Nouveau
                     </button>
                   </div>
-                  {clientInvoices.length === 0 ? (
+                  {clientDocuments.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <FileText size={28} className="text-slate-500" />
                       </div>
-                      <p className="text-sm text-slate-400">Aucun document pour ce client</p>
+                      <p className="text-sm text-slate-400">Aucun document (devis, avoir, acompte) pour ce client</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-200">
-                      {clientInvoices.map((inv, idx) => (
+                      {clientDocuments.map((inv, idx) => (
                         <motion.div key={inv.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }}>
                           <Link href={`/invoices/${inv.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group">
                             <div className="flex-1 min-w-0">
@@ -719,25 +731,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Mobile floating action bar */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden z-30 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => router.push('/clients')} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={16} />Retour
-          </button>
-          <div className="flex gap-2">
-            <button onClick={handleGeneratePortal} disabled={portalLoading} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/20 transition-all disabled:opacity-50" title="Portail client">
-              {portalLoading ? <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : portalCopied ? <Check size={16} className="text-emerald-400" /> : <Globe size={16} />}
-            </button>
-            <button onClick={() => setShowEdit(true)} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-gray-900 hover:border-gray-300 transition-all" title="Modifier">
-              <Pencil size={16} />
-            </button>
-            <button onClick={() => setShowDelete(true)} className="p-2.5 rounded-xl bg-gray-100 border border-gray-200 text-slate-400 hover:text-red-400 hover:border-red-500/20 transition-all" title="Supprimer">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* PHOENIX FIX (CRISE 4) : l'ancienne barre d'action mobile custom (fixed
+          bottom-0) chevauchait la BottomTabBar globale (elle aussi bottom-0) ET
+          doublonnait avec <MobileActionBar> ci-dessous (Modifier / Portail /
+          Supprimer présents deux fois). On la retire — <MobileActionBar> est
+          correctement positionné (bottom-[68px], au-dessus de la BottomTabBar) et
+          reste le composant standard. Le retour mobile est assuré par la nav globale. */}
 
       {/* Edit modal */}
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier le client" size="lg">

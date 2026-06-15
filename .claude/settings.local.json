@@ -248,7 +248,8 @@
       "mcp__plugin_vercel_vercel__get_deployment_build_logs",
       "mcp__stripe__search_stripe_resources",
       "mcp__stripe__stripe_api_write",
-      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(node scripts/gen-favicon.cjs)"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

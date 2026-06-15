@@ -36,9 +36,21 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
 ];
 
 export default function ContractsPage() {
-  const { profile, initialized } = useAuthStore();
+  // PHOENIX FIX (CRISE 3) : sélecteurs Zustand FINIS au lieu de destructurer le store
+  // entier. Lire le store entier (useAuthStore() / useContractStore() sans sélecteur)
+  // abonne le composant à CHAQUE changement du moindre champ → tempête de re-renders
+  // pendant la fenêtre de résolution du profil (debounce 300ms de fetchProfile) →
+  // instabilité « marche après F5 ». Les sélecteurs primitifs ne re-renderent que
+  // quand la valeur sélectionnée change réellement.
+  const profile = useAuthStore((s) => s.profile);
+  const initialized = useAuthStore((s) => s.initialized);
   const { canUseContracts } = useSubscription();
-  const { contracts, stats, loading, fetchContracts, deleteContract, duplicateContract } = useContractStore();
+  const contracts = useContractStore((s) => s.contracts);
+  const stats = useContractStore((s) => s.stats);
+  const loading = useContractStore((s) => s.loading);
+  const fetchContracts = useContractStore((s) => s.fetchContracts);
+  const deleteContract = useContractStore((s) => s.deleteContract);
+  const duplicateContract = useContractStore((s) => s.duplicateContract);
 
   // FIXER (BUG 3) : ne PAS évaluer canUseContracts tant que le profil n'est pas chargé.
   // useSubscription fait défaillir le tier à 'free' quand profile === null (authStore
@@ -66,7 +78,15 @@ export default function ContractsPage() {
   >(null);
   const [deletingContract, setDeletingContract] = useState(false);
 
-  useEffect(() => { fetchContracts(); }, []);
+  // PHOENIX FIX (CRISE 3) : on ne fetch les contrats QUAND le profil/session sont
+  // résolus. Avant, `useEffect(() => { fetchContracts(); }, [])` se déclenchait au
+  // montage — AVANT que la session Supabase soit hydratée côté client — → requête
+  // 401/empty silencieuse → liste vide au premier rendu → l'utilisateur devait
+  // rafraîchir (le F5 force le bootstrap auth qui résout la session). Gater sur
+  // `subscriptionReady` garantit un fetch authentifié → la liste s'affiche du 1er coup.
+  useEffect(() => {
+    if (subscriptionReady) fetchContracts();
+  }, [subscriptionReady]);
 
   // SENTINEL (URGENCE 2) — GATE DÉTERMINISTE : plus de router.push('/paywall').
   // L'ancien useEffect redirigeait vers /paywall comme effet de bord pendant la

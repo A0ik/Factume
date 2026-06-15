@@ -56,19 +56,30 @@ export default function CreateDocumentContent() {
   }, [effectiveType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Auto-fill client details when clientId is selected ──
+  // PHOENIX FIX (CRISE 0+1C / React #310) : garde d'égalité obligatoire.
+  // `updateField` crée TOUJOURS un nouvel état Zustand (même si la valeur est
+  // identique), ce qui déclenche un re-render. Comme `clients` est un array
+  // instable (lu sans sélecteur sur useDataStore), l'effet se re-déclenchait à
+  // chaque render → updateField → re-render → nouvelle réf `clients` → effet → ∞
+  // → "Maximum update depth exceeded" (#310), qui tuait la page et rendait le
+  // bouton « Créer » inactif. On ne mute désormais que si la valeur change.
+  //
+  // IMPORTANT : on garde les deps MINIMALES [session.clientId, clients]. NE PAS
+  // ajouter session.clientEmail/etc. dans les deps — sinon chaque frappe de
+  // l'utilisateur dans le champ email re-déclencherait l'effet et écraserait sa
+  // saisie avec la valeur du client. La garde d'égalité suffit à casser la boucle.
   useEffect(() => {
-    if (session.clientId && clients.length > 0) {
-      const c = clients.find((cl) => cl.id === session.clientId);
-      if (c) {
-        session.updateField('clientEmail', c.email || '');
-        session.updateField('clientPhone', c.phone || '');
-        session.updateField('clientAddress', c.address || '');
-        session.updateField('clientCity', c.city || '');
-        session.updateField('clientPostalCode', c.postal_code || '');
-        session.updateField('clientSiret', c.siret || '');
-        session.updateField('clientVatNumber', c.vat_number || '');
-      }
-    }
+    if (!session.clientId || clients.length === 0) return;
+    const c = clients.find((cl) => cl.id === session.clientId);
+    if (!c) return;
+
+    if (session.clientEmail !== (c.email || '')) session.updateField('clientEmail', c.email || '');
+    if (session.clientPhone !== (c.phone || '')) session.updateField('clientPhone', c.phone || '');
+    if (session.clientAddress !== (c.address || '')) session.updateField('clientAddress', c.address || '');
+    if (session.clientCity !== (c.city || '')) session.updateField('clientCity', c.city || '');
+    if (session.clientPostalCode !== (c.postal_code || '')) session.updateField('clientPostalCode', c.postal_code || '');
+    if (session.clientSiret !== (c.siret || '')) session.updateField('clientSiret', c.siret || '');
+    if (session.clientVatNumber !== (c.vat_number || '')) session.updateField('clientVatNumber', c.vat_number || '');
   }, [session.clientId, clients]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Save handler ──────────────────────────────────

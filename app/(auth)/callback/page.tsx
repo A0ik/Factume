@@ -17,7 +17,15 @@ function CallbackHandler() {
         return;
       }
 
-      const { data: { session } } = await getSupabaseClient().auth.getSession();
+      const supabase = getSupabaseClient();
+
+      // PHOENIX FIX (CRISE 2) : échange explicite du code PKCE. Indispensable
+      // pour le retour OAuth Google (et les liens de réinitialisation mot de passe).
+      // Sans cet appel, getSession() lit un cookie non finalisé → null → redirect
+      // /login → connexion Google visiblement « cassée ».
+      await supabase.auth.exchangeCodeForSession(window.location.href);
+
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         router.push('/login');
         return;
@@ -25,14 +33,14 @@ function CallbackHandler() {
 
       await fetchProfile(session.user.id);
 
-      const { data: profile } = await getSupabaseClient()
+      const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_done')
         .eq('id', session.user.id)
         .single();
 
       if (!profile || !profile.onboarding_done) {
-        await getSupabaseClient().from('profiles').upsert({
+        await supabase.from('profiles').upsert({
           id: session.user.id,
           email: session.user.email ?? '',
           company_name: '',
