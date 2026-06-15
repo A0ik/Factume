@@ -219,7 +219,13 @@ export async function POST(req: NextRequest) {
     console.log('[send-invoice] Génération PDF...');
     let pdfBuffer: Buffer;
     try {
-      const element = React.createElement(PdfDocument, { invoice, profile: (profile || {}) as any });
+      // SENTINEL (AUDIT 2) — Injecter le QR code (data URL) avant le rendu, sinon
+      // PdfDocument affiche le fallback texte « Payer » au lieu de l'image QR
+      // (l'invoice vient de Supabase, qui ne persiste pas qr_data_url). Miroir du
+      // chemin downloadInvoicePdf / withQrDataUrl pour que le PDF email ait le QR.
+      const { withQrDataUrl } = await import('@/lib/pdf');
+      const invoiceWithQr = await withQrDataUrl(invoice);
+      const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: (profile || {}) as any });
       const pdfBytes = await renderToBuffer(element as any);
       pdfBuffer = Buffer.from(pdfBytes);
       console.log('[send-invoice] PDF généré, taille:', pdfBuffer.length, 'bytes');

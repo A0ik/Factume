@@ -140,7 +140,7 @@ export default function EditDocumentContent({ invoiceId }: { invoiceId: string }
           client_siret: session.clientSiret || undefined,
           client_vat_number: session.clientVatNumber || undefined,
         }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 30000)),
       ]);
       toast.success('Document modifié avec succès !');
       setTimeout(() => router.push(`/invoices/${invoice.id}`), 400);

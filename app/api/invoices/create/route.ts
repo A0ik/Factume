@@ -6,6 +6,11 @@ import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
 import { getUserSubscriptionStatus, requireLimit } from '@/lib/subscription-guard';
 import type { NextRequest } from 'next/server';
 
+// SENTINEL (URGENCE 1) : autoriser jusqu'à 60s pour que la transmission e-facturation
+// B2B (SuperPDP) ne soit pas coupée par la limite serverless par défaut (~10s), ce qui
+// faisait échouer/raccourcir la création de factures B2B avant la réponse.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     // LOI 9 : seuil entreprise — ne pas bloquer la création légitime (était 20/min)

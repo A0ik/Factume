@@ -173,7 +173,11 @@ export const useDataStore = create<DataState>((set, get) => ({
       const result = await response.json();
 
       if (!response.ok || result.error) {
-        throw new Error(result.error || `Erreur serveur (${response.status})`);
+        // SENTINEL (URGENCE 1) : propager le code structuré (ex. 'LIMIT_REACHED')
+        // pour que le client puisse réagir précisément (redirection /paywall).
+        const err = new Error(result.error || `Erreur serveur (${response.status})`) as Error & { code?: string };
+        if (result.code) err.code = result.code;
+        throw err;
       }
 
       const data = result.invoice;

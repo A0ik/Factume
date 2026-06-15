@@ -134,7 +134,10 @@ export default function CreateDocumentContent() {
           idempotencyId,
         ),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('__timeout__')), 15000),
+          // SENTINEL (URGENCE 1) : 60s (au lieu de 15s) — la transmission e-facturation
+          // B2B (SuperPDP) peut dépasser 15s ; un timeout trop court masquait une
+          // création réussie et empêchait la redirection de succès.
+          setTimeout(() => reject(new Error('__timeout__')), 60000),
         ),
       ]);
 
@@ -150,9 +153,19 @@ export default function CreateDocumentContent() {
     } catch (e: any) {
       console.error('[CreateDocument] Error:', e);
       if (e?.message === '__timeout__') {
-        session.setError('Délai dépassé — réessayez.');
-        toast.error('Délai de création dépassé');
-      } else if (e?.message?.includes('Limite de')) {
+        // SENTINEL (URGENCE 1) : un timeout ≠ un échec. La facture est très
+        // probablement créée côté serveur (la transmission e-facturation B2B via
+        // SuperPDP peut dépasser 60s). On redirige vers la liste plutôt que
+        // d'afficher un échec trompeur.
+        session.setError('Création en cours : la transmission e-facturation prend plus de temps que prévu. Votre document est probablement créé.');
+        toast.info('Création en cours — vérifiez vos documents.', {
+          description: 'La e-facturation B2B peut prendre jusqu’à 1 minute.',
+        });
+        setTimeout(() => router.push('/invoices'), 1500);
+      } else if (e?.code === 'LIMIT_REACHED' || e?.message?.includes('Limite')) {
+        // SENTINEL (URGENCE 1) : le serveur renvoie « Limite atteinte (X/Y)… »
+        // (et non « Limite de »). On matche le code structuré propagé par dataStore
+        // + le texte réel, pour enfin rediriger vers /paywall.
         session.setError('Limite de documents atteinte.');
         toast.error('Limite atteinte !');
         setTimeout(() => router.push('/paywall'), 1500);

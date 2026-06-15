@@ -135,17 +135,22 @@ export default function CanvasCopilotLayout({
           </motion.div>
         )}
 
-        {/* ═══ Save/Create button — ALWAYS visible (mobile + desktop) ═══ */}
+        {/* ═══ Save/Create button — ALWAYS visible & clickable (mobile + desktop) ═══
+            SENTINEL (URGENCE 1) : le bouton n'est JAMAIS désactivé par manque de
+            contenu — la validation se fait au clic dans handleSave avec un message
+            clair. Avant, un item vide (description '' + unit_price 0) gardait le
+            bouton `disabled` silencieusement → le clic était avalé par le HTML,
+            sans aucun feedback → « rien ne se passe ». */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onSave}
-          disabled={saving || !hasContent}
+          disabled={saving}
           className={cn(
             'flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
-            hasContent && !saving
-              ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
-              : 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-not-allowed',
+            saving
+              ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-wait'
+              : `bg-gradient-to-r ${config.gradient} text-white shadow-lg hover:shadow-xl`,
           )}
         >
           {saving ? (

@@ -15,7 +15,6 @@ import { ContractCard } from '@/components/contracts/ContractCard';
 import { ContractStatusBadge, ContractTypeBadge } from '@/components/contracts/ContractStatusBadge';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { downloadCSV } from '@/lib/utils';
 
 const ease = [0.25, 0.1, 0.25, 1] as [number, number, number, number];
@@ -37,7 +36,6 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
 ];
 
 export default function ContractsPage() {
-  const router = useRouter();
   const { profile, initialized } = useAuthStore();
   const { canUseContracts } = useSubscription();
   const { contracts, stats, loading, fetchContracts, deleteContract, duplicateContract } = useContractStore();
@@ -70,12 +68,17 @@ export default function ContractsPage() {
 
   useEffect(() => { fetchContracts(); }, []);
 
-  useEffect(() => {
-    if (subscriptionReady && !canUseContracts) {
-      router.push('/paywall');
-    }
-  }, [subscriptionReady, canUseContracts, router]);
-
+  // SENTINEL (URGENCE 2) — GATE DÉTERMINISTE : plus de router.push('/paywall').
+  // L'ancien useEffect redirigeait vers /paywall comme effet de bord pendant la
+  // fenêtre de résolution du tier d'abonnement (useSubscription fait défaut à
+  // 'free' tant que profile est null / en cours de résolution). Ce redirect
+  // provoquait le rebond intermittent « Contrats marche parfois, parfois non ».
+  // Désormais le comportement est 100% déterministe via des gates de RENDU :
+  //   • profil non résolu  → loader (subscriptionReady)
+  //   • résolu, pas accès  → UI paywall inline (return ci-dessous), avec CTA
+  //                          « Voir les offres » qui mène toujours à /paywall
+  //   • résolu, accès      → liste des contrats
+  // Aucun flash, aucun rebond, aucune condition aléatoire.
   // Tant que le profil n'est pas résolu, on affiche un loader plutôt que le paywall
   // (évite le flash paywall + le redirect prématuré vers /paywall).
   if (!subscriptionReady) {

@@ -505,8 +505,11 @@ export default function LandingPageClient() {
             <R delay={0.12}><p className="text-base sm:text-lg text-gray-500 mt-5 max-w-xl leading-relaxed">Quel que soit votre métier, Factu.me s'adapte à votre quotidien — et à votre façon de travailler.</p></R>
           </div>
 
-          {/* Bento — 4 colonnes desktop, diagonale sombre (auto TL / agence BR) */}
-          <div className="grid grid-cols-2 max-[374px]:grid-cols-1 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(210px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
+          {/* Bento — 4 colonnes desktop, diagonale sombre (auto TL / agence BR).
+              SENTINEL (URGENCE 3) — mobile-first compact : auto-rows content-driven
+              (minmax(108px,auto) au lieu de 170px/1fr qui étiraient), gap resserré,
+              et on garde 2 colonnes même sur très petits écrans (plus dense que 1 col). */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(108px,auto)] lg:auto-rows-[minmax(210px,1fr)] gap-2.5 sm:gap-4 2xl:gap-5">
 
             {/* ── AUTO-ENTREPRENEUR — carte héro (2×2, sombre) ── */}
             <R delay={0.04} className="col-span-2 lg:row-span-2">
@@ -538,7 +541,7 @@ export default function LandingPageClient() {
             </R>
 
             {/* ── ARTISAN (large, chaud) ── */}
-            <R delay={0.1} className="col-span-2">
+            <R delay={0.1} className="col-span-1 lg:col-span-2">
               <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-stone-100 to-amber-50/70 border border-stone-200/80">
                 <svg className="absolute right-3 top-3 w-40 h-40 text-amber-900/[0.05]" viewBox="0 0 100 100" fill="none"><path d="M10 80 L40 30 L60 50 L90 20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="4 6" /><circle cx="10" cy="80" r="5" fill="currentColor" /><circle cx="90" cy="20" r="5" fill="currentColor" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
@@ -574,7 +577,7 @@ export default function LandingPageClient() {
             </R>
 
             {/* ── CONSULTANT (large, clair) ── */}
-            <R delay={0.28} className="col-span-2">
+            <R delay={0.28} className="col-span-1 lg:col-span-2">
               <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <svg className="absolute right-4 top-6 w-44 h-20 text-emerald-500/10" viewBox="0 0 200 60" fill="none" preserveAspectRatio="none"><path d="M4 44 C30 20 60 52 92 28 C120 8 160 40 196 16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
@@ -614,7 +617,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={2} />
 
       {/* ════════════ CORE FEATURE — Facture électronique + IA ════════════ */}
-      <section data-nav-theme="dark" id="features" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="features" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-black">
         <div className={`${LC} relative z-10`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-4">Facturation électronique</p></R>
@@ -680,7 +683,7 @@ export default function LandingPageClient() {
             <R delay={0.15}><h2 className="text-[clamp(1.9rem,6vw,2.5rem)] md:text-5xl 2xl:text-6xl font-bold tracking-tight text-gray-900 leading-[1.08]">Tout ce qu'il vous faut, <span className="text-emerald-500">au-delà de la facture</span></h2></R>
           </div>
 
-          <div className="grid grid-cols-2 max-[374px]:grid-cols-1 lg:grid-cols-4 auto-rows-[minmax(170px,1fr)] lg:auto-rows-[minmax(200px,1fr)] gap-3 sm:gap-4 2xl:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(108px,auto)] lg:auto-rows-[minmax(200px,1fr)] gap-2.5 sm:gap-4 2xl:gap-5">
 
             {/* ── ENCAISSEMENT — hero (2×2, sombre) ── */}
             <R delay={0.05} className="col-span-2 lg:row-span-2">
@@ -719,7 +722,7 @@ export default function LandingPageClient() {
             </R>
 
             {/* ── CRM (large, clair) ── */}
-            <R delay={0.1} className="col-span-2">
+            <R delay={0.1} className="col-span-1 lg:col-span-2">
               <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Brain className="w-5 h-5 text-white" /></div>
@@ -764,7 +767,7 @@ export default function LandingPageClient() {
             </R>
 
             {/* ── RÉCURRENTES (large, clair) ── */}
-            <R delay={0.28} className="col-span-2">
+            <R delay={0.28} className="col-span-1 lg:col-span-2">
               <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <div className="relative z-10 flex items-start justify-between gap-4 h-full">
                   <div className="flex flex-col h-full">
@@ -874,7 +877,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={3} />
 
       {/* ════════════ CONTRATS — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-black">
         <div className={`${LC} relative z-[2]`}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <div className="space-y-8">
@@ -927,7 +930,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
 
       {/* ════════════ ENCAISSEMENT — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className={`${LC}`}>
           <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 2xl:gap-32 items-center">
             <R x={-30} y={0}>
@@ -1000,7 +1003,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
 
       {/* ════════════ TIMELINE — DARK ════════════ */}
-      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-black">
         <div className={`${LC} relative z-[2]`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-16 md:mb-24 2xl:mb-32">
             <R><p className="text-xs sm:text-sm text-emerald-400 uppercase tracking-[0.2em] font-semibold mb-4">Comment ça marche</p></R>
@@ -1036,7 +1039,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={2} />
 
       {/* ════════════ TESTIMONIALS — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className={`${LC}`}>
           <div className="max-w-2xl 2xl:max-w-3xl mb-14 md:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">Témoignages</p></R>
@@ -1066,7 +1069,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={0} />
 
       {/* ════════════ PRICING — DARK (confetti + compteurs) ════════════ */}
-      <section data-nav-theme="dark" id="pricing" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="pricing" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-black">
         <Confetti fire={confettiFire} />
         <div className={`${LC} relative z-[2]`}>
           <div className="text-center mb-12 md:mb-16 2xl:mb-20">
@@ -1166,7 +1169,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#000000" toColor="#ffffff" variant={0} />
 
       {/* ════════════ FAQ — BLANC ════════════ */}
-      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-white">
+      <section data-nav-theme="light" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-white">
         <div className="max-w-3xl 2xl:max-w-4xl mx-auto px-6 sm:px-8 md:px-12 lg:px-20 2xl:px-32">
           <div className="mb-14 2xl:mb-20">
             <R><p className="text-xs sm:text-sm text-emerald-600 uppercase tracking-[0.2em] font-semibold mb-4">FAQ</p></R>
@@ -1183,7 +1186,7 @@ export default function LandingPageClient() {
       <Wave fromColor="#ffffff" toColor="#000000" variant={1} />
 
       {/* ════════════ CTA FINAL — DARK ════════════ */}
-      <section data-nav-theme="dark" id="ai" className="relative py-16 sm:py-24 md:py-40 2xl:py-48 overflow-hidden bg-black">
+      <section data-nav-theme="dark" id="ai" className="relative py-16 sm:py-24 md:py-28 2xl:py-36 overflow-hidden bg-black">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[800px] lg:w-[1000px] h-[600px] sm:h-[800px] lg:h-[1000px] bg-emerald-500/8 rounded-full blur-[180px] lg:blur-[250px]" />
         </div>
