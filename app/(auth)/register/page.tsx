@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail } from 'lucide-react';
+import { ShieldCheck, RefreshCw, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -20,10 +20,24 @@ export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get('ref');
-  const { signUp, signInWithGoogle, loading } = useAuthStore();
+  const { signUp, verifyEmailOtp, resendSignupOtp, signInWithGoogle, loading } = useAuthStore();
   const [error, setError] = useState('');
   const [confirmEmail, setConfirmEmail] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+
+  // BASTION (CIBLE 2) — État du code OTP.
+  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Compte à rebours du bouton "Renvoyer le code"
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const handleEmailRegister = async (email: string, password: string, confirmPassword?: string) => {
     setError('');
@@ -43,9 +57,62 @@ export default function RegisterPage() {
 
     try {
       setPendingEmail(email);
-      const { userId } = await signUp(email, password);
+      // signUp lève 'CONFIRM_EMAIL' quand la confirmation email est requise
+      // (session non créée → l'utilisateur n'est PAS connecté).
+      await signUp(email, password);
+      router.push('/onboarding/quick');
+    } catch (err: any) {
+      if (err.message === 'CONFIRM_EMAIL') {
+        setConfirmEmail(true);
+        setOtp(['', '', '', '', '', '']);
+        setOtpError('');
+        // Focus le premier chiffre dès l'affichage
+        setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      } else {
+        setError(err.message || 'Erreur lors de la création du compte');
+      }
+    }
+  };
 
-      // Track referral if code exists
+  const handleOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1); // 1 chiffre max
+    const next = [...otp];
+    next[index] = digit;
+    setOtp(next);
+    setOtpError('');
+    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
+    if (!pasted.length) return;
+    const next = ['', '', '', '', '', ''];
+    pasted.forEach((d, i) => (next[i] = d));
+    setOtp(next);
+    setOtpError('');
+    inputRefs.current[Math.min(pasted.length, 5)]?.focus();
+  };
+
+  const handleVerifyOtp = async () => {
+    setOtpError('');
+    const code = otp.join('');
+    if (code.length !== 6) {
+      setOtpError('Veuillez saisir les 6 chiffres du code');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      // Crée la session UNIQUEMENT si le code est valide.
+      await verifyEmailOtp(pendingEmail, code);
+      // Suivi du parrainage après conversion réelle (email vérifié).
+      const userId = useAuthStore.getState().user?.id;
       if (referralCode && userId) {
         try {
           await fetch('/api/referral/track', {
@@ -57,11 +124,22 @@ export default function RegisterPage() {
           // Referral tracking failure should not block registration
         }
       }
-
       router.push('/onboarding/quick');
     } catch (err: any) {
-      if (err.message === 'CONFIRM_EMAIL') setConfirmEmail(true);
-      else setError(err.message || 'Erreur lors de la création du compte');
+      setOtpError(err.message || 'Code invalide ou expiré');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setOtpError('');
+    try {
+      await resendSignupOtp(pendingEmail);
+      setResendCooldown(30);
+    } catch (err: any) {
+      setOtpError(err.message || 'Impossible de renvoyer le code');
     }
   };
 
@@ -72,6 +150,7 @@ export default function RegisterPage() {
   };
 
   if (confirmEmail) {
+    const codeComplete = otp.every((d) => d !== '');
     return (
       <main className="relative min-h-screen flex items-center justify-center p-5 bg-[#09090B]">
         {/* Animated background */}
@@ -91,22 +170,77 @@ export default function RegisterPage() {
           </div>
 
           <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-            <Mail size={28} className="text-emerald-400" />
+            <ShieldCheck size={28} className="text-emerald-400" />
           </div>
 
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-white">Vérifiez votre email</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Un lien de confirmation a été envoyé à <strong className="text-white">{pendingEmail}</strong>.
-              Cliquez dessus pour activer votre compte.
+              Saisissez le code à 6 chiffres envoyé à <strong className="text-white break-all">{pendingEmail}</strong>.
             </p>
+          </div>
+
+          {/* 6 cases OTP */}
+          <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { inputRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                className="w-11 h-14 sm:w-12 sm:h-14 rounded-xl bg-white/[0.06] border border-white/[0.08] text-center text-2xl font-bold text-white focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              />
+            ))}
+          </div>
+
+          {otpError && (
+            <p className="text-sm text-red-300">{otpError}</p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleVerifyOtp}
+            disabled={!codeComplete || otpLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]"
+          >
+            {otpLoading ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : null}
+            {otpLoading ? 'Vérification…' : 'Vérifier le code'}
+          </button>
+
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={() => { setConfirmEmail(false); setError(''); }}
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={13} /> Changer d'email
+            </button>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendCooldown > 0}
+              className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={13} />
+              {resendCooldown > 0 ? `Renvoyer (${resendCooldown}s)` : 'Renvoyer le code'}
+            </button>
           </div>
 
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 transition-all"
+            className="block pt-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
           >
-            Retour à la connexion
+            Déjà un compte ? Se connecter
           </Link>
         </div>
       </main>

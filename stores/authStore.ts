@@ -24,6 +24,8 @@ interface AuthState {
   initialize: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ userId: string }>;
+  verifyEmailOtp: (email: string, token: string) => Promise<void>;
+  resendSignupOtp: (email: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
@@ -102,6 +104,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }).select().single();
       if (profileError) console.error('[signUp] profile creation warning:', profileError.message);
       return { userId: data.user.id };
+    } finally { set({ loading: false }); }
+  },
+
+  // BASTION (CIBLE 2) — Vérification du code OTP reçu par email à l'inscription.
+  // L'utilisateur n'est JAMAIS connecté tant que ce code n'est pas validé
+  // (confirmations email activées côté Supabase → signUp ne crée pas de session).
+  verifyEmailOtp: async (email, token) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await getSupabaseClient().auth.verifyOtp({
+        email,
+        token,
+        type: 'email', // type 'email' = confirmation d'inscription (doc JS ref : "Verify Signup OTP")
+      });
+      if (error) throw error;
+      // Une session valide n'est renvoyée QUE si le code est correct.
+      if (data.user) {
+        set({ user: data.user, session: data.session });
+        await get().fetchProfile(data.user.id);
+      }
+    } finally { set({ loading: false }); }
+  },
+
+  resendSignupOtp: async (email) => {
+    set({ loading: true });
+    try {
+      const { error } = await getSupabaseClient().auth.resend({ email, type: 'signup' });
+      if (error) throw error;
     } finally { set({ loading: false }); }
   },
 

@@ -249,7 +249,8 @@
       "mcp__stripe__search_stripe_resources",
       "mcp__stripe__stripe_api_write",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
-      "Bash(node scripts/gen-favicon.cjs)"
+      "Bash(node scripts/gen-favicon.cjs)",
+      "mcp__supabase__get_project_url"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",
