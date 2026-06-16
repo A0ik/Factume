@@ -131,6 +131,38 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, invoice?.id, id]);
 
+  // INSPECTOR (BUG 3) — Auto-régén silencieuse : quand une édition de prix a
+  // invalidé le lien (payment_link_stale), on recrée immédiatement le lien au
+  // même prestataire, sans intervention utilisateur. En cas d'échec (prestataire
+  // déconnecté, réseau), le drapeau reste levé → la bannière ci-dessous invite à
+  // recréer manuellement. Le PDF n'affiche AUCUN QR tant que stale = true.
+  //
+  // ⚠️ FIX React #310 (Règles des hooks) : cet effet DOIT rester AVANT le return
+  // anticipé « if (!invoice) » ci-dessous. Placé après, le 2e rendu (une fois la
+  // facture chargée) appelait un hook de plus que le 1er rendu (où l'on return
+  // avant de l'atteindre) → « Rendered more hooks than during the previous render »
+  // → error boundary → page d'erreur générique sur TOUTE facture. La garde interne
+  // « if (!invoice) return » le rend inactif tant que la facture est nulle.
+  useEffect(() => {
+    if (!invoice) return;
+    if (
+      invoice.payment_link_stale &&
+      invoice.payment_provider &&
+      autoRegenAttemptedRef.current !== invoice.id
+    ) {
+      autoRegenAttemptedRef.current = invoice.id;
+      const provider = invoice.payment_provider;
+      (provider === 'stripe' ? handleCreatePaymentLink(true, true) : handleSumUpLink(true, true)).catch(() => {
+        toast.error('Lien de paiement obsolète — recréez-le via « Lien de paiement ».');
+      });
+    }
+    // Le lien n'est plus stale (régén réussie) → on réarme le verrou.
+    if (!invoice.payment_link_stale && autoRegenAttemptedRef.current === invoice.id) {
+      autoRegenAttemptedRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider]);
+
   if (!invoice) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -331,31 +363,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     setShowPaymentSuccessModal(false);
     setShowPaymentModal(true);
   };
-
-  // INSPECTOR (BUG 3) — Auto-régén silencieuse : quand une édition de prix a
-  // invalidé le lien (payment_link_stale), on recrée immédiatement le lien au
-  // même prestataire, sans intervention utilisateur. En cas d'échec (prestataire
-  // déconnecté, réseau), le drapeau reste levé → la bannière ci-dessous invite à
-  // recréer manuellement. Le PDF n'affiche AUCUN QR tant que stale = true.
-  useEffect(() => {
-    if (!invoice) return;
-    if (
-      invoice.payment_link_stale &&
-      invoice.payment_provider &&
-      autoRegenAttemptedRef.current !== invoice.id
-    ) {
-      autoRegenAttemptedRef.current = invoice.id;
-      const provider = invoice.payment_provider;
-      (provider === 'stripe' ? handleCreatePaymentLink(true, true) : handleSumUpLink(true, true)).catch(() => {
-        toast.error('Lien de paiement obsolète — recréez-le via « Lien de paiement ».');
-      });
-    }
-    // Le lien n'est plus stale (régén réussie) → on réarme le verrou.
-    if (!invoice.payment_link_stale && autoRegenAttemptedRef.current === invoice.id) {
-      autoRegenAttemptedRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider]);
 
   const handleMarkPaid = async () => {
     setStatusLoading(true);

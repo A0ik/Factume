@@ -185,10 +185,10 @@ function MobileClientCard({ client, stats, idx, onDelete }: {
             </div>
           )}
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-200 text-xs">
-              <FileText size={12} className="text-slate-400" />
-              <span className="text-gray-900 dark:text-white font-medium">{stats.count}</span>
-              <span className="text-slate-400">facture{stats.count !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs">
+              <FileText size={12} />
+              <span className="font-medium">{stats.count}</span>
+              <span>facture{stats.count !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-xs">
               <span className="text-emerald-400 font-semibold">{formatCurrency(stats.revenue)}</span>
@@ -250,9 +250,9 @@ function DesktopClientCardGrid({ client, stats, idx, onDelete }: {
             </button>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="text-center p-2.5 rounded-xl bg-gray-100/60">
-              <p className="text-gray-900 dark:text-white font-bold">{stats.count}</p>
-              <p className="text-[10px] text-slate-400">Facture{stats.count !== 1 ? 's' : ''}</p>
+            <div className="text-center p-2.5 rounded-xl bg-blue-500/10">
+              <p className="text-blue-400 font-bold">{stats.count}</p>
+              <p className="text-[10px] text-blue-400/80">Facture{stats.count !== 1 ? 's' : ''}</p>
             </div>
             <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
               <p className="text-emerald-400 font-bold truncate">{formatCurrency(stats.revenue)}</p>
