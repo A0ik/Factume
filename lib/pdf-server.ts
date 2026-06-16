@@ -511,7 +511,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         qrImage = await pdfDoc.embedPng(qrBuffer);
       }
     } catch (qrErr) {
-      console.warn('[pdf-server] QR buffer embed failed:', (qrErr as Error).message);
+      console.error('[pdf-server] QR buffer embed failed:', (qrErr as Error).message);
     }
 
     // Fallback: try data URL → PNG conversion
@@ -525,8 +525,15 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
           qrImage = await pdfDoc.embedPng(qrBuffer);
         }
       } catch (fallbackErr) {
-        console.warn('[pdf-server] QR data-URL fallback failed:', (fallbackErr as Error).message);
+        console.error('[pdf-server] QR data-URL fallback failed:', (fallbackErr as Error).message);
       }
+    }
+
+    // ALCHEMIST — plus jamais silencieux : si les deux stratégies QR échouent alors
+    // qu'une URL existe, on le crie dans les logs (Vercel) au lieu de rendre
+    // discrètement un pavé texte. On conserve le repli texte pour ne pas casser le PDF.
+    if (!qrImage) {
+      console.error('[pdf-server] QR INTROUVABLE pour le lien de paiement — rendu texte seul. URL:', paymentUrl.slice(0, 80));
     }
 
     const boxH = qrImage ? 70 : 48;

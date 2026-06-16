@@ -4,6 +4,10 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-parse', 'canvas', 'pdf-lib', 'pdfjs-dist'],
 
+  // SPECTRE (diagnostic crash /contracts) — stack traces client lisibles en prod.
+  // Sans ceci, les erreurs client sont minifiées/illisibles → console « vide ».
+  productionBrowserSourceMaps: true,
+
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

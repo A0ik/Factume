@@ -250,7 +250,11 @@
       "mcp__stripe__stripe_api_write",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
       "Bash(node scripts/gen-favicon.cjs)",
-      "mcp__supabase__get_project_url"
+      "mcp__supabase__get_project_url",
+      "Bash(vercel --version)",
+      "Bash(vercel whoami *)",
+      "Bash(echo \"=====EXIT: $?=====\")",
+      "Bash(rtk vitest *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

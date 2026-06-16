@@ -71,13 +71,17 @@ export function hasPaymentLink(invoice: Invoice): boolean {
  */
 export async function withQrDataUrl(invoice: Invoice): Promise<Invoice> {
   const url = getPaymentUrl(invoice);
-  if (!url || (invoice as any).qr_data_url) return invoice;
+  if (!url) return invoice;
+  if ((invoice as any).qr_data_url) return invoice;
   try {
     const { generateQrDataUrl } = await import('./qr-generate');
     const qr = await generateQrDataUrl(url);
     if (qr) return { ...invoice, qr_data_url: qr } as Invoice;
-  } catch {
-    // QR échoué — on rend quand même le PDF (sans QR).
+    // ALCHEMIST — fin de l'échec silencieux : on rend le PDF, mais on trace
+    // pour que le bug soit enfin visible (au lieu de rendre un pavé « Payer »).
+    console.warn('[pdf] withQrDataUrl: QR vide pour', url.slice(0, 60));
+  } catch (err) {
+    console.warn('[pdf] withQrDataUrl: échec génération QR —', (err as Error).message);
   }
   return invoice;
 }
@@ -89,20 +93,10 @@ export async function withQrDataUrl(invoice: Invoice): Promise<Invoice> {
  * pdf-lib works everywhere (Vercel, Node, etc.) without CSP or WASM issues.
  */
 export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
-  const paymentUrl = getPaymentUrl(invoice);
-
-  // Pre-generate QR code data URL for payment links (used by @react-pdf/renderer fallback)
-  if (paymentUrl) {
-    try {
-      const { generateQrDataUrl } = await import('./qr-generate');
-      const qrDataUrl = await generateQrDataUrl(paymentUrl);
-      if (qrDataUrl) (invoice as any).qr_data_url = qrDataUrl;
-    } catch {
-      // QR pre-generation failed, pdf-server.ts will try again
-    }
-  }
-
-  // PRIMARY: pdf-lib — rock solid in serverless environments
+  // PRIMARY: pdf-lib — rock solid in serverless environments. Génère lui-même le
+  // QR côté Node via QRCode.toBuffer (fiable, indépendant du navigateur). On ne
+  // mute JAMAIS l'invoice en entrée : l'ancien code faisait `invoice.qr_data_url =
+  // ...` ce qui laissait un QR obsolète survivre aux régénérations (CIBLE 2).
   try {
     const { generateInvoicePdfBuffer } = await import('./pdf-server');
     const buffer = await generateInvoicePdfBuffer(invoice, profile);
@@ -110,11 +104,12 @@ export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | nu
   } catch (pdfLibErr) {
     console.warn('[pdf] pdf-lib failed, trying @react-pdf/renderer:', (pdfLibErr as Error).message);
 
-    // FALLBACK: @react-pdf/renderer
+    // FALLBACK: @react-pdf/renderer — on injecte le QR de façon IMMUABLE (copie).
     try {
       const { renderToBuffer } = await import('@react-pdf/renderer');
       const { PdfDocument } = await import('@/components/pdf-document');
-      const element = React.createElement(PdfDocument, { invoice, profile: profile || {} as Profile });
+      const invoiceWithQr = await withQrDataUrl(invoice);
+      const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
       return await renderToBuffer(element as any);
     } catch (reactPdfErr) {
       console.error('[pdf] Both PDF engines failed. pdf-lib:', (pdfLibErr as Error).message, '| react-pdf:', (reactPdfErr as Error).message);
@@ -126,8 +121,16 @@ export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | nu
 import React from 'react';
 
 /**
- * Download PDF — generates a real PDF via @react-pdf/renderer and triggers download.
- * Falls back to HTML+print if React-PDF fails (e.g. custom template).
+ * Download PDF — ALCHEMIST (BUG : QR manquant).
+ *
+ * SERVEUR D'ABORD : on récupère le PDF via /api/download/pdf/[id] (moteur pdf-lib)
+ * qui génère le QR côté Node via QRCode.toBuffer — fiable et indépendant du
+ * navigateur. Le chemin client @react-pdf/renderer n'est qu'un REPLI : il dépend
+ * de QRCode.toDataURL (canvas/CSP/iOS WebKit) qui échoue en SILENCE puis rend un
+ * pavé « Payer » sans QR — sans jamais throw, donc le repli serveur n'était
+ * JAMAIS atteint. C'est la cause racine de l'absence du QR.
+ *
+ * Falls back to HTML+print if a custom template is set (non-PDF path).
  */
 export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | null): Promise<void> {
   if (profile?.custom_template_html) {
@@ -138,31 +141,27 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
   const filename = `${invoice.number.replace(/\//g, '-')}.pdf`;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const cleanupDelay = isIOS ? 5000 : 150;
+  const serverUrl = `/api/download/pdf/${invoice.id}`;
 
-  try {
-    const { pdf } = await import('@react-pdf/renderer');
-    const { PdfDocument } = await import('@/components/pdf-document');
-    // FIXER (BUG 1) : génère le QR côté client AVANT le rendu @react-pdf/renderer,
-    // sinon PdfDocument affiche le fallback texte au lieu de l'image QR code.
-    const invoiceWithQr = await withQrDataUrl(invoice);
-    const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
-    const blob = await pdf(element as any).toBlob();
-
-    // Try native share on iOS first
+  // Déclenche le téléchargement/partage d'un blob, en tentant le partage natif iOS.
+  const triggerDownload = (blob: Blob) => {
     if (isIOS && navigator.share && typeof navigator.share === 'function') {
-      try {
-        const file = new File([blob], filename, { type: 'application/pdf' });
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file] });
-          return;
-        }
-      } catch (shareErr: any) {
-        // User cancelled share or share failed — fall through to download
-        if (shareErr?.name === 'AbortError') return;
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [file] })) {
+        navigator
+          .share({ files: [file] })
+          .catch((shareErr: any) => {
+            // Annulation par l'utilisateur → on ne fait rien ; autre erreur → téléchargement.
+            if (shareErr?.name === 'AbortError') return;
+            standardDownload(blob);
+          });
+        return;
       }
     }
+    standardDownload(blob);
+  };
 
-    // Standard Blob download
+  const standardDownload = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -174,32 +173,37 @@ export async function downloadInvoicePdf(invoice: Invoice, profile?: Profile | n
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, cleanupDelay);
-  } catch {
-    // Fallback: download via server-side endpoint
-    try {
-      const res = await fetch(`/api/download/pdf/${invoice.id}`);
-      if (res.ok) {
-        const serverBlob = await res.blob();
-        const serverUrl = URL.createObjectURL(serverBlob);
-        const a = document.createElement('a');
-        a.href = serverUrl;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(serverUrl);
-        }, cleanupDelay);
-      } else {
-        throw new Error('Server PDF generation failed');
-      }
-    } catch {
-      // Last resort for non-iOS: open in new tab
-      if (!isIOS) {
-        window.open(`/api/download/pdf/${invoice.id}`, '_blank');
-      }
+  };
+
+  // 1) PRIMARY — moteur serveur pdf-lib (QR garanti côté Node).
+  try {
+    const res = await fetch(serverUrl);
+    if (res.ok) {
+      triggerDownload(await res.blob());
+      return;
     }
+    console.warn('[pdf] server PDF renvoyé', res.status, '— repli client');
+  } catch (serverErr) {
+    console.warn('[pdf] server PDF injoignable, repli client :', (serverErr as Error).message);
+  }
+
+  // 2) FALLBACK — rendu client @react-pdf/renderer (QR injecté immuablement).
+  try {
+    const { pdf } = await import('@react-pdf/renderer');
+    const { PdfDocument } = await import('@/components/pdf-document');
+    const invoiceWithQr = await withQrDataUrl(invoice);
+    const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
+    triggerDownload(await pdf(element as any).toBlob());
+    return;
+  } catch (clientErr) {
+    console.warn('[pdf] rendu client aussi échoué :', (clientErr as Error).message);
+  }
+
+  // 3) LAST RESORT — ouverture du PDF serveur dans un nouvel onglet.
+  if (isIOS) {
+    window.location.href = serverUrl;
+  } else {
+    window.open(serverUrl, '_blank');
   }
 }
 

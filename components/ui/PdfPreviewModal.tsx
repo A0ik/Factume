@@ -13,7 +13,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import React from 'react';
 import { Invoice, Profile } from '@/types';
-import { withQrDataUrl } from '@/lib/pdf';
+import { withQrDataUrl, getPaymentUrl } from '@/lib/pdf';
 
 interface PdfPreviewModalProps {
   invoice: Invoice;
@@ -59,6 +59,11 @@ export function PdfPreviewModal({
   const iframeUrlRef = useRef<string>('');
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ALCHEMIST — l'URL résolue change quand l'utilisateur crée/régénère un lien de
+  // paiement. En l'ajoutant aux dépendances du rendu, l'aperçu se rafraîchit au
+  // lieu de garder un QR absent/obsolète (l'ancien code ne dépendait que de invoice.id).
+  const paymentUrl = getPaymentUrl(invoice);
+
   // Load PDF and render to canvas images
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +87,27 @@ export function PdfPreviewModal({
         let arrayBuffer: ArrayBuffer;
 
         try {
-          // Client-side generation using @react-pdf/renderer (fast, no network)
+          if (paymentUrl) {
+            // ALCHEMIST — SERVEUR d'abord quand un lien de paiement existe : le PDF
+            // pdf-lib embarque le QR côté Node (fiable). Le rendu client @react-pdf
+            // rate le QR en silence (canvas/CSP/iOS) puis affiche un pavé « Payer ».
+            const response = await fetch(`/api/download/pdf/${invoice.id}?mode=preview`);
+            if (!response.ok) throw new Error('Erreur serveur');
+            arrayBuffer = await (await response.blob()).arrayBuffer();
+          } else {
+            // Pas de lien de paiement : rendu client @react-pdf/renderer (rapide,
+            // hors réseau) — aucun QR à afficher dans ce cas.
+            const { pdf } = await import('@react-pdf/renderer');
+            const { PdfDocument } = await import('@/components/pdf-document');
+            const element = React.createElement(PdfDocument, {
+              invoice: pdfInvoice,
+              profile: profile || ({} as Profile),
+            });
+            const blob = await (pdf as any)(element).toBlob();
+            arrayBuffer = await blob.arrayBuffer();
+          }
+        } catch {
+          // Repli : rendu client @react-pdf/renderer (QR injecté via withQrDataUrl).
           const { pdf } = await import('@react-pdf/renderer');
           const { PdfDocument } = await import('@/components/pdf-document');
           const element = React.createElement(PdfDocument, {
@@ -90,14 +115,6 @@ export function PdfPreviewModal({
             profile: profile || ({} as Profile),
           });
           const blob = await (pdf as any)(element).toBlob();
-          arrayBuffer = await blob.arrayBuffer();
-        } catch {
-          // Client-side failed -- fetch from server endpoint
-          const response = await fetch(
-            `/api/download/pdf/${invoice.id}?mode=preview`,
-          );
-          if (!response.ok) throw new Error('Erreur serveur');
-          const blob = await response.blob();
           arrayBuffer = await blob.arrayBuffer();
         }
 
@@ -180,7 +197,7 @@ export function PdfPreviewModal({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoice.id]);
+  }, [invoice.id, paymentUrl]);
 
   const serverPdfUrl = `/api/download/pdf/${invoice.id}`;
 

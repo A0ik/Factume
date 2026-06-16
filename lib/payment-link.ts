@@ -48,6 +48,7 @@ export function resolvePaymentLink(invoice: Invoice | Record<string, unknown>): 
   }
 
   let url = '';
+  let resolvedProvider: PaymentProvider | null = provider;
   if (provider === 'stripe') {
     url = inv.stripe_payment_url || inv.stripe_payment_link_url || '';
   } else if (provider === 'sumup') {
@@ -61,7 +62,26 @@ export function resolvePaymentLink(invoice: Invoice | Record<string, unknown>): 
       (inv.sumup_checkout_id ? `https://checkout.sumup.com/${inv.sumup_checkout_id}` : '');
   }
 
-  return { provider, url, amount, isStale: false };
+  // ALCHEMIST (BUG : « pavé paiement manquant ») — RÉSILIENCE. Si le prestataire
+  // déclaré n'a PAS d'URL (donnée corrompue/legacy : payment_provider='stripe' mais
+  // stripe_payment_url NULL alors qu'un lien SumUp existe — ex. FACT-2026-035), le
+  // résolveur strict renvoyait une URL vide → le PDF sortait SANS bloc paiement,
+  // comme une facture normale. On retombe sur n'importe quel lien actif plutôt que
+  // de n'en afficher aucun. On neutralise le provider (libellé générique
+  // « PAIEMENT EN LIGNE ») pour ne pas réintroduire BUG 2 (QR SumUp + libellé Stripe).
+  if (!url) {
+    const fallback =
+      inv.payment_link ||
+      inv.stripe_payment_url ||
+      inv.stripe_payment_link_url ||
+      (inv.sumup_checkout_id ? `https://checkout.sumup.com/${inv.sumup_checkout_id}` : '');
+    if (fallback) {
+      url = fallback;
+      resolvedProvider = null;
+    }
+  }
+
+  return { provider: resolvedProvider, url, amount, isStale: false };
 }
 
 /** Un lien actif et utilisable existe-t-il (pas stale, URL résolue) ? */

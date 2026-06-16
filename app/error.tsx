@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 
@@ -11,11 +12,23 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // SPECTRE (diagnostic crash /contracts) — capturer L'INTÉGRALITÉ de l'erreur.
+  // En prod Next 15 / React 19, l'objet error peut arriver « digest-only »
+  // (message/stack vides) pour les erreurs serveur ou d'hydration → console
+  // apparemment vide. On logge donc tous les champs + on pousse à Sentry.
   useEffect(() => {
-    console.error('[Factu.me Error]', {
-      message: error.message,
-      digest: error.digest,
-      stack: error.stack,
+    const payload = {
+      name: error?.name,
+      message: error?.message,
+      digest: error?.digest,
+      stack: error?.stack,
+      cause: error?.cause ? String(error.cause) : undefined,
+      href: typeof window !== 'undefined' ? window.location.href : undefined,
+    };
+    console.error('[Factu.me Error]', payload);
+    Sentry.captureException(error, {
+      tags: { source: 'app_error_boundary' },
+      extra: { ...payload },
     });
   }, [error]);
 
@@ -59,6 +72,23 @@ export default function GlobalError({
             Ref: {error.digest}
           </p>
         )}
+
+        {/* SPECTRE DEBUG (temporaire — crash /contracts) — afficher l'erreur réelle
+            pour diagnostic. À retirer une fois la cause racine fixée. */}
+        <details className="mb-6 text-left">
+          <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            Détails techniques (debug)
+          </summary>
+          <pre className="mt-2 p-3 bg-gray-100 dark:bg-slate-800 rounded-lg text-[10px] leading-relaxed text-red-500 dark:text-red-400 overflow-auto whitespace-pre-wrap break-all">
+{JSON.stringify({
+  name: error?.name,
+  message: error?.message,
+  digest: error?.digest,
+  stack: error?.stack,
+  cause: error?.cause ? String(error.cause) : undefined,
+}, null, 2)}
+          </pre>
+        </details>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
