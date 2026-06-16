@@ -88,7 +88,7 @@ function SearchableSelect({
 
 export default function QuickOnboardingPage() {
   const router = useRouter();
-  const { updateProfile, user } = useAuthStore();
+  const { updateProfile, user, initialized } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [lang, setLang] = useState<'fr' | 'en'>('fr');
@@ -108,9 +108,12 @@ export default function QuickOnboardingPage() {
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  // BASTION — ne redirige vers /login qu'APRÈS l'init du store d'auth.
+  // Sinon, au retour OAuth (cookie valide mais user pas encore chargé),
+  // la page rebondit vers /login pendant une fraction de seconde.
   useEffect(() => {
-    if (!user) router.replace('/login');
-  }, [user, router]);
+    if (initialized && !user) router.replace('/login');
+  }, [initialized, user, router]);
 
   const handleCompanySelect = (company: {
     name: string;

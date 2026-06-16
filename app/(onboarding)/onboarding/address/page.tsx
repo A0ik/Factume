@@ -10,7 +10,7 @@ import { FieldTooltip } from '@/components/onboarding/FieldTooltip';
 
 export default function OnboardingAddressPage() {
   const router = useRouter();
-  const { updateProfile, profile, user } = useAuthStore();
+  const { updateProfile, profile, user, initialized } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -26,12 +26,12 @@ export default function OnboardingAddressPage() {
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Redirect if not authenticated
+  // BASTION — ne redirige qu'après l'init du store (évite le rebond /login post-OAuth)
   useEffect(() => {
-    if (!user) {
+    if (initialized && !user) {
       router.replace('/login');
     }
-  }, [user, router]);
+  }, [initialized, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

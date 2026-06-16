@@ -7,15 +7,15 @@ import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 
 export default function OnboardingLanguagePage() {
   const router = useRouter();
-  const { updateProfile, user } = useAuthStore();
+  const { updateProfile, user, initialized } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
-  // Redirect if not authenticated
+  // BASTION — ne redirige qu'après l'init du store (évite le rebond /login post-OAuth)
   useEffect(() => {
-    if (!user) {
+    if (initialized && !user) {
       router.replace('/login');
     }
-  }, [user, router]);
+  }, [initialized, user, router]);
 
   const handleSelect = async (lang: 'fr' | 'en') => {
     setLoading(true);
