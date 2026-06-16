@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { getValidSumUpToken } from '@/lib/sumup/oauth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { buildFreshLinkUpdate } from '@/lib/payment-link';
+import { ensureShortToken, buildShortPayUrl } from '@/lib/pay-token';
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,8 +73,16 @@ export async function POST(req: NextRequest) {
     // FIXER (BUG 1) — cache court-circuité quand l'utilisateur force la régénération.
     if (invoice.sumup_checkout_id && !force) {
       const existingUrl = invoice.payment_link || `https://checkout.sumup.com/${invoice.sumup_checkout_id}`;
-      return NextResponse.json({ url: existingUrl, checkoutId: invoice.sumup_checkout_id });
+      return NextResponse.json({
+        url: existingUrl,
+        checkoutId: invoice.sumup_checkout_id,
+        shortUrl: buildShortPayUrl(invoice.payment_short_token) ?? existingUrl,
+      });
     }
+
+    // ATELIER (CIBLE 2 & 3) — token d'URL courte pour QR léger + lien cliquable.
+    // Idempotent : renvoie le token existant ou en minte un nouveau (une seule fois).
+    const shortToken = await ensureShortToken(supabase, invoiceId, invoice.payment_short_token);
 
     // Validate and round amount
     const amount = Math.round(Number(invoice.total) * 100) / 100;
@@ -136,17 +145,10 @@ export async function POST(req: NextRequest) {
           const existingUrl = `https://checkout.sumup.com/${existingCheckoutId}`;
           // INSPECTOR (BUG 2) — ré-écriture via le builder : nullifie aussi les
           // colonnes Stripe legacy (stripe_payment_link_url/_id) + pose provider/amount.
-          await supabase
-            .from('invoices')
-            .update(
-              buildFreshLinkUpdate('sumup', {
-                url: existingUrl,
-                amount,
-                sumupId: existingCheckoutId,
-              }),
-            )
-            .eq('id', invoiceId);
-          return NextResponse.json({ url: existingUrl, checkoutId: existingCheckoutId });
+          const updA = buildFreshLinkUpdate('sumup', { url: existingUrl, amount, sumupId: existingCheckoutId });
+          if (shortToken) updA.payment_short_token = shortToken;
+          await supabase.from('invoices').update(updA).eq('id', invoiceId);
+          return NextResponse.json({ url: existingUrl, checkoutId: existingCheckoutId, shortUrl: buildShortPayUrl(shortToken) ?? existingUrl });
         }
         // Fallback: try to list checkouts to find the existing one
         try {
@@ -159,17 +161,10 @@ export async function POST(req: NextRequest) {
             if (existing?.id) {
               const existingUrl = existing.hosted_checkout_url || `https://checkout.sumup.com/${existing.id}`;
               // INSPECTOR (BUG 2) — même nettoyage complet que ci-dessus.
-              await supabase
-                .from('invoices')
-                .update(
-                  buildFreshLinkUpdate('sumup', {
-                    url: existingUrl,
-                    amount,
-                    sumupId: existing.id,
-                  }),
-                )
-                .eq('id', invoiceId);
-              return NextResponse.json({ url: existingUrl, checkoutId: existing.id });
+              const updB = buildFreshLinkUpdate('sumup', { url: existingUrl, amount, sumupId: existing.id });
+              if (shortToken) updB.payment_short_token = shortToken;
+              await supabase.from('invoices').update(updB).eq('id', invoiceId);
+              return NextResponse.json({ url: existingUrl, checkoutId: existing.id, shortUrl: buildShortPayUrl(shortToken) ?? existingUrl });
             }
           }
         } catch {}
@@ -204,22 +199,15 @@ export async function POST(req: NextRequest) {
     // TOUTES les colonnes Stripe (url ET legacy link) via le builder. Avant, seul
     // stripe_payment_url était nettoyé → stripe_payment_link_url/_id survivaient
     // et corrompaient les résolveurs du PDF (QR/libellé en désaccord).
-    const { error: saveErr } = await supabase
-      .from('invoices')
-      .update(
-        buildFreshLinkUpdate('sumup', {
-          url: paymentUrl,
-          amount,
-          sumupId: checkout.id,
-        }),
-      )
-      .eq('id', invoiceId);
+    const updMain = buildFreshLinkUpdate('sumup', { url: paymentUrl, amount, sumupId: checkout.id });
+    if (shortToken) updMain.payment_short_token = shortToken;
+    const { error: saveErr } = await supabase.from('invoices').update(updMain).eq('id', invoiceId);
 
     if (saveErr) {
       console.error('[sumup-payment-link] DB save failed:', saveErr.message);
     }
 
-    return NextResponse.json({ url: paymentUrl, checkoutId: checkout.id });
+    return NextResponse.json({ url: paymentUrl, checkoutId: checkout.id, shortUrl: buildShortPayUrl(shortToken) ?? paymentUrl });
   } catch (error: any) {
     console.error('[sumup-payment-link] Unexpected error:', error?.message || error);
     return NextResponse.json({ error: error.message || 'Erreur interne' }, { status: 500 });

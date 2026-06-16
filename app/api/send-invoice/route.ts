@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
-import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
-import React from 'react';
-import { PdfDocument } from '@/components/pdf-document';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { SendInvoiceSchema, validateRequest } from '@/lib/validation';
 import { z } from 'zod';
@@ -216,19 +213,29 @@ export async function POST(req: NextRequest) {
     const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
     const replyToEmail = profile?.email || senderEmail;
 
-    console.log('[send-invoice] Génération PDF...');
+    console.log('[send-invoice] Génération PDF (pdf-lib)...');
     let pdfBuffer: Buffer;
     try {
-      // SENTINEL (AUDIT 2) — Injecter le QR code (data URL) avant le rendu, sinon
-      // PdfDocument affiche le fallback texte « Payer » au lieu de l'image QR
-      // (l'invoice vient de Supabase, qui ne persiste pas qr_data_url). Miroir du
-      // chemin downloadInvoicePdf / withQrDataUrl pour que le PDF email ait le QR.
-      const { withQrDataUrl } = await import('@/lib/pdf');
-      const invoiceWithQr = await withQrDataUrl(invoice);
-      const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: (profile || {}) as any });
-      const pdfBytes = await renderToBuffer(element as any);
+      // ATELIER (CIBLE 5) — unification : le chemin email passe enfin par pdf-lib
+      // (même moteur que le téléchargement) au lieu de @react-pdf/renderer.
+      //   • rendu identique au PDF téléchargé (layout, QR léger, lien cliquable,
+      //     conditions non débordantes, émetteur bien placé) ;
+      //   • Factur-X EMBARQUÉ (avant, le PDF emailé était SANS XML → non conforme
+      //     e-invoicing 2026). Défensif : si l'embarquement échoue, on envoie quand
+      //     même le PDF (sans XML) plutôt que de bloquer l'email.
+      const { generatePdfBuffer } = await import('@/lib/pdf');
+      const { createFacturXPdf } = await import('@/lib/facturx');
+      let pdfBytes = await generatePdfBuffer(invoice, profile);
+      const facturxEligible = isFacturXEligible(invoice, profile);
+      if (facturxEligible) {
+        try {
+          pdfBytes = await createFacturXPdf(pdfBytes, invoice, profile);
+        } catch (fxErr: any) {
+          console.error('[send-invoice] Factur-X embed échoué (PDF envoyé sans XML) :', fxErr.message);
+        }
+      }
       pdfBuffer = Buffer.from(pdfBytes);
-      console.log('[send-invoice] PDF généré, taille:', pdfBuffer.length, 'bytes');
+      console.log('[send-invoice] PDF généré', facturxEligible ? '(pdf-lib + Factur-X)' : '(pdf-lib)', 'taille:', pdfBuffer.length, 'bytes');
     } catch (pdfErr: any) {
       console.error('[send-invoice] ERREUR génération PDF:', pdfErr.message);
       return NextResponse.json({ error: `Erreur génération PDF: ${pdfErr.message}` }, { status: 500 });

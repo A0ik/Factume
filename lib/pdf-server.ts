@@ -104,6 +104,46 @@ function drawWrapped(
   return y;
 }
 
+/** Compte le nombre de lignes qu'un texte occupera une fois wrappé (miroir de drawWrapped). */
+function wrapLines(text: string, maxW: number, size: number, font: PDFFont): number {
+  const words = safe(text).split(/\s+/);
+  let line = '';
+  let count = 0;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (font.widthOfTextAtSize(test, size) > maxW) {
+      count++;
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) count++;
+  return Math.max(1, count);
+}
+
+/**
+ * ATELIER (CIBLE 3) — Ajoute une annotation de lien cliquable (URI) sur une zone
+ * rectangulaire de la page. Recette officielle pdf-lib (context.obj + register +
+ * page.node.addAnnotation). Échoue silencieusement (log) pour ne jamais casser le
+ * rendu PDF : un lien absent reste un défaut cosmétique, pas un crash.
+ */
+function addLinkAnnotation(page: PDFPage, x: number, y: number, w: number, h: number, uri: string): void {
+  try {
+    const doc = page.doc;
+    const annot = doc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [x, y, x + w, y + h],
+      Border: [0, 0, 0],
+      A: { Type: 'Action', S: 'URI', URI: uri },
+    });
+    page.node.addAnnot(doc.context.register(annot));
+  } catch (err) {
+    console.warn('[pdf-server] addLinkAnnotation failed:', (err as Error).message);
+  }
+}
+
 // ── Template style definitions ────────────────────────────────────────────────
 
 type TemplateStyle = {
@@ -120,6 +160,8 @@ type TemplateStyle = {
   totalValueColor: (accent: RGB) => RGB;
   dividerColor: RGB;
   sectionBoxBg: RGB;
+  /** ATELIER (CIBLE 4) — traitement du TOTAL TTC. Défaut 'bar' (bande pleine). */
+  totalStyle?: 'bar' | 'flat' | 'card' | 'boxed';
 };
 
 function getStyle(templateId: number, accent: RGB): TemplateStyle {
@@ -188,6 +230,51 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
         totalValueColor: () => rgb(1, 1, 1),
         dividerColor: rgb(0.733, 0.973, 0.816),
         sectionBoxBg: rgb(0.941, 0.992, 0.957),
+      };
+    case 7:
+      // ATELIER (CIBLE 4) — PUR : minimaliste épuré (Stripe/Linear). Filets
+      // capillaires, lignes sans zebra, total à plat (filet accent + grand chiffre).
+      return {
+        useSerif: false, headerFull: false,
+        headerBg: accent, headerH: 6,
+        bodyBg: rgb(1, 1, 1),
+        rowEven: rgb(1, 1, 1), rowOdd: rgb(1, 1, 1),
+        thBg: rgb(0.965, 0.97, 0.975), thText: accent,
+        totalBg: rgb(1, 1, 1),
+        totalValueColor: (a: RGB) => a,
+        dividerColor: rgb(0.91, 0.91, 0.93),
+        sectionBoxBg: rgb(0.985, 0.985, 0.988),
+        totalStyle: 'flat',
+      };
+    case 8:
+      // ATELIER (CIBLE 4) — AUDACE : moderne à fort impact. Bande accent pleine,
+      // bandeau de tableau accent, zebra accent léger, TOTAL en carte accent.
+      return {
+        useSerif: false, headerFull: true,
+        headerBg: accent, headerH: 120,
+        bodyBg: rgb(1, 1, 1),
+        rowEven: rgb(1, 1, 1), rowOdd: mixRgb(accent, 0.04),
+        thBg: accent, thText: rgb(1, 1, 1),
+        totalBg: accent,
+        totalValueColor: () => rgb(1, 1, 1),
+        dividerColor: mixRgb(accent, 0.2),
+        sectionBoxBg: mixRgb(accent, 0.06),
+        totalStyle: 'card',
+      };
+    case 9:
+      // ATELIER (CIBLE 4) — ÉLÉGANCE : formel/classique. Barre fine sombre, bandeau
+      // de tableau gris à texte encre, zebra discret, TOTAL en boîte bordée accent.
+      return {
+        useSerif: false, headerFull: false,
+        headerBg: rgb(0.07, 0.07, 0.07), headerH: 6,
+        bodyBg: rgb(1, 1, 1),
+        rowEven: rgb(1, 1, 1), rowOdd: rgb(0.985, 0.985, 0.985),
+        thBg: rgb(0.97, 0.97, 0.97), thText: rgb(0.07, 0.07, 0.07),
+        totalBg: rgb(1, 1, 1),
+        totalValueColor: (a: RGB) => a,
+        dividerColor: rgb(0.8, 0.8, 0.8),
+        sectionBoxBg: rgb(0.975, 0.975, 0.975),
+        totalStyle: 'boxed',
       };
     default:
       return {
@@ -358,9 +445,16 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   let ly = y;
   let ry = y;
 
-  // Sender (left)
-  drawText(page, senderName, margin, ly, 10, bold, ink, halfX - margin - 16);
-  ly -= 13;
+  // ATELIER (CIBLE 1) — hiérarchie stricte : ÉMETTEUR (gauche) / FACTURÉ À (droite).
+  // Le nom de l'entreprise n'est répété dans le corps QUE si l'en-tête affiche le
+  // logo (et donc pas le nom). Sinon le nom est déjà dans la bande d'en-tête : on
+  // évite la duplication qui le faisait apparaître « au milieu » du document.
+  drawText(page, 'EMETTEUR', margin, ly, 7, bold, accent);
+  ly -= 14;
+  if (logoImage) {
+    drawText(page, senderName, margin, ly, 10, bold, ink, halfX - margin - 16);
+    ly -= 13;
+  }
   if (profile?.address) { drawText(page, safe(profile.address), margin, ly, 8.5, reg, muted, halfX - margin - 16); ly -= 12; }
   if (profile?.postal_code || profile?.city) {
     drawText(page, safe([profile.postal_code, profile.city].filter(Boolean).join(' ')), margin, ly, 8.5, reg, muted); ly -= 12;
@@ -466,11 +560,28 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   const totRow = (label: string, value: string, isFinal = false) => {
     needPage();
     if (isFinal) {
-      const boxH = 38;
-      page.drawRectangle({ x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, color: style.totalBg });
-      drawText(page, label, totX - 4, y - 8, 9, bold, rgb(0.85, 0.85, 0.88));
-      rightText(page, value, totRight, y - 10, 16, bold, style.totalValueColor(accent));
-      y -= boxH + 6;
+      const ts = style.totalStyle || 'bar';
+      if (ts === 'flat') {
+        // ATELIER (CIBLE 4) — PUR : total à plat (filet accent + grand chiffre accent).
+        page.drawLine({ start: { x: totX - 12, y: y + 4 }, end: { x: totRight, y: y + 4 }, thickness: 1.2, color: accent });
+        drawText(page, label, totX - 4, y - 8, 9, bold, muted);
+        rightText(page, value, totRight, y - 14, 20, bold, accent);
+        y -= 34;
+      } else if (ts === 'boxed') {
+        // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent, valeur accent.
+        const boxH = 38;
+        page.drawRectangle({ x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, color: rgb(1, 1, 1), borderColor: accent, borderWidth: 1 });
+        drawText(page, label, totX - 4, y - 8, 9, bold, muted);
+        rightText(page, value, totRight, y - 10, 16, bold, accent);
+        y -= boxH + 6;
+      } else {
+        // 'bar' (templates 1-6) ou 'card' (AUDACE) : bande pleine couleur totalBg.
+        const boxH = 38;
+        page.drawRectangle({ x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, color: style.totalBg });
+        drawText(page, label, totX - 4, y - 8, 9, bold, rgb(0.85, 0.85, 0.88));
+        rightText(page, value, totRight, y - 10, 16, bold, style.totalValueColor(accent));
+        y -= boxH + 6;
+      }
     } else {
       drawText(page, label, totX, y, 8.5, reg, muted);
       rightText(page, value, totRight, y, 8.5, bold, ink);
@@ -499,74 +610,79 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   const providerName = resolvedPayment.provider === 'stripe' ? 'Stripe' : resolvedPayment.provider === 'sumup' ? 'SumUp' : '';
 
   if (paymentUrl) {
-    needPage();
-    y -= 8;
+    // ATELIER (CIBLE 2 & 3) — URL courte préférée pour le QR (payload ~35 chars →
+    // code moins dense) ET pour le lien cliquable. Repli sur l'URL provider si la
+    // facture n'a pas encore de token (legacy non backfillé).
+    const { buildShortPayUrl } = await import('./pay-token');
+    const displayUrl = buildShortPayUrl(invoice.payment_short_token) || paymentUrl;
 
-    // Generate QR code — try buffer first, fall back to data URL → buffer
+    // QR code — payload = URL courte. Params conformes ISO 18004 (margin 4, EC 'L').
     let qrImage: any = null;
     try {
       const { generateQrBuffer } = await import('./qr-generate');
-      const qrBuffer = await generateQrBuffer(paymentUrl);
-      if (qrBuffer && qrBuffer.length > 0) {
-        qrImage = await pdfDoc.embedPng(qrBuffer);
-      }
+      const qrBuffer = await generateQrBuffer(displayUrl);
+      if (qrBuffer && qrBuffer.length > 0) qrImage = await pdfDoc.embedPng(qrBuffer);
     } catch (qrErr) {
       console.error('[pdf-server] QR buffer embed failed:', (qrErr as Error).message);
     }
-
-    // Fallback: try data URL → PNG conversion
     if (!qrImage) {
       try {
         const { generateQrDataUrl } = await import('./qr-generate');
-        const dataUrl = await generateQrDataUrl(paymentUrl);
+        const dataUrl = await generateQrDataUrl(displayUrl);
         if (dataUrl && dataUrl.startsWith('data:image/png;base64,')) {
-          const base64 = dataUrl.replace('data:image/png;base64,', '');
-          const qrBuffer = Buffer.from(base64, 'base64');
-          qrImage = await pdfDoc.embedPng(qrBuffer);
+          qrImage = await pdfDoc.embedPng(Buffer.from(dataUrl.replace('data:image/png;base64,', ''), 'base64'));
         }
       } catch (fallbackErr) {
         console.error('[pdf-server] QR data-URL fallback failed:', (fallbackErr as Error).message);
       }
     }
-
-    // ALCHEMIST — plus jamais silencieux : si les deux stratégies QR échouent alors
-    // qu'une URL existe, on le crie dans les logs (Vercel) au lieu de rendre
-    // discrètement un pavé texte. On conserve le repli texte pour ne pas casser le PDF.
     if (!qrImage) {
-      console.error('[pdf-server] QR INTROUVABLE pour le lien de paiement — rendu texte seul. URL:', paymentUrl.slice(0, 80));
+      console.error('[pdf-server] QR INTROUVABLE — rendu texte seul. URL:', displayUrl.slice(0, 80));
     }
 
-    const boxH = qrImage ? 70 : 48;
-    page.drawRectangle({ x: margin, y: y - boxH + 8, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
+    const qrSize = 64;                  // ≈ 2,26 cm — min ISO 18004 (close range) = 2 cm
+    const boxH = qrImage ? 84 : 56;
+
+    // Garde zone footer : on réserve la place, nouvelle page sinon (jamais tronqué).
+    if (y - boxH < minY) {
+      page = pdfDoc.addPage([W, H]);
+      if (style.bodyBg.red < 0.99) page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: style.bodyBg });
+      y = H - 40;
+    }
+    y -= 8;
+
+    const boxBottom = y - boxH;
+    page.drawRectangle({ x: margin, y: boxBottom, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
+    page.drawRectangle({ x: margin, y: boxBottom, width: 3, height: boxH, color: accent });
 
     const methodLabel = providerName ? `PAIEMENT EN LIGNE (${providerName.toUpperCase()})` : 'PAIEMENT EN LIGNE';
-    drawText(page, methodLabel, margin + 14, y - 8, 7, bold, accent);
+    drawText(page, methodLabel, margin + 12, y - 14, 7, bold, accent);
+
+    const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
+    drawText(page, btnLabel, margin + 12, y - 30, 11, bold, ink);
+
+    // CIBLE 3 — URL affichée ENTIÈRE (courte) + cliquable (annotation sur la zone).
+    const urlText = safe(displayUrl);
+    const urlY = y - 46;
+    const urlMaxW = W - margin - (margin + 12) - (qrImage ? qrSize + 24 : 24);
+    drawText(page, urlText, margin + 12, urlY, 7.5, reg, accent, urlMaxW);
+    const urlW = Math.min(reg.widthOfTextAtSize(urlText, 7.5), urlMaxW);
+    addLinkAnnotation(page, margin + 12, urlY - 2, urlW, 12, displayUrl);
 
     if (qrImage) {
-      const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
-      drawText(page, btnLabel, margin + 14, y - 22, 10, bold, accent);
-
-      const urlText = safe(paymentUrl).slice(0, 50);
-      drawText(page, urlText, margin + 14, y - 36, 6.5, reg, muted);
-
-      drawText(page, 'Scannez pour payer :', margin + 14, y - 52, 7, reg, muted);
-
-      const qrSize = 48;
-      page.drawImage(qrImage, {
-        x: W - margin - qrSize - 10,
-        y: y - boxH + 14,
-        width: qrSize,
-        height: qrSize,
-      });
+      drawText(page, 'Scannez pour payer :', margin + 12, y - 62, 7, reg, muted);
+      const qrX = W - margin - qrSize - 14;
+      const qrY = boxBottom + (boxH - qrSize) / 2;
+      page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+      // CIBLE 3 — le QR lui-même est cliquable.
+      addLinkAnnotation(page, qrX, qrY, qrSize, qrSize, displayUrl);
     } else {
-      const btnLabel = providerName ? `Payer ${fmt(invoice.total ?? 0)} avec ${providerName}` : `Payer ${fmt(invoice.total ?? 0)} en ligne`;
-      centreText(page, btnLabel, margin, contentW, y - 22, 10, bold, accent);
-
-      const urlText = safe(paymentUrl).slice(0, 80);
-      centreText(page, urlText, margin, contentW, y - 35, 6.5, reg, muted);
+      // Repli texte : URL centrée, cliquable sur toute la largeur.
+      centreText(page, urlText, margin, contentW, y - 50, 7.5, reg, accent);
+      addLinkAnnotation(page, margin, y - 54, contentW, 14, displayUrl);
     }
 
-    y -= boxH + 6;
+    y = boxBottom - 8;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -626,14 +742,30 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     if (!termsText) {
       termsText = "Paiement a reception de la presente facture. En cas de retard de paiement, une indemnite forfaitaire pour frais de recouvrement de 40 euros sera appliquee, conformement a l'article L.441-6 du Code de commerce. Les penalites de retard sont calculees sur la base de trois fois le taux d'interet legal en vigueur. Tout litige relatif a la presente facture sera soumis a la competence exclusive du Tribunal de Commerce du siege social du prestataire. L'acceptation de la presente facture vaut accord sur les conditions generales de vente.";
     }
-    if (termsText && y > minY + 40) {
-      needPage();
-      y -= 8;
-      page.drawRectangle({ x: margin, y: y - 16, width: contentW, height: 16, color: style.sectionBoxBg });
-      drawText(page, 'CONDITIONS DE PAIEMENT', margin + 8, y - 4, 7, bold, accent);
-      y -= 20;
-      y = drawWrapped(page, safe(termsText), margin + 8, y, contentW - 16, 8, reg, muted, 12, minY);
-      y -= 8;
+    if (termsText) {
+      // ATELIER (CIBLE 1) — boîte mesurée : on compte les lignes AVANT de dessiner
+      // pour dimensionner le fond, et on garantit la place (nouvelle page si besoin)
+      // au lieu d'avaler les conditions en silence quand y < minY+40 (bug inverse).
+      const termsMaxW = contentW - 20;
+      const termsLineH = 12;
+      const lines = wrapLines(termsText, termsMaxW, 8, reg);
+      const titleH = 18;
+      const boxH = titleH + lines * termsLineH + 10;
+
+      // Garde zone footer : pas la place → nouvelle page (le bloc est toujours rendu).
+      if (y - boxH < minY) {
+        page = pdfDoc.addPage([W, H]);
+        if (style.bodyBg.red < 0.99) page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: style.bodyBg });
+        y = H - 40;
+      }
+
+      const boxBottom = y - boxH;
+      page.drawRectangle({ x: margin, y: boxBottom, width: contentW, height: boxH, color: style.sectionBoxBg });
+      page.drawRectangle({ x: margin, y: boxBottom, width: 3, height: boxH, color: accent });
+      drawText(page, 'CONDITIONS DE PAIEMENT', margin + 10, y - 12, 7, bold, accent);
+      y -= titleH;
+      y = drawWrapped(page, safe(termsText), margin + 10, y, termsMaxW, 8, reg, muted, termsLineH, boxBottom + 6);
+      y = boxBottom - 10;
     }
   }
 

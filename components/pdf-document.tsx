@@ -449,6 +449,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
         {/* ══════════════════════════════════════════════════════════════════ */}
 
         {paymentUrl && (
+          <Link src={paymentUrl}>
           <View style={{ marginHorizontal: 44, marginBottom: 14, backgroundColor: tpl.sectionBg, borderRadius: 8, padding: '14 18', flexDirection: 'row', alignItems: 'center', gap: 14 }} wrap={false}>
             <View style={{ width: 36, height: 36, backgroundColor: accent, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ fontSize: 16, color: '#ffffff' }}>€</Text>
@@ -468,6 +469,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
               </View>
             )}
           </View>
+          </Link>
         )}
 
         {/* ══════════════════════════════════════════════════════════════════ */}

@@ -191,6 +191,8 @@ export interface Invoice {
   payment_provider?: 'stripe' | 'sumup' | null;
   payment_link_amount?: number | null;
   payment_link_stale?: boolean;
+  // ATELIER (CIBLE 2 & 3) — token de l'URL de paiement courte factu.me/pay/<token>.
+  payment_short_token?: string | null;
   qr_data_url?: string;
   partial_payments?: PartialPayment[];
   amount_paid?: number;

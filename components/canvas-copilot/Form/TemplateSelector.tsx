@@ -14,6 +14,9 @@ const TEMPLATES = [
   { id: 4, name: 'Elegant', accent: '#f59e0b', style: 'Raffiné, typographie soignée' },
   { id: 5, name: 'Corporate', accent: '#64748b', style: 'Professionnel, formel' },
   { id: 6, name: 'Nature', accent: '#22c55e', style: 'Organique, arrondis doux' },
+  { id: 7, name: 'PUR', accent: '#1D9E75', style: 'Épuré, filets capillaires' },
+  { id: 8, name: 'AUDACE', accent: '#1D9E75', style: 'Audacieux, bande accent' },
+  { id: 9, name: 'ÉLÉGANCE', accent: '#1D9E75', style: 'Formel, boîte bordée' },
 ];
 
 // ─── Mini SVG Preview ──────────────────────────────────

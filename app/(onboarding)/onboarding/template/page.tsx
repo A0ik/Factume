@@ -14,6 +14,9 @@ const TEMPLATES = [
   { id: 4, name: 'Élégant',     desc: 'Chaleureux et raffiné', headerBg: 'bg-amber-300', headerH: 'h-1',  bodyBg: 'bg-amber-50' },
   { id: 5, name: 'Corporate',   desc: 'Structuré et pro',      headerBg: 'bg-slate-800', headerH: 'h-5',  bodyBg: 'bg-white' },
   { id: 6, name: 'Nature',      desc: 'Frais et organique',    headerBg: 'bg-green-700', headerH: 'h-5',  bodyBg: 'bg-green-50' },
+  { id: 7, name: 'PUR',         desc: 'Minimaliste épuré',      headerBg: 'bg-primary',   headerH: 'h-1',  bodyBg: 'bg-white' },
+  { id: 8, name: 'AUDACE',      desc: 'Moderne audacieux',      headerBg: 'bg-primary',   headerH: 'h-5',  bodyBg: 'bg-white' },
+  { id: 9, name: 'ÉLÉGANCE',    desc: 'Classique formel',       headerBg: 'bg-gray-900',  headerH: 'h-1',  bodyBg: 'bg-white' },
 ];
 
 export default function OnboardingTemplatePage() {

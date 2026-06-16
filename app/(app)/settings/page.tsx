@@ -717,6 +717,9 @@ export default function SettingsPage() {
           { id: '4', name: 'Élégant', desc: 'Chaleureux', headerColor: '#fbbf24', headerH: 'h-1' },
           { id: '5', name: 'Corporate', desc: 'Pro', headerColor: '#475569', headerH: 'h-5' },
           { id: '6', name: 'Nature', desc: 'Organique', headerColor: '#15803d', headerH: 'h-5' },
+          { id: '7', name: 'PUR', desc: 'Minimaliste', headerColor: '#1D9E75', headerH: 'h-1' },
+          { id: '8', name: 'AUDACE', desc: 'Audacieux', headerColor: '#1D9E75', headerH: 'h-5' },
+          { id: '9', name: 'ÉLÉGANCE', desc: 'Formel', headerColor: '#111827', headerH: 'h-1' },
         ].map((t) => (
           <button
             key={t.id}

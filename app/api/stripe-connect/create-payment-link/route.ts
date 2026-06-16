@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { buildFreshLinkUpdate } from '@/lib/payment-link';
+import { ensureShortToken, buildShortPayUrl } from '@/lib/pay-token';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     if (existingStripeUrl && !force) {
       return NextResponse.json({
         paymentLinkUrl: existingStripeUrl,
-        shortUrl: existingStripeUrl,
+        shortUrl: buildShortPayUrl(invoice.payment_short_token) ?? existingStripeUrl,
         paymentLinkId: invoice.stripe_payment_link_id || null,
       });
     }
@@ -116,14 +117,17 @@ export async function POST(req: NextRequest) {
     // stripe_payment_link_url/_id ET sumup_checkout_id) via buildFreshLinkUpdate.
     // Avant, seul sumup_checkout_id était nettoyé → la legacy Stripe survécût
     // et corrompait les résolveurs.
+    // ATELIER (CIBLE 2 & 3) — mint/ensure le token d'URL courte (QR léger + lien).
+    const shortToken = await ensureShortToken(admin, invoiceId, invoice.payment_short_token);
+    const freshUpdate = buildFreshLinkUpdate('stripe', {
+      url: session.url as string,
+      amount: Number(invoice.total ?? 0),
+    });
+    if (shortToken) freshUpdate.payment_short_token = shortToken;
+
     const { error: updateErr } = await admin
       .from('invoices')
-      .update(
-        buildFreshLinkUpdate('stripe', {
-          url: session.url as string,
-          amount: Number(invoice.total ?? 0),
-        }),
-      )
+      .update(freshUpdate)
       .eq('id', invoiceId);
 
     if (updateErr) {
@@ -133,7 +137,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       paymentLinkId: session.id,
       paymentLinkUrl: session.url,
-      shortUrl: session.url,
+      shortUrl: buildShortPayUrl(shortToken) ?? session.url,
     });
   } catch (error: any) {
     console.error('[Stripe Connect Payment Link]', error);
