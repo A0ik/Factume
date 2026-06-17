@@ -130,15 +130,19 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
                      invoice.document_type === 'deposit' ? '380' :
                      invoice.document_type === 'purchase_order' ? '220' : '380';
 
-  // Due date
-  let dueDateEl = '';
+  // Date d'échéance (BT-9) — va dans ApplicableHeaderTradeSettlement /
+  // SpecifiedTradePaymentTerms, JAMAIS dans ExchangedDocument (sinon rejet XSD
+  // CII D22B : « Element DueDateDateTime is not expected »).
+  let paymentTermsEl = '';
   if (invoice.due_date) {
     try {
       const formattedDueDate = formatDateFacturX(invoice.due_date);
-      dueDateEl = `
+      paymentTermsEl = `
+      <ram:SpecifiedTradePaymentTerms>
         <ram:DueDateDateTime>
           <udt:DateTimeString format="102">${formattedDueDate}</udt:DateTimeString>
-        </ram:DueDateDateTime>`;
+        </ram:DueDateDateTime>
+      </ram:SpecifiedTradePaymentTerms>`;
     } catch (e) {
       // Ignorer les erreurs de date d'échéance (non obligatoire)
     }
@@ -309,7 +313,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
     <ram:TypeCode>${docTypeCode}</ram:TypeCode>
     <ram:IssueDateTime>
       <udt:DateTimeString format="102">${issueDate}</udt:DateTimeString>
-    </ram:IssueDateTime>${dueDateEl}
+    </ram:IssueDateTime>
   </rsm:ExchangedDocument>
 
   <rsm:SupplyChainTradeTransaction>
@@ -363,13 +367,13 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
 
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>${escapeXml(currency)}</ram:InvoiceCurrencyCode>
-      ${(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && profile.iban ? `<ram:SpecifiedTradeSettlementPaymentMeans>
+      ${vatBreakdownXml}${discountXml}${paymentTermsEl}${(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && profile.iban ? `<ram:SpecifiedTradeSettlementPaymentMeans>
         <ram:TypeCode>58</ram:TypeCode>
         <ram:PayeePartyCreditorFinancialAccount>
           <ram:IBANID>${escapeXml(profile.iban.replace(/\s/g, ''))}</ram:IBANID>
           ${profile.bic ? `<ram:ProprietaryID>${escapeXml(profile.bic)}</ram:ProprietaryID>` : ''}
         </ram:PayeePartyCreditorFinancialAccount>
-      </ram:SpecifiedTradeSettlementPaymentMeans>` : ''}${vatBreakdownXml}${discountXml}
+      </ram:SpecifiedTradeSettlementPaymentMeans>` : ''}
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
         <ram:LineTotalAmount>${formatCurrencyFacturX(subtotal)}</ram:LineTotalAmount>
         ${discountAmount > 0 ? `<ram:AllowanceTotalAmount>${formatCurrencyFacturX(discountAmount)}</ram:AllowanceTotalAmount>` : ''}
