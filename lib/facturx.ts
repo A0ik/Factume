@@ -319,7 +319,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
       <ram:SellerTradeParty>
         <ram:Name>${sellerName}</ram:Name>
         ${sellerSiret ? `<ram:SpecifiedLegalOrganization>
-          <ram:ID schemeID="0002">${escapeXml(sellerSiret)}</ram:ID>
+          <ram:ID schemeID="0002">${escapeXml(sellerSiret.replace(/\s/g, '').substring(0, 9))}</ram:ID>
         </ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
           <ram:LineOne>${sellerLineOne}</ram:LineOne>
@@ -337,7 +337,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
       <ram:BuyerTradeParty>
         <ram:Name>${buyerName}</ram:Name>
         ${buyerSiret ? `<ram:SpecifiedLegalOrganization>
-          <ram:ID schemeID="0002">${escapeXml(buyerSiret)}</ram:ID>
+          <ram:ID schemeID="0002">${escapeXml(buyerSiret.replace(/\s/g, '').substring(0, 9))}</ram:ID>
         </ram:SpecifiedLegalOrganization>` : ''}
         <ram:PostalTradeAddress>
           <ram:LineOne>${buyerLineOne}</ram:LineOne>

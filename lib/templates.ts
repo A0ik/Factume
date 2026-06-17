@@ -501,8 +501,17 @@ export function prepareTemplateData(invoice: Invoice, profile?: Profile | null, 
   const f = (n: number) => fmt(n, currency, locale);
   const fd = (s: string) => fmtDate(s, locale);
   const t = getTranslation(localeTyped);
-  const clientName = invoice.client?.name || invoice.client_name_override || t.common.client;
-  const clientAddr = invoice.client ? [invoice.client.address, `${invoice.client.postal_code || ''} ${invoice.client.city || ''}`.trim(), invoice.client.country !== 'France' ? invoice.client.country : ''].filter(Boolean).join('<br/>') : '';
+  // ATELIER (e-invoicing) — un client B2B saisi à la volée (sans fiche liée)
+  // stocke ses coordonnées dans les champs dénormalisés de la facture. Le template
+  // ne lisait QUE invoice.client.* (le join) → le PDF n'affichait NI adresse NI
+  // SIRET client. On résout chaque champ en « inline d'abord, join en repli ».
+  const cli: any = invoice.client || {};
+  const clientName = invoice.client_name_override || invoice.client?.name || t.common.client;
+  const cAddrLine = invoice.client_address || cli.address || '';
+  const cPostal = invoice.client_postal_code || cli.postal_code || '';
+  const cCity = invoice.client_city || cli.city || '';
+  const cCountry = cli.country && cli.country !== 'France' ? cli.country : '';
+  const clientAddr = [cAddrLine, `${cPostal} ${cCity}`.trim(), cCountry].filter(Boolean).join('<br/>');
   const labels = getLabels(invoice, localeTyped);
   const logoHtml = p.logo_url
     ? `<div style="display:flex;align-items:flex-start;justify-content:flex-start;margin-bottom:16px;padding:12px;background:#fafafa;border-radius:12px;border-left:4px solid var(--accent-color)"><img src="${p.logo_url}" style="height:120px;max-width:300px;object-fit:contain;display:block;margin:0;padding:0" onerror="this.parentNode && this.parentNode.removeChild(this)" crossorigin="anonymous"/></div>`
@@ -765,9 +774,10 @@ function magnificentTemplate(d: TemplateData, accentColor: string, templateId: n
     <div style="font-weight:700;font-size:16px;margin-bottom:6px;color:#1a1a1a">${d.clientName}</div>
     <div style="font-size:13px;color:#5a5a5a;line-height:1.7">
       ${d.clientAddr}
-      ${d.invoice.client?.email?`<br/>${d.invoice.client.email}`:''}
-      ${d.invoice.client?.phone?`<br/>${d.invoice.client.phone}`:''}
-      ${d.invoice.client?.siret?`<br/><span style="font-size:11px;color:#6b7280;font-weight:500">SIRET ${d.invoice.client.siret}</span>`:''}
+      ${((d.invoice as any).client_email || d.invoice.client?.email)?`<br/>${(d.invoice as any).client_email || d.invoice.client?.email}`:''}
+      ${((d.invoice as any).client_phone || d.invoice.client?.phone)?`<br/>${(d.invoice as any).client_phone || d.invoice.client?.phone}`:''}
+      ${((d.invoice as any).client_siret || d.invoice.client?.siret)?`<br/><span style="font-size:11px;color:#6b7280;font-weight:500">SIRET ${(d.invoice as any).client_siret || d.invoice.client?.siret}</span>`:''}
+      ${((d.invoice as any).client_vat_number || d.invoice.client?.vat_number)?`<br/><span style="font-size:11px;color:#6b7280;font-weight:500">TVA ${(d.invoice as any).client_vat_number || d.invoice.client?.vat_number}</span>`:''}
     </div>
   `;
 

@@ -222,11 +222,11 @@ export async function POST(req: NextRequest) {
     // ATELIER (e-invoicing) — le RPC create_invoice_atomique ne stocke PAS les
     // champs client inline (siret, tva, adresse…). Or la transmission Factur-X en
     // a BESOIN (le XML exige SIRET + adresse client ; isFacturXEligible vérifie le
-    // SIRET client). On les persiste maintenant pour les clients SANS fiche liée,
-    // et on les fusionne dans l'objet invoice pour transmitInvoice. Sans ça, la
-    // transmission échouait sur « SIRET du client obligatoire » même si l'utilisateur
-    // l'avait saisi (le SIRET n'arrivait qu'après, via un update séparé du formulaire).
-    if (!client_id) {
+    // SIRET client). On les persiste donc sur la facture et on les fusionne dans
+    // l'objet invoice pour transmitInvoice. Choix produit « inline » : on fige ces
+    // infos sur la facture TOUJOURS, même pour un client lié (champs vides ignorés
+    // → le PDF/XML replient sur la fiche via le join).
+    {
       const inlineFields: Record<string, string> = {};
       if (client_siret) inlineFields.client_siret = client_siret;
       if (client_vat_number) inlineFields.client_vat_number = client_vat_number;

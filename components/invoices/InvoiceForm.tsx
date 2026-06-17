@@ -132,8 +132,13 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
   const [clientAddress, setClientAddress] = useState((invoice as any)?.client_address || invoice?.client?.address || '');
   const [clientCity, setClientCity] = useState((invoice as any)?.client_city || invoice?.client?.city || '');
   const [clientPostalCode, setClientPostalCode] = useState((invoice as any)?.client_postal_code || invoice?.client?.postal_code || '');
-  const [clientSiret, setClientSiret] = useState(invoice?.client?.siret || '');
-  const [clientVatNumber, setClientVatNumber] = useState(invoice?.client?.vat_number || '');
+  // ATELIER (e-invoicing) — lire le SIRET/TVA du champ dénormalisé inline
+  // (invoice.client_siret) EN PREMIER, car les clients B2B saisis à la volée
+  // n'ont PAS de fiche liée (invoice.client = null). Avant, l'édition affichait
+  // un SIRET vide même quand il était sauvegardé en base → l'utilisateur croyait
+  // que ça ne sauvegardait jamais.
+  const [clientSiret, setClientSiret] = useState((invoice as any)?.client_siret || invoice?.client?.siret || '');
+  const [clientVatNumber, setClientVatNumber] = useState((invoice as any)?.client_vat_number || invoice?.client?.vat_number || '');
 
   // ─── Lignes ───
   const [items, setItems] = useState<Omit<InvoiceItem, 'total'>[]>(
@@ -529,13 +534,13 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           items: items,
           notes: notes || undefined,
           discount_percent: discountPercent > 0 ? discountPercent : undefined,
-          client_email: clientId ? undefined : clientEmail || undefined,
-          client_phone: clientId ? undefined : clientPhone || undefined,
-          client_address: clientId ? undefined : clientAddress || undefined,
-          client_city: clientId ? undefined : clientCity || undefined,
-          client_postal_code: clientId ? undefined : clientPostalCode || undefined,
-          client_siret: clientId ? undefined : clientSiret || undefined,
-          client_vat_number: clientId ? undefined : clientVatNumber || undefined,
+          client_email: clientEmail || undefined,
+          client_phone: clientPhone || undefined,
+          client_address: clientAddress || undefined,
+          client_city: clientCity || undefined,
+          client_postal_code: clientPostalCode || undefined,
+          client_siret: clientSiret || undefined,
+          client_vat_number: clientVatNumber || undefined,
           client_type: clientType || undefined,
         }, profile, currentIdempotencyId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 15000)),
@@ -613,12 +618,13 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           // ATELIER (e-invoicing) — parité create/edit : sans ces champs, éditer une
           // facture B2B (ex. pour ajouter un SIRET oublié) ne persistait JAMAIS le
           // SIRET → retransmission impossible. Le PATCH /api/invoices/[id] les
-          // accepte (pas en colonnes protégées). Garde `clientId ? undefined` pour
-          // ne pas écraser les données d'un client lié (le SIRET vient du join).
-          client_city: clientId ? undefined : clientCity || undefined,
-          client_postal_code: clientId ? undefined : clientPostalCode || undefined,
-          client_siret: clientId ? undefined : clientSiret || undefined,
-          client_vat_number: clientId ? undefined : clientVatNumber || undefined,
+          // accepte (pas en colonnes protégées). Pas de garde clientId : on fige
+          // toujours les infos client sur la facture (choix produit « inline »),
+          // même pour un client lié (les champs vides restent undefined = inchangés).
+          client_city: clientCity || undefined,
+          client_postal_code: clientPostalCode || undefined,
+          client_siret: clientSiret || undefined,
+          client_vat_number: clientVatNumber || undefined,
           client_type: clientType || undefined,
         }),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),

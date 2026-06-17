@@ -123,6 +123,36 @@ export interface InvoiceEventResult {
   hasMore: boolean;
 }
 
+// ── Diagnostic : rapport de validation détaillé ───────────────────────────────
+
+/**
+ * Valide un XML Factur-X auprès de SuperPDP via POST /validation_reports (FormData).
+ *
+ * /invoices répond souvent « Invalid report » SANS détail quand le XML échoue à la
+ * validation EN 16931. Cet endpoint renvoie le rapport complet (is_valid + erreurs),
+ * ce qui permet de diagnostiquer précisément le 400. Cf. SUPERPDP_API_REFERENCE §3.3.
+ */
+async function validateXmlReport(xml: string): Promise<any | null> {
+  try {
+    const token = await getAccessToken();
+    const form = new FormData();
+    form.append('file', new Blob([xml], { type: 'application/xml' }), 'factur-x.xml');
+    const response = await fetch(`${BASE_URL}/validation_reports`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form,
+    });
+    const text = await response.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch { json = { raw: text }; }
+    console.log('[SuperPDP] validation_reports:', response.status, JSON.stringify(json).slice(0, 3000));
+    return json;
+  } catch (e: any) {
+    console.warn('[SuperPDP] validation_reports échoué:', e?.message);
+    return null;
+  }
+}
+
 // ── Fonction principale : Transmission d'une facture ──────────────────────────
 
 /**
@@ -231,7 +261,9 @@ export async function transmitInvoice(
 
       console.error('[SuperPDP] Erreur transmission:', response.status, errorData);
 
-      // Erreurs de validation (400)
+      // Erreurs de validation (400) — SuperPDP répond « Invalid report » sans détail
+      // sur /invoices. On appelle /validation_reports (FormData) pour récupérer le
+      // rapport complet et l'injecter dans les logs + validationDetails.
       if (response.status === 400) {
         const details: string[] = [];
         if (errorData.validation_errors) {
@@ -243,6 +275,28 @@ export async function transmitInvoice(
           errorData.report.subreport.forEach((s: any) =>
             details.push(`${s.location}: ${s.message}`)
           );
+        }
+
+        // Diagnostic : rapport de validation détaillé (BR-XX / règles EN 16931)
+        const report = await validateXmlReport(ciiXml);
+        if (report) {
+          const arr: any[] = Array.isArray(report)
+            ? report
+            : (report.data || report.reports || report.validation_reports || [report]);
+          for (const r of arr) {
+            if (!r || typeof r !== 'object') continue;
+            const entries =
+              r.report?.subreport || r.subreport || r.errors || r.validation_errors || r.details;
+            if (Array.isArray(entries) && entries.length) {
+              for (const e of entries) {
+                details.push(
+                  `[validation] ${e.location || e.field || e.rule || e.id || ''}: ${e.message || e.text || JSON.stringify(e)}`
+                );
+              }
+            } else {
+              details.push(`[validation] ${r.summary || r.message || JSON.stringify(r).slice(0, 400)}`);
+            }
+          }
         }
 
         return {
