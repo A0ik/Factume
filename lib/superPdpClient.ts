@@ -160,33 +160,52 @@ async function validateXmlReport(xml: string): Promise<any | null> {
  * SIRET : le token client_credentials émet pour un autre SIRET non enrollé), ou
  * parce que l'acheteur n'est pas routable. On logge ces infos pour trancher.
  */
-async function diagnoseTransmissionContext(invoice: any, profile: Profile): Promise<void> {
+async function diagnoseTransmissionContext(
+  invoice: any,
+  profile: Profile,
+): Promise<{ buyerInDirectory: boolean | null; sellerMatchesAccount: boolean | null }> {
+  let buyerInDirectory: boolean | null = null;
+  let sellerMatchesAccount: boolean | null = null;
   try {
     const token = await getAccessToken();
     const sellerSiret = (profile.siret || '').trim();
+    const sellerSiren = sellerSiret.replace(/\s/g, '').substring(0, 9);
     const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
     console.log('[SuperPDP] diagnostic — SIRET vendeur (XML):', sellerSiret, '| SIRET acheteur:', buyerSiret);
 
-    // 1. Compte authentifié = le compte plateforme (dont son propre SIRET).
+    // 1. Compte authentifié = la plateforme (dont son propre SIREN).
     try {
       const meRes = await fetch(`${BASE_URL}/companies/me`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       });
       const meText = await meRes.text();
       console.log('[SuperPDP] diagnostic companies/me:', meRes.status, meText.slice(0, 1000));
+      try {
+        const me = JSON.parse(meText);
+        if (me?.number) sellerMatchesAccount = String(me.number) === sellerSiren;
+        if (me?.env) console.log('[SuperPDP] diagnostic env compte:', me.env);
+      } catch {}
     } catch (e: any) {
       console.warn('[SuperPDP] diagnostic companies/me échoué:', e?.message);
     }
 
-    // 2. Reachabilité de l'acheteur dans l'annuaire DGFiP.
-    if (buyerSiret) {
+    // 2. Reachabilité de l'acheteur dans l'annuaire DGFiP. IMPORTANT : SuperPDP
+    // identifie les entreprises par leur NUMÉRO D'ENTREPRISE (SIREN, 9 chiffres),
+    // pas le SIRET (14). On interroge donc avec le SIREN.
+    const buyerSiren = buyerSiret.replace(/\s/g, '').substring(0, 9);
+    if (buyerSiren) {
       try {
         const dirRes = await fetch(
-          `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(buyerSiret)}`,
+          `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(buyerSiren)}`,
           { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } },
         );
         const dirText = await dirRes.text();
-        console.log('[SuperPDP] diagnostic french_directory (acheteur):', dirRes.status, dirText.slice(0, 1000));
+        console.log('[SuperPDP] diagnostic french_directory (acheteur SIREN', buyerSiren, '):', dirRes.status, dirText.slice(0, 1000));
+        try {
+          const dir = JSON.parse(dirText);
+          const entries = dir?.data || dir?.entries || (Array.isArray(dir) ? dir : []);
+          buyerInDirectory = Array.isArray(entries) && entries.length > 0;
+        } catch {}
       } catch (e: any) {
         console.warn('[SuperPDP] diagnostic french_directory échoué:', e?.message);
       }
@@ -194,6 +213,7 @@ async function diagnoseTransmissionContext(invoice: any, profile: Profile): Prom
   } catch (e: any) {
     console.warn('[SuperPDP] diagnostic contexte échoué:', e?.message);
   }
+  return { buyerInDirectory, sellerMatchesAccount };
 }
 
 // ── Fonction principale : Transmission d'une facture ──────────────────────────
@@ -370,11 +390,21 @@ export async function transmitInvoice(
         };
       }
 
-      // Erreur serveur (500+) — retryable. On logge le contexte de traitement
-      // pour trancher entre : vendeur non enrollé (multi-SIRET), acheteur non
-      // routable, ou instabilité sandbox. Cf. diagnoseTransmissionContext.
+      // Erreur serveur (500+) — retryable SAUF si la cause est identifiée comme
+      // non retentable. On diagnostique : acheteur non inscrit à l'e-invoicing
+      // (absent de l'annuaire DGFiP) = non routable → SuperPDP répond 500. Dans ce
+      // cas, message clair et NON retenté (retry inutile tant que le client n'est
+      // pas inscrit). Sinon, on suppose une instabilité serveur → retry.
       if (response.status >= 500) {
-        await diagnoseTransmissionContext(invoice, profile);
+        const diag = await diagnoseTransmissionContext(invoice, profile);
+        if (diag.buyerInDirectory === false) {
+          const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
+          return {
+            success: false,
+            error: `Le client (${buyerSiret}) n'est pas inscrit à la facturation électronique (absent de l'annuaire DGFiP). La transmission sera possible dès qu'il sera enregistré auprès d'une plateforme agréée (PDP).`,
+            errorCode: 'RECEIVER_NOT_REGISTERED',
+          };
+        }
         return {
           success: false,
           error: `Erreur serveur Super PDP (${response.status}) — sera retenté automatiquement`,
@@ -437,8 +467,13 @@ export async function lookupCompany(sirenOrSiret: string): Promise<DirectoryLook
   try {
     const token = await getAccessToken();
 
+    // SuperPDP identifie les entreprises par leur numéro d'entreprise (SIREN, 9
+    // chiffres). On normalise : si on reçoit un SIRET (14), on prend le SIREN.
+    const cleaned = (sirenOrSiret || '').replace(/\s/g, '');
+    const number = cleaned.length >= 14 ? cleaned.substring(0, 9) : cleaned;
+
     const response = await fetch(
-      `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(sirenOrSiret)}`,
+      `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(number)}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
