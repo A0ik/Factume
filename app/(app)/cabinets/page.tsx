@@ -54,7 +54,7 @@ export default function CabinetsPage() {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        toast.error('Session expiree. Veuillez vous reconnecter.');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
         return;
       }
       const res = await fetch('/api/cabinet/clients', {
@@ -70,15 +70,15 @@ export default function CabinetsPage() {
       });
       if (res.ok) {
         const { cabinet } = await res.json();
-        toast.success('Cabinet cree avec succes');
+        toast.success('Cabinet créé avec succès');
         localStorage.setItem('factume_active_cabinet_id', cabinet.id);
         router.push('/cabinet');
       } else {
-        const error = await res.json().catch(() => ({ error: 'Erreur lors de la creation' }));
-        toast.error(error.error || 'Erreur lors de la creation');
+        const error = await res.json().catch(() => ({ error: 'Erreur lors de la création' }));
+        toast.error(error.error || 'Erreur lors de la création');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la creation');
+      toast.error(error.message || 'Erreur lors de la création');
     } finally {
       setCreating(false);
     }
@@ -100,8 +100,8 @@ export default function CabinetsPage() {
             Multi-cabinets
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            Gerez plusieurs cabinets comptables depuis un espace unique. Basculez
-            d&apos;un cabinet a l&apos;autre en un clic et centralisez votre activite.
+            Gérez plusieurs cabinets comptables depuis un espace unique. Basculez
+            d&apos;un cabinet à l&apos;autre en un clic et centralisez votre activité.
           </p>
           <Link
             href="/paywall?plan=business"
@@ -210,7 +210,7 @@ export default function CabinetsPage() {
                     href="/cabinet/settings"
                     onClick={() => localStorage.setItem('factume_active_cabinet_id', cabinet.id)}
                     className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-                    title="Parametres"
+                    title="Paramètres"
                   >
                     <Settings size={16} />
                   </Link>
@@ -259,7 +259,7 @@ export default function CabinetsPage() {
                   ) : (
                     <Plus size={14} />
                   )}
-                  Creer
+                  Créer
                 </button>
                 <button
                   onClick={() => {
@@ -282,7 +282,7 @@ export default function CabinetsPage() {
                 <Plus size={22} className="text-gray-400 group-hover:text-primary transition-colors" />
               </div>
               <span className="text-sm font-semibold text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
-                Creer un cabinet
+                Créer un cabinet
               </span>
             </button>
           )}

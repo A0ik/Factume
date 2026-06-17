@@ -7,8 +7,10 @@ import {
   Building2, User, Search, Percent,
   CalendarDays, MessageSquare,
   Clock, CheckCircle2, Receipt, Package, ShieldCheck,
+  Eraser, Copy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { springFast, springSmooth } from '@/lib/motion';
 import { CompanySearch } from '@/components/ui/CompanySearch';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
@@ -20,9 +22,6 @@ import { PDPValidator } from '@/components/ui/PDPValidator';
 import { ProductCatalogModal } from '@/components/invoices/ProductCatalogModal';
 import { Product } from '@/types';
 import { toast } from 'sonner';
-
-const springFast = { type: 'spring' as const, damping: 25, stiffness: 400 };
-const springSmooth = { type: 'spring' as const, damping: 28, stiffness: 300 };
 
 // ─── Section Wrapper with Micro Button ──────────────────
 
@@ -218,6 +217,8 @@ export default function DocumentFormPanel({
     updateItem,
     addItem,
     removeItem,
+    clearItem,
+    duplicateItem,
     dueDate,
   } = store;
 
@@ -348,10 +349,12 @@ export default function DocumentFormPanel({
   ) : null;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ─── Scrollable Form Content ──────────────────── */}
-      {/* FLAW 1 FIX: pb-28 (was pb-32) — reduced since mobile bottom bar is now compact (no duplicate Create button) */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-28 lg:pb-4 space-y-4 scroll-momentum">
+    <div className="flex flex-col">
+      {/* ─── Form Content ────────────────────
+          CIBLE 2 FIX : le scroll est géré par le parent (CanvasCopilotLayout,
+          desktop :191 / mobile :225). Retrait du double scroll imbriqué qui
+          cassait les ancres de scroll + le momentum. */}
+      <div className="px-4 pt-4 pb-8 space-y-4">
 
         {/* ═══════════ CLIENT SECTION ═══════════ */}
         <FormSection
@@ -422,7 +425,7 @@ export default function DocumentFormPanel({
                 fieldRefMap={fieldRefMap}
               />
               <FormInput
-                label="Telephone"
+                label="Téléphone"
                 value={clientPhone}
                 onChange={(v) => updateField('clientPhone', v)}
                 placeholder="06 12 34 56 78"
@@ -473,7 +476,7 @@ export default function DocumentFormPanel({
               className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
               <ChevronDown size={12} className={cn('transition-transform', advancedOpen && 'rotate-180')} />
-              Adresse et details
+              Adresse et détails
             </button>
 
             <AnimatePresence>
@@ -489,7 +492,7 @@ export default function DocumentFormPanel({
                     label="Adresse"
                     value={clientAddress}
                     onChange={(v) => updateField('clientAddress', v)}
-                    placeholder="Numero et rue"
+                    placeholder="Numéro et rue"
                   />
                   <div className="grid grid-cols-3 gap-3">
                     <FormInput
@@ -520,7 +523,7 @@ export default function DocumentFormPanel({
               >
                 <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
                 <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  Facturation electronique PDP activee pour ce client B2B
+                  Facturation électronique PDP activée pour ce client B2B
                 </span>
               </motion.div>
             )}
@@ -584,6 +587,25 @@ export default function DocumentFormPanel({
                     >
                       <Package size={13} />
                     </motion.button>
+                    {/* CIBLE 1 — Vider la ligne : présent sur TOUTES les lignes (reset du contenu) */}
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => clearItem(item.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
+                      title="Vider la ligne"
+                    >
+                      <Eraser size={13} />
+                    </motion.button>
+                    {/* CIBLE 1 — Dupliquer la ligne : first-class (pattern Cushion 2026), sur TOUTES les lignes */}
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => duplicateItem(item.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                      title="Dupliquer la ligne"
+                    >
+                      <Copy size={13} />
+                    </motion.button>
+                    {/* Supprimer : masqué sur la 1re ligne (invariant ≥ 1 ligne garanti par removeItem) */}
                     {items.length > 1 && (
                       <motion.button
                         whileTap={{ scale: 0.85 }}
@@ -600,7 +622,7 @@ export default function DocumentFormPanel({
                 {/* Qty, Price, TVA */}
                 <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
                   <FormInput
-                    label="Qte"
+                    label="Qté"
                     value={item.quantity || ''}
                     onChange={(v) => updateItem(item.id, 'quantity', v)}
                     placeholder="1"
@@ -652,17 +674,23 @@ export default function DocumentFormPanel({
               </motion.div>
             ))}
 
-            {/* Add line button */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => addItem()}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all text-sm font-medium"
-            >
-              <Plus size={16} strokeWidth={2.5} />
-              Ajouter une ligne
-            </motion.button>
           </div>
         </FormSection>
+
+        {/* CIBLE 2 — « Ajouter une ligne » sticky : toujours visible & cliquable
+            pendant la saisie. Sorti de la FormSection (overflow-hidden) pour que
+            le sticky colle au viewport, pas à la card. backdrop-blur reste propre
+            au-dessus des cards ET des zones blanches. */}
+        <div className="sticky bottom-0 z-10 -mx-4 px-4 pb-3 pt-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-gray-100 dark:border-white/[0.06]">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => addItem()}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-control border-2 border-dashed border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all text-sm font-medium"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Ajouter une ligne
+          </motion.button>
+        </div>
 
         {/* ═══════════ TOTALS SECTION ═══════════ */}
         <motion.div
@@ -735,7 +763,7 @@ export default function DocumentFormPanel({
             />
             <div className="grid grid-cols-2 gap-3">
               <FormInput
-                label="Date d'emission"
+                label="Date d'émission"
                 value={issueDate}
                 onChange={(v) => updateField('issueDate', v)}
                 type="date"
@@ -744,7 +772,7 @@ export default function DocumentFormPanel({
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
                   <Clock size={9} className="text-gray-400" />
-                  Delai paiement
+                  Délai paiement
                 </label>
                 <PaymentTermsSelector
                   termId={paymentTermId}

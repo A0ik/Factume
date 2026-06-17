@@ -70,12 +70,12 @@ const PRODUCT_CATEGORIES = [
 ];
 
 const PRODUCT_UNITS = [
-  { value: 'unit', label: 'Unite' },
+  { value: 'unit', label: 'Unité' },
   { value: 'hour', label: 'Heure' },
   { value: 'day', label: 'Jour' },
   { value: 'month', label: 'Mois' },
   { value: 'kg', label: 'Kilogramme' },
-  { value: 'km', label: 'Kilometre' },
+  { value: 'km', label: 'Kilomètre' },
   { value: 'forfait', label: 'Forfait' },
 ];
 
@@ -121,7 +121,7 @@ function ClientForm({
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input label="Email" type="email" placeholder="contact@exemple.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
-        <Input label="Telephone" placeholder="+33 6 12 34 56 78" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+        <Input label="Téléphone" placeholder="+33 6 12 34 56 78" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
       </div>
       <Input label="Adresse" placeholder="123 rue de la Paix" value={form.address} onChange={(e) => set('address', e.target.value)} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -130,7 +130,7 @@ function ClientForm({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input label="SIRET" placeholder="12345678901234" value={form.siret} onChange={(e) => set('siret', e.target.value)} />
-        <Input label="N degre TVA intracommunautaire" placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
+        <Input label="N° degré TVA intracommunautaire" placeholder="FR12345678901" value={form.vat_number} onChange={(e) => set('vat_number', e.target.value)} />
       </div>
       <Input label="Site web" placeholder="https://exemple.com" value={form.website} onChange={(e) => set('website', e.target.value)} />
       {error && (
@@ -140,7 +140,7 @@ function ClientForm({
         </motion.div>
       )}
       <div className="flex gap-3 pt-2">
-        <Button type="submit" className="flex-1" loading={loading}>Creer le client</Button>
+        <Button type="submit" className="flex-1" loading={loading}>Créer le client</Button>
       </div>
     </form>
   );
@@ -256,7 +256,7 @@ function DesktopClientCardGrid({ client, stats, idx, onDelete }: {
             </div>
             <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
               <p className="text-emerald-400 font-bold truncate">{formatCurrency(stats.revenue)}</p>
-              <p className="text-[10px] text-slate-400">Encaisse</p>
+              <p className="text-[10px] text-slate-400">Encaissé</p>
             </div>
             {stats.pending > 0 ? (
               <div className="text-center p-2.5 rounded-xl bg-amber-500/10 min-w-0">
@@ -579,7 +579,7 @@ export default function ContactsPage() {
   const handleExport = useCallback(() => {
     downloadCSV(
       `clients-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Nom', 'Email', 'Telephone', 'Adresse', 'Code postal', 'Ville', 'Pays', 'SIRET', 'N degre TVA'],
+      ['Nom', 'Email', 'Téléphone', 'Adresse', 'Code postal', 'Ville', 'Pays', 'SIRET', 'N° degré TVA'],
       clients.map((c) => [c.name, c.email, c.phone, c.address, c.postal_code, c.city, c.country, c.siret, c.vat_number]),
     );
   }, [clients]);
@@ -593,12 +593,12 @@ export default function ContactsPage() {
     e.preventDefault();
     if (!clientForm.name) { setClientError('Le nom est requis'); return; }
     if (clientForm.siret && !validateSiret(clientForm.siret)) { setClientError('SIRET invalide (14 chiffres requis)'); return; }
-    if (clientForm.vat_number && !validateVatNumber(clientForm.vat_number)) { setClientError('N degre TVA invalide'); return; }
+    if (clientForm.vat_number && !validateVatNumber(clientForm.vat_number)) { setClientError('N° degré TVA invalide'); return; }
     setClientLoading(true); setClientError('');
     try {
       await createClient(clientForm as any);
       setShowClientModal(false);
-      toast.success('Client cree avec succes');
+      toast.success('Client créé avec succès');
       resetClientForm();
     } catch (e: any) { setClientError(e.message); } finally { setClientLoading(false); }
   }, [clientForm, createClient, resetClientForm]);
@@ -608,7 +608,7 @@ export default function ContactsPage() {
     const client = clients.find((c) => c.id === id);
     toast('Supprimer ce client ?', {
       description: client?.name,
-      action: { label: 'Supprimer', onClick: () => deleteClient(id).then(() => toast.success('Client supprime')).catch((err: any) => toast.error(err.message)) },
+      action: { label: 'Supprimer', onClick: () => deleteClient(id).then(() => toast.success('Client supprimé')).catch((err: any) => toast.error(err.message)) },
     });
   }, [clients, deleteClient]);
 
@@ -646,12 +646,12 @@ export default function ContactsPage() {
         const { data, error } = await getSupabaseClient().from('products').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editingProductId).select().single();
         if (error) throw error;
         setProducts((ps) => ps.map((p) => (p.id === editingProductId ? data : p)));
-        toast.success('Produit mis a jour');
+        toast.success('Produit mis à jour');
       } else {
         const { data, error } = await getSupabaseClient().from('products').insert(payload).select().single();
         if (error) throw error;
         setProducts((ps) => [...ps, data]);
-        toast.success('Produit cree');
+        toast.success('Produit créé');
       }
       setShowProductModal(false);
     } catch (e: any) { toast.error(e.message); } finally { setSavingProduct(false); }
@@ -662,7 +662,7 @@ export default function ContactsPage() {
     try {
       await getSupabaseClient().from('products').delete().eq('id', id);
       setProducts((ps) => ps.filter((p) => p.id !== id));
-      toast.success('Produit supprime');
+      toast.success('Produit supprimé');
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -673,7 +673,7 @@ export default function ContactsPage() {
         .select().single();
       if (error) throw error;
       setProducts((ps) => [...ps, data]);
-      toast.success('Produit duplique');
+      toast.success('Produit dupliqué');
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -785,7 +785,7 @@ export default function ContactsPage() {
                   <div className="hidden md:grid grid-cols-3 gap-4">
                     {[
                       { title: 'Total clients', value: clients.length, sub: `${activeClients.length} avec factures`, icon: Users },
-                      { title: 'CA encaisse', value: formatCurrency(totalRevenue), sub: 'toutes factures payees', icon: TrendingUp },
+                      { title: 'CA encaissé', value: formatCurrency(totalRevenue), sub: 'toutes factures payées', icon: TrendingUp },
                       { title: 'Factures / client', value: activeClients.length > 0 ? (invoices.filter((i) => activeClients.some((c) => c.id === i.client_id)).length / activeClients.length).toFixed(1) : '0', sub: 'en moyenne', icon: FileText },
                     ].map((s, i) => (
                       <motion.div key={s.title} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -837,10 +837,10 @@ export default function ContactsPage() {
                         <Users size={28} className="text-slate-400" />
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        {clientSearch ? 'Aucun client trouve' : 'Votre carnet de clients vous attend'}
+                        {clientSearch ? 'Aucun client trouvé' : 'Votre carnet de clients vous attend'}
                       </h3>
                       <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
-                        {clientSearch ? "Essayez d'autres mots-cles" : 'Commencez par ajouter votre premier client.'}
+                        {clientSearch ? "Essayez d'autres mots-clés" : 'Commencez par ajouter votre premier client.'}
                       </p>
                       {!clientSearch && (
                         <Button icon={<Plus size={16} />} onClick={() => setShowClientModal(true)}>Ajouter mon premier client</Button>
@@ -876,7 +876,7 @@ export default function ContactsPage() {
                             <div className="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Plus size={24} className="text-emerald-400" /></div>
                             <div className="text-center">
                               <p className="text-sm font-medium text-slate-400 group-hover:text-emerald-400 transition-colors">Ajouter un client</p>
-                              <p className="text-xs text-slate-500 mt-1">Creer une fiche client</p>
+                              <p className="text-xs text-slate-500 mt-1">Créer une fiche client</p>
                             </div>
                           </motion.button>
                         </motion.div>
@@ -892,7 +892,7 @@ export default function ContactsPage() {
                                 <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Client</th>
                                 <th className="text-left px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider hidden lg:table-cell">Contact</th>
                                 <th className="text-center px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Factures</th>
-                                <th className="text-right px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">CA encaisse</th>
+                                <th className="text-right px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">CA encaissé</th>
                                 <th className="px-4 py-3.5" />
                               </tr>
                             </thead>
@@ -924,7 +924,7 @@ export default function ContactsPage() {
                       address: c.address || '', city: c.city || '', postal_code: c.postal_code || '',
                       country: c.country || 'France', siret: c.siret || '', vat_number: c.vat_number || '', website: c.website || '',
                     } as any)));
-                    toast.success(`${companies.length} client(s) importe(s)`);
+                    toast.success(`${companies.length} client(s) importé(s)`);
                   }}
                 />
               </motion.div>
@@ -947,7 +947,7 @@ export default function ContactsPage() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Catalogue produits</h3>
                     <p className="text-sm text-slate-500 mt-0.5">
-                      Gerez vos produits et services pour vos factures
+                      Gérez vos produits et services pour vos factures
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -977,7 +977,7 @@ export default function ContactsPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
                     <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input placeholder="Rechercher par nom, reference ou description..." value={productSearch}
+                    <input placeholder="Rechercher par nom, référence ou description..." value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors" />
                     {productSearch && (
@@ -1013,15 +1013,15 @@ export default function ContactsPage() {
                       <Package size={28} className="text-gray-400" />
                     </div>
                     <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-2">
-                      {productSearch ? 'Aucun resultat' : 'Aucun produit'}
+                      {productSearch ? 'Aucun résultat' : 'Aucun produit'}
                     </h3>
                     <p className="text-sm text-slate-500 mb-6">
-                      {productSearch ? 'Modifiez votre recherche' : 'Creez votre premier produit ou service'}
+                      {productSearch ? 'Modifiez votre recherche' : 'Créez votre premier produit ou service'}
                     </p>
                     {!productSearch && (
                       <button onClick={openCreateProduct}
                         className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all">
-                        <Plus size={18} />Creer un produit
+                        <Plus size={18} />Créer un produit
                       </button>
                     )}
                   </div>
@@ -1118,7 +1118,7 @@ export default function ContactsPage() {
                         <form onSubmit={handleSaveProduct} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                           {/* Category */}
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-3">Categorie</label>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-3">Catégorie</label>
                             <div className="grid grid-cols-2 gap-2">
                               {PRODUCT_CATEGORIES.map((cat) => {
                                 const Icon = cat.icon;
@@ -1140,12 +1140,12 @@ export default function ContactsPage() {
                           <div>
                             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Nom *</label>
                             <input required value={productForm.name} onChange={(e) => productSet('name', e.target.value)}
-                              placeholder="Ex : Developpement web, Formation..."
+                              placeholder="Ex : Développement web, Formation..."
                               className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/30 transition-colors" />
                           </div>
                           {/* Reference */}
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Reference</label>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Référence</label>
                             <div className="relative">
                               <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                               <input value={productForm.reference} onChange={(e) => productSet('reference', e.target.value)}
@@ -1172,7 +1172,7 @@ export default function ContactsPage() {
                               </div>
                             </div>
                             <div>
-                              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Unite *</label>
+                              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">Unité *</label>
                               <select value={productForm.unit} onChange={(e) => productSet('unit', e.target.value)}
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/30 transition-colors">
                                 {PRODUCT_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
@@ -1196,7 +1196,7 @@ export default function ContactsPage() {
                           <div className="flex items-center justify-between p-4 bg-gray-100 border border-gray-200 rounded-xl">
                             <div>
                               <p className="text-sm font-semibold text-gray-900 dark:text-white">Produit actif</p>
-                              <p className="text-xs text-slate-500">Visible lors de la creation de facture</p>
+                              <p className="text-xs text-slate-500">Visible lors de la création de facture</p>
                             </div>
                             <button type="button" onClick={() => productSet('is_active', !productForm.is_active)}
                               className={cn('w-12 h-7 rounded-full transition-all duration-200 relative flex-shrink-0',
@@ -1213,7 +1213,7 @@ export default function ContactsPage() {
                           </button>
                           <button onClick={handleSaveProduct} disabled={savingProduct}
                             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition-all disabled:opacity-60">
-                            {savingProduct ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Check size={18} />{editingProductId ? 'Enregistrer' : 'Creer'}</>}
+                            {savingProduct ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Check size={18} />{editingProductId ? 'Enregistrer' : 'Créer'}</>}
                           </button>
                         </div>
                       </motion.div>
@@ -1240,7 +1240,7 @@ export default function ContactsPage() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pipeline CRM</h3>
                     <p className="text-sm text-slate-400 mt-0.5">
-                      {opportunities.length} deal{opportunities.length !== 1 ? 's' : ''} · {formatCurrency(pipelineValue)} pipeline pondere
+                      {opportunities.length} deal{opportunities.length !== 1 ? 's' : ''} · {formatCurrency(pipelineValue)} pipeline pondéré
                     </p>
                   </div>
                 </div>
@@ -1249,10 +1249,10 @@ export default function ContactsPage() {
                 {opportunities.length > 0 && (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Pipeline pondere', value: formatCurrency(pipelineValue), icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600' },
-                      { label: 'Revenue gagne', value: formatCurrency(wonRevenue), icon: TrendingUp, gradient: 'from-blue-500 to-indigo-500' },
+                      { label: 'Pipeline pondéré', value: formatCurrency(pipelineValue), icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600' },
+                      { label: 'Revenu gagné', value: formatCurrency(wonRevenue), icon: TrendingUp, gradient: 'from-blue-500 to-indigo-500' },
                       { label: 'Taux de conversion', value: `${winRate}%`, icon: Target, gradient: 'from-violet-500 to-purple-500' },
-                      { label: 'Deals gagnes', value: wonCount, icon: Check, gradient: 'from-amber-500 to-orange-500' },
+                      { label: 'Deals gagnés', value: wonCount, icon: Check, gradient: 'from-amber-500 to-orange-500' },
                     ].map((stat, i) => (
                       <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35, delay: i * 0.06, ease: EASE }}
@@ -1277,10 +1277,10 @@ export default function ContactsPage() {
                       <Target size={28} className="text-emerald-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Vue complete du Pipeline CRM
+                      Vue complète du Pipeline CRM
                     </h3>
                     <p className="text-sm text-slate-400 mb-6 max-w-md mx-auto">
-                      Accedez au Kanban interactif avec drag-and-drop, gestion des taches, suivi des activites et detail de chaque deal.
+                      Accédez au Kanban interactif avec drag-and-drop, gestion des tâches, suivi des activités et détail de chaque deal.
                     </p>
                     <motion.button
                       whileHover={{ scale: 1.02 }}

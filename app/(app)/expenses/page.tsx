@@ -47,8 +47,8 @@ interface Expense {
 const CATEGORIES = [
   { value: 'transport', label: 'Transport', icon: Car, dot: 'bg-blue-400' },
   { value: 'meals', label: 'Repas', icon: Coffee, dot: 'bg-amber-400' },
-  { value: 'accommodation', label: 'Hebergement', icon: Home, dot: 'bg-green-400' },
-  { value: 'equipment', label: 'Materiel', icon: Laptop, dot: 'bg-purple-400' },
+  { value: 'accommodation', label: 'Hébergement', icon: Home, dot: 'bg-green-400' },
+  { value: 'equipment', label: 'Matériel', icon: Laptop, dot: 'bg-purple-400' },
   { value: 'office', label: 'Bureau', icon: Briefcase, dot: 'bg-cyan-400' },
   { value: 'shopping', label: 'Achats', icon: ShoppingCart, dot: 'bg-pink-400' },
   { value: 'mileage', label: 'IK', icon: Gauge, dot: 'bg-red-400' },
@@ -57,9 +57,9 @@ const CATEGORIES = [
 
 const PAYMENT_METHODS = [
   { value: 'card', label: 'Carte bancaire' },
-  { value: 'cash', label: 'Especes' },
+  { value: 'cash', label: 'Espèces' },
   { value: 'transfer', label: 'Virement' },
-  { value: 'check', label: 'Cheque' },
+  { value: 'check', label: 'Chèque' },
 ];
 
 const MILEAGE_RATES_2024 = {
@@ -95,8 +95,8 @@ const MEAL_ALLOWANCE_2024 = {
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
   pending: { label: 'En attente', dot: 'bg-amber-400' },
-  validated: { label: 'Validee', dot: 'bg-emerald-400' },
-  rejected: { label: 'Rejetee', dot: 'bg-red-400' },
+  validated: { label: 'Validée', dot: 'bg-emerald-400' },
+  rejected: { label: 'Rejetée', dot: 'bg-red-400' },
   reviewed: { label: 'Revue', dot: 'bg-blue-400' },
 };
 
@@ -217,7 +217,7 @@ function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate, isDar
           <span className={cn("text-xs", isDark ? "text-zinc-400" : "text-gray-500")}>· {expense.distance_km} km</span>
         )}
         {expense.tax_free_amount && expense.tax_free_amount > 0 && (
-          <span className="text-xs text-emerald-500">· {formatCurrency(expense.tax_free_amount)} exonere</span>
+          <span className="text-xs text-emerald-500">· {formatCurrency(expense.tax_free_amount)} exonéré</span>
         )}
       </div>
 
@@ -502,7 +502,7 @@ export default function ExpensesPage() {
         setExpenses((es) => [data, ...es]);
       }
       setShowModal(false);
-      toast.success(editingId ? 'Depense mise a jour' : 'Depense ajoutee');
+      toast.success(editingId ? 'Dépense mise à jour' : 'Dépense ajoutée');
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
@@ -511,7 +511,7 @@ export default function ExpensesPage() {
       action: {
         label: 'Supprimer',
         onClick: async () => {
-          try { await getSupabaseClient().from('expenses').delete().eq('id', id); setExpenses((es) => es.filter((e) => e.id !== id)); toast.success('Depense supprimee'); }
+          try { await getSupabaseClient().from('expenses').delete().eq('id', id); setExpenses((es) => es.filter((e) => e.id !== id)); toast.success('Dépense supprimée'); }
           catch (e: any) { toast.error(e.message); }
         },
       },
@@ -526,10 +526,10 @@ export default function ExpensesPage() {
 
   const handleExportAccounting = async (format: 'csv' | 'fec' | 'pdf') => {
     const validated = expenses.filter(e => e.status === 'validated');
-    if (validated.length === 0) { toast.error('Aucune depense validee a exporter'); return; }
+    if (validated.length === 0) { toast.error('Aucune dépense validée à exporter'); return; }
 
     if (format === 'csv') {
-      const headers = ['Date', 'Fournisseur', 'Description', 'Categorie', 'Montant TTC', 'TVA', 'Montant HT', 'Pays', 'Ville', 'Client', 'Projet', 'Deductible'];
+      const headers = ['Date', 'Fournisseur', 'Description', 'Catégorie', 'Montant TTC', 'TVA', 'Montant HT', 'Pays', 'Ville', 'Client', 'Projet', 'Déductible'];
       const rows = validated.map(e => [
         e.date, e.vendor, e.description || '', getCat(e.category).label,
         e.amount.toFixed(2), (e.vat_amount || 0).toFixed(2),
@@ -546,7 +546,7 @@ export default function ExpensesPage() {
       a.download = `export_comptable_depenses_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export CSV comptable reussi');
+      toast.success('Export CSV comptable réussi');
     }
 
     if (format === 'fec') {
@@ -561,10 +561,10 @@ export default function ExpensesPage() {
       a.download = `FEC_Depenses_${new Date().toISOString().split('T')[0]}.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export FEC reussi');
+      toast.success('Export FEC réussi');
     }
 
-    if (format === 'pdf') { toast.info('Export PDF en cours de developpement...'); }
+    if (format === 'pdf') { toast.info('Export PDF en cours de développement...'); }
   };
 
   const filtered = useMemo(() => {
@@ -605,7 +605,7 @@ export default function ExpensesPage() {
       >
         <div>
           <h1 className={cn("text-3xl font-bold tracking-tight", isDark ? "text-white" : "text-gray-900")}>Notes de Frais</h1>
-          <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-gray-500")}>Legal FR · IK · Plafonds repas</p>
+          <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-gray-500")}>Légal FR · IK · Plafonds repas</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* LOI 5 (SENTINEL) : Input vocal directement sur la page Notes de frais */}
@@ -616,7 +616,7 @@ export default function ExpensesPage() {
           <button onClick={openCreate}
             className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
             <Plus size={16} />
-            <span className="hidden sm:inline">Nouvelle depense</span>
+            <span className="hidden sm:inline">Nouvelle dépense</span>
             <span className="sm:hidden">Ajouter</span>
           </button>
           <button onClick={() => setShowMultiInvoiceModal(true)}
@@ -712,7 +712,7 @@ export default function ExpensesPage() {
                       ? 'bg-white/[0.04] text-zinc-400 border-white/[0.08] hover:border-white/[0.12]'
                       : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
                 )}>
-                {s === '' ? 'Tout' : s === 'pending' ? 'En attente' : 'Validees'}
+                {s === '' ? 'Tout' : s === 'pending' ? 'En attente' : 'Validées'}
               </button>
             ))}
           </div>
@@ -770,11 +770,11 @@ export default function ExpensesPage() {
           )}>
             <Receipt size={28} className={isDark ? "text-zinc-500" : "text-gray-400"} />
           </div>
-          <h3 className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>Aucune depense trouvee</h3>
-          <p className={cn("text-sm mb-6 text-center", isDark ? "text-zinc-400" : "text-gray-500")}>Notes de frais legales francaises avec IK et plafonds repas</p>
+          <h3 className={cn("text-lg font-semibold mb-2", isDark ? "text-white" : "text-gray-900")}>Aucune dépense trouvée</h3>
+          <p className={cn("text-sm mb-6 text-center", isDark ? "text-zinc-400" : "text-gray-500")}>Notes de frais légales françaises avec IK et plafonds repas</p>
           <button onClick={openCreate}
             className="flex items-center gap-2 bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
-            <Plus size={16} /> Ajouter une depense
+            <Plus size={16} /> Ajouter une dépense
           </button>
         </motion.div>
       ) : (
@@ -806,7 +806,7 @@ export default function ExpensesPage() {
                 <tr className={cn("border-b", isDark ? "border-white/[0.06]" : "border-gray-200")}>
                   <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Fournisseur</th>
                   <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Montant</th>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Categorie</th>
+                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</th>
                   <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Date</th>
                   <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Statut</th>
                   <th className={cn("px-5 py-3 text-right text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Actions</th>
@@ -854,8 +854,8 @@ export default function ExpensesPage() {
               {/* Modal header */}
               <div className={cn("px-5 pt-5 pb-4 flex items-center justify-between flex-shrink-0 border-b", isDark ? "border-white/[0.06]" : "border-gray-200")}>
                 <div>
-                  <h2 className={cn("text-lg font-semibold", isDark ? "text-white" : "text-gray-900")}>{editingId ? 'Modifier la depense' : 'Nouvelle depense'}</h2>
-                  <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>Conforme legislation francaise</p>
+                  <h2 className={cn("text-lg font-semibold", isDark ? "text-white" : "text-gray-900")}>{editingId ? 'Modifier la dépense' : 'Nouvelle dépense'}</h2>
+                  <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>Conforme législation française</p>
                 </div>
                 <button onClick={() => setShowModal(false)}
                   className={cn("p-2 rounded-lg transition-colors", isDark ? "hover:bg-white/[0.06] text-zinc-400 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900")}>
@@ -866,7 +866,7 @@ export default function ExpensesPage() {
               <form onSubmit={handleSave} className="p-5 space-y-5 overflow-y-auto flex-1">
                 {/* Category Selection */}
                 <div>
-                  <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>Categorie</label>
+                  <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</label>
                   <div className="grid grid-cols-4 gap-2">
                     {CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
@@ -911,7 +911,7 @@ export default function ExpensesPage() {
                     )}>
                     <div className={cn("flex items-center gap-2", isDark ? "text-zinc-300" : "text-gray-700")}>
                       <Gauge size={16} />
-                      <p className="text-sm font-medium">Indemnites Kilometriques (Bareme URSSAF 2024)</p>
+                      <p className="text-sm font-medium">Indemnités Kilométriques (Barème URSSAF 2024)</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -934,7 +934,7 @@ export default function ExpensesPage() {
                               ? "bg-white/[0.04] border border-white/[0.08] text-white focus:border-white/[0.15]"
                               : "bg-gray-100 border border-gray-200 text-gray-900 focus:border-gray-300"
                           )}>
-                          <option value="">Selectionner...</option>
+                          <option value="">Sélectionner...</option>
                           {Array.from({ length: 13 }, (_, i) => i + 1).map(cv => (
                             <option key={cv} value={cv}>{cv} CV</option>
                           ))}
@@ -964,14 +964,14 @@ export default function ExpensesPage() {
                     )}>
                     <div className={cn("flex items-center gap-2", isDark ? "text-zinc-300" : "text-gray-700")}>
                       <Coffee size={16} />
-                      <p className="text-sm font-medium">Frais de Repas (Plafond exoneration 2024)</p>
+                      <p className="text-sm font-medium">Frais de Repas (Plafond exonération 2024)</p>
                     </div>
                     <div>
                       <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>Type de repas</label>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { value: 'full_day', label: 'Journee complete', allowance: MEAL_ALLOWANCE_2024.full_day },
-                          { value: 'half_day', label: 'Demi-journee', allowance: MEAL_ALLOWANCE_2024.half_day },
+                          { value: 'full_day', label: 'Journée complète', allowance: MEAL_ALLOWANCE_2024.full_day },
+                          { value: 'half_day', label: 'Demi-journée', allowance: MEAL_ALLOWANCE_2024.half_day },
                         ].map((type) => (
                           <button key={type.value} type="button" onClick={() => set('meal_type', type.value)}
                             className={cn('p-3 rounded-xl border text-sm font-medium text-left transition-colors',
@@ -982,7 +982,7 @@ export default function ExpensesPage() {
                                   : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
                             )}>
                             <p className="font-medium">{type.label}</p>
-                            <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>Exonere jusqu'a {formatCurrency(type.allowance * 100)}</p>
+                            <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>Exonéré jusqu'à {formatCurrency(type.allowance * 100)}</p>
                           </button>
                         ))}
                       </div>
@@ -994,7 +994,7 @@ export default function ExpensesPage() {
                           <span className={cn("text-sm font-medium", isDark ? "text-white" : "text-gray-900")}>{formatCurrency(parseFloat(form.amount))}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-500")}>Part exoneree</span>
+                          <span className={cn("text-sm", isDark ? "text-zinc-400" : "text-gray-500")}>Part exonérée</span>
                           <span className="text-sm font-medium text-emerald-400">{formatCurrency(form.tax_free_amount ? parseFloat(form.tax_free_amount) : 0)}</span>
                         </div>
                         <div className="flex items-center justify-between">
@@ -1020,7 +1020,7 @@ export default function ExpensesPage() {
                   </div>
                   <input required={form.category !== 'mileage'} disabled={form.category === 'mileage'}
                     value={form.vendor} onChange={(e) => set('vendor', e.target.value)}
-                    placeholder={form.category === 'mileage' ? 'Indemnites kilometriques' : 'Ex : SNCF, Amazon, Leroy Merlin...'}
+                    placeholder={form.category === 'mileage' ? 'Indemnités kilométriques' : 'Ex : SNCF, Amazon, Leroy Merlin...'}
                     className={cn(
                       "w-full px-3.5 py-2.5 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
                       isDark
@@ -1047,7 +1047,7 @@ export default function ExpensesPage() {
                       </div>
                     </div>
                     <div>
-                      <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>TVA recuperable</label>
+                      <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>TVA récupérable</label>
                       <div className="relative">
                         <span className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 text-sm", isDark ? "text-zinc-500" : "text-gray-400")}>EUR</span>
                         <input type="number" min="0" step="0.01" value={form.vat_amount}
@@ -1095,12 +1095,12 @@ export default function ExpensesPage() {
                 {/* Trip Type */}
                 {['transport', 'accommodation', 'meals', 'mileage'].includes(form.category) && (
                   <div>
-                    <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>Type de deplacement</label>
+                    <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>Type de déplacement</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { value: 'professional', label: 'Professionnel', icon: Briefcase },
                         { value: 'training', label: 'Formation', icon: FileText },
-                        { value: 'client_meeting', label: 'Reunion client', icon: Users },
+                        { value: 'client_meeting', label: 'Réunion client', icon: Users },
                         { value: 'other', label: 'Autre', icon: MoreHorizontal },
                       ].map((type) => {
                         const Icon = type.icon;
@@ -1180,7 +1180,7 @@ export default function ExpensesPage() {
                 <div>
                   <label className={cn("text-xs font-medium uppercase tracking-wider block mb-1.5", isDark ? "text-zinc-500" : "text-gray-500")}>Description</label>
                   <textarea value={form.description} onChange={(e) => set('description', e.target.value)}
-                    placeholder="Objet de la depense..." rows={2}
+                    placeholder="Objet de la dépense..." rows={2}
                     className={cn(
                       "w-full px-3.5 py-2.5 rounded-xl text-sm resize-none focus:outline-none transition-colors",
                       isDark
@@ -1203,8 +1203,8 @@ export default function ExpensesPage() {
                       isDark ? "border-zinc-600 bg-white/[0.04]" : "border-gray-300 bg-gray-100"
                     )} />
                   <div className="flex-1">
-                    <label htmlFor="is_deductible" className={cn("text-sm font-medium cursor-pointer", isDark ? "text-white" : "text-gray-900")}>Depense deductible fiscalement</label>
-                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Cochez si cette depense est professionnelle et deductible</p>
+                    <label htmlFor="is_deductible" className={cn("text-sm font-medium cursor-pointer", isDark ? "text-white" : "text-gray-900")}>Dépense déductible fiscalement</label>
+                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Cochez si cette dépense est professionnelle et déductible</p>
                   </div>
                   <Info size={14} className={isDark ? "text-zinc-500" : "text-gray-400"} />
                 </div>
@@ -1218,7 +1218,7 @@ export default function ExpensesPage() {
                     {receiptUrl ? (
                       <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                         <FileImage size={16} className="text-emerald-400 flex-shrink-0" />
-                        <span className="text-sm text-emerald-300 flex-1 truncate">Justificatif ajoute</span>
+                        <span className="text-sm text-emerald-300 flex-1 truncate">Justificatif ajouté</span>
                         <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">
                           <ExternalLink size={14} />
                         </a>
@@ -1257,7 +1257,7 @@ export default function ExpensesPage() {
                 <button type="submit" disabled={saving}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-60">
                   {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
-                  {editingId ? 'Enregistrer' : 'Ajouter la depense'}
+                  {editingId ? 'Enregistrer' : 'Ajouter la dépense'}
                 </button>
               </div>
             </motion.div>
@@ -1311,7 +1311,7 @@ export default function ExpensesPage() {
                   </div>
                   <div className="flex-1">
                     <p className={cn("font-medium text-sm", isDark ? "text-white" : "text-gray-900")}>Export CSV Excel</p>
-                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Pour Excel, comptabilite generale</p>
+                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Pour Excel, comptabilité générale</p>
                   </div>
                   <Download size={16} className={isDark ? "text-zinc-500" : "text-gray-400"} />
                 </button>
@@ -1328,7 +1328,7 @@ export default function ExpensesPage() {
                   </div>
                   <div className="flex-1">
                     <p className={cn("font-medium text-sm", isDark ? "text-white" : "text-gray-900")}>Fichier FEC</p>
-                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Format Fichier des Ecritures Comptables</p>
+                    <p className={cn("text-xs", isDark ? "text-zinc-500" : "text-gray-500")}>Format Fichier des Écritures Comptables</p>
                   </div>
                   <Download size={16} className={isDark ? "text-zinc-500" : "text-gray-400"} />
                 </button>
@@ -1357,8 +1357,8 @@ export default function ExpensesPage() {
               )}>
                 <Info size={14} className={cn("flex-shrink-0 mt-0.5", isDark ? "text-zinc-500" : "text-gray-400")} />
                 <div className="text-xs">
-                  <p className={cn("font-medium mb-0.5", isDark ? "text-zinc-300" : "text-gray-700")}>Conforme legislation francaise</p>
-                  <p className={isDark ? "text-zinc-500" : "text-gray-500"}>Tous les exports incluent les champs legaux: TVA, lieu, client, projet, deductibilite</p>
+                  <p className={cn("font-medium mb-0.5", isDark ? "text-zinc-300" : "text-gray-700")}>Conforme législation française</p>
+                  <p className={isDark ? "text-zinc-500" : "text-gray-500"}>Tous les exports incluent les champs légaux: TVA, lieu, client, projet, déductibilité</p>
                 </div>
               </div>
             </motion.div>
@@ -1394,7 +1394,7 @@ export default function ExpensesPage() {
                     <Sparkles className="w-4 h-4 text-purple-400" />
                     Upload Multi-Factures
                   </h2>
-                  <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>L'IA detecte automatiquement chaque facture dans votre PDF</p>
+                  <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>L'IA détecte automatiquement chaque facture dans votre PDF</p>
                 </div>
                 <button onClick={() => setShowMultiInvoiceModal(false)}
                   className={cn("p-2 rounded-lg transition-colors", isDark ? "hover:bg-white/[0.06] text-zinc-400 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900")}>
@@ -1407,7 +1407,7 @@ export default function ExpensesPage() {
                   onExtracted={(expenses) => {
                     setExpenses(prev => [...expenses, ...prev]);
                     setShowMultiInvoiceModal(false);
-                    toast.success(`${expenses.length} facture(s) extraite(s) avec succes`);
+                    toast.success(`${expenses.length} facture(s) extraite(s) avec succès`);
                   }}
                 />
               </div>

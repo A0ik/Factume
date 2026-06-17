@@ -5,6 +5,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { SendInvoiceSchema, validateRequest } from '@/lib/validation';
 import { z } from 'zod';
 import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
+import { isInvoiceB2B } from '@/lib/tva-validator';
 import { isFacturXEligible } from '@/lib/facturx';
 
 export const maxDuration = 60;
@@ -227,7 +228,10 @@ export async function POST(req: NextRequest) {
       const { createFacturXPdf } = await import('@/lib/facturx');
       let pdfBytes = await generatePdfBuffer(invoice, profile);
       const facturxEligible = isFacturXEligible(invoice, profile);
-      if (facturxEligible) {
+      // isFacturXEligible() retourne un OBJET {eligible, reason, warnings} (pas un booléen) —
+      // on teste bien .eligible, sinon le test serait toujours truthy → XML embarqué sur des
+      // factures inéligibles (B2C / sans SIRET client).
+      if (facturxEligible?.eligible) {
         try {
           pdfBytes = await createFacturXPdf(pdfBytes, invoice, profile);
         } catch (fxErr: any) {
@@ -235,7 +239,7 @@ export async function POST(req: NextRequest) {
         }
       }
       pdfBuffer = Buffer.from(pdfBytes);
-      console.log('[send-invoice] PDF généré', facturxEligible ? '(pdf-lib + Factur-X)' : '(pdf-lib)', 'taille:', pdfBuffer.length, 'bytes');
+      console.log('[send-invoice] PDF généré', facturxEligible?.eligible ? '(pdf-lib + Factur-X)' : '(pdf-lib)', 'taille:', pdfBuffer.length, 'bytes');
     } catch (pdfErr: any) {
       console.error('[send-invoice] ERREUR génération PDF:', pdfErr.message);
       return NextResponse.json({ error: `Erreur génération PDF: ${pdfErr.message}` }, { status: 500 });
@@ -279,10 +283,13 @@ export async function POST(req: NextRequest) {
       const hasPdpAccess = profile?.is_trial_active || tier === 'pro' || tier === 'business';
 
       if (hasPdpCredentials && isEligibleDocType && hasPdpAccess) {
-        // BUG 6: Skip PDP transmission for B2C invoices
-        const invoiceClientType = invoice.client_type || invoice.client?.client_type;
-        if (invoiceClientType === 'b2c') {
-          console.log('[send-invoice] Facture B2C — transmission PDP ignorée');
+        // ATELIER (e-invoicing) — B2C (particulier) : non soumis à la transmission
+        // (e-reporting à part côté SuperPDP /b2c_*). isInvoiceB2B = source unique
+        // SIRET-based ; corrige aussi le B2C vocal 'individual' qui n'était pas
+        // sauté par l'ancien test client_type === 'b2c'.
+        if (!isInvoiceB2B(invoice)) {
+          console.log('[send-invoice] Facture B2C (particulier) — transmission non requise');
+          await supabase.from('invoices').update({ pdp_status: 'not_required_b2c', updated_at: new Date().toISOString() }).eq('id', invoiceId).then(({ error }) => { if (error) console.warn('[send-invoice] not_required_b2c:', error.message); });
         } else {
           const eligibility = isFacturXEligible(invoice, profile || {});
 

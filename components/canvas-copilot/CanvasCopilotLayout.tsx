@@ -199,7 +199,7 @@ export default function CanvasCopilotLayout({
             {/* ═══ Voice-First Bar ═══
                 Voice LEFT = primary (Von Restorff).
                 Text RIGHT = secondary alternative. */}
-            <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900">
+            <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 z-10">
               <div className="flex items-center gap-3">
                 <VoiceOneShot
                   sector={profile?.sector}
@@ -234,7 +234,7 @@ export default function CanvasCopilotLayout({
               FLAW 1: Removed the full-width Create button that was here.
               It duplicated the header button and ate 64px of vertical space.
               FLAW 4: Voice button is FIRST (left), text bar is secondary. */}
-          <div className="shrink-0 px-3 py-2.5 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+          <div className="shrink-0 px-3 py-2.5 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
             <div className="flex items-center gap-2.5">
               {/* HERO: Voice button first — Loi: Von Restorff Effect */}
               <VoiceOneShot

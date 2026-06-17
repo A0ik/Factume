@@ -10,6 +10,7 @@
  */
 
 import { generateFacturXXml, isFacturXEligible } from './facturx';
+import { isInvoiceB2B } from './tva-validator';
 import { Invoice, Profile } from '@/types';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -146,9 +147,13 @@ export async function transmitInvoice(
 
   try {
     // ── 0. Vérification B2C — pas de transmission PDP requise ───────────
-    const invoiceClientType = (invoice as any).client_type || (invoice as any).client?.client_type;
-    if (invoiceClientType === 'b2c') {
-      console.log('[SuperPDP] Facture B2C — transmission PDP non requise');
+    // ATELIER (e-invoicing / réforme FR 2026) — SEUL le B2B (client assujetti =
+    // SIRET ou identifiants d'entreprise) est soumis à la transmission via
+    // /invoices. Le B2C (particulier) relève de l'e-reporting (endpoints SuperPDP
+    // /b2c_*), JAMAIS de /invoices. Détection SIRET-based via isInvoiceB2B,
+    // cohérente avec le flux voix et isFacturXEligible (source de vérité unique).
+    if (!isInvoiceB2B(invoice as any)) {
+      console.log('[SuperPDP] Facture B2C (particulier) — transmission non requise (e-reporting à part)');
       return {
         success: false,
         error: 'Facture B2C — transmission PDP non requise pour les particuliers',

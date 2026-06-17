@@ -2,7 +2,7 @@
 
 import { CheckCircle, AlertCircle, Clock, RefreshCw, Shield } from 'lucide-react';
 
-type PdpStatus = 'not_transmitted' | 'transmitting' | 'transmitted' | 'pending_retry' | 'failed';
+type PdpStatus = 'not_transmitted' | 'not_required_b2c' | 'transmitting' | 'transmitted' | 'pending_retry' | 'failed';
 
 interface PdpStatusBadgeProps {
   status?: PdpStatus;
@@ -20,6 +20,12 @@ const PDP_CONFIG: Record<PdpStatus, {
 }> = {
   not_transmitted: {
     label: 'Non transmise',
+    color: 'text-slate-400',
+    bg: 'bg-slate-100',
+    icon: Shield,
+  },
+  not_required_b2c: {
+    label: 'Non requis (particulier)',
     color: 'text-slate-400',
     bg: 'bg-slate-100',
     icon: Shield,

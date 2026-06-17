@@ -39,9 +39,9 @@ type TabKey = 'invoices' | 'expenses' | 'documents' | 'health';
 
 const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'invoices', label: 'Factures', icon: Receipt },
-  { key: 'expenses', label: 'Depenses', icon: ShoppingBag },
+  { key: 'expenses', label: 'Dépenses', icon: ShoppingBag },
   { key: 'documents', label: 'Documents', icon: FileText },
-  { key: 'health', label: 'Sante', icon: Star },
+  { key: 'health', label: 'Santé', icon: Star },
 ];
 
 // ---------------------------------------------------------------------------
@@ -199,14 +199,14 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error('L\'image ne doit pas depasser 2 Mo.'); return; }
-    if (!file.type.startsWith('image/')) { toast.error('Veuillez selectionner une image valide.'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('L\'image ne doit pas dépasser 2 Mo.'); return; }
+    if (!file.type.startsWith('image/')) { toast.error('Veuillez sélectionner une image valide.'); return; }
 
     setUploadingLogo(true);
     try {
       const supabase = getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Non authentifie');
+      if (!session?.user) throw new Error('Non authentifié');
 
       const fileExt = file.name.split('.').pop();
       const filePath = `client-logos/${session.user.id}/${id}.${fileExt}`;
@@ -216,9 +216,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       const { data: { publicUrl } } = supabase.storage.from('client-logos').getPublicUrl(filePath);
       await updateClient(id, { logo_url: publicUrl });
-      toast.success('Logo mis a jour !');
+      toast.success('Logo mis à jour !');
     } catch (e: any) {
-      toast.error(e.message || 'Erreur lors du telechargement');
+      toast.error(e.message || 'Erreur lors du téléchargement');
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
@@ -257,7 +257,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       if (error) throw new Error(error.message);
       setNotes((prev) => [data, ...prev]);
       setNoteInput('');
-      toast.success('Note ajoutee');
+      toast.success('Note ajoutée');
     } catch (e: any) { toast.error(e.message || 'Erreur lors de l\'ajout'); }
     finally { setAddingNote(false); }
   }, [id, user, noteInput]);
@@ -274,7 +274,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     setPortalLoading(true);
     try {
       const { data: { session } } = await getSupabaseClient().auth.getSession();
-      if (!session) throw new Error('Non authentifie');
+      if (!session) throw new Error('Non authentifié');
       const res = await fetch('/api/client-portal/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
@@ -310,7 +310,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <AlertCircle size={32} className="text-slate-500" />
       </div>
       <p className="text-slate-400 font-medium">Client introuvable</p>
-      <p className="text-slate-500 text-sm mt-1">Ce client n'existe pas ou a ete supprime.</p>
+      <p className="text-slate-500 text-sm mt-1">Ce client n'existe pas ou a été supprimé.</p>
       <Link href="/clients" className="mt-4 text-emerald-400 font-semibold text-sm hover:text-emerald-300 block transition-colors">Retour aux clients</Link>
     </div>
   );
@@ -429,7 +429,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-emerald-400">{formatCurrency(totalRevenue)}</p>
-            <p className="text-xs text-slate-500">CA encaisse</p>
+            <p className="text-xs text-slate-500">CA encaissé</p>
           </div>
           <div className="text-center">
             <p className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-400' : clientInvoices.filter((i) => i.status === 'sent').length > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
@@ -483,7 +483,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(tagInput); } }}
-            placeholder="Nouveau tag... (Entree pour ajouter)"
+            placeholder="Nouveau tag... (Entrée pour ajouter)"
             className="flex-1 px-4 py-2.5 text-sm bg-gray-100 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 transition-all text-gray-900 dark:text-white placeholder-slate-500"
           />
           <button onClick={() => handleAddTag(tagInput)} disabled={!tagInput.trim() || savingTags} className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
@@ -531,7 +531,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                         <Receipt size={28} className="text-slate-500" />
                       </div>
                       <p className="text-sm text-slate-400">Aucune facture pour ce client</p>
-                      <button onClick={() => setShowNewDocument(true)} className="mt-3 text-sm text-emerald-400 font-medium hover:text-emerald-300 transition-colors">Creer une facture</button>
+                      <button onClick={() => setShowNewDocument(true)} className="mt-3 text-sm text-emerald-400 font-medium hover:text-emerald-300 transition-colors">Créer une facture</button>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-200">
@@ -561,15 +561,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <motion.div key="expenses" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Depenses</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Dépenses</h3>
                   </div>
                   {clientExpenses.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                         <ShoppingBag size={28} className="text-slate-500" />
                       </div>
-                      <p className="text-sm text-slate-400">Le suivi des depenses par client arrive bientot.</p>
-                      <p className="text-xs text-slate-500 mt-1">Retrouvez deja toutes vos depenses dans l'onglet Depenses.</p>
+                      <p className="text-sm text-slate-400">Le suivi des dépenses par client arrive bientôt.</p>
+                      <p className="text-xs text-slate-500 mt-1">Retrouvez déjà toutes vos dépenses dans l'onglet Dépenses.</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-200">
@@ -577,7 +577,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                         <motion.div key={exp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.04, ease }} className="px-5 py-3.5 hover:bg-gray-50 transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{exp.description || exp.category || 'Depense'}</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{exp.description || exp.category || 'Dépense'}</p>
                               <p className="text-xs text-slate-500">{formatDateShort(exp.date || exp.created_at)}</p>
                             </div>
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(exp.amount || 0)}</p>
@@ -654,7 +654,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       {scoreData.avgPaymentDays !== null && (
                         <span className="flex items-center gap-1.5">
                           <Clock size={13} className="text-slate-500" />
-                          Paiement moyen : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.avgPaymentDays)}j apres echeance</strong>
+                          Paiement moyen : <strong className="text-gray-900 dark:text-white">{Math.round(scoreData.avgPaymentDays)}j après échéance</strong>
                         </span>
                       )}
                       {scoreData.paymentRate !== null && (
@@ -670,7 +670,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     <div className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-3">
                       <Star size={28} className="text-slate-500" />
                     </div>
-                    <p className="text-sm text-slate-400">Pas assez de donnees pour calculer le score</p>
+                    <p className="text-sm text-slate-400">Pas assez de données pour calculer le score</p>
                   </div>
                 )}
 
@@ -744,7 +744,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <Input label="Nom *" value={form.name} onChange={(e) => setField('name', e.target.value)} required />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Email" type="email" value={form.email} onChange={(e) => setField('email', e.target.value)} />
-            <Input label="Telephone" value={form.phone} onChange={(e) => setField('phone', e.target.value)} />
+            <Input label="Téléphone" value={form.phone} onChange={(e) => setField('phone', e.target.value)} />
           </div>
           <Input label="Adresse" value={form.address} onChange={(e) => setField('address', e.target.value)} />
           <div className="grid grid-cols-3 gap-3">
@@ -753,7 +753,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="SIRET" value={form.siret} onChange={(e) => setField('siret', e.target.value)} />
-            <Input label="N TVA" value={form.vat_number} onChange={(e) => setField('vat_number', e.target.value)} />
+            <Input label="N° TVA" value={form.vat_number} onChange={(e) => setField('vat_number', e.target.value)} />
           </div>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowEdit(false)}>Annuler</Button>
@@ -764,7 +764,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Delete modal */}
       <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Supprimer ce client">
-        <p className="text-slate-400 mb-4">Etes-vous sur de vouloir supprimer <strong className="text-gray-900 dark:text-white">{client.name}</strong> ? Cette action est irreversible.</p>
+        <p className="text-slate-400 mb-4">Êtes-vous sûr de vouloir supprimer <strong className="text-gray-900 dark:text-white">{client.name}</strong> ? Cette action est irréversible.</p>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => setShowDelete(false)}>Annuler</Button>
           <Button variant="danger" className="flex-1" onClick={handleDelete}>Supprimer</Button>

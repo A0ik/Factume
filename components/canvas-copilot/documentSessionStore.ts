@@ -63,6 +63,10 @@ export interface DocumentSessionState {
   updateItem: (id: string, field: string, value: string | number) => void;
   addItem: (preset?: Partial<Omit<InvoiceItem, 'id' | 'total'>>) => void;
   removeItem: (id: string) => void;
+  /** Vide le contenu d'une ligne (description/qty/price/tva) en gardant sa position. */
+  clearItem: (id: string) => void;
+  /** Duplique une ligne (copie insérée juste après l'originale). */
+  duplicateItem: (id: string) => void;
   moveItem: (id: string, direction: 'up' | 'down') => void;
 
   // ─── AI/Voice Result Application ─────────────────────
@@ -330,6 +334,41 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     history.future = [];
 
     set({ items: state.items.filter((i) => i.id !== id) });
+    const newState = get();
+    const computed = computeFromItems(newState.items, newState.discountPercent);
+    set(computed);
+  },
+
+  clearItem: (id) => {
+    const state = get();
+    history.past.push(takeSnapshot(state));
+    if (history.past.length > MAX_HISTORY) history.past.shift();
+    history.future = [];
+
+    set({
+      items: state.items.map((i) =>
+        i.id === id
+          ? { ...i, description: '', quantity: 1, unit_price: 0, vat_rate: 20, discount_percent: undefined }
+          : i,
+      ),
+    });
+    const newState = get();
+    const computed = computeFromItems(newState.items, newState.discountPercent);
+    set(computed);
+  },
+
+  duplicateItem: (id) => {
+    const state = get();
+    const idx = state.items.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    history.past.push(takeSnapshot(state));
+    if (history.past.length > MAX_HISTORY) history.past.shift();
+    history.future = [];
+
+    const copy = { ...state.items[idx], id: generateId() };
+    const next = [...state.items];
+    next.splice(idx + 1, 0, copy);
+    set({ items: next });
     const newState = get();
     const computed = computeFromItems(newState.items, newState.discountPercent);
     set(computed);

@@ -248,7 +248,7 @@ export default function CabinetRelancesPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <Bell size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
-        <p className="text-gray-500 dark:text-gray-400">Aucune donnee disponible</p>
+        <p className="text-gray-500 dark:text-gray-400">Aucune donnée disponible</p>
         <Link href="/cabinet" className="mt-4 text-sm text-blue-500 hover:text-blue-600">
           Retour au cabinet
         </Link>

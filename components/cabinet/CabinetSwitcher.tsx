@@ -135,7 +135,7 @@ export default function CabinetSwitcher() {
                 <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Plus size={11} className="text-primary" />
                 </div>
-                Creer un cabinet
+                Créer un cabinet
               </button>
             </div>
           </motion.div>

@@ -33,7 +33,7 @@ export default function BankReconciliationPage() {
     try {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expiree'); return; }
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
 
       // Get auto-matches
       const res = await fetch('/api/expenses/bank-match', {
@@ -72,7 +72,7 @@ export default function BankReconciliationPage() {
     try {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { toast.error('Session expiree'); return; }
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
 
       const res = await fetch('/api/expenses/bank-match', {
         method: 'POST',
@@ -83,7 +83,7 @@ export default function BankReconciliationPage() {
       if (!res.ok) throw new Error('Erreur');
 
       setMatches(prev => prev.filter(m => m.expenseId !== match.expenseId));
-      toast.success('Rapprochement confirme');
+      toast.success('Rapprochement confirmé');
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
     } finally {
@@ -93,7 +93,7 @@ export default function BankReconciliationPage() {
 
   const handleRejectMatch = async (match: MatchSuggestion) => {
     setMatches(prev => prev.filter(m => m.expenseId !== match.expenseId));
-    toast.success('Suggestion ignoree');
+    toast.success('Suggestion ignorée');
   };
 
   if (loading) {
@@ -113,7 +113,7 @@ export default function BankReconciliationPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">Rapprochement bancaire</h1>
-            <p className="text-sm text-gray-500">{matches.length} correspondances suggerees</p>
+            <p className="text-sm text-gray-500">{matches.length} correspondances suggérées</p>
           </div>
         </div>
         <button onClick={() => loadData(true)} className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors" title="Actualiser">
@@ -127,7 +127,7 @@ export default function BankReconciliationPage() {
             <Landmark size={28} className="text-gray-300 dark:text-gray-600" />
           </div>
           <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucune correspondance</p>
-          <p className="text-sm text-gray-400">Toutes les depenses approuvees sont rappelees ou aucune transaction bancaire disponible.</p>
+          <p className="text-sm text-gray-400">Toutes les dépenses approuvées sont rapprochées ou aucune transaction bancaire disponible.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -142,7 +142,7 @@ export default function BankReconciliationPage() {
               <div className="flex items-center gap-4">
                 {/* Expense */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 mb-1">Depense</p>
+                  <p className="text-xs text-gray-500 mb-1">Dépense</p>
                   <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{match.expense.vendor || 'Inconnu'}</p>
                   <p className="text-sm font-bold text-emerald-600">{formatCurrency(match.expense.amount)}</p>
                   <p className="text-xs text-gray-400">{formatDate(match.expense.date)}</p>

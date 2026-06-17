@@ -184,6 +184,45 @@ export function isB2CClient(client: {
 }
 
 /**
+ * ATELIER (e-invoicing / réforme FR 2026) — Une facture doit-elle être transmise
+ * électroniquement via la PA (SuperPDP) ?
+ *
+ * RÈGLE OFFICIELLE : SEUL le B2B (client assujetti = entreprise) est soumis à la
+ * facturation électronique (POST /invoices). Le B2C (particulier) relève de
+ * l'e-reporting (endpoints SuperPDP /b2c_*), JAMAIS de /invoices.
+ *
+ * Source de vérité unique : SIRET client (14 chiffres) ou indicateurs d'entreprise,
+ * via isB2CClient() — le même détecteur que le flux voix. On accepte aussi un
+ * client_type explicite ('b2b'/'business' vs 'b2c'/'individual') comme fast-path
+ * pour la cohérence avec l'existant, mais le SIRET reste l'autorité.
+ */
+export interface B2BInvoiceLike {
+  client_type?: string | null;
+  client?: { name?: string | null; siret?: string | null; address?: string | null; client_type?: string | null } | null;
+  client_name_override?: string | null;
+  client_siret?: string | null;
+  client_address?: string | null;
+}
+
+export function isInvoiceB2B(invoice: B2BInvoiceLike | null | undefined): boolean {
+  if (!invoice) return false;
+  const ct = invoice.client_type || invoice.client?.client_type;
+  if (ct === 'b2b' || ct === 'business') return true;
+  if (ct === 'b2c' || ct === 'individual') return false;
+  // Sinon : détection par SIRET / nom d'entreprise (signal fiable de la réforme).
+  const name = invoice.client_name_override || invoice.client?.name || null;
+  const siret = invoice.client_siret || invoice.client?.siret || null;
+  // Conservateur : ni SIRET ni nom → on ne peut pas confirmer le B2B → on ne
+  // transmet PAS (mieux vaut s'abstenir que transmettre à tort un cas douteux).
+  if (!siret && !name) return false;
+  return !isB2CClient({
+    name,
+    siret,
+    address: invoice.client_address || invoice.client?.address || null,
+  });
+}
+
+/**
  * Returns the default TVA rate based on client type.
  * B2C individuals with no explicit TVA rate get 0% (auto-entrepreneur / franchise de TVA).
  * B2B clients default to 20%.

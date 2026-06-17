@@ -9,7 +9,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.tsx'],
     include: ['**/*.{test,spec}.{js,jsx,ts,tsx}'],
-    exclude: ['node_modules', '.next', 'dist'],
+    // APEX : exclure les worktrees git obsolètes (.claude/worktrees/agent-*)
+    // qui sinon sont ramassés par le glob '**/*.test.*' et génèrent des centaines
+    // de faux échecs (copies de sessions d'agents précédentes).
+    exclude: ['node_modules', '.next', 'dist', '.claude/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

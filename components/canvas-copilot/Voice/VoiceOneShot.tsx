@@ -215,7 +215,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[min(80vw,22rem)] z-30 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-4 py-3 shadow-xl"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[min(80vw,22rem)] z-30 pointer-events-none rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-4 py-3 shadow-xl"
           >
             <div className="flex items-start gap-2">
               <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -240,7 +240,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.9 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 dark:bg-zinc-700 text-zinc-100 text-[10px] font-semibold shadow-lg border border-white/10 z-30"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 dark:bg-zinc-700 text-zinc-100 text-[10px] font-semibold shadow-lg border border-white/10 z-30 pointer-events-none"
           >
             {langBadge.flag} {langBadge.label}
           </motion.div>
@@ -319,7 +319,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, height: 24 }}
             exit={{ opacity: 0, height: 0 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-end justify-center gap-[2px] z-30"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex items-end justify-center gap-[2px] z-30 pointer-events-none"
           >
             {Array.from({ length: 12 }).map((_, i) => (
               <motion.div
@@ -341,7 +341,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg z-30"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg z-30 pointer-events-none"
           >
             Analyse IA en cours…
           </motion.div>
@@ -356,7 +356,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg z-30"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-bold shadow-lg z-30 pointer-events-none"
           >
             {errorMsg}
           </motion.div>

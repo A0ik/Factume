@@ -140,7 +140,7 @@ export default function BankingPage() {
       txns.push({
         id: exp.id,
         type: 'expense' as const,
-        title: exp.vendor || 'Depense',
+        title: exp.vendor || 'Dépense',
         subtitle: exp.category || '',
         amount: exp.amount,
         date: exp.date || exp.created_at,
@@ -218,14 +218,14 @@ export default function BankingPage() {
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
             La vue Bancaire est disponible avec les abonnements Pro et Business.
-            Suivez vos encaissements, depenses et flux de tresorerie en un coup d'oeil.
+            Suivez vos encaissements, dépenses et flux de trésorerie en un coup d'œil.
           </p>
           <Link
             href="/paywall?plan=pro"
             className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 transition-all"
           >
             <Crown size={18} />
-            Passer a Pro
+            Passer à Pro
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </motion.div>
@@ -252,7 +252,7 @@ export default function BankingPage() {
       <motion.div variants={itemVariants}>
         <Header
           title="Banque"
-          subtitle="Vue d'ensemble de votre tresorerie"
+          subtitle="Vue d'ensemble de votre trésorerie"
           actions={
             <div className="flex items-center gap-3">
               <Link
@@ -267,7 +267,7 @@ export default function BankingPage() {
                 className="group inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95"
               >
                 <Plus size={16} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
-                Depense
+                Dépense
               </Link>
             </div>
           }
@@ -291,7 +291,7 @@ export default function BankingPage() {
                   {profile?.bank_name || 'Compte principal'}
                 </p>
                 <p className="text-xs text-white/40 font-mono mt-0.5 tracking-wider">
-                  {hasBankInfo ? maskIBAN(profile!.iban) : 'IBAN non configure'}
+                  {hasBankInfo ? maskIBAN(profile!.iban) : 'IBAN non configuré'}
                 </p>
               </div>
             </div>
@@ -305,7 +305,7 @@ export default function BankingPage() {
               <div className="flex items-center justify-end gap-1.5 mt-1">
                 <div className={`w-2 h-2 rounded-full ${netBalance >= 0 ? 'bg-green-400' : 'bg-red-400'}`} />
                 <span className="text-xs text-white/50">
-                  {netBalance >= 0 ? 'Positif' : 'Negatif'}
+                  {netBalance >= 0 ? 'Positif' : 'Négatif'}
                 </span>
               </div>
             </div>
@@ -316,11 +316,11 @@ export default function BankingPage() {
             <div className="flex items-center gap-3 text-xs text-white/40 mb-2">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400" />
-                Encaisse {formatCurrency(totalRevenue)}
+                Encaissé {formatCurrency(totalRevenue)}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-400" />
-                Depense {formatCurrency(totalExpenses)}
+                Dépense {formatCurrency(totalExpenses)}
               </span>
             </div>
             <div className="h-2 rounded-full bg-white/10 overflow-hidden flex">
@@ -360,7 +360,7 @@ export default function BankingPage() {
                   Informations bancaires
                 </h4>
                 <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                  Configurez vos informations bancaires pour apparaitre sur vos factures.
+                  Configurez vos informations bancaires pour apparaître sur vos factures.
                 </p>
                 <Link
                   href="/settings"
@@ -383,14 +383,14 @@ export default function BankingPage() {
               <TrendingUp size={16} className="text-green-500 dark:text-green-400" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
-              Total encaisse
+              Total encaissé
             </p>
           </div>
           <p className="text-2xl font-black text-gray-900 dark:text-white">
             {formatCurrency(totalRevenue)}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {paidInvoices.length} facture{paidInvoices.length !== 1 ? 's' : ''} payee{paidInvoices.length !== 1 ? 's' : ''}
+            {paidInvoices.length} facture{paidInvoices.length !== 1 ? 's' : ''} payée{paidInvoices.length !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -401,14 +401,14 @@ export default function BankingPage() {
               <TrendingDown size={16} className="text-red-500 dark:text-red-400" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
-              Total depense
+              Total dépense
             </p>
           </div>
           <p className="text-2xl font-black text-gray-900 dark:text-white">
             {formatCurrency(totalExpenses)}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {expenses.length} depense{expenses.length !== 1 ? 's' : ''}
+            {expenses.length} dépense{expenses.length !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -438,7 +438,7 @@ export default function BankingPage() {
             {formatCurrency(netBalance)}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {netBalance >= 0 ? 'Excedent' : 'Deficit'}
+            {netBalance >= 0 ? 'Excédent' : 'Déficit'}
           </p>
         </div>
       </motion.div>
@@ -457,7 +457,7 @@ export default function BankingPage() {
                   Paiements en attente
                 </h2>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {formatCurrency(totalPending)} a encaisser
+                  {formatCurrency(totalPending)} à encaisser
                 </p>
               </div>
             </div>
@@ -498,7 +498,7 @@ export default function BankingPage() {
                         {inv.client?.name || inv.client_name_override || 'Sans client'}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {inv.number} &middot; {inv.due_date ? `Echeance ${formatTxDate(inv.due_date)}` : 'Sans echeance'}
+                        {inv.number} &middot; {inv.due_date ? `Échéance ${formatTxDate(inv.due_date)}` : 'Sans échéance'}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -528,10 +528,10 @@ export default function BankingPage() {
           <div>
             <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <TrendingUp size={16} className="text-primary" />
-              Flux de tresorerie
+              Flux de trésorerie
             </h2>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              6 derniers mois &middot; Encaissements vs Depenses
+              6 derniers mois &middot; Encaissements vs Dépenses
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
@@ -541,7 +541,7 @@ export default function BankingPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-red-200 dark:bg-red-800/50" />
-              Depenses
+              Dépenses
             </span>
           </div>
         </div>
@@ -555,14 +555,14 @@ export default function BankingPage() {
                   animate={{ height: `${(m.income / maxMonthlyAmount) * 100}%` }}
                   transition={{ duration: 0.6, delay: i * 0.08 }}
                   className="flex-1 bg-green-200 dark:bg-green-800/50 rounded-t"
-                  title={`Encaisse: ${formatCurrency(m.income)}`}
+                  title={`Encaissé: ${formatCurrency(m.income)}`}
                 />
                 <motion.div
                   initial={{ height: 0 }}
                   animate={{ height: `${(m.expenses / maxMonthlyAmount) * 100}%` }}
                   transition={{ duration: 0.6, delay: i * 0.08 + 0.1 }}
                   className="flex-1 bg-red-200 dark:bg-red-800/50 rounded-t"
-                  title={`Depense: ${formatCurrency(m.expenses)}`}
+                  title={`Dépense: ${formatCurrency(m.expenses)}`}
                 />
               </div>
               <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
@@ -581,7 +581,7 @@ export default function BankingPage() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
           <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <CreditCard size={14} className="text-primary" />
-            Transactions recentes
+            Transactions récentes
           </h2>
           <div className="flex items-center gap-3">
             <Link
@@ -594,7 +594,7 @@ export default function BankingPage() {
               href="/expenses"
               className="text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-primary dark:hover:text-primary hover:underline flex items-center gap-1 group"
             >
-              Depenses <ArrowUpRight size={11} className="group-hover:translate-x-1 transition-transform" />
+              Dépenses <ArrowUpRight size={11} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
@@ -611,7 +611,7 @@ export default function BankingPage() {
               Aucune transaction
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Vos encaissements et decaissements apparaitront ici
+              Vos encaissements et décaissements apparaîtront ici
             </p>
           </div>
         ) : (
@@ -675,7 +675,7 @@ export default function BankingPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 dark:text-white">Factures</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Gerer vos factures et devis</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Gérer vos factures et devis</p>
           </div>
           <ArrowRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
         </Link>
@@ -689,7 +689,7 @@ export default function BankingPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 dark:text-white">Notes de frais</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Suivi de vos depenses</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Suivi de vos dépenses</p>
           </div>
           <ArrowRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
         </Link>
@@ -702,7 +702,7 @@ export default function BankingPage() {
             <Building2 size={18} className="text-gray-500 dark:text-gray-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 dark:text-white">Parametres</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Paramètres</p>
             <p className="text-xs text-gray-400 dark:text-gray-500">Compte & informations bancaires</p>
           </div>
           <ArrowRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />

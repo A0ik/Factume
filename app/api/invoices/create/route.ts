@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { calculateInvoiceTotals } from '@/lib/money';
 import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
+import { isInvoiceB2B } from '@/lib/tva-validator';
 import { getUserSubscriptionStatus, requireLimit } from '@/lib/subscription-guard';
 import type { NextRequest } from 'next/server';
 
@@ -232,7 +233,11 @@ export async function POST(req: NextRequest) {
     // on transmet automatiquement à SuperPDP en arrière-plan.
     let pdpResult: { transmitted: boolean; superPdpId?: string; error?: string } | null = null;
 
-    if (client_type === 'b2b' && invoice.number) {
+    // ATELIER (e-invoicing) — transmission UNIQUEMENT pour le B2B (client assujetti
+    // = SIRET ou identifiants d'entreprise), via isInvoiceB2B (source de vérité
+    // unique SIRET-based, cohérente avec le flux voix). Avant, la gate testait
+    // client_type === 'b2b' qui ne matchait jamais le 'business' du flux voix.
+    if (invoice.number && isInvoiceB2B(invoice)) {
       const hasPdpCredentials = process.env.SUPER_PDP_CLIENT_ID
         && (process.env.SUPER_PDP_CLIENT_SECRET || process.env.SUPER_PDP_SECRET_ID);
 
@@ -302,6 +307,19 @@ export async function POST(req: NextRequest) {
             pdpResult = { transmitted: false, error: pdpError.message };
           }
         }
+      }
+    } else {
+      // ATELIER (e-invoicing) — B2C (particulier) : la facturation électronique
+      // n'est PAS requise (e-reporting à part côté SuperPDP /b2c_*). On pose un
+      // statut explicite pour que ça ne paraisse pas comme un échec de transmission.
+      try {
+        const adminB2c = createAdminClient();
+        const { error: b2cErr } = await adminB2c.from('invoices')
+          .update({ pdp_status: 'not_required_b2c', updated_at: new Date().toISOString() })
+          .eq('id', invoice.id);
+        if (b2cErr) console.warn('[invoices/create] not_required_b2c update failed:', b2cErr.message);
+      } catch (e: any) {
+        console.warn('[invoices/create] not_required_b2c update error:', e?.message);
       }
     }
 

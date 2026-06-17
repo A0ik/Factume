@@ -107,8 +107,8 @@ export default function BlogPage() {
             &amp; Gestion
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Guides pratiques, conseils d&#39;experts et actualites pour optimiser votre
-            facturation de freelance ou auto-entrepreneur. Soyez paye plus vite et en regle.
+            Guides pratiques, conseils d&#39;experts et actualités pour optimiser votre
+            facturation de freelance ou auto-entrepreneur. Soyez payé plus vite et en règle.
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export default function BlogPage() {
         {(activeCategory || debouncedSearch.trim()) && (
           <div className="text-center mb-8">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''} trouve{filteredPosts.length !== 1 ? 's' : ''}
+              {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''} trouvé{filteredPosts.length !== 1 ? 's' : ''}
               {activeCategory && (
                 <>
                   {' '}dans <span className="font-semibold text-primary">{activeCategory}</span>
@@ -191,10 +191,10 @@ export default function BlogPage() {
               <Search className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              Aucun article trouve
+              Aucun article trouvé
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">
-              Essayez de modifier vos criteres de recherche ou de changer de categorie.
+              Essayez de modifier vos critères de recherche ou de changer de catégorie.
             </p>
             <button
               onClick={() => {
@@ -203,7 +203,7 @@ export default function BlogPage() {
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary-dark transition-colors"
             >
-              Reinitialiser les filtres
+              Réinitialiser les filtres
             </button>
           </div>
         )}
@@ -219,7 +219,7 @@ export default function BlogPage() {
         {displayPosts.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
-              {activeCategory || debouncedSearch.trim() ? 'Resultats' : 'Tous les articles'}
+              {activeCategory || debouncedSearch.trim() ? 'Résultats' : 'Tous les articles'}
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayPosts.map((post) => (
@@ -238,7 +238,7 @@ export default function BlogPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               <ChevronLeft className="w-4 h-4" />
-              Precedent
+              Précédent
             </button>
 
             <div className="flex items-center gap-1">
@@ -276,11 +276,11 @@ export default function BlogPage() {
           </div>
           <div className="relative z-10">
             <h3 className="text-2xl lg:text-3xl font-bold mb-4">
-              Pret a simplifier votre facturation ?
+              Prêt à simplifier votre facturation ?
             </h3>
             <p className="text-white/90 max-w-xl mx-auto mb-8 text-lg">
-              Testez Factu.me gratuitement pendant 4 jours. Creation de factures par
-              dictee vocale, relances automatisees, conformite garantie.
+              Testez Factu.me gratuitement pendant 4 jours. Création de factures par
+              dictée vocale, relances automatisées, conformité garantie.
             </p>
             <Link
               href="/register?plan=pro&trial=4"
@@ -305,7 +305,7 @@ export default function BlogPage() {
             </span>
           </Link>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {new Date().getFullYear()} Factu.me – Tous droits reserves.
+            {new Date().getFullYear()} Factu.me – Tous droits réservés.
           </p>
         </div>
       </footer>

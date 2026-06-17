@@ -52,17 +52,17 @@ const SOFTWARE_CARDS: {
   {
     key: 'pennylane',
     name: 'Pennylane',
-    description: 'Leader francais SaaS comptabilite',
+    description: 'Leader français SaaS comptabilité',
     color: 'from-violet-500 to-purple-600',
     bgGradient: 'from-violet-500/10 to-purple-600/10',
     iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
     needsConfig: 'api_key',
-    configLabel: 'Cle API Pennylane',
+    configLabel: 'Clé API Pennylane',
   },
   {
     key: 'sage',
     name: 'Sage',
-    description: 'Logiciel comptable n1 en France',
+    description: 'Logiciel comptable n°1 en France',
     color: 'from-green-500 to-emerald-600',
     bgGradient: 'from-green-500/10 to-emerald-600/10',
     iconBg: 'bg-gradient-to-br from-green-500 to-emerald-600',
@@ -97,8 +97,8 @@ const SOFTWARE_CARDS: {
 const CATEGORY_LABELS: Record<string, string> = {
   transport: 'Transport',
   meals: 'Repas',
-  accommodation: 'Hebergement',
-  equipment: 'Materiel',
+  accommodation: 'Hébergement',
+  equipment: 'Matériel',
   office: 'Bureau',
   shopping: 'Achats',
   mileage: 'IK',
@@ -139,7 +139,7 @@ export default function ExportComptaPage() {
       if (error) throw error;
       setExpenses(data || []);
     } catch (err: any) {
-      toast.error('Erreur lors du chargement des depenses');
+      toast.error('Erreur lors du chargement des dépenses');
     } finally {
       setLoading(false);
     }
@@ -188,23 +188,23 @@ export default function ExportComptaPage() {
   // ── Export handler ────────────────────────────────────────────────────
   const handleExport = async () => {
     if (!selectedSoftware) {
-      toast.error('Selectionnez un logiciel comptable');
+      toast.error('Sélectionnez un logiciel comptable');
       return;
     }
 
     if (selectedExpenseIds.size === 0) {
-      toast.error('Selectionnez au moins une depense');
+      toast.error('Sélectionnez au moins une dépense');
       return;
     }
 
     const softwareConfig = SOFTWARE_CARDS.find((s) => s.key === selectedSoftware);
     if (softwareConfig?.needsConfig === 'api_key' && !apiKey.trim()) {
-      toast.error('Entrez votre cle API');
+      toast.error('Entrez votre clé API');
       return;
     }
 
     if (softwareConfig?.comingSoon) {
-      toast.error('Cette integration arrive bientot');
+      toast.error('Cette intégration arrive bientôt');
       return;
     }
 
@@ -246,7 +246,7 @@ export default function ExportComptaPage() {
         };
         saveExportHistory([record, ...exportHistory].slice(0, 50));
 
-        toast.success(`${selectedExpenseIds.size} depense(s) exportee(s) en FEC`);
+        toast.success(`${selectedExpenseIds.size} dépense(s) exportée(s) en FEC`);
         setSelectedExpenseIds(new Set());
         setExporting(false);
         return;
@@ -275,16 +275,16 @@ export default function ExportComptaPage() {
       saveExportHistory([record, ...exportHistory].slice(0, 50));
 
       if (data.errors && data.errors.length > 0) {
-        toast.warning(`${data.exported} exportee(s), ${data.errors.length} erreur(s)`);
+        toast.warning(`${data.exported} exportée(s), ${data.errors.length} erreur(s)`);
         data.errors.forEach((e: string) => toast.error(e));
       } else {
-        toast.success(`${data.exported} depense(s) exportee(s) vers ${softwareConfig?.name}`);
+        toast.success(`${data.exported} dépense(s) exportée(s) vers ${softwareConfig?.name}`);
       }
 
       setSelectedExpenseIds(new Set());
       await fetchExpenses();
     } catch (err: any) {
-      toast.error(err.message || 'Erreur reseau');
+      toast.error(err.message || 'Erreur réseau');
     } finally {
       setExporting(false);
     }
@@ -306,7 +306,7 @@ export default function ExportComptaPage() {
               Export Comptable
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Envoyez vos depenses vers votre logiciel comptable
+              Envoyez vos dépenses vers votre logiciel comptable
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -379,7 +379,7 @@ export default function ExportComptaPage() {
                 {sw.comingSoon && (
                   <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
                     <Zap size={12} />
-                    Bientot
+                    Bientôt
                   </div>
                 )}
 
@@ -415,7 +415,7 @@ export default function ExportComptaPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white">Configuration Pennylane</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Entrez votre cle API pour connecter votre compte</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Entrez votre clé API pour connecter votre compte</p>
                 </div>
                 <a
                   href="https://app.pennylane.com/api"
@@ -423,14 +423,14 @@ export default function ExportComptaPage() {
                   rel="noopener noreferrer"
                   className="ml-auto flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
                 >
-                  Obtenir la cle <ExternalLink size={14} />
+                  Obtenir la clé <ExternalLink size={14} />
                 </a>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">
-                    Cle API Pennylane
+                    Clé API Pennylane
                   </label>
                   <div className="relative">
                     <Key size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -445,7 +445,7 @@ export default function ExportComptaPage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">
-                    Compte comptable par defaut
+                    Compte comptable par défaut
                   </label>
                   <div className="relative">
                     <Settings size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -499,7 +499,7 @@ export default function ExportComptaPage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2">
-                    Compte comptable par defaut
+                    Compte comptable par défaut
                   </label>
                   <div className="relative">
                     <Settings size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -528,7 +528,7 @@ export default function ExportComptaPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <FileText size={20} className="text-primary" />
-            Depenses validees
+            Dépenses validées
             {!loading && (
               <span className="text-sm font-normal text-gray-400">({expenses.length} disponibles)</span>
             )}
@@ -543,7 +543,7 @@ export default function ExportComptaPage() {
                   : 'bg-white/50 dark:bg-slate-700/50 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-primary/30'
               )}
             >
-              {selectedExpenseIds.size === expenses.length ? 'Tout deselectionner' : 'Tout selectionner'}
+              {selectedExpenseIds.size === expenses.length ? 'Tout désélectionner' : 'Tout sélectionner'}
             </button>
           )}
         </div>
@@ -557,7 +557,7 @@ export default function ExportComptaPage() {
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center mx-auto mb-6">
               <FileText size={40} className="text-gray-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aucune depense validee</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aucune dépense validée</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6">Validez des notes de frais pour les exporter</p>
             <Link
               href="/expenses"
@@ -580,7 +580,7 @@ export default function ExportComptaPage() {
                 />
               </div>
               <div className="col-span-3">Fournisseur</div>
-              <div className="col-span-2">Categorie</div>
+              <div className="col-span-2">Catégorie</div>
               <div className="col-span-2">Date</div>
               <div className="col-span-1 text-right">HT</div>
               <div className="col-span-1 text-right">TVA</div>
@@ -674,7 +674,7 @@ export default function ExportComptaPage() {
                 {/* Summary */}
                 <div className="flex items-center gap-8">
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Selection</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sélection</p>
                     <p className="text-2xl font-black text-gray-900 dark:text-white">{selectedExpenseIds.size}</p>
                   </div>
                   <div className="w-px h-12 bg-gray-200 dark:bg-gray-700" />
@@ -722,7 +722,7 @@ export default function ExportComptaPage() {
               {!selectedSoftware && (
                 <p className="text-sm text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-2">
                   <AlertCircle size={14} />
-                  Selectionnez un logiciel comptable ci-dessus pour exporter
+                  Sélectionnez un logiciel comptable ci-dessus pour exporter
                 </p>
               )}
             </div>
@@ -744,7 +744,7 @@ export default function ExportComptaPage() {
 
         {exportHistory.length === 0 ? (
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 p-8 text-center">
-            <p className="text-gray-400 text-sm">Aucun export realise pour le moment</p>
+            <p className="text-gray-400 text-sm">Aucun export réalisé pour le moment</p>
           </div>
         ) : (
           <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl overflow-hidden">
@@ -764,7 +764,7 @@ export default function ExportComptaPage() {
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-gray-900 dark:text-white text-sm">{swConfig?.name || record.software}</p>
                         <span className="text-xs text-gray-400">
-                          {record.count} depense(s)
+                          {record.count} dépense(s)
                         </span>
                       </div>
                       <p className="text-xs text-gray-400">
@@ -825,10 +825,10 @@ export default function ExportComptaPage() {
                   <div>
                     <h4 className="font-bold text-gray-900 dark:text-white mb-1">Pennylane</h4>
                     <ol className="text-sm text-gray-500 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                      <li>Connectez-vous a votre compte Pennylane</li>
-                      <li>Allez dans Parametres &gt; API</li>
-                      <li>Creez une cle API avec les permissions "supplier_invoices"</li>
-                      <li>Copiez la cle et collez-la dans le champ ci-dessus</li>
+                      <li>Connectez-vous à votre compte Pennylane</li>
+                      <li>Allez dans Paramètres &gt; API</li>
+                      <li>Créez une clé API avec les permissions "supplier_invoices"</li>
+                      <li>Copiez la clé et collez-la dans le champ ci-dessus</li>
                     </ol>
                   </div>
                 </div>
@@ -841,9 +841,9 @@ export default function ExportComptaPage() {
                   <div>
                     <h4 className="font-bold text-gray-900 dark:text-white mb-1">Sage Business Cloud</h4>
                     <ol className="text-sm text-gray-500 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                      <li>Connectez-vous a Sage Business Cloud</li>
-                      <li>Allez dans Parametres &gt; Integrations</li>
-                      <li>Generez un token d'acces OAuth</li>
+                      <li>Connectez-vous à Sage Business Cloud</li>
+                      <li>Allez dans Paramètres &gt; Intégrations</li>
+                      <li>Générez un token d'accès OAuth</li>
                       <li>Collez le token dans le champ de configuration</li>
                     </ol>
                   </div>
@@ -857,9 +857,9 @@ export default function ExportComptaPage() {
                   <div>
                     <h4 className="font-bold text-gray-900 dark:text-white mb-1">Export CSV / FEC</h4>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      L'export FEC (Fichier des Ecritures Comptables) est un format reglementaire francais conforme a la norme DGFiP.
-                      Il est compatible avec tous les logiciels comptables et peut etre importe directement.
-                      Aucune configuration necessaire.
+                      L'export FEC (Fichier des Écritures Comptables) est un format réglementaire français conforme à la norme DGFiP.
+                      Il est compatible avec tous les logiciels comptables et peut être importé directement.
+                      Aucune configuration nécessaire.
                     </p>
                   </div>
                 </div>
@@ -868,10 +868,10 @@ export default function ExportComptaPage() {
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-start gap-3">
                   <AlertCircle size={18} className="text-blue-500 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-bold text-blue-700 dark:text-blue-300 mb-1">Securite des donnees</p>
+                    <p className="font-bold text-blue-700 dark:text-blue-300 mb-1">Sécurité des données</p>
                     <p className="text-blue-600/80 dark:text-blue-400/80">
-                      Vos cles API sont utilisees uniquement pour l'export et ne sont jamais stockees sur nos serveurs.
-                      L'export FEC est toujours disponible gratuitement et ne necessite aucune connexion.
+                      Vos clés API sont utilisées uniquement pour l'export et ne sont jamais stockées sur nos serveurs.
+                      L'export FEC est toujours disponible gratuitement et ne nécessite aucune connexion.
                     </p>
                   </div>
                 </div>

@@ -258,8 +258,8 @@ export function ProductCatalogModal({ open, onClose, onApply, replaceMode = fals
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-5 sm:px-6 py-4 border-t border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-3">
+            {/* Footer — safe-area pour dégager le bouton « Ajouter » de l'indicateur home iOS */}
+            <div className="px-5 sm:px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-3">
               <div className="text-sm">
                 {selectedList.length === 0 ? (
                   <span className="text-gray-500 dark:text-gray-400">Aucun article sélectionné</span>

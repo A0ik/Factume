@@ -114,7 +114,7 @@ export default function CabinetSettingsPage() {
         body: JSON.stringify({ email: inviteEmail.trim() }),
       });
       if (res.ok) {
-        toast.success('Invitation envoyee');
+        toast.success('Invitation envoyée');
         setInviteEmail('');
         await fetchMembers();
       } else {
@@ -140,7 +140,7 @@ export default function CabinetSettingsPage() {
         body: JSON.stringify({ memberId }),
       });
       if (res.ok) {
-        toast.success('Membre retire');
+        toast.success('Membre retiré');
         await fetchMembers();
       } else {
         const { error } = await res.json().catch(() => ({}));
@@ -175,7 +175,7 @@ export default function CabinetSettingsPage() {
           account_holder: accountHolder.trim() || undefined,
         },
       });
-      toast.success('Parametres sauvegardes');
+      toast.success('Paramètres sauvegardés');
     } catch {
       toast.error('Erreur lors de la sauvegarde');
     } finally {
@@ -190,7 +190,7 @@ export default function CabinetSettingsPage() {
       const supabase = (await import('@/lib/supabase')).getSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        toast.error('Session expiree. Veuillez vous reconnecter.');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
         return;
       }
       const res = await fetch('/api/cabinet/delete', {
@@ -201,7 +201,7 @@ export default function CabinetSettingsPage() {
         const error = await res.json().catch(() => ({ error: 'Erreur lors de la suppression' }));
         throw new Error(error.error || 'Erreur lors de la suppression');
       }
-      toast.success('Cabinet supprime avec succes');
+      toast.success('Cabinet supprimé avec succès');
       router.push('/dashboard');
     } catch (error: any) {
       console.error('[handleDeleteCabinet] Error:', error);
@@ -221,7 +221,7 @@ export default function CabinetSettingsPage() {
             <ArrowLeft size={18} className="text-gray-400" />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Parametres du cabinet</h1>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Paramètres du cabinet</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Informations et configuration</p>
           </div>
         </div>
@@ -251,7 +251,7 @@ export default function CabinetSettingsPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex : Cabinet Dubois & Associes"
+            placeholder="Ex : Cabinet Dubois & Associés"
             className={cn(
               'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
@@ -274,7 +274,7 @@ export default function CabinetSettingsPage() {
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
             )}
           />
-          <p className="text-xs text-gray-400 mt-1.5">Apparait sur vos documents officiels</p>
+          <p className="text-xs text-gray-400 mt-1.5">Apparaît sur vos documents officiels</p>
         </div>
 
         <div>
@@ -298,7 +298,7 @@ export default function CabinetSettingsPage() {
       <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
         <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
           <MapPin size={15} className="text-emerald-500" />
-          Coordonnees
+          Coordonnées
         </h3>
 
         <div>
@@ -350,7 +350,7 @@ export default function CabinetSettingsPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
-              <span className="flex items-center gap-1.5"><Phone size={11} />Telephone</span>
+              <span className="flex items-center gap-1.5"><Phone size={11} />Téléphone</span>
             </label>
             <input
               type="tel"
@@ -385,10 +385,10 @@ export default function CabinetSettingsPage() {
       <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
         <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
           <Landmark size={15} className="text-amber-500" />
-          Coordonnees bancaires (RIB)
+          Coordonnées bancaires (RIB)
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Ces informations apparaitront sur vos factures et documents officiels.
+          Ces informations apparaîtront sur vos factures et documents officiels.
         </p>
 
         <div>
@@ -448,7 +448,7 @@ export default function CabinetSettingsPage() {
             type="text"
             value={accountHolder}
             onChange={(e) => setAccountHolder(e.target.value)}
-            placeholder="Cabinet Dubois & Associes"
+            placeholder="Cabinet Dubois & Associés"
             className={cn(
               'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500'
@@ -462,10 +462,10 @@ export default function CabinetSettingsPage() {
         <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
             <Shield size={15} className="text-indigo-500" />
-            Equipe du cabinet
+            Équipe du cabinet
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Invitez vos collaborateurs a rejoindre le cabinet.
+            Invitez vos collaborateurs à rejoindre le cabinet.
           </p>
 
           {/* Invite form — only for owner */}
@@ -518,9 +518,9 @@ export default function CabinetSettingsPage() {
                         {m.profile?.first_name ? `${m.profile.first_name} ${m.profile?.last_name || ''}` : (m.profile?.email || 'Membre')}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {m.role === 'owner' ? 'Proprietaire' : m.role === 'admin' ? 'Administrateur' : 'Collaborateur'}
+                        {m.role === 'owner' ? 'Propriétaire' : m.role === 'admin' ? 'Administrateur' : 'Collaborateur'}
                         {m.user_id === cabinet?.owner_id && (
-                          <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Proprietaire</span>
+                          <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Propriétaire</span>
                         )}
                       </p>
                     </div>
@@ -608,7 +608,7 @@ export default function CabinetSettingsPage() {
                 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
               )}
             />
-            <p className="text-xs text-gray-400 mt-1.5">Logo affiche dans la barre de navigation du cabinet</p>
+            <p className="text-xs text-gray-400 mt-1.5">Logo affiché dans la barre de navigation du cabinet</p>
           </div>
 
           <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800">
@@ -616,7 +616,7 @@ export default function CabinetSettingsPage() {
               <Eye size={16} className="text-gray-400" />
               <div>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Masquer la marque Factu.me</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Remplace les references a Factu.me par votre nom de marque</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Remplace les références à Factu.me par votre nom de marque</p>
               </div>
             </div>
             <button
@@ -663,7 +663,7 @@ export default function CabinetSettingsPage() {
           Zone de danger
         </h3>
         <p className="text-xs text-red-700 dark:text-red-400">
-          Supprimer le cabinet deconnecte tous les clients et efface la configuration. Cette action est irreversible.
+          Supprimer le cabinet déconnecte tous les clients et efface la configuration. Cette action est irréversible.
         </p>
         {!confirmDelete ? (
           <button
@@ -676,7 +676,7 @@ export default function CabinetSettingsPage() {
         ) : (
           <div className="space-y-3 pt-2">
             <p className="text-sm text-red-800 dark:text-red-300 font-semibold">
-              Cette action est definitive. Pour confirmer, tapez <span className="font-mono bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded text-red-900 dark:text-red-200 text-xs">SUPPRIMER</span> ci-dessous.
+              Cette action est définitive. Pour confirmer, tapez <span className="font-mono bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded text-red-900 dark:text-red-200 text-xs">SUPPRIMER</span> ci-dessous.
             </p>
             <input
               type="text"
@@ -692,7 +692,7 @@ export default function CabinetSettingsPage() {
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                {deleting ? 'Suppression...' : 'Supprimer definitivement'}
+                {deleting ? 'Suppression...' : 'Supprimer définitivement'}
               </button>
               <button
                 onClick={() => { setConfirmDelete(false); setDeleteInput(''); }}
