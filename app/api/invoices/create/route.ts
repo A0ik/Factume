@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
     const {
       client_id, client_name_override, document_type, issue_date, due_date,
       items, subtotal, vat_amount, discount_percent, discount_amount, total,
-      notes, prefix, linked_invoice_id, idempotency_id, client_type
+      notes, prefix, linked_invoice_id, idempotency_id, client_type,
+      client_siret, client_vat_number, client_email, client_phone,
+      client_address, client_city, client_postal_code
     } = body;
 
     // FIX GAP-6: Validation serveur de la date d'émission (anti-antidatage)
@@ -215,6 +217,34 @@ export async function POST(req: NextRequest) {
     if (fetchError || !invoice) {
       console.error('[API /invoices/create] Fetch error:', fetchError);
       return NextResponse.json({ error: 'Facture créée mais impossible de la récupérer' }, { status: 500 });
+    }
+
+    // ATELIER (e-invoicing) — le RPC create_invoice_atomique ne stocke PAS les
+    // champs client inline (siret, tva, adresse…). Or la transmission Factur-X en
+    // a BESOIN (le XML exige SIRET + adresse client ; isFacturXEligible vérifie le
+    // SIRET client). On les persiste maintenant pour les clients SANS fiche liée,
+    // et on les fusionne dans l'objet invoice pour transmitInvoice. Sans ça, la
+    // transmission échouait sur « SIRET du client obligatoire » même si l'utilisateur
+    // l'avait saisi (le SIRET n'arrivait qu'après, via un update séparé du formulaire).
+    if (!client_id) {
+      const inlineFields: Record<string, string> = {};
+      if (client_siret) inlineFields.client_siret = client_siret;
+      if (client_vat_number) inlineFields.client_vat_number = client_vat_number;
+      if (client_email) inlineFields.client_email = client_email;
+      if (client_phone) inlineFields.client_phone = client_phone;
+      if (client_address) inlineFields.client_address = client_address;
+      if (client_city) inlineFields.client_city = client_city;
+      if (client_postal_code) inlineFields.client_postal_code = client_postal_code;
+      if (Object.keys(inlineFields).length > 0) {
+        try {
+          await createAdminClient().from('invoices')
+            .update({ ...inlineFields, updated_at: new Date().toISOString() })
+            .eq('id', invoice.id);
+        } catch (e: any) {
+          console.warn('[invoices/create] inline client fields persist failed:', e?.message);
+        }
+        Object.assign(invoice, inlineFields);
+      }
     }
 
     // Update profile stats in background

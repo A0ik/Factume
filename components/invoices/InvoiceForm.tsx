@@ -1088,7 +1088,7 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
                       </div>
                     </motion.div>
                   ))}
-                  <button onClick={addItem} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 text-sm font-semibold transition-all">
+                  <button onClick={addItem} className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border-2 border-dashed border-emerald-400/60 dark:border-white/15 text-emerald-600 dark:text-gray-100 hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/70 dark:hover:border-white/30 dark:hover:bg-white/[0.06] text-sm font-semibold transition-all">
                     <Plus size={15} /> Ajouter une ligne
                   </button>
                 </div>

@@ -78,6 +78,46 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const canUseFacturX = isPro || isBusiness || isTrialActive;
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  // ATELIER (e-invoicing) — bouton « Réessayer la transmission » : relance
+  // manuellement POST /api/invoices/transmit (utile si la transmission auto a
+  // échoué : SIRET manquant à l'époque, 403 enrollment, erreur réseau…).
+  const handleRetryTransmission = async () => {
+    if (!invoice || retrying) return;
+    setRetrying(true);
+    try {
+      const res = await fetch('/api/invoices/transmit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setInvoice((inv) => inv ? {
+          ...inv,
+          pdp_status: 'transmitted',
+          pdp_transmission_id: data.superPdpId ?? inv.pdp_transmission_id,
+          pdp_transmitted_at: new Date().toISOString(),
+          pdp_last_error: undefined,
+        } as Invoice : inv);
+      } else {
+        setInvoice((inv) => inv ? {
+          ...inv,
+          pdp_status: 'failed',
+          pdp_last_error: data?.error || data?.message || 'Échec de la transmission',
+        } as Invoice : inv);
+      }
+    } catch (e: any) {
+      setInvoice((inv) => inv ? {
+        ...inv,
+        pdp_status: 'failed',
+        pdp_last_error: e?.message || 'Erreur réseau',
+      } as Invoice : inv);
+    } finally {
+      setRetrying(false);
+    }
+  };
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showQuoteActionModal, setShowQuoteActionModal] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
@@ -998,6 +1038,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                     <p className="text-xs text-amber-600">Nouvelle tentative de transmission programmée...</p>
                   </div>
+                )}
+                {(invoice.pdp_status === 'failed' || invoice.pdp_status === 'pending_retry') && (
+                  <button
+                    onClick={handleRetryTransmission}
+                    disabled={retrying}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-black dark:hover:bg-zinc-900 text-white dark:border dark:border-white/10 text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw size={14} className={retrying ? 'animate-spin' : ''} />
+                    {retrying ? 'Transmission en cours…' : 'Réessayer la transmission'}
+                  </button>
                 )}
               </div>
             </div>
