@@ -610,6 +610,16 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
           client_email: clientEmail || undefined,
           client_phone: clientPhone || undefined,
           client_address: clientAddress || undefined,
+          // ATELIER (e-invoicing) — parité create/edit : sans ces champs, éditer une
+          // facture B2B (ex. pour ajouter un SIRET oublié) ne persistait JAMAIS le
+          // SIRET → retransmission impossible. Le PATCH /api/invoices/[id] les
+          // accepte (pas en colonnes protégées). Garde `clientId ? undefined` pour
+          // ne pas écraser les données d'un client lié (le SIRET vient du join).
+          client_city: clientId ? undefined : clientCity || undefined,
+          client_postal_code: clientId ? undefined : clientPostalCode || undefined,
+          client_siret: clientId ? undefined : clientSiret || undefined,
+          client_vat_number: clientId ? undefined : clientVatNumber || undefined,
+          client_type: clientType || undefined,
         }),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('__timeout__')), 7000)),
       ]);

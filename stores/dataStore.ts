@@ -161,6 +161,19 @@ export const useDataStore = create<DataState>((set, get) => ({
           linked_invoice_id: formData.linked_invoice_id || null,
           idempotency_id: finalIdempotencyId,
           client_type: formData.client_type || null,
+          // ATELIER (e-invoicing) — BUG : ces champs client inline (SIRET, TVA,
+          // adresse…) étaient construits par le formulaire mais JAMAIS转发és au
+          // body de /api/invoices/create. Résultat : create/route.ts recevait
+          // client_siret=undefined → son fix de persistance (fix #2) était sauté →
+          // la ligne restait à client_siret=NULL → isFacturXEligible rejetait le
+          // B2B (« SIRET du client obligatoire »). On les forward explicitement.
+          client_siret: formData.client_siret || null,
+          client_vat_number: formData.client_vat_number || null,
+          client_email: formData.client_email || null,
+          client_phone: formData.client_phone || null,
+          client_address: formData.client_address || null,
+          client_city: formData.client_city || null,
+          client_postal_code: formData.client_postal_code || null,
         }),
       });
 
