@@ -153,6 +153,49 @@ async function validateXmlReport(xml: string): Promise<any | null> {
   }
 }
 
+/**
+ * Diagnostic contexte (sur 500 serveur) : un 500 SuperPDP après validation XML OK
+ * signifie généralement que le serveur ne sait pas TRAITER la facture — souvent
+ * parce que le vendeur du XML n'est pas le compte authentifié (problème multi-
+ * SIRET : le token client_credentials émet pour un autre SIRET non enrollé), ou
+ * parce que l'acheteur n'est pas routable. On logge ces infos pour trancher.
+ */
+async function diagnoseTransmissionContext(invoice: any, profile: Profile): Promise<void> {
+  try {
+    const token = await getAccessToken();
+    const sellerSiret = (profile.siret || '').trim();
+    const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
+    console.log('[SuperPDP] diagnostic — SIRET vendeur (XML):', sellerSiret, '| SIRET acheteur:', buyerSiret);
+
+    // 1. Compte authentifié = le compte plateforme (dont son propre SIRET).
+    try {
+      const meRes = await fetch(`${BASE_URL}/companies/me`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      });
+      const meText = await meRes.text();
+      console.log('[SuperPDP] diagnostic companies/me:', meRes.status, meText.slice(0, 1000));
+    } catch (e: any) {
+      console.warn('[SuperPDP] diagnostic companies/me échoué:', e?.message);
+    }
+
+    // 2. Reachabilité de l'acheteur dans l'annuaire DGFiP.
+    if (buyerSiret) {
+      try {
+        const dirRes = await fetch(
+          `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(buyerSiret)}`,
+          { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } },
+        );
+        const dirText = await dirRes.text();
+        console.log('[SuperPDP] diagnostic french_directory (acheteur):', dirRes.status, dirText.slice(0, 1000));
+      } catch (e: any) {
+        console.warn('[SuperPDP] diagnostic french_directory échoué:', e?.message);
+      }
+    }
+  } catch (e: any) {
+    console.warn('[SuperPDP] diagnostic contexte échoué:', e?.message);
+  }
+}
+
 // ── Fonction principale : Transmission d'une facture ──────────────────────────
 
 /**
@@ -327,8 +370,11 @@ export async function transmitInvoice(
         };
       }
 
-      // Erreur serveur (500+) — retryable
+      // Erreur serveur (500+) — retryable. On logge le contexte de traitement
+      // pour trancher entre : vendeur non enrollé (multi-SIRET), acheteur non
+      // routable, ou instabilité sandbox. Cf. diagnoseTransmissionContext.
       if (response.status >= 500) {
+        await diagnoseTransmissionContext(invoice, profile);
         return {
           success: false,
           error: `Erreur serveur Super PDP (${response.status}) — sera retenté automatiquement`,
