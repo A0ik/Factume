@@ -317,6 +317,21 @@ export async function POST(req: NextRequest) {
 
                 pdpResult = { transmitted: false, error: 'Transmission en attente de retry' };
                 console.warn('[invoices/create] PDP retry planifié:', result.error);
+              } else if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+                // Utilisateur sans plateforme connectée → pas un échec, juste un
+                // prérequis manquant. On reste en not_transmitted (silencieux) ;
+                // la transmission se fera dès qu'il branchera SuperPDP (settings).
+                await admin
+                  .from('invoices')
+                  .update({
+                    pdp_status: 'not_transmitted',
+                    pdp_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoice.id);
+
+                pdpResult = { transmitted: false, error: 'Plateforme non connectée' };
+                console.log('[invoices/create] SuperPDP non connecté — transmission différée');
               } else {
                 // Erreur non retryable
                 await admin

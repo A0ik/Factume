@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, User, ArrowRight } from 'lucide-react';
+import { Building2, User, ArrowRight, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ClientTypeModalProps {
   open: boolean;
@@ -16,14 +18,33 @@ interface ClientTypeModalProps {
  * - B2B (Entreprise) : SIRET requis, facture électronique PDP activée
  * - B2C (Particulier) : Pas de SIRET, facture classique, e-reporting agrégé
  *
- * Perfect dark/light mode support via Tailwind dark: variants.
+ * Gating e-invoicing : la transmission électronique (B2B) n'est possible QUE si
+ * l'utilisateur a connecté sa plateforme SuperPDP (KYC fait). Sans connexion :
+ * - B2B reste sélectionnable (le client EST une entreprise — on enregistre son SIRET)
+ * - mais un badge « Connexion requise » signale que la transmission différera,
+ *   et un toast oriente vers les paramètres pour brancher/réactiver.
  *
- * IMPORTANT: Parent component should handle the following on type change:
- * - B2B → B2C: clear siret, vat_number fields, set items vat_rate to 0
- * - B2C → B2B: set items vat_rate to default (20%)
- * Use getDefaultTVARate() from @/lib/tva-validator for the correct rate
+ * Perfect dark/light mode support via Tailwind dark: variants.
  */
 export default function ClientTypeModal({ open, onSelect, clientName }: ClientTypeModalProps) {
+  const [connected, setConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    // Statut de connexion SuperPDP (badge B2B). Ne bloque jamais la sélection.
+    fetch('/api/superpdp/status')
+      .then((r) => r.json())
+      .then((d) => setConnected(!!d.connected))
+      .catch(() => setConnected(false));
+  }, [open]);
+
+  const handleB2B = () => {
+    onSelect('b2b');
+    if (connected === false) {
+      toast.info('La facture B2B sera enregistrée, mais la transmission électronique nécessite de connecter votre plateforme (Paramètres → Facturation).', { duration: 6000 });
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -68,15 +89,31 @@ export default function ClientTypeModal({ open, onSelect, clientName }: ClientTy
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onSelect('b2b')}
+                onClick={handleB2B}
                 className="w-full group relative flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 transition-all text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800/50 transition-colors">
                   <Building2 size={22} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Entreprise</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Client avec SIRET/SIREN · Facture électronique PDP</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Entreprise</p>
+                    {connected === false && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                        <ShieldAlert size={10} /> Connexion requise
+                      </span>
+                    )}
+                    {connected === true && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                        <ShieldCheck size={10} /> E-invoicing actif
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {connected === false
+                      ? 'Client avec SIRET/SIREN · Transmission différée (connectez votre plateforme)'
+                      : 'Client avec SIRET/SIREN · Facture électronique PDP'}
+                  </p>
                 </div>
                 <ArrowRight size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
               </motion.button>
@@ -104,7 +141,7 @@ export default function ClientTypeModal({ open, onSelect, clientName }: ClientTy
                   <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">i</span>
                 </div>
                 <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                  <strong>B2B</strong> : La facture sera transmise électroniquement via PDP (obligatoire 2026-2027).<br />
+                  <strong>B2B</strong> : La facture sera transmise électroniquement via PDP (obligatoire 2026-2027).{connected === false ? ' Connectez votre plateforme dans les Paramètres.' : ''}<br />
                   <strong>B2C</strong> : Facture classique — la transmission PDP n'est pas requise pour les particuliers.
                 </p>
               </div>

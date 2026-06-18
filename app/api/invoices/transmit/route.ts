@@ -34,7 +34,14 @@ export async function POST(req: NextRequest) {
     // ── Authentification ───────────────────────────────────────────────────
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
-    if (!user) {
+
+    // Mode interne (cron Supabase pg_cron / Vercel Cron) : pas de session
+    // utilisateur, mais un x-cron-secret valide. On opère alors pour le user_id
+    // de la facture (retry automatique des transmissions en échec transitoire).
+    const cronSecret = req.headers.get('x-cron-secret');
+    const isInternalCron = !!cronSecret && !!process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET;
+
+    if (!user && !isInternalCron) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -55,21 +62,40 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
 
     // ── Récupération facture + profil ──────────────────────────────────────
-    const [
-      { data: invoice, error: invError },
-      { data: profile },
-    ] = await Promise.all([
-      admin
+    // Mode cron interne : pas de user.id → on cherche la facture par id seul et
+    // on prend son user_id pour le profil. Mode utilisateur : scope user.id.
+    let invoice: any;
+    let profile: any;
+    if (isInternalCron) {
+      const { data: inv, error: invError } = await admin
         .from('invoices')
         .select('*, client:clients(*)')
         .eq('id', invoiceId)
-        .eq('user_id', user.id)
-        .single(),
-      admin.from('profiles').select('*').eq('id', user.id).single(),
-    ]);
-
-    if (invError || !invoice) {
-      return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+        .single();
+      invoice = inv;
+      if (invError || !inv) {
+        return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+      }
+      const { data: prof } = await admin.from('profiles').select('*').eq('id', inv.user_id).single();
+      profile = prof;
+    } else {
+      const [
+        { data: inv, error: invError },
+        { data: prof },
+      ] = await Promise.all([
+        admin
+          .from('invoices')
+          .select('*, client:clients(*)')
+          .eq('id', invoiceId)
+          .eq('user_id', user!.id)
+          .single(),
+        admin.from('profiles').select('*').eq('id', user!.id).single(),
+      ]);
+      invoice = inv;
+      profile = prof;
+      if (invError || !inv) {
+        return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+      }
     }
 
     if (!profile) {

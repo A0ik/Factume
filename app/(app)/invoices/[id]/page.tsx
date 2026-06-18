@@ -101,6 +101,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           pdp_transmitted_at: new Date().toISOString(),
           pdp_last_error: undefined,
         } as Invoice : inv);
+      } else if (data?.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+        // Pas de plateforme connectée → on invite à brancher (paramètres) plutôt
+        // qu'à marquer la facture en échec. L'utilisateur pourra réactiver ensuite.
+        setInvoice((inv) => inv ? { ...inv, pdp_status: 'not_transmitted', pdp_last_error: undefined } as Invoice : inv);
+        toast.error('Connectez votre plateforme de facturation pour transmettre cette facture.', { duration: 5000 });
+        router.push('/settings');
       } else {
         setInvoice((inv) => inv ? {
           ...inv,

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Button from '@/components/ui/Button';
 import { CompanySearch } from '@/components/ui/CompanySearch';
+import { SuperPdpConnect } from '@/components/ui/SuperPdpConnect';
 import { LEGAL_STATUSES } from '@/lib/utils';
 import { Check, ChevronDown, Building2, Zap, ArrowRight, Lock } from 'lucide-react';
 import Image from 'next/image';
@@ -105,6 +106,10 @@ export default function QuickOnboardingPage() {
     country: 'France',
   });
   const [companyFound, setCompanyFound] = useState(false);
+  // Étape e-invoicing (facultative) affichée APRÈS la sauvegarde du profil :
+  // à ce moment le SIRET est persisté → le branchement SuperPDP (qui lit
+  // profile.siret) fonctionne. Skippable → /dashboard.
+  const [step, setStep] = useState<'form' | 'einvoicing'>('form');
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -166,7 +171,9 @@ export default function QuickOnboardingPage() {
         country: form.country,
         onboarding_done: true,
       } as any);
-      router.push('/dashboard');
+      // SIRET désormais persisté → on propose le branchement e-invoicing
+      // (facultatif, skippable).
+      setStep('einvoicing');
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde');
     } finally {
@@ -175,6 +182,48 @@ export default function QuickOnboardingPage() {
   };
 
   if (!user) return null;
+
+  // ── Étape e-invoicing (facultative) ────────────────────────────────────────
+  // Affichée après la sauvegarde du profil (SIRET présent). L'utilisateur peut
+  // connecter sa plateforme SuperPDP (1 clic + KYC SuperPDP) ou passer.
+  if (step === 'einvoicing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center p-4">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-primary/10 blur-[120px]" />
+        </div>
+        <div className="relative w-full max-w-md">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary shadow-lg shadow-primary/25 mb-4">
+              <Image src="/logo-lg.png" alt="F" width={32} height={32} className="rounded-lg" />
+            </div>
+            <h1 className="text-2xl font-black text-white mb-1">
+              {lang === 'fr' ? 'Une dernière étape' : 'One last step'}
+              <span className="block text-sm font-medium text-gray-400 mt-1">
+                {lang === 'fr' ? '(facultative)' : '(optional)'}
+              </span>
+            </h1>
+          </div>
+
+          <SuperPdpConnect variant="card" />
+
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 mt-4 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90"
+          >
+            {lang === 'fr' ? 'Accéder au tableau de bord' : 'Go to dashboard'}
+            <ArrowRight size={16} />
+          </button>
+          <p className="text-center text-[10px] text-gray-500 mt-4">
+            {lang === 'fr'
+              ? 'Vous pourrez activer la facturation électronique plus tard dans les Paramètres.'
+              : 'You can enable e-invoicing later in Settings.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center p-4">

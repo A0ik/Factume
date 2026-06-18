@@ -261,7 +261,8 @@
       "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-probe.mjs)",
       "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-post.mjs)",
       "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-routing-test.mjs)",
-      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-difftest.mjs)"
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-difftest.mjs)",
+      "mcp__supabase__list_edge_functions"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

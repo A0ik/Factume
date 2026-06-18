@@ -315,6 +315,20 @@ export async function POST(req: NextRequest) {
               pdpResult = { transmitted: true, superPdpId: result.superPdpId };
               console.log('[send-invoice] Facture transmise légalement. ID PDP:', result.superPdpId);
 
+            } else if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+              // Pas de plateforme connectée → silencieux (pas un échec). L'email
+              // part quand même ; la transmission suivra dès le branchement SuperPDP.
+              await supabase
+                .from('invoices')
+                .update({
+                  pdp_status: 'not_transmitted',
+                  pdp_last_error: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', invoiceId);
+
+              pdpResult = { transmitted: false, error: 'Plateforme non connectée' };
+              console.log('[send-invoice] SuperPDP non connecté — transmission différée');
             } else {
               // Erreur de transmission — on loggue mais on ne bloque pas l'envoi email
               const retryable = isRetryableError(result);
