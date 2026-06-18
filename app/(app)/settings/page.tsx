@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
+import { SuperPdpConnect } from '@/components/ui/SuperPdpConnect';
 import Link from 'next/link';
 
 const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
@@ -269,6 +270,8 @@ export default function SettingsPage() {
     const stripeConnectError = params.get('stripe-connect-error');
     const sumupConnected = params.get('sumup');
     const sumupError = params.get('sumup_error');
+    const superpdpConnected = params.get('superpdp');
+    const superpdpError = params.get('superpdp_error');
 
     if (stripeConnect === 'success') {
       setStripeStatus('connected');
@@ -297,6 +300,22 @@ export default function SettingsPage() {
         'unknown': 'Erreur inattendue. Veuillez réessayer.',
       };
       toast.error(errorMessages[sumupError] || `Erreur SumUp: ${sumupError}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    if (superpdpConnected === 'connected') {
+      toast.success('Plateforme de facturation connectée ! Vos factures B2B seront transmises automatiquement.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (superpdpError) {
+      const superpdpErrors: Record<string, string> = {
+        state_mismatch: "Session invalide (sécurité). Veuillez réessayer.",
+        state_expired: 'Session expirée. Veuillez réessayer.',
+        user_mismatch: "L'identité ne correspond pas. Reconnectez-vous.",
+        missing_params: "Paramètres manquants. Veuillez réessayer.",
+        exchange_failed: "Échange OAuth échoué. Vérifiez la configuration et réessayez.",
+        internal_error: 'Erreur inattendue. Veuillez réessayer.',
+      };
+      toast.error(superpdpErrors[superpdpError] || `Erreur SuperPDP: ${superpdpError}`);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -668,6 +687,7 @@ export default function SettingsPage() {
 
   const renderBillingSection = () => (
     <div className="space-y-4">
+      <SuperPdpConnect variant="card" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="Préfixe numéro" value={form.invoice_prefix} onChange={(e) => set('invoice_prefix', e.target.value)} placeholder="FACT" />
         <Select label="Devise" value={form.currency} onChange={(e) => set('currency', e.target.value)} options={CURRENCY_OPTS} />

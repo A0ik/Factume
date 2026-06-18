@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import { useAuthStore } from '@/stores/authStore';
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
+import { SuperPdpConnect } from '@/components/ui/SuperPdpConnect';
 
 export default function OnboardingDonePage() {
   const router = useRouter();
@@ -92,6 +93,10 @@ export default function OnboardingDonePage() {
             <h3 className="font-semibold text-sm">Scanner une facture</h3>
             <p className="text-xs text-gray-500 mt-1">OCR intelligent</p>
           </Link>
+        </div>
+
+        <div className="w-full">
+          <SuperPdpConnect variant="card" className="text-left" />
         </div>
 
         <div className="space-y-3">

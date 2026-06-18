@@ -109,6 +109,23 @@ async function handleRetry(req: NextRequest) {
           console.log('[pdp-retry] Facture', inv.number, 'retransmise avec succès');
 
         } else {
+          // Compte SuperPDP non connecté : ce n'est pas un échec de transmission,
+          // juste un prérequis manquant. On remet à not_transmitted (pas de retry
+          // automatique tant que l'utilisateur n'a pas branché sa plateforme).
+          if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+            await admin
+              .from('invoices')
+              .update({
+                pdp_status: 'not_transmitted',
+                pdp_last_error: result.error,
+                pdp_next_retry_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', inv.id);
+            console.log('[pdp-retry] Facture', inv.number, '— SuperPDP non connecté, remise à not_transmitted');
+            continue;
+          }
+
           const retryable = isRetryableError(result);
 
           if (retryable && retryCount < maxRetries) {

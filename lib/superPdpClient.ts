@@ -11,12 +11,15 @@
 
 import { generateFacturXXml, isFacturXEligible } from './facturx';
 import { isInvoiceB2B } from './tva-validator';
+import { createAdminClient } from './supabase-server';
+import { encryptToken, decryptToken } from './utils';
 import { Invoice, Profile } from '@/types';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 const BASE_URL = 'https://api.superpdp.tech/v1.beta';
 const TOKEN_URL = 'https://api.superpdp.tech/oauth2/token';
+const AUTHORIZE_URL = 'https://api.superpdp.tech/oauth2/authorize';
 
 function getClientId(): string {
   const id = process.env.SUPER_PDP_CLIENT_ID;
@@ -35,6 +38,307 @@ function getClientSecret(): string {
  * (client_id/client_secret), PAS par l'URL. Les 2 modes utilisent le même
  * endpoint https://api.superpdp.tech. Cf. documentation SuperPDP §Introduction.
  */
+
+/**
+ * URI de redirection OAuth (Authorization Code). Doit être enregistrée dans
+ * l'application SuperPDP (interface SuperPDP → Applications → Redirect URI).
+ */
+function getRedirectUri(origin: string): string {
+  return process.env.SUPER_PDP_REDIRECT_URI || `${origin}/api/superpdp/callback`;
+}
+
+/** Mode sandbox (true en dev). Détermine le scheme d'adressage du tunnel OAuth. */
+function isSandbox(): boolean {
+  return (process.env.SUPER_PDP_SANDBOX ?? 'true').toLowerCase() !== 'false';
+}
+
+// ── Multi-SIRET : tokens OAuth par utilisateur (modèle marque grise) ──────────
+//
+// PRÉREUX ARCHITECTURAL : chez SuperPDP, 1 token = 1 entreprise émettrice
+// (page 2 « un jeu d'identifiants par entreprise » ; page 4 Authorization Code =
+// « l'utilisateur d'un logiciel de gestion qui donne accès à son compte »).
+// Le token détermine l'identité du vendeur ; les factures sont « scoped » au
+// compte authentifié. Pour transmettre POUR un utilisateur (son SIRET), il faut
+// un token qui représente SON compte SuperPDP — obtenu via le flux Authorization
+// Code (cf. exemple officiel erp.go), stocké chiffré dans superpdp_connections.
+
+export interface UserToken {
+  token: string;
+  siren?: string | null;
+  env?: string | null;
+}
+
+interface ConnectionRow {
+  id: string;
+  user_id: string;
+  siren: string | null;
+  siret: string | null;
+  company_name: string | null;
+  platform_company_id: string | null;
+  env: string | null;
+  refresh_token_encrypted: string;
+  access_token_encrypted: string | null;
+  access_token_expires_at: string | null;
+  connected_at: string | null;
+  revoked_at: string | null;
+  last_error: string | null;
+}
+
+/**
+ * Récupère la connexion SuperPDP active d'un utilisateur.
+ */
+export async function getUserConnection(userId: string): Promise<ConnectionRow | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from('superpdp_connections')
+    .select('*')
+    .eq('user_id', userId)
+    .is('revoked_at', null)
+    .maybeSingle();
+  return (data as ConnectionRow | null) ?? null;
+}
+
+/**
+ * Statut de connexion (pour badge UI). Ne lève jamais.
+ */
+export async function getConnectionStatus(userId: string): Promise<{
+  connected: boolean;
+  siren?: string | null;
+  companyName?: string | null;
+  env?: string | null;
+  connectedAt?: string | null;
+  lastError?: string | null;
+}> {
+  try {
+    const conn = await getUserConnection(userId);
+    if (!conn) return { connected: false };
+    return {
+      connected: true,
+      siren: conn.siren,
+      companyName: conn.company_name,
+      env: conn.env,
+      connectedAt: conn.connected_at,
+      lastError: conn.last_error,
+    };
+  } catch {
+    return { connected: false };
+  }
+}
+
+/**
+ * Révoque (déconnecte) la connexion SuperPDP d'un utilisateur.
+ */
+export async function disconnectSuperPdp(userId: string): Promise<void> {
+  const admin = createAdminClient();
+  await admin
+    .from('superpdp_connections')
+    .update({ revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .is('revoked_at', null);
+}
+
+/**
+ * Construit l'URL d'autorisation OAuth (Authorization Code) pour brancher le
+ * compte SuperPDP de l'utilisateur. Pré-remplit l'email et le SIREN (scheme
+ * `fr_siren` en prod, `sandbox` en sandbox) comme documenté page 4.
+ */
+export function buildAuthorizeUrl(params: {
+  origin: string;
+  state: string;
+  loginHint?: string;
+  companySiren?: string; // 9 chiffres
+}): string {
+  const url = new URL(AUTHORIZE_URL);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('client_id', getClientId());
+  url.searchParams.set('redirect_uri', getRedirectUri(params.origin));
+  url.searchParams.set('state', params.state);
+  // Pas de scopes (page 4 : « Scopes : aucun, laisser vide »)
+  if (params.loginHint) url.searchParams.set('login_hint', params.loginHint);
+  if (params.companySiren && !isSandbox()) {
+    url.searchParams.set('superpdp_company_number', params.companySiren);
+    url.searchParams.set('superpdp_company_number_scheme', 'fr_siren');
+  }
+  return url.toString();
+}
+
+/**
+ * Échange un code d'autorisation contre des tokens (access + refresh) et stocke
+ * la connexion. Vérifie la concordance SIREN : le compte SuperPDP connecté DOIT
+ * correspondre au SIRET du profil (sinon on refuse — on ne transmet pas pour une
+ * autre entreprise que celle de l'utilisateur).
+ *
+ * @returns {created: true} si OK, sinon {error}
+ */
+export async function exchangeAndStoreConnection(params: {
+  userId: string;
+  code: string;
+  origin: string;
+  expectedSiren?: string; // SIREN du profil (9 chiffres) — garde-fou
+}): Promise<{ created: boolean; error?: string }> {
+  const tokenResp = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: params.code,
+      client_id: getClientId(),
+      client_secret: getClientSecret(),
+      redirect_uri: getRedirectUri(params.origin),
+    }),
+  });
+
+  if (!tokenResp.ok) {
+    const errText = await tokenResp.text();
+    console.error('[SuperPDP] token exchange failed:', tokenResp.status, errText);
+    return { created: false, error: `Échange du code OAuth échoué (${tokenResp.status})` };
+  }
+
+  const tokens = (await tokenResp.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+
+  if (!tokens.access_token || !tokens.refresh_token) {
+    return { created: false, error: 'Réponse OAuth invalide (tokens manquants)' };
+  }
+
+  // Récupère l'identité de l'entreprise connectée
+  const meResp = await fetch(`${BASE_URL}/companies/me`, {
+    headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: 'application/json' },
+  });
+  let me: any = null;
+  if (meResp.ok) {
+    try { me = await meResp.json(); } catch { me = null; }
+  }
+  const connectedSiren = me?.number ? String(me.number) : null;
+
+  // Garde-fou concordance SIREN (production uniquement : en sandbox, number scheme
+  // = sandbox, le SIREN réel n'est pas pertinent)
+  if (!isSandbox() && params.expectedSiren && connectedSiren && connectedSiren !== params.expectedSiren) {
+    return {
+      created: false,
+      error: `Le compte SuperPDP connecté (SIREN ${connectedSiren}) ne correspond pas à votre entreprise (SIREN ${params.expectedSiren}).`,
+    };
+  }
+
+  const admin = createAdminClient();
+  // Upsert : une seule connexion active par utilisateur (UNIQUE user_id)
+  const { error } = await admin
+    .from('superpdp_connections')
+    .upsert(
+      {
+        user_id: params.userId,
+        siren: connectedSiren,
+        siret: me?.siret || null,
+        company_name: me?.formal_name || me?.name || null,
+        platform_company_id: me?.id || null,
+        env: me?.env || (isSandbox() ? 'sandbox' : 'production'),
+        refresh_token_encrypted: encryptToken(tokens.refresh_token),
+        access_token_encrypted: encryptToken(tokens.access_token),
+        access_token_expires_at: new Date(
+          Date.now() + (tokens.expires_in || 1800) * 1000
+        ).toISOString(),
+        connected_at: new Date().toISOString(),
+        revoked_at: null,
+        last_error: null,
+      },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) {
+    console.error('[SuperPDP] upsert connection failed:', error.message);
+    return { created: false, error: 'Échec enregistrement de la connexion' };
+  }
+
+  console.log('[SuperPDP] Connexion OAuth stockée pour user', params.userId, '— SIREN', connectedSiren);
+  return { created: true };
+}
+
+/**
+ * Récupère un access_token valide pour l'utilisateur : utilise le cache (30 min)
+ * ou rafraîchit via le refresh_token (rotation OAuth 2.1). Retourne null si
+ * l'utilisateur n'a pas de connexion active ou si elle est invalide.
+ */
+export async function getAccessTokenForUser(userId: string): Promise<UserToken | null> {
+  const conn = await getUserConnection(userId);
+  if (!conn) return null;
+
+  // Cache access_token encore valide (marge 60s)
+  const stillValid =
+    conn.access_token_encrypted &&
+    conn.access_token_expires_at &&
+    new Date(conn.access_token_expires_at).getTime() > Date.now() + 60_000;
+  if (stillValid && conn.access_token_encrypted) {
+    return {
+      token: decryptToken(conn.access_token_encrypted),
+      siren: conn.siren,
+      env: conn.env,
+    };
+  }
+
+  // Refresh (OAuth 2.1 → rotation du refresh_token)
+  let refreshToken: string;
+  try {
+    refreshToken = decryptToken(conn.refresh_token_encrypted);
+  } catch {
+    console.error('[SuperPDP] refresh_token indéchiffrable pour user', userId);
+    return null;
+  }
+
+  const resp = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: getClientId(),
+      client_secret: getClientSecret(),
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    console.error('[SuperPDP] refresh failed:', resp.status, errText);
+    // invalid_grant = refresh_token révoqué/expiré → on marque la connexion
+    if (resp.status === 400 || resp.status === 401) {
+      const admin = createAdminClient();
+      await admin
+        .from('superpdp_connections')
+        .update({
+          revoked_at: new Date().toISOString(),
+          last_error: `Refresh token invalide (${resp.status})`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conn.id);
+    }
+    return null;
+  }
+
+  const data = (await resp.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+
+  const update: Record<string, unknown> = {
+    access_token_encrypted: encryptToken(data.access_token),
+    access_token_expires_at: new Date(
+      Date.now() + (data.expires_in || 1800) * 1000
+    ).toISOString(),
+    last_error: null,
+    updated_at: new Date().toISOString(),
+  };
+  if (data.refresh_token) {
+    update.refresh_token_encrypted = encryptToken(data.refresh_token);
+  }
+
+  const admin = createAdminClient();
+  await admin.from('superpdp_connections').update(update).eq('id', conn.id);
+
+  return { token: data.access_token, siren: conn.siren, env: conn.env };
+}
 
 // ── OAuth2 Token Management ───────────────────────────────────────────────────
 
@@ -132,14 +436,14 @@ export interface InvoiceEventResult {
  * validation EN 16931. Cet endpoint renvoie le rapport complet (is_valid + erreurs),
  * ce qui permet de diagnostiquer précisément le 400. Cf. SUPERPDP_API_REFERENCE §3.3.
  */
-async function validateXmlReport(xml: string): Promise<any | null> {
+async function validateXmlReport(xml: string, token?: string): Promise<any | null> {
   try {
-    const token = await getAccessToken();
+    const authToken = token || (await getAccessToken());
     const form = new FormData();
     form.append('file', new Blob([xml], { type: 'application/xml' }), 'factur-x.xml');
     const response = await fetch(`${BASE_URL}/validation_reports`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: { 'Authorization': `Bearer ${authToken}` },
       body: form,
     });
     const text = await response.text();
@@ -163,11 +467,13 @@ async function validateXmlReport(xml: string): Promise<any | null> {
 async function diagnoseTransmissionContext(
   invoice: any,
   profile: Profile,
-): Promise<{ buyerInDirectory: boolean | null; sellerMatchesAccount: boolean | null }> {
+  token?: string,
+): Promise<{ buyerInDirectory: boolean | null; sellerMatchesAccount: boolean | null; env: string | null }> {
   let buyerInDirectory: boolean | null = null;
   let sellerMatchesAccount: boolean | null = null;
+  let env: string | null = null;
   try {
-    const token = await getAccessToken();
+    const authToken = token || (await getAccessToken());
     const sellerSiret = (profile.siret || '').trim();
     const sellerSiren = sellerSiret.replace(/\s/g, '').substring(0, 9);
     const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
@@ -176,14 +482,14 @@ async function diagnoseTransmissionContext(
     // 1. Compte authentifié = la plateforme (dont son propre SIREN).
     try {
       const meRes = await fetch(`${BASE_URL}/companies/me`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+        headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
       });
       const meText = await meRes.text();
       console.log('[SuperPDP] diagnostic companies/me:', meRes.status, meText.slice(0, 1000));
       try {
         const me = JSON.parse(meText);
         if (me?.number) sellerMatchesAccount = String(me.number) === sellerSiren;
-        if (me?.env) console.log('[SuperPDP] diagnostic env compte:', me.env);
+        if (me?.env) { env = me.env; console.log('[SuperPDP] diagnostic env compte:', me.env); }
       } catch {}
     } catch (e: any) {
       console.warn('[SuperPDP] diagnostic companies/me échoué:', e?.message);
@@ -197,7 +503,7 @@ async function diagnoseTransmissionContext(
       try {
         const dirRes = await fetch(
           `${BASE_URL}/french_directory/companies?number=${encodeURIComponent(buyerSiren)}`,
-          { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } },
+          { headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' } },
         );
         const dirText = await dirRes.text();
         console.log('[SuperPDP] diagnostic french_directory (acheteur SIREN', buyerSiren, '):', dirRes.status, dirText.slice(0, 1000));
@@ -213,7 +519,7 @@ async function diagnoseTransmissionContext(
   } catch (e: any) {
     console.warn('[SuperPDP] diagnostic contexte échoué:', e?.message);
   }
-  return { buyerInDirectory, sellerMatchesAccount };
+  return { buyerInDirectory, sellerMatchesAccount, env };
 }
 
 // ── Fonction principale : Transmission d'une facture ──────────────────────────
@@ -286,24 +592,47 @@ export async function transmitInvoice(
       };
     }
 
-    // ── 2. Génération du XML CII ─────────────────────────────────────────
+    // ── 2. Connexion SuperPDP de l'utilisateur (token = SON entreprise) ──
+    // MULTI-SIRET : chez SuperPDP, le token détermine le vendeur (les factures
+    // sont « scoped » au compte authentifié). Pour transmettre pour l'utilisateur,
+    // le token DOIT porter SON SIREN — obtenu via le flux Authorization Code et
+    // stocké chiffré dans superpdp_connections. Sans connexion → on s'arrête
+    // proprement avec un code que l'UI sait gérer (proposer le branchement).
+    const userId = (profile as any).id as string | undefined;
+    if (!userId) {
+      return {
+        success: false,
+        error: 'Impossible d\'identifier l\'utilisateur pour la transmission',
+        errorCode: 'INTERNAL_ERROR',
+      };
+    }
+    const userToken = await getAccessTokenForUser(userId);
+    if (!userToken) {
+      return {
+        success: false,
+        error: 'Votre plateforme de facturation (SuperPDP) n\'est pas encore connectée. Branchez-la une seule fois pour transmettre légalement vos factures.',
+        errorCode: 'SUPERPDP_NOT_CONNECTED',
+      };
+    }
+
+    // ── 3. Génération du XML CII ─────────────────────────────────────────
+    // SuperPDP exige le customization ID CII pur (urn:cen.eu:en16931:2017),
+    // PAS l'ID Factur-X (rejeté en « unknown profile »). On le passe explicitement.
     console.log('[SuperPDP] Génération XML CII pour facture', invoice.number);
-    const ciiXml = generateFacturXXml(invoice, profile);
+    const ciiXml = generateFacturXXml(invoice, profile, { customizationId: 'urn:cen.eu:en16931:2017' });
     console.log('[SuperPDP] XML généré, taille:', ciiXml.length, 'caractères');
 
-    // ── 3. Authentification OAuth2 ───────────────────────────────────────
-    const token = await getAccessToken();
-
-    // ── 4. Envoi à Super PDP ─────────────────────────────────────────────
+    // ── 4. Envoi à Super PDP (token de l'utilisateur) ────────────────────
     // D'après la documentation officielle + quick_start.js :
     // POST /v1.beta/invoices avec le XML brut en body (pas de FormData).
-    // Content-Type auto-détecté par l'API. Headers minimaux : Authorization.
+    // Le token porte le SIREN de l'utilisateur → le vendeur du XML (SellerTradeParty)
+    // correspond au compte authentifié → la facture est acceptée.
     console.log('[SuperPDP] Transmission de la facture', invoice.number, '...');
 
     const response = await fetch(`${BASE_URL}/invoices`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${userToken.token}`,
         'Content-Type': 'application/xml; charset=utf-8',
         'Accept': 'application/json',
       },
@@ -341,7 +670,7 @@ export async function transmitInvoice(
         }
 
         // Diagnostic : rapport de validation détaillé (BR-XX / règles EN 16931)
-        const report = await validateXmlReport(ciiXml);
+        const report = await validateXmlReport(ciiXml, userToken.token);
         if (report) {
           const arr: any[] = Array.isArray(report)
             ? report
@@ -391,13 +720,14 @@ export async function transmitInvoice(
       }
 
       // Erreur serveur (500+) — retryable SAUF si la cause est identifiée comme
-      // non retentable. On diagnostique : acheteur non inscrit à l'e-invoicing
-      // (absent de l'annuaire DGFiP) = non routable → SuperPDP répond 500. Dans ce
-      // cas, message clair et NON retenté (retry inutile tant que le client n'est
-      // pas inscrit). Sinon, on suppose une instabilité serveur → retry.
+      // non retentable. On diagnostique via companies/me + annuaire.
       if (response.status >= 500) {
-        const diag = await diagnoseTransmissionContext(invoice, profile);
-        if (diag.buyerInDirectory === false) {
+        const diag = await diagnoseTransmissionContext(invoice, profile, userToken.token);
+
+        // PROD : french_directory = annuaire DGFiP réel. Acheteur absent = non
+        // routable → message clair, NON retenté (retry inutile tant que le client
+        // n'est pas inscrit).
+        if (diag.env !== 'sandbox' && diag.buyerInDirectory === false) {
           const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
           return {
             success: false,
@@ -405,6 +735,20 @@ export async function transmitInvoice(
             errorCode: 'RECEIVER_NOT_REGISTERED',
           };
         }
+
+        // SANDBOX : french_directory interroge l'annuaire DGFiP RÉEL (vide pour
+        // les entreprises de test) → ce check n'est PAS fiable en sandbox. Un 500
+        // sandbox vient généralement d'un acheteur de test invalide/non routable
+        // (le quick_start officiel utilise Tricatel). Message clair, non retenté.
+        if (diag.env === 'sandbox') {
+          const sellerOk = diag.sellerMatchesAccount !== false;
+          return {
+            success: false,
+            error: `Erreur serveur SuperPDP en sandbox (500). Causes probables : (1) l'acheteur n'est pas une entreprise de test sandbox valide/routable — utilise celle du quick_start officiel (Tricatel), pas un numéro inventé ; (2) instabilité sandbox. Vendeur ${sellerOk ? 'OK (matche le token)' : 'en MISMATCH (le SIREN profil ≠ token)'}.`,
+            errorCode: 'SANDBOX_CONFIG_ERROR',
+          };
+        }
+
         return {
           success: false,
           error: `Erreur serveur Super PDP (${response.status}) — sera retenté automatiquement`,

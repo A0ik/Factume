@@ -255,7 +255,13 @@
       "Bash(vercel whoami *)",
       "Bash(echo \"=====EXIT: $?=====\")",
       "Bash(rtk vitest *)",
-      "Bash(curl -sS -D - -o /tmp/paybody.html \"https://factu.me/pay/testtoken123\" 2>&1 | head -20; echo \"--- body head ---\"; head -c 400 /tmp/paybody.html 2>/dev/null; echo \"\"; echo \"--- git pushed? ---\"; cd \"c:/Users/salma/Desktop/FACTU.ME PACKAGE/Factu.me\" && rtk git log --oneline -1 2>&1 | tail -2 && rtk git status --short 2>&1 | grep -c \"^\" )"
+      "Bash(curl -sS -D - -o /tmp/paybody.html \"https://factu.me/pay/testtoken123\" 2>&1 | head -20; echo \"--- body head ---\"; head -c 400 /tmp/paybody.html 2>/dev/null; echo \"\"; echo \"--- git pushed? ---\"; cd \"c:/Users/salma/Desktop/FACTU.ME PACKAGE/Factu.me\" && rtk git log --oneline -1 2>&1 | tail -2 && rtk git status --short 2>&1 | grep -c \"^\" )",
+      "Bash(node scripts/superpdp-test-buyer.mjs)",
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-inspect.mjs)",
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-probe.mjs)",
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-post.mjs)",
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-routing-test.mjs)",
+      "Bash(SID=019ed756-508b-7220-8f9a-5bd54802470e SSECRET=ZPWItgh9wjyT0yhBePp2byQRZ7Ck0xczsktEnQ node scripts/superpdp-difftest.mjs)"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

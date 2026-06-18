@@ -84,7 +84,17 @@ function getVatExemptionReason(vatRate: number, legalStatus?: string): string {
 /**
  * Génère le XML Factur-X conformément au profil EN 16931
  */
-export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
+export function generateFacturXXml(
+  invoice: Invoice,
+  profile: Profile,
+  opts?: { customizationId?: string }
+): string {
+  // ATELIER (e-invoicing) — SuperPDP (POST /invoices en CII brut) EXIGE le
+  // customization ID CII pur « urn:cen.eu:en16931:2017 » et REJETTE l'ID Factur-X
+  // (« unknown profile for CII: …#conformant#urn:factur-x.eu:1p0:en16931 » → 400,
+  // parfois 500). Le PDF Factur-X embarqué (.fx) garde l'ID Factur-X. D'où ce
+  // paramètre : transmitInvoice passe l'ID CII ; createFacturXPdf garde Factur-X.
+  const customizationId = opts?.customizationId || 'urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:en16931';
   const currency = profile.currency || 'EUR';
 
   // Validation des données requises
@@ -304,7 +314,7 @@ export function generateFacturXXml(invoice: Invoice, profile: Profile): string {
 
   <rsm:ExchangedDocumentContext>
     <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:en16931</ram:ID>
+      <ram:ID>${customizationId}</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
 

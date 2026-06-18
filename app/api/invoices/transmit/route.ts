@@ -144,6 +144,28 @@ export async function POST(req: NextRequest) {
       });
 
     } else {
+      // Cas spécial : compte SuperPDP non connecté → l'utilisateur doit brancher sa
+      // plateforme (une fois). Non retentable, statut réinitialisé (pas un échec
+      // de transmission, un prérequis manquant). L'UI reçoit connectUrl pour agir.
+      if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+        await admin
+          .from('invoices')
+          .update({
+            pdp_status: 'not_transmitted',
+            pdp_last_error: result.error,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', invoiceId);
+
+        return NextResponse.json({
+          success: false,
+          error: result.error,
+          errorCode: 'SUPERPDP_NOT_CONNECTED',
+          connectUrl: '/api/superpdp/connect',
+          retryable: false,
+        }, { status: 422 });
+      }
+
       // Déterminer si c'est retryable
       const retryable = isRetryableError(result);
       const retryCount = (invoice.pdp_retry_count || 0) + 1;
