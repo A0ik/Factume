@@ -735,7 +735,7 @@ export default function CapturePage() {
 
         // Handle tier-specific error
         if (res.status === 403 && errorData.tier !== 'pro') {
-          toast.error(`${errorData.message}\n\nVotre plan actuel: ${errorData.tier === 'free' ? 'Gratuit' : 'Solo'}\nDossiers existants: ${errorData.currentWorkspaces}\n\nPassez à Pro pour créer plusieurs dossiers.`);
+          toast.error(`${errorData.message}\n\nVotre plan actuel: ${errorData.tier === 'free' ? 'Gratuit' : errorData.tier === 'business' ? 'Business' : 'Pro'}\nDossiers existants: ${errorData.currentWorkspaces}\n\nPassez à Pro pour créer plusieurs dossiers.`);
           return;
         }
 
@@ -1663,7 +1663,7 @@ export default function CapturePage() {
               {!isPro && workspaces.length >= 1 && (
                 <div className="mx-5 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                   <p className="text-xs text-amber-800">
-                    <strong>Limitation de plan:</strong> Les utilisateurs Solo peuvent gérer un seul dossier.
+                    <strong>Limitation de plan:</strong> Les utilisateurs du plan Gratuit peuvent gérer un seul dossier.
                     {' '}Passez à <span className="font-semibold">Pro</span> pour créer plusieurs dossiers d'entreprise.
                   </p>
                 </div>

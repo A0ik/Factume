@@ -47,26 +47,26 @@ interface LivePdfCanvasProps {
 function PdfSkeleton() {
   return (
     <div className="flex flex-col items-center justify-center h-full w-full p-4">
-      <div className="w-full max-w-[595px] aspect-[210/297] bg-white dark:bg-slate-800 rounded-lg shadow-xl overflow-hidden">
+      <div className="w-full max-w-[595px] aspect-[210/297] bg-white dark:bg-white/[0.04] rounded-lg shadow-xl overflow-hidden">
         <div className="p-8 space-y-4 animate-pulse">
           <div className="flex justify-between">
-            <div className="h-6 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
-            <div className="h-4 bg-gray-100 dark:bg-slate-700 rounded w-1/6" />
+            <div className="h-6 bg-gray-100 dark:bg-white/[0.06] rounded w-1/4" />
+            <div className="h-4 bg-gray-100 dark:bg-white/[0.06] rounded w-1/6" />
           </div>
           <div className="mt-6 space-y-2">
-            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/3" />
-            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/2" />
-            <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-2/5" />
+            <div className="h-3 bg-gray-100 dark:bg-white/[0.06] rounded w-1/3" />
+            <div className="h-3 bg-gray-100 dark:bg-white/[0.06] rounded w-1/2" />
+            <div className="h-3 bg-gray-100 dark:bg-white/[0.06] rounded w-2/5" />
           </div>
           <div className="mt-6 space-y-2">
-            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
-            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-5/6" />
-            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-4/6" />
-            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-full" />
-            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded w-3/4" />
+            <div className="h-2 bg-gray-100 dark:bg-white/[0.06] rounded w-full" />
+            <div className="h-2 bg-gray-100 dark:bg-white/[0.06] rounded w-5/6" />
+            <div className="h-2 bg-gray-100 dark:bg-white/[0.06] rounded w-4/6" />
+            <div className="h-2 bg-gray-100 dark:bg-white/[0.06] rounded w-full" />
+            <div className="h-2 bg-gray-100 dark:bg-white/[0.06] rounded w-3/4" />
           </div>
           <div className="mt-6 flex justify-end">
-            <div className="h-5 bg-gray-100 dark:bg-slate-700 rounded w-1/4" />
+            <div className="h-5 bg-gray-100 dark:bg-white/[0.06] rounded w-1/4" />
           </div>
         </div>
       </div>
@@ -365,9 +365,9 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
 
   // ─── Render ──────────────────────────────────────────────
   return (
-    <div className={`relative flex flex-col h-full bg-gray-100 dark:bg-slate-900 ${className || ''}`}>
+    <div className={`relative flex flex-col h-full bg-gray-100 dark:bg-zinc-950 ${className || ''}`}>
       {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-white/10">
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-white/[0.04] border-b border-gray-200 dark:border-white/10">
         <div className="flex items-center gap-2">
           <Eye size={14} className="text-gray-400" />
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -460,7 +460,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 rounded-lg flex items-center justify-center backdrop-blur-[2px]"
+                  className="absolute inset-0 bg-white/40 dark:bg-zinc-950/40 rounded-lg flex items-center justify-center backdrop-blur-[2px]"
                 >
                   <Loader2 size={20} className="text-gray-400 animate-spin" />
                 </motion.div>
@@ -474,7 +474,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
       </div>
 
       {/* Quick Stats Bar */}
-      <div className="shrink-0 px-4 py-2 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
+      <div className="shrink-0 px-4 py-2 bg-white dark:bg-white/[0.04] border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="text-center">
             <p className="text-[10px] text-gray-400 uppercase">Total TTC</p>

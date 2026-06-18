@@ -837,7 +837,7 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
                   <Zap size={18} className="text-amber-500 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Disponible avec Solo ou Pro</p>
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Disponible avec Pro</p>
                   <p className="text-xs text-amber-600 dark:text-amber-500/80 mt-0.5">Dicttez votre document à voix haute, l'IA le remplit automatiquement</p>
                 </div>
               </motion.button>

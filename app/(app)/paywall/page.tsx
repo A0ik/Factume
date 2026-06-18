@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getDeviceFingerprint } from '@/lib/fingerprint';
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES & PLAN DATA — 3 plans obligatoires : Gratuit / Pro / Business
@@ -113,7 +114,9 @@ export default function PaywallPage() {
   const isDark = resolvedTheme === 'dark';
 
   const [loading, setLoading] = useState<string | null>(null);
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  // OVERLORD (CIBLE 9) — annuel par défaut : c'est le levier de conversion #1
+  // (les pages optimisées passent de 3,8% à 8-12%). Prix affiché en équivalent mensuel.
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
   const isYearly = billing === 'yearly';
   const [trialLoading, setTrialLoading] = useState(false);
   const trialTriggered = useRef(false);
@@ -134,9 +137,8 @@ export default function PaywallPage() {
     if (!profile?.id) return;
     setTrialLoading(true);
     try {
-      const fp = btoa(
-        `${navigator.userAgent}|${screen.width}x${screen.height}|${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
-      ).slice(0, 64);
+      // OVERLORD (CIBLE 2) — visitorId FingerprintJS (robuste) au lieu du btoa trivial.
+      const fp = await getDeviceFingerprint();
       const res = await fetch('/api/trial/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -214,10 +216,13 @@ export default function PaywallPage() {
   const used = sub.invoiceCount ?? 0;
   const progress = Math.min(100, (used / INVOICE_LIMIT) * 100);
 
+  // OVERLORD (CIBLE 9) — un SEUL accent chromatique (émeraude) pour la cohérence
+  // « Calme dense / Émeraude raffiné » : Pro = émeraude vif (héros), Business =
+  // émeraude profond (premium), Free = zinc (discret). Fini le violet/bleu hors palette.
   const accentGrad: Record<Plan['accent'], string> = {
     zinc: 'linear-gradient(135deg, #52525b, #27272a)',
     emerald: 'linear-gradient(135deg, #10b981, #047857)',
-    violet: 'linear-gradient(135deg, #1e40af, #6d28d9)',
+    violet: 'linear-gradient(135deg, #047857, #065f46)',
   };
 
   return (

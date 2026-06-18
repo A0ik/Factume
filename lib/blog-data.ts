@@ -724,7 +724,7 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           'Le premier avantage est le gain de temps. Un document signé électroniquement peut être finalisé en quelques minutes, contre plusieurs jours pour un document papier (impression, envoi, signature, retour). Pour les entreprises qui signent régulièrement des contrats, le gain est considérable.',
           'Le deuxième avantage est la réduction des coûts. Plus d\'impression, de papier, d\'enveloppes, de timbres, ni de frais d\'envoi en recommandé. Pour une TPE qui envoie 50 devis par mois, l\'économie peut atteindre 200 a 300 euros mensuels.',
-          'Enfin, la traçabilité est totale : vous savez exactement qui a signé, quand, et depuis quelle adresse IP. En cas de litige, ces informations constituent des preuves solides. Factu.me inclut la signature eIDAS gratuitement dans ses plans Solo et supérieurs.',
+          'Enfin, la traçabilité est totale : vous savez exactement qui a signé, quand, et depuis quelle adresse IP. En cas de litige, ces informations constituent des preuves solides. Factu.me inclut la signature eIDAS gratuitement dans ses plans Pro et supérieurs.',
         ],
       },
     ],

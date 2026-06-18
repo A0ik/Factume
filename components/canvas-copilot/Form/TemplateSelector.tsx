@@ -43,7 +43,7 @@ const LIGHT_PALETTE: MiniPalette = {
   divider: '#e5e7eb',
 };
 
-// Obsidian — aligné sur le wrapper dark:bg-slate-800 (#1e293b) du parent.
+// Obsidian — palette sombre pour le rendu des miniatures de template (aperçu).
 const DARK_PALETTE: MiniPalette = {
   bg: '#1e293b',
   border: '#334155',
@@ -139,7 +139,7 @@ export default function TemplateSelector({ value, onChange }: TemplateSelectorPr
               )}
             >
               {/* Mini SVG preview */}
-              <div className="w-full aspect-[210/297] p-1.5 bg-white dark:bg-slate-800">
+              <div className="w-full aspect-[210/297] p-1.5 bg-white dark:bg-white/[0.04]">
                 <MiniPreview accent={template.accent} isActive={isActive} isDark={isDark} />
               </div>
 

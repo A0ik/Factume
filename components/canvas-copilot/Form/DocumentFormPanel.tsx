@@ -41,7 +41,7 @@ function FormSection({ title, icon, children, defaultOpen = true, badge }: Secti
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={springFast}
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+      className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
     >
       {/* Section header */}
       <button
@@ -681,7 +681,7 @@ export default function DocumentFormPanel({
             pendant la saisie. Sorti de la FormSection (overflow-hidden) pour que
             le sticky colle au viewport, pas à la card. backdrop-blur reste propre
             au-dessus des cards ET des zones blanches. */}
-        <div className="sticky bottom-0 z-10 -mx-4 px-4 pb-3 pt-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-gray-100 dark:border-white/[0.06]">
+        <div className="sticky bottom-0 z-10 -mx-4 px-4 pb-3 pt-3 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-t border-gray-100 dark:border-white/[0.06]">
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => addItem()}
@@ -697,7 +697,7 @@ export default function DocumentFormPanel({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springFast, delay: 0.1 }}
-          className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+          className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
         >
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">

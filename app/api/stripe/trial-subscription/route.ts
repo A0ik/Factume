@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
-import { getClientIp } from '@/lib/rate-limit';
+import { getClientIp, rateLimit } from '@/lib/rate-limit';
 import { isDisposableEmail } from '@/lib/disposable-emails';
 
 // MONOLITH: Plus de plan Solo — solo legacy → pro
@@ -22,6 +22,15 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié. Veuillez vous reconnecter.' }, { status: 401 });
     const userId = user.id;
+
+    // OVERLORD (CIBLE 2) — rate-limit anti-brute-force sur l'essai Stripe.
+    const rl = rateLimit({ key: getClientIp(req), limit: 5, windowMs: 60_000 });
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans une minute.' },
+        { status: 429 },
+      );
+    }
 
     const { plan, yearly = false } = await req.json();
     const interval = yearly ? 'yearly' : 'monthly';

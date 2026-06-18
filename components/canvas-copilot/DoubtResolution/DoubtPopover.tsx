@@ -56,7 +56,7 @@ function DoubtCard({ doubt, onConfirm, onCorrect, onDismiss }: DoubtCardProps) {
       animate="visible"
       exit="exit"
       layout
-      className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-slate-800 shadow-xl shadow-amber-500/10"
+      className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-white/[0.04] shadow-xl shadow-amber-500/10"
     >
       {/* Emerald pulse border */}
       <motion.div
@@ -85,7 +85,7 @@ function DoubtCard({ doubt, onConfirm, onCorrect, onDismiss }: DoubtCardProps) {
         </div>
 
         {/* Field name */}
-        <div className="mb-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-700 inline-flex items-center gap-1.5">
+        <div className="mb-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/[0.06] inline-flex items-center gap-1.5">
           <span className="text-[10px] font-bold text-gray-400 uppercase">{fieldLabel}</span>
         </div>
 
@@ -107,7 +107,7 @@ function DoubtCard({ doubt, onConfirm, onCorrect, onDismiss }: DoubtCardProps) {
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               autoFocus
-              className="w-full px-3 py-2.5 rounded-xl border border-blue-300 dark:border-blue-500/40 text-sm font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="w-full px-3 py-2.5 rounded-xl border border-blue-300 dark:border-blue-500/40 text-sm font-semibold text-gray-900 dark:text-white bg-white dark:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               placeholder="Corrigez la valeur..."
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && editValue.trim()) {
@@ -126,7 +126,7 @@ function DoubtCard({ doubt, onConfirm, onCorrect, onDismiss }: DoubtCardProps) {
               </button>
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-500 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/[0.06] text-gray-500 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
               >
                 Annuler
               </button>

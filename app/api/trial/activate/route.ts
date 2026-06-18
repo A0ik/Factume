@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { isDisposableEmail } from '@/lib/disposable-emails';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * POST /api/trial/activate
@@ -19,6 +20,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié. Veuillez vous reconnecter.' }, { status: 401 });
     }
     const userId = user.id;
+
+    // OVERLORD (CIBLE 2) — rate-limit anti-brute-force de l'activation d'essai.
+    const rl = rateLimit({ key: getClientIp(req), limit: 5, windowMs: 60_000 });
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans une minute.' },
+        { status: 429 },
+      );
+    }
 
     // 2. Parse body
     // MONOLITH: Plus de plan Solo — 'solo' legacy → 'pro'
@@ -57,9 +67,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Use existing RPC for trial validation (checks IP, email, etc.)
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || req.headers.get('x-real-ip')
-      || null;
+    const rawIp = getClientIp(req);
+    const clientIp = rawIp !== 'unknown' ? rawIp : null;
 
     try {
       const { data: trialCheck, error: trialCheckError } = await supabase
@@ -86,15 +95,25 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 8. Fingerprint anti-abuse check
+    // 8. Empreinte device anti-abuse — cross-account linking.
+    // OVERLORD (CIBLE 2) : on cherche l'empreinte (trial_fingerprint OU
+    // device_fingerprint) sur un AUTRE compte. L'empreinte est désormais un
+    // visitorId FingerprintJS (bien plus robuste que l'ancien btoa UA|screen|tz).
     if (fingerprint) {
-      const { data: existingFp } = await supabase
+      const { data: byTrialFp } = await supabase
         .from('profiles')
         .select('id')
+        .neq('id', userId)
         .eq('trial_fingerprint', fingerprint)
         .limit(1);
+      const { data: byDeviceFp } = await supabase
+        .from('profiles')
+        .select('id')
+        .neq('id', userId)
+        .eq('device_fingerprint', fingerprint)
+        .limit(1);
 
-      if (existingFp && existingFp.length > 0) {
+      if ((byTrialFp && byTrialFp.length > 0) || (byDeviceFp && byDeviceFp.length > 0)) {
         return NextResponse.json({
           error: 'Un essai a déjà été activé sur cet appareil.',
         }, { status: 400 });
@@ -114,6 +133,7 @@ export async function POST(req: NextRequest) {
       is_trial_active: true,
       has_used_trial: true,
       trial_fingerprint: fingerprint || null,
+      device_fingerprint: fingerprint || null,
       trial_ip_address: clientIp || null,
     };
 

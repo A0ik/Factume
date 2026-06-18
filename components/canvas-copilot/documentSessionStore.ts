@@ -569,9 +569,21 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
   // ─── Edition — hydratation depuis une facture existante ───
   hydrate: (invoice) => {
     const issueDate = invoice.issue_date || new Date().toISOString().split('T')[0];
-    const initialDays = invoice.due_date
-      ? Math.max(0, Math.round((new Date(invoice.due_date).getTime() - new Date(issueDate).getTime()) / (1000 * 60 * 60 * 24)))
-      : 30;
+    // OVERLORD (CIBLE 8) — préférer le terme persisté sur la facture : '' = à
+    // réception (0 jour), '15'/'30'/… = N jours. Repli sur due_date pour les
+    // factures antérieures (colonne absente avant migration).
+    const rawTerms = (invoice as any).payment_terms;
+    const fromTerms: number | null =
+      typeof rawTerms === 'string' && rawTerms.trim() !== '' && /^\d+$/.test(rawTerms.trim())
+        ? parseInt(rawTerms.trim(), 10)
+        : rawTerms === ''
+          ? 0
+          : null;
+    const initialDays = fromTerms !== null
+      ? fromTerms
+      : invoice.due_date
+        ? Math.max(0, Math.round((new Date(invoice.due_date).getTime() - new Date(issueDate).getTime()) / (1000 * 60 * 60 * 24)))
+        : 30;
     const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
 
     const rawItems = (invoice.items?.length ? invoice.items : []).map((i) => {
@@ -603,8 +615,11 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       clientAddress: (invoice as any).client_address || invoice.client?.address || '',
       clientCity: (invoice as any).client_city || invoice.client?.city || '',
       clientPostalCode: (invoice as any).client_postal_code || invoice.client?.postal_code || '',
-      clientSiret: invoice.client?.siret || '',
-      clientVatNumber: invoice.client?.vat_number || '',
+      // OVERLORD (CIBLE 6) — fallback sur la colonne plate (client libre/non lié) :
+      // sans ça, SIRET/TVA s'effondrent à '' à la réouverture d'édition et sont
+      // écrasés (perdus) à la prochaine sauvegarde. Coherent avec address/email.
+      clientSiret: (invoice as any).client_siret || invoice.client?.siret || '',
+      clientVatNumber: (invoice as any).client_vat_number || invoice.client?.vat_number || '',
       clientType: (invoice as any).client_type || null,
       items,
       notes: invoice.notes || '',

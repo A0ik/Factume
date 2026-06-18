@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       items, subtotal, vat_amount, discount_percent, discount_amount, total,
       notes, prefix, linked_invoice_id, idempotency_id, client_type,
       client_siret, client_vat_number, client_email, client_phone,
-      client_address, client_city, client_postal_code
+      client_address, client_city, client_postal_code, payment_terms
     } = body;
 
     // FIX GAP-6: Validation serveur de la date d'émission (anti-antidatage)
@@ -235,16 +235,17 @@ export async function POST(req: NextRequest) {
       if (client_address) inlineFields.client_address = client_address;
       if (client_city) inlineFields.client_city = client_city;
       if (client_postal_code) inlineFields.client_postal_code = client_postal_code;
-      if (Object.keys(inlineFields).length > 0) {
-        try {
-          await createAdminClient().from('invoices')
-            .update({ ...inlineFields, updated_at: new Date().toISOString() })
-            .eq('id', invoice.id);
-        } catch (e: any) {
-          console.warn('[invoices/create] inline client fields persist failed:', e?.message);
-        }
-        Object.assign(invoice, inlineFields);
+      // OVERLORD (CIBLE 8) — toujours persister les conditions (même '' = à réception)
+      // pour que le PDF lise la facture et non le défaut profil ('30').
+      inlineFields.payment_terms = typeof payment_terms === 'string' ? payment_terms : '';
+      try {
+        await createAdminClient().from('invoices')
+          .update({ ...inlineFields, updated_at: new Date().toISOString() })
+          .eq('id', invoice.id);
+      } catch (e: any) {
+        console.warn('[invoices/create] inline client fields persist failed:', e?.message);
       }
+      Object.assign(invoice, inlineFields);
     }
 
     // Update profile stats in background

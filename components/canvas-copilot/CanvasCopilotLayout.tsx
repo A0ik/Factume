@@ -73,7 +73,7 @@ export default function CanvasCopilotLayout({
     <div className="flex flex-col -my-5 -mx-5 lg:-my-6 lg:-mx-8 h-[calc(100dvh-3.5rem-4rem)] lg:h-screen">
 
       {/* ═══════════ TOP HEADER BAR ═══════════ */}
-      <div className="shrink-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 z-20">
+      <div className="shrink-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-white/10 z-20">
         {/* Back button */}
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -126,7 +126,7 @@ export default function CanvasCopilotLayout({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-slate-800"
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/[0.04]"
           >
             <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Total</span>
             <span className="text-sm font-bold text-gray-900 dark:text-white">
@@ -149,7 +149,7 @@ export default function CanvasCopilotLayout({
           className={cn(
             'flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
             saving
-              ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 cursor-wait'
+              ? 'bg-gray-200 dark:bg-white/[0.06] text-gray-400 cursor-wait'
               : `bg-gradient-to-r ${config.gradient} text-white shadow-lg hover:shadow-xl`,
           )}
         >
@@ -199,7 +199,7 @@ export default function CanvasCopilotLayout({
             {/* ═══ Voice-First Bar ═══
                 Voice LEFT = primary (Von Restorff).
                 Text RIGHT = secondary alternative. */}
-            <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-slate-900 z-10">
+            <div className="shrink-0 px-4 py-3 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-950 z-10">
               <div className="flex items-center gap-3">
                 <VoiceOneShot
                   sector={profile?.sector}
@@ -234,7 +234,7 @@ export default function CanvasCopilotLayout({
               FLAW 1: Removed the full-width Create button that was here.
               It duplicated the header button and ate 64px of vertical space.
               FLAW 4: Voice button is FIRST (left), text bar is secondary. */}
-          <div className="shrink-0 px-3 py-2.5 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10">
+          <div className="shrink-0 px-3 py-2.5 border-t border-gray-200 dark:border-white/10 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm z-10">
             <div className="flex items-center gap-2.5">
               {/* HERO: Voice button first — Loi: Von Restorff Effect */}
               <VoiceOneShot

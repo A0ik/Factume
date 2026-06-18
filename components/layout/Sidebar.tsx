@@ -11,7 +11,7 @@ import {
   EyeOff, Eye, LogOut, Moon, Sun, Keyboard,
   DollarSign, ClipboardList, UsersRound,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
-  Briefcase, Lock, ArrowUpRight, Crown, Rocket, Sparkles,
+  Briefcase, Lock, ArrowUpRight, Crown, Sparkles,
   FileSignature,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -28,9 +28,8 @@ import { toast } from 'sonner';
 
 // ─── Tier config (unchanged from original) ───────────────────────
 const TIER_CONFIG = {
-  free: { name: 'Gratuit', nextTier: 'solo', gradient: 'from-gray-600 to-gray-700', icon: Zap, iconColor: 'text-white', message: 'Essai gratuit 7 jours', subtext: 'Accès complet · Sans engagement', cta: '/trial' },
+  free: { name: 'Gratuit', nextTier: 'pro', gradient: 'from-gray-600 to-gray-700', icon: Zap, iconColor: 'text-white', message: 'Essai gratuit 7 jours', subtext: 'Accès complet · Sans engagement', cta: '/trial' },
   trial: { name: 'Essai', nextTier: 'pro', gradient: 'from-purple-500 to-violet-600', icon: Sparkles, iconColor: 'text-white', message: 'Essai en cours', subtext: 'Accès Pro · 7 jours gratuits', cta: '/paywall' },
-  solo: { name: 'Solo', nextTier: 'pro', gradient: 'from-blue-800 via-blue-900 to-indigo-900', icon: Rocket, iconColor: 'text-white', message: 'Passer à Pro', subtext: 'Contrats · Notes de frais · Signatures', cta: '/paywall' },
   pro: { name: 'Pro', nextTier: 'business', gradient: 'from-violet-500 to-violet-600', icon: Crown, iconColor: 'text-white', message: 'Passer à Business', subtext: 'CRM · OCR · API · Multi-comptes', cta: '/paywall' },
   business: { name: 'Business', nextTier: 'business', gradient: 'from-violet-600 to-purple-700', icon: Sparkles, iconColor: 'text-white', message: 'Tout inclus', subtext: 'Fonctionnalités illimitées', cta: '/paywall' },
 } as const;
@@ -64,7 +63,11 @@ export default function Sidebar() {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const overdueCount = invoices.filter((i) => i.status === 'overdue').length;
-  const currentTier = (['free','trial','solo','pro','business'].includes(sub.tier) ? sub.tier : 'free') as keyof typeof TIER_CONFIG;
+  // OVERLORD (CIBLE 3) — 'solo' est un plan legacy supprimé : on le mappe sur 'pro'
+  // (resolveEffectiveTier fait de même) pour qu'un profil DB encore à 'solo'
+  // n'affiche plus jamais le badge fantôme.
+  const tierKey = sub.tier === 'solo' ? 'pro' : sub.tier;
+  const currentTier = (['free','trial','pro','business'].includes(tierKey) ? tierKey : 'free') as keyof typeof TIER_CONFIG;
   const tierConfig = TIER_CONFIG[currentTier];
   const shouldShowUpgrade = sub.tier !== 'business';
 

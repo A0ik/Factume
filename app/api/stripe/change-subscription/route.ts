@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import { logStripeEnv, logStripeError } from '@/lib/stripe-diagnostics';
 
 // Structure des prix — MONOLITH: Plus de plan Solo
 const PRICE_IDS: Record<string, Record<string, string>> = {
@@ -67,6 +68,8 @@ function calculateProrata(
 
 export async function POST(req: NextRequest) {
   try {
+    // OVERLORD (CIBLE 4) — trace la présence des vars Stripe pour identifier le 500.
+    logStripeEnv('change-subscription');
     // Auth check - get userId from session, not from body
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -164,6 +167,7 @@ export async function POST(req: NextRequest) {
         const isNotFound = se.code === 'resource_missing' || se.message?.includes('No such subscription');
         if (!isNotFound) {
           console.error('[change-subscription] Erreur Stripe:', se.message);
+          logStripeError('change-subscription', stripeError);
           return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
         }
         // Subscription invalide → on continue vers la création d'une nouvelle
@@ -193,6 +197,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error('[change-subscription] Error:', err.message);
+    logStripeError('change-subscription', error);
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }
@@ -259,6 +264,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error('[change-subscription] GET Error:', err.message);
+    logStripeError('change-subscription:get', error);
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

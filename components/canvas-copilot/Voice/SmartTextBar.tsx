@@ -144,7 +144,7 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
           'flex items-center justify-center w-9 h-9 rounded-xl transition-all flex-shrink-0',
           text.trim() && !isStreaming
             ? 'bg-blue-500 text-white shadow-md shadow-blue-500/15'
-            : 'bg-gray-100 dark:bg-slate-800 text-gray-400 cursor-not-allowed',
+            : 'bg-gray-100 dark:bg-white/[0.04] text-gray-400 cursor-not-allowed',
         )}
       >
         {isStreaming ? (

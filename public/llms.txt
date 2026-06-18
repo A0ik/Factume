@@ -59,17 +59,8 @@ Mots-clés associés : facturation intelligence artificielle, facturation IA, lo
 - 1 template basique
 - Essai gratuit 7 jours sans engagement
 
-### Plan Solo — 14,99 €/mois (ou 12 €/mois en annuel)
-- Factures et devis illimités
-- Clients illimités
-- 6 templates professionnels
-- Dictée vocale (voice-to-invoice)
-- Signature électronique eIDAS niveau Avancé (gratuite)
-- Envoi par email, paiement en ligne Stripe & SumUp
-- Relances automatiques impayés
-
 ### Plan Pro — 29,99 €/mois (ou 24 €/mois en annuel) — Populaire
-- Tout Solo +
+- Tout le plan Gratuit +
 - Contrats de travail CDI/CDD avec signature eIDAS
 - CRM avec pipeline commercial
 - Factures récurrentes
@@ -138,7 +129,7 @@ Garantie satisfait ou remboursé : 30 jours.
 ## Différenciateurs clés
 
 1. **Facturation vocale unique** — dictez votre facture, l'IA la génère en quelques secondes
-2. **Signature eIDAS gratuite** — incluse dès le plan Solo, sans surcoût
+2. **Signature eIDAS gratuite** — incluse dès le plan Pro, sans surcoût
 3. **Contrats de travail intégrés** — CDI/CDD avec conformité droit français, unique sur ce marché
 4. **Factur-X natif** — prêt pour la réforme facturation électronique 2026
 5. **IA locale gratuite** — modèles OpenRouter, 0 € de coût IA pour l'opérateur

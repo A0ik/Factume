@@ -128,6 +128,8 @@ export default function CreateDocumentContent() {
             document_type: effectiveType,
             issue_date: session.issueDate,
             due_date: session.dueDate || undefined,
+            // OVERLORD (CIBLE 8) — '' pour « à réception », sinon le nombre de jours.
+            payment_terms: session.paymentDays > 0 ? String(session.paymentDays) : '',
             items: session.items,
             notes: session.notes || undefined,
             discount_percent: session.discountPercent > 0 ? session.discountPercent : undefined,

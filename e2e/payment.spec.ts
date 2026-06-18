@@ -14,7 +14,7 @@ test.describe('Payment Flow', () => {
 
     await expect(page.locator('h1')).toContainText('Choisissez votre plan');
 
-    const plans = ['Gratuit', 'Solo', 'Pro', 'Business'];
+    const plans = ['Gratuit', 'Pro', 'Business'];
     for (const plan of plans) {
       await expect(page.locator(`text=${plan}`)).toBeVisible();
     }
@@ -22,7 +22,7 @@ test.describe('Payment Flow', () => {
 
   test('should initiate Stripe checkout', async ({ page }) => {
     await page.click('text=Abonnement');
-    await page.locator('button').filter({ hasText: 'Solo' }).getByText('Commencer').click();
+    await page.locator('button').filter({ hasText: 'Pro' }).getByText('Commencer').click();
 
     // Should redirect to Stripe or show Stripe modal
     await expect(page.locator('[data-testid="stripe-loading"]')).toBeVisible();
@@ -36,7 +36,7 @@ test.describe('Payment Flow', () => {
     const paywall = page.locator('[data-testid="paywall-modal"]');
     if (await paywall.isVisible()) {
       await expect(paywall).toContainText('Limite atteinte');
-      await expect(paywall.locator('button:has-text("Passer à Solo")')).toBeVisible();
+      await expect(paywall.locator('button:has-text("Passer à Pro")')).toBeVisible();
     }
   });
 });

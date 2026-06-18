@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier l'abonnement - Les signatures de devis sont disponibles pour Solo, Pro et Business
+    // Vérifier l'abonnement - Les signatures de devis sont disponibles pour Pro et Business
+    // ('solo' conservé dans la liste par sécurité legacy : un profil encore à 'solo' est traité comme Pro)
     const { data: profile } = await admin
       .from('profiles')
       .select('subscription_tier, is_trial_active')
@@ -75,10 +76,10 @@ export async function POST(req: NextRequest) {
 
     if (!isPaid && !isTrial) {
       return NextResponse.json({
-        error: 'La signature électronique de devis est disponible avec les plans Solo, Pro et Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
+        error: 'La signature électronique de devis est disponible avec les plans Pro et Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.',
         feature: 'quote_signing',
-        requiredPlan: 'solo',
-        upgradeUrl: '/paywall?plan=solo'
+        requiredPlan: 'pro',
+        upgradeUrl: '/paywall?plan=pro'
       }, { status: 402 });
     }
 

@@ -87,27 +87,15 @@ export function PdfPreviewModal({
         let arrayBuffer: ArrayBuffer;
 
         try {
-          if (paymentUrl) {
-            // ALCHEMIST — SERVEUR d'abord quand un lien de paiement existe : le PDF
-            // pdf-lib embarque le QR côté Node (fiable). Le rendu client @react-pdf
-            // rate le QR en silence (canvas/CSP/iOS) puis affiche un pavé « Payer ».
-            const response = await fetch(`/api/download/pdf/${invoice.id}?mode=preview`);
-            if (!response.ok) throw new Error('Erreur serveur');
-            arrayBuffer = await (await response.blob()).arrayBuffer();
-          } else {
-            // Pas de lien de paiement : rendu client @react-pdf/renderer (rapide,
-            // hors réseau) — aucun QR à afficher dans ce cas.
-            const { pdf } = await import('@react-pdf/renderer');
-            const { PdfDocument } = await import('@/components/pdf-document');
-            const element = React.createElement(PdfDocument, {
-              invoice: pdfInvoice,
-              profile: profile || ({} as Profile),
-            });
-            const blob = await (pdf as any)(element).toBlob();
-            arrayBuffer = await blob.arrayBuffer();
-          }
+          // OVERLORD (CIBLE 7) — TOUJOURS rendre via le serveur pdf-lib (le MÊME
+          // moteur que le téléchargement) pour garantir preview == PDF au pixel
+          // près. L'ancienne branche @react-pdf/renderer n'implémentait PAS les
+          // templates 7/8/9 (PUR/AUDACE/ÉLÉGANCE) et divergeait du PDF téléchargé.
+          const response = await fetch(`/api/download/pdf/${invoice.id}?mode=preview`);
+          if (!response.ok) throw new Error('Erreur serveur');
+          arrayBuffer = await (await response.blob()).arrayBuffer();
         } catch {
-          // Repli : rendu client @react-pdf/renderer (QR injecté via withQrDataUrl).
+          // Repli réseau : rendu client @react-pdf/renderer (QR injecté via withQrDataUrl).
           const { pdf } = await import('@react-pdf/renderer');
           const { PdfDocument } = await import('@/components/pdf-document');
           const element = React.createElement(PdfDocument, {
@@ -230,7 +218,7 @@ export function PdfPreviewModal({
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center flex-shrink-0">
             <FileText size={16} className="text-white" />
@@ -239,7 +227,7 @@ export function PdfPreviewModal({
             <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">
               Apercu
             </h2>
-            <p className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
+            <p className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">
               {invoice.number}
             </p>
           </div>
@@ -248,21 +236,21 @@ export function PdfPreviewModal({
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Zoom controls (canvas mode only) */}
           {mode === 'canvas' && (
-            <div className="hidden sm:flex items-center gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+            <div className="hidden sm:flex items-center gap-1 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-0.5">
               <button
                 onClick={zoomOut}
                 disabled={zoom <= 0.5}
-                className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-white/[0.08] text-gray-600 dark:text-zinc-300 disabled:opacity-30 transition-colors"
               >
                 <ZoomOut size={14} />
               </button>
-              <span className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 w-9 text-center tabular-nums">
+              <span className="text-[10px] font-semibold text-gray-500 dark:text-zinc-400 w-9 text-center tabular-nums">
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={zoomIn}
                 disabled={zoom >= 3}
-                className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 disabled:opacity-30 transition-colors"
+                className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-white/[0.08] text-gray-600 dark:text-zinc-300 disabled:opacity-30 transition-colors"
               >
                 <ZoomIn size={14} />
               </button>
@@ -270,7 +258,7 @@ export function PdfPreviewModal({
           )}
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 text-xs font-bold transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/[0.04] hover:bg-gray-200 dark:hover:bg-white/[0.08] text-gray-700 dark:text-zinc-200 text-xs font-bold transition-colors"
           >
             Fermer
           </button>
@@ -280,7 +268,7 @@ export function PdfPreviewModal({
       {/* ── Content ── */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-200/50 dark:bg-slate-800/50"
+        className="flex-1 overflow-auto bg-gray-200/50 dark:bg-white/[0.03]"
       >
         {/* Loading */}
         {mode === 'loading' && (
@@ -290,7 +278,7 @@ export function PdfPreviewModal({
                 size={32}
                 className="animate-spin text-primary mx-auto mb-3"
               />
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-zinc-400">
                 Generation de l&apos;apercu...
               </p>
             </div>
@@ -317,7 +305,7 @@ export function PdfPreviewModal({
                 </button>
                 <button
                   onClick={handleOpenNewTab}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-sm font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/[0.04] text-gray-700 dark:text-zinc-200 text-sm font-bold hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
                 >
                   <ExternalLink size={16} />
                   Nouvel onglet
@@ -347,7 +335,7 @@ export function PdfPreviewModal({
                   />
                 </div>
                 {numPages > 1 && (
-                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-2 font-medium">
+                  <p className="text-[10px] text-gray-400 dark:text-zinc-500 mt-2 font-medium">
                     Page {i + 1} sur {numPages}
                   </p>
                 )}
@@ -367,24 +355,24 @@ export function PdfPreviewModal({
       </div>
 
       {/* ── Bottom Actions ── */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-white/10 flex-shrink-0 safe-area-bottom">
+      <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-white/10 flex-shrink-0 safe-area-bottom">
         {/* Mobile zoom controls (canvas mode) */}
         {mode === 'canvas' && (
-          <div className="flex sm:hidden items-center gap-0.5 bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+          <div className="flex sm:hidden items-center gap-0.5 bg-gray-100 dark:bg-white/[0.04] rounded-lg p-0.5">
             <button
               onClick={zoomOut}
               disabled={zoom <= 0.5}
-              className="p-1.5 rounded-md active:bg-gray-200 dark:active:bg-slate-700 text-gray-600 dark:text-slate-300 disabled:opacity-30"
+              className="p-1.5 rounded-md active:bg-gray-200 dark:active:bg-white/[0.08] text-gray-600 dark:text-zinc-300 disabled:opacity-30"
             >
               <ZoomOut size={14} />
             </button>
-            <span className="text-[9px] font-semibold text-gray-500 dark:text-slate-400 w-7 text-center tabular-nums">
+            <span className="text-[9px] font-semibold text-gray-500 dark:text-zinc-400 w-7 text-center tabular-nums">
               {Math.round(zoom * 100)}%
             </span>
             <button
               onClick={zoomIn}
               disabled={zoom >= 3}
-              className="p-1.5 rounded-md active:bg-gray-200 dark:active:bg-slate-700 text-gray-600 dark:text-slate-300 disabled:opacity-30"
+              className="p-1.5 rounded-md active:bg-gray-200 dark:active:bg-white/[0.08] text-gray-600 dark:text-zinc-300 disabled:opacity-30"
             >
               <ZoomIn size={14} />
             </button>
@@ -401,7 +389,7 @@ export function PdfPreviewModal({
 
         <button
           onClick={handleOpenNewTab}
-          className="flex items-center justify-center w-11 h-11 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.95]"
+          className="flex items-center justify-center w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.04] text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors active:scale-[0.95]"
           title="Ouvrir dans un nouvel onglet"
         >
           <ExternalLink size={18} />
@@ -412,7 +400,7 @@ export function PdfPreviewModal({
           'share' in navigator && (
             <button
               onClick={handleShare}
-              className="flex items-center justify-center w-11 h-11 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors active:scale-[0.95]"
+              className="flex items-center justify-center w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.04] text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors active:scale-[0.95]"
               title="Partager"
             >
               <Share size={18} />

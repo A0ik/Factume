@@ -40,7 +40,7 @@ export default class PdfCanvasErrorBoundary extends React.Component<Props, State
   render() {
     if (this.state.hasError) {
       return (
-        <div className={`flex flex-col items-center justify-center h-full text-center px-8 bg-gray-100 dark:bg-slate-900 ${this.props.className || ''}`}>
+        <div className={`flex flex-col items-center justify-center h-full text-center px-8 bg-gray-100 dark:bg-zinc-950 ${this.props.className || ''}`}>
           <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4">
             <FileWarning size={24} className="text-amber-500" />
           </div>

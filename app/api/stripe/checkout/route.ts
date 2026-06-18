@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import { logStripeEnv, logStripeError } from '@/lib/stripe-diagnostics';
 
 /**
  * POST /api/stripe/checkout
@@ -25,6 +26,8 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // OVERLORD (CIBLE 4) — trace la présence des vars Stripe pour identifier le 500.
+    logStripeEnv('checkout');
     // 1. Auth — userId depuis la session, jamais du body
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -114,6 +117,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Votre carte a été refusée.' }, { status: 400 });
     }
     console.error('[checkout]', err?.message || err);
+    logStripeError('checkout', error);
     return NextResponse.json(
       { error: 'Impossible de démarrer le paiement. Veuillez réessayer.' },
       { status: 500 },

@@ -1321,19 +1321,18 @@ export default function SettingsPage() {
         </div>
         <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
           sub.tier === 'business' ? 'bg-purple-500/20 text-purple-400' :
-          sub.tier === 'pro' ? 'bg-amber-500/20 text-amber-400' :
-          sub.tier === 'solo' ? 'bg-emerald-500/20 text-emerald-400' :
+          (sub.tier === 'pro' || sub.tier === 'solo') ? 'bg-amber-500/20 text-amber-400' :
           'bg-slate-700 text-slate-400'
         }`}>
-          {sub.tier === 'business' ? <Sparkles size={11} /> : sub.tier === 'pro' ? <Crown size={11} /> : sub.tier === 'solo' ? <Zap size={11} /> : null}
-          {sub.tier === 'free' ? 'Gratuit' : sub.tier === 'solo' ? 'Solo' : sub.tier === 'pro' ? 'Pro' : 'Business'}
+          {sub.tier === 'business' ? <Sparkles size={11} /> : (sub.tier === 'pro' || sub.tier === 'solo') ? <Crown size={11} /> : null}
+          {sub.tier === 'free' ? 'Gratuit' : (sub.tier === 'pro' || sub.tier === 'solo') ? 'Pro' : 'Business'}
         </div>
       </div>
 
       {/* Subscription upgrade for free users */}
       {sub.isFree && (
         <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-          <p className="text-sm font-semibold text-emerald-300 mb-1">Passez à Solo ou Pro</p>
+          <p className="text-sm font-semibold text-emerald-300 mb-1">Passez à Pro</p>
           <p className="text-xs text-slate-400 mb-3">Factures illimitées, dictée vocale IA, templates premium et bien plus.</p>
           <button onClick={() => router.push('/paywall')} className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors">
             <Zap size={14} />
@@ -1571,7 +1570,7 @@ export default function SettingsPage() {
             >
               <Crown size={22} className="text-amber-300 flex-shrink-0" />
               <div>
-                <p className="font-bold text-gray-900 dark:text-white">Passer à Solo ou Pro</p>
+                <p className="font-bold text-gray-900 dark:text-white">Passer à Pro</p>
                 <p className="text-sm text-emerald-100/80">Factures illimitées, dictée vocale, templates...</p>
               </div>
             </button>

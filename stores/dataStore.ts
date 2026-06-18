@@ -150,6 +150,10 @@ export const useDataStore = create<DataState>((set, get) => ({
           document_type: docType,
           issue_date: formData.issue_date,
           due_date: formData.due_date || null,
+          // OVERLORD (CIBLE 8) — conditions de paiement persistées sur la facture
+          // ('' = à réception, sinon le nombre de jours). Sinon le PDF relit le
+          // défaut profil ('30') et les conditions restent figées à 30 jours.
+          payment_terms: formData.payment_terms ?? null,
           items,
           subtotal: discountedSubtotal,
           vat_amount: recalculatedVat,

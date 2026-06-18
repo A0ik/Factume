@@ -141,7 +141,7 @@ export default function InlineDoubtCard({
           left: position.left,
         }}
       >
-        <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-slate-800 shadow-xl shadow-amber-500/10">
+        <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-white/[0.04] shadow-xl shadow-amber-500/10">
           {/* Emerald pulse border */}
           <motion.div
             className="absolute inset-0 rounded-2xl border-2 border-emerald-400"
@@ -172,7 +172,7 @@ export default function InlineDoubtCard({
             </div>
 
             {/* Field label */}
-            <div className="mb-2 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-slate-700 inline-flex items-center gap-1.5">
+            <div className="mb-2 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-white/[0.06] inline-flex items-center gap-1.5">
               <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase">{fieldLabel}</span>
             </div>
 
@@ -194,7 +194,7 @@ export default function InlineDoubtCard({
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   autoFocus
-                  className="w-full px-3 py-2 rounded-xl border border-blue-300 dark:border-blue-500/40 text-sm font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  className="w-full px-3 py-2 rounded-xl border border-blue-300 dark:border-blue-500/40 text-sm font-semibold text-gray-900 dark:text-white bg-white dark:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   placeholder="Corrigez la valeur..."
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && editValue.trim()) {
@@ -213,7 +213,7 @@ export default function InlineDoubtCard({
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-500 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/[0.06] text-gray-500 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
                   >
                     Annuler
                   </button>
@@ -260,7 +260,7 @@ export default function InlineDoubtCard({
 
           {/* Arrow pointing to field (right placement only) */}
           {position.placement === 'right' && (
-            <div className="absolute left-0 top-4 -translate-x-1.5 w-3 h-3 bg-white dark:bg-slate-800 border-l border-b border-amber-200 dark:border-amber-500/30 rotate-45" />
+            <div className="absolute left-0 top-4 -translate-x-1.5 w-3 h-3 bg-white dark:bg-white/[0.04] border-l border-b border-amber-200 dark:border-amber-500/30 rotate-45" />
           )}
         </div>
       </motion.div>

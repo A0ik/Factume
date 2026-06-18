@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import { logStripeEnv, logStripeError } from '@/lib/stripe-diagnostics';
 
 // MONOLITH: Structure de prix centralisée — plus de plan Solo
 const PRICE_IDS: Record<string, Record<string, string>> = {
@@ -16,6 +17,8 @@ const PRICE_IDS: Record<string, Record<string, string>> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // OVERLORD (CIBLE 4) — trace la présence des vars Stripe pour identifier le 500.
+    logStripeEnv('subscription');
     // Auth check - get userId from session, not from body
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Configuration de paiement introuvable. Veuillez contacter le support.' }, { status: 400 });
     }
     console.error('[API Error]', err);
+    logStripeError('subscription', error);
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

@@ -9,7 +9,7 @@ import {
   Check, CreditCard, Link as LinkIcon, Star,
   Building2, Code2, Store, Briefcase, Palette,
   ChevronDown, LogIn, Shield, Eye, Share2,
-  Twitter, Linkedin, Github, Brain, Mic,
+  Brain, Mic,
   ShieldCheck, Lock, CheckCircle, Calculator, FileClock,
   LayoutGrid, Crown, Hammer,
 } from 'lucide-react';
@@ -298,7 +298,8 @@ export default function LandingPageClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showSticky, setShowSticky] = useState(false);
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  // OVERLORD (CIBLE 9) — annuel par défaut (levier de conversion #1).
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
   const [confettiFire, setConfettiFire] = useState(0);
   const [navLight, setNavLight] = useState(false);
 
@@ -1091,7 +1092,7 @@ export default function LandingPageClient() {
                   <button onClick={() => switchBilling('monthly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200', billing === 'monthly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>Mensuel</button>
                   <button onClick={() => switchBilling('yearly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200 inline-flex items-center gap-2', billing === 'yearly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>
                     Annuel
-                    <span className={cn('text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full', billing === 'yearly' ? 'bg-neutral-950/15 text-neutral-950' : 'bg-emerald-500/15 text-emerald-400')}>−20%</span>
+                    <span className={cn('text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full', billing === 'yearly' ? 'bg-neutral-950/15 text-neutral-950' : 'bg-emerald-500/15 text-emerald-400')}>−17%</span>
                   </button>
                 </div>
               </div>
@@ -1230,11 +1231,6 @@ export default function LandingPageClient() {
                 <span className="text-lg 2xl:text-xl font-bold text-white">Factu<span className="text-emerald-400">.me</span></span>
               </Link>
               <p className="text-xs 2xl:text-sm text-neutral-400 max-w-xs leading-relaxed mb-4">L'assistant IA vocal pour votre facturation électronique. 100% français.</p>
-              <div className="flex gap-2">
-                {[Twitter, Linkedin, Github].map((Icon, i) => (
-                  <a key={i} href="#" aria-label="Réseau social" className="w-10 h-10 2xl:w-11 2xl:h-11 bg-neutral-900 hover:bg-neutral-800 rounded-lg flex items-center justify-center transition-colors duration-200 active:scale-95"><Icon className="w-4 h-4 text-neutral-400" /></a>
-                ))}
-              </div>
             </div>
             {[
               { title: 'Produit', links: [['Facturation', '#features'], ['IA Vocale', '#ai'], ['Tarifs', '#pricing']] },

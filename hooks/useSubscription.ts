@@ -45,7 +45,6 @@ export function useSubscription() {
 
   const isFree     = tier === 'free' && !isTrialActive;
   const isTrial    = tier === 'trial' || isTrialActive;
-  const isSolo     = tier === 'solo';
   const isPro      = tier === 'pro';
   const isBusiness = tier === 'business';
   const isProOrAbove = tier === 'pro' || tier === 'business';
@@ -75,7 +74,6 @@ export function useSubscription() {
     plan,                          // Full plan config from lib/plans.ts
     isFree,
     isTrial,
-    isSolo,
     isPro,
     isBusiness,
     isProOrAbove,

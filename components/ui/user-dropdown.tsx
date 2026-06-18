@@ -58,7 +58,6 @@ const MENU_ITEMS = {
 const TIER_CONFIG = {
   free: { name: 'Gratuit', gradient: 'from-gray-500 to-gray-600', iconBg: 'bg-gray-100' },
   trial: { name: 'Essai', gradient: 'from-purple-500 to-violet-600', iconBg: 'bg-purple-100' },
-  solo: { name: 'Solo', gradient: 'from-blue-500 to-indigo-600', iconBg: 'bg-blue-100' },
   pro: { name: 'Pro', gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-violet-100' },
   business: { name: 'Business', gradient: 'from-amber-500 to-orange-600', iconBg: 'bg-amber-100' },
 };
@@ -101,7 +100,9 @@ export const UserDropdown = ({
     tier: profile?.subscription_tier || 'free',
   };
 
-  const tierConfig = TIER_CONFIG[userData.tier as keyof typeof TIER_CONFIG] || TIER_CONFIG.free;
+  // OVERLORD (CIBLE 3) — 'solo' legacy → 'pro' (plan supprimé, ne plus afficher 'Solo').
+  const tierKey = (userData.tier === 'solo' ? 'pro' : userData.tier) as keyof typeof TIER_CONFIG;
+  const tierConfig = TIER_CONFIG[tierKey] || TIER_CONFIG.free;
 
   const handleAction = async (action: string) => {
     if (action === 'logout') {

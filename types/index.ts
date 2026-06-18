@@ -221,6 +221,7 @@ export interface Invoice {
   client_vat_number?: string;
   client_type?: 'b2b' | 'b2c';
   payment_terms_id?: string;
+  payment_terms?: string | null; // OVERLORD (CIBLE 8) — choix persisté ('' = à réception, sinon nb de jours)
   // Transmission électronique (Super PDP)
   pdp_transmission_id?: string;
   pdp_status?: 'not_transmitted' | 'transmitting' | 'transmitted' | 'pending_retry' | 'failed';
@@ -284,6 +285,7 @@ export interface InvoiceFormData {
   client_siret?: string;
   client_vat_number?: string;
   client_type?: 'b2b' | 'b2c';
+  payment_terms?: string | null; // OVERLORD (CIBLE 8)
 }
 
 export interface Appointment {

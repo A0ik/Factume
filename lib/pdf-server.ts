@@ -463,7 +463,22 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   if (profile?.email) { drawText(page, safe(profile.email), margin, ly, 8.5, reg, muted); ly -= 12; }
 
   // Client (right)
-  const client = invoice.client;
+  // OVERLORD (CIBLE 6) — fusionner les colonnes plates (client libre/non lié en
+  // base) dans l'objet client avant de dessiner, sinon SIRET/TVA/adresse
+  // n'apparaissent jamais sur le PDF bien qu'ils soient persistés.
+  const client: any = invoice.client ? { ...invoice.client } : {};
+  for (const [prop, flat] of [
+    ['siret', 'client_siret'],
+    ['vat_number', 'client_vat_number'],
+    ['address', 'client_address'],
+    ['city', 'client_city'],
+    ['postal_code', 'client_postal_code'],
+    ['email', 'client_email'],
+    ['phone', 'client_phone'],
+  ] as Array<[string, string]>) {
+    const v = (invoice as any)[flat];
+    if (v) client[prop] = v;
+  }
   const clientBoxX = halfX;
   const clientBoxW = W - margin - halfX;
 
@@ -473,6 +488,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   if (client?.postal_code || client?.city) clientFieldCount++;
   if (client?.email) clientFieldCount++;
   if (client?.siret) clientFieldCount++;
+  if (client?.vat_number) clientFieldCount++;
   if (client?.phone) clientFieldCount++;
   const clientBoxH = 40 + clientFieldCount * 12;
 
@@ -490,6 +506,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   }
   if (client?.email) { drawText(page, safe(client.email), clientBoxX, ry, 8.5, reg, muted, clientBoxW); ry -= 12; }
   if (client?.siret) { drawText(page, `SIRET : ${safe(client.siret)}`, clientBoxX, ry, 7.5, reg, muted); ry -= 12; }
+  if (client?.vat_number) { drawText(page, `TVA : ${safe(client.vat_number)}`, clientBoxX, ry, 7.5, reg, muted); ry -= 12; }
   if (client?.phone) { drawText(page, safe(client.phone), clientBoxX, ry, 8.5, reg, muted); ry -= 12; }
 
   y = Math.min(ly, ry) - 16;
@@ -730,8 +747,10 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // ═══════════════════════════════════════════════════════════════════════════
 
   {
-    // Build proper payment terms text — handle numeric values like "30"
-    const rawTerms = (profile?.payment_terms || '').trim();
+    // Build proper payment terms text — handle numeric values like "30".
+    // OVERLORD (CIBLE 8) — priorité à la facture (choix utilisateur persisté) ;
+    // repli sur le défaut du profil. ?? (et non ||) pour garder '' = à réception.
+    const rawTerms = (invoice.payment_terms ?? profile?.payment_terms ?? '').trim();
     let termsText = '';
     if (/^\d+$/.test(rawTerms)) {
       // Numeric value like "30" → full formatted sentence

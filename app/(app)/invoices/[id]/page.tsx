@@ -225,7 +225,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const docCfg = DOC_CONFIG[invoice.document_type] || DOC_CONFIG.invoice;
   const DocIcon = docCfg.icon;
   const clientName = invoice.client?.name || invoice.client_name_override || 'Client inconnu';
-  const clientEmail = invoice.client?.email || '';
+  // OVERLORD (CIBLE 6) — préférer la colonne plate (client libre/non lié) avant le join.
+  const clientEmail = (invoice as any).client_email || invoice.client?.email || '';
 
   const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
@@ -707,7 +708,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Client</p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{clientName}</p>
                 {clientEmail && <p className="text-xs text-slate-500 mt-0.5">{clientEmail}</p>}
-                {invoice.client?.address && <p className="text-xs text-slate-500 mt-0.5">{invoice.client.address}</p>}
+                {(((invoice as any).client_address) || (invoice.client?.address)) && (
+                  <p className="text-xs text-slate-500 mt-0.5">{(invoice as any).client_address || invoice.client?.address}</p>
+                )}
               </div>
               <div>
                 <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Date d'émission</p>
@@ -1080,11 +1083,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <span className="font-semibold text-slate-200 ml-auto">{fmtDate(invoice.sent_at)}</span>
                 </div>
               )}
-              {invoice.client?.siret && (
+              {(((invoice as any).client_siret) || (invoice.client?.siret)) && (
                 <div className="flex items-center gap-2 text-slate-400">
                   <Building2 size={14} className="text-gray-400" />
                   <span className="text-xs">SIRET :</span>
-                  <span className="font-semibold text-slate-200 ml-auto">{invoice.client.siret}</span>
+                  <span className="font-semibold text-slate-200 ml-auto">{(invoice as any).client_siret || invoice.client?.siret}</span>
                 </div>
               )}
             </div>
@@ -1158,7 +1161,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           isOpen={showEmailModal}
           onClose={() => setShowEmailModal(false)}
           onSend={handleSendEmail}
-          defaultEmail={invoice.client?.email || ''}
+          defaultEmail={(invoice as any).client_email || invoice.client?.email || ''}
           isReminder={isReminder}
         />
       )}
