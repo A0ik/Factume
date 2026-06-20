@@ -96,6 +96,11 @@ export async function POST(req: NextRequest) {
         subscription_data: { metadata: { userId, plan } },
         allow_promotion_codes: true,
         tax_id_collection: { enabled: true },
+        // OVERLORD (CIBLE 4 / D) — OBLIGATOIRE avec tax_id_collection quand on
+        // réutilise un customer existant : sinon Stripe rejette (400) « Tax ID
+        // collection requires updating business name on the customer ». On laisse
+        // Stripe mettre à jour nom + adresse depuis le formulaire Checkout.
+        customer_update: { name: 'auto', address: 'auto' },
         // LOI 1 (Arbiter) : le consentement CGV ne doit JAMAIS bloquer le cash.
         // On a déjà une case CGU à l'inscription — on ne redemande pas un ToS
         // Stripe qui casse le checkout si l'URL n'est pas renseignée au Dashboard.
@@ -115,6 +120,16 @@ export async function POST(req: NextRequest) {
     const err = error as Error & { type?: string; code?: string };
     if (err.type === 'StripeCardError') {
       return NextResponse.json({ error: 'Votre carte a été refusée.' }, { status: 400 });
+    }
+    if (err.type === 'StripeInvalidRequestError') {
+      // Erreur de configuration/requête Stripe (ex: tax_id_collection sans
+      // customer_update) → 400 explicite, pas un 500 trompeur.
+      console.error('[checkout]', err?.message || err);
+      logStripeError('checkout', error);
+      return NextResponse.json(
+        { error: 'Configuration de paiement incorrecte. Notre équipe a été notifiée.' },
+        { status: 400 },
+      );
     }
     console.error('[checkout]', err?.message || err);
     logStripeError('checkout', error);
