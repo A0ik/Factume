@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -161,6 +161,14 @@ export default function CheckoutModal({
     }
   }, [planId]);
 
+  // ─── CIBLE 1 (AEGIS) — Anti-spam 429 ───────────────────────────
+  // On mémorise le combo (mode + plan + billing) déjà chargé ainsi qu'un
+  // éventuel fetch en cours, pour ne JAMAIS re-POSTer /api/stripe/subscription
+  // sur un re-rendu : StrictMode (double-fire dev), changements de props,
+  // re-mount, toggle billing… tout passe par UNE seule requête par combo.
+  const fetchedKeyRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
+
   useEffect(() => {
     if (!open) {
       // Reset à la fermeture
@@ -168,14 +176,25 @@ export default function CheckoutModal({
       setError(null);
       setProrata(null);
       setLoading(false);
+      fetchedKeyRef.current = null;
+      inFlightRef.current = false;
       return;
     }
-    if (mode === 'change') {
-      fetchProrata();
-    } else {
-      fetchClientSecret();
-    }
-  }, [open, mode, fetchClientSecret, fetchProrata]);
+    const key = `${mode}:${planId}:${billing}`;
+    if (inFlightRef.current || fetchedKeyRef.current === key) return;
+    fetchedKeyRef.current = key;
+    inFlightRef.current = true;
+    const run = mode === 'change' ? fetchProrata() : fetchClientSecret();
+    run.finally(() => { inFlightRef.current = false; });
+  }, [open, mode, planId, billing, fetchClientSecret, fetchProrata]);
+
+  // Réessayer (bouton d'erreur) : on relâche les gardes puis on relance manuellement.
+  const retryFetch = () => {
+    fetchedKeyRef.current = null;
+    inFlightRef.current = false;
+    if (mode === 'change') fetchProrata();
+    else fetchClientSecret();
+  };
 
   /* ─── Confirmation changement de plan ─── */
   const confirmChange = async () => {
@@ -268,7 +287,7 @@ export default function CheckoutModal({
               <div className="flex-1">
                 <p className={cn('text-sm font-medium', isDark ? 'text-red-300' : 'text-red-700')}>{error}</p>
                 <button
-                  onClick={() => (mode === 'change' ? fetchProrata() : fetchClientSecret())}
+                  onClick={retryFetch}
                   className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                 >
                   <RefreshCw size={12} /> Réessayer

@@ -462,6 +462,14 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     if (parsed?.client_siret) updates.clientSiret = parsed.client_siret;
     if (parsed?.client_vat_number) updates.clientVatNumber = parsed.client_vat_number;
 
+    // CIBLE 3 (AEGIS) — on câble enfin le client_type détecté côté serveur.
+    // Auparavant ce champ était calculé puis JETÉ : l'utilisateur devait basculer
+    // manuellement le toggle B2B/B2C. On ne déduit que si un client est présent.
+    if (parsed?.client_name) {
+      if (parsed?.client_type === 'business') updates.clientType = 'b2b';
+      else if (parsed?.client_type === 'individual' || parsed?.is_b2c === true) updates.clientType = 'b2c';
+    }
+
     // Items — LOI 3 (Arbiter) : on FUSIONNE au lieu d'écraser, pour que
     // re-parler/re-écrire modifie au lieu de supprimer les articles existants.
     if (parsed?.items?.length) {
@@ -516,9 +524,22 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
     });
 
-    // Handle uncertain fields
-    if (parsed?.uncertain_fields?.length > 0) {
-      get().requestDoubtResolution(parsed.uncertain_fields, (corrections) => {
+    // CIBLE 4 (AEGIS) — Handle uncertain fields + safety net : si l'IA signale
+    // une faible CONFiance sans préciser de champ, on synthétise une demande de
+    // vérification pour qu'un pop-up remonte TOUJOURS quand elle hésite.
+    let voiceDoubts = parsed?.uncertain_fields ?? [];
+    if (voiceDoubts.length === 0 && parsed?.confidence === 'low' && (parsed?.items?.length || parsed?.client_name)) {
+      const field = parsed?.client_name ? 'client_name' : 'items[0].unit_price';
+      const current = parsed?.client_name ?? (parsed?.items?.[0]?.unit_price ?? null);
+      voiceDoubts = [{
+        field,
+        current_value: current as any,
+        reason: "Confiance faible de l'IA sur cette dictée — merci de vérifier le montant et le client.",
+        suggestion: current as any,
+      }];
+    }
+    if (voiceDoubts.length > 0) {
+      get().requestDoubtResolution(voiceDoubts as any, (corrections) => {
         // Apply corrections
         const s = get();
         const correctedUpdates: any = {};

@@ -353,6 +353,13 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
     if (parsed.client_postal_code) setClientPostalCode(parsed.client_postal_code);
     if (parsed.client_siret) setClientSiret(parsed.client_siret);
     if (parsed.client_vat_number) setClientVatNumber(parsed.client_vat_number);
+    // CIBLE 3 (AEGIS) — auto-détection B2B/B2C côté serveur : on évite la modale
+    // manuelle quand la voix a identifié un client entreprise ou particulier.
+    const detectedType = (parsed as any).client_type;
+    if (parsed.client_name) {
+      if (detectedType === 'business') setClientType('b2b');
+      else if (detectedType === 'individual' || (parsed as any).is_b2c === true) setClientType('b2c');
+    }
     if (parsed.items?.length) {
       // LOI 3 (Arbiter) — FUSION au lieu d'écraser : re-parler/re-écrire modifie au lieu de supprimer.
       setItems((prev) =>

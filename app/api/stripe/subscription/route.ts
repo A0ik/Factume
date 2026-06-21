@@ -41,12 +41,33 @@ export async function POST(req: NextRequest) {
     // 1b. Vérifier qu'aucun abonnement actif n'existe déjà (anti-double-charge)
     if (profile.stripe_subscription_id) {
       try {
-        const existingSub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+        const existingSub = await stripe.subscriptions.retrieve(
+          profile.stripe_subscription_id,
+          { expand: ['latest_invoice.payment_intent'] },
+        );
         if (existingSub.status === 'active' || existingSub.status === 'trialing') {
           return NextResponse.json(
             { error: 'Vous avez déjà un abonnement actif. Veuillez annuler votre abonnement actuel avant d\'en souscrire un nouveau.' },
             { status: 409 }
           );
+        }
+        // CIBLE 1 (AEGIS) — Réutiliser un abonnement incomplet/past_due pour le MÊME prix
+        // plutôt que d'en créer un nouveau à chaque POST (cause racine du spam 429).
+        // Aucune carte n'étant encore attachée à un abonnement incomplet, le réutiliser
+        // est sûr et évite l'accumulation d'abonnements orphelins côté Stripe.
+        if (existingSub.status === 'incomplete' || existingSub.status === 'past_due') {
+          const existingPriceId = existingSub.items?.data?.[0]?.price?.id;
+          if (existingPriceId === priceId) {
+            const inv = existingSub.latest_invoice as Stripe.Invoice | null;
+            const pi = inv?.payment_intent as Stripe.PaymentIntent | null;
+            const existingSecret = pi?.client_secret ?? null;
+            if (existingSecret) {
+              return NextResponse.json({
+                clientSecret: existingSecret,
+                subscriptionId: existingSub.id,
+              });
+            }
+          }
         }
       } catch {
         // Subscription not found in Stripe (deleted/expired) — safe to proceed
@@ -74,7 +95,10 @@ export async function POST(req: NextRequest) {
         expand: ['latest_invoice.payment_intent'],
         metadata: { userId, plan },
       },
-      { idempotencyKey: 'sub_' + userId + '_' + plan + '_' + interval + '_' + Date.now() }
+      // CIBLE 1 (AEGIS) — clé idempotente STABLE (sans Date.now()) : deux POST
+      // identiques pour le même user/plan/interval sont dédupliqués par Stripe
+      // au lieu de créer chacun un abonnement neuf (source du 429).
+      { idempotencyKey: 'sub_' + userId + '_' + plan + '_' + interval }
     );
 
     // 3. Extraire le client_secret pour le formulaire de paiement

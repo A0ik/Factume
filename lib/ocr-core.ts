@@ -211,7 +211,11 @@ export async function processAndSaveExpense(
     receipt_url: fileMeta.receiptUrl,
     receipt_storage_path: fileMeta.storagePath,
     payment_method: extracted.payment_method,
-    status: validation.needsReview ? 'needs_review' : 'pending',
+    // TITAN — 'needs_review' est refusé par la contrainte expenses_status_check
+    // (CHECK limité à pending/reviewed/ready/validated/rejected/exported). Le signal
+    // « à vérifier » est porté par ocr_validation_warnings + la confiance ; le statut
+    // reste 'pending' jusqu'à vérification utilisateur (→ 'reviewed').
+    status: 'pending',
     ocr_raw_response: rawAiResponse,
     ocr_confidence: extracted.confidence,
     ocr_line_items: extracted.line_items,

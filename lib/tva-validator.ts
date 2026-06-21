@@ -129,27 +129,69 @@ export function validateAndCorrectTVA(items: InvoiceItem[]): ValidationResult {
 // B2C Detection
 // ---------------------------------------------------------------------------
 
-/** Company-name indicators that suggest a B2B relationship */
+/**
+ * Company-name indicators that suggest a B2B relationship.
+ * CIBLE 3 (AEGIS) — enrichi : formes juridiques FR/intl + noms de commerces
+ * et d'activités typiques (café, garage, pharmacie…) pour ne plus rater les
+ * clients entreprise au nom « marque » (ex : « Café Croissant »).
+ */
 const COMPANY_INDICATORS = [
+  // Formes juridiques françaises
   /soci[eé]t[eé]/i,
   /entreprise/i,
   /s\.?a\.?(r\.?l\.?)?/i,
   /e\.?u\.?r\.?l\.?/i,
   /s\.?a\.?s/i,
+  /sasu/i,
+  /eirl/i,
+  /s\.?c\.?i/i,
+  /s\.?c\.?o\.?p/i,
   /s\.?n\.?c/i,
   /s\.?c\.?p/i,
+  /s\.?c\.?a/i,
+  /auto[\s-]?entrepreneu/i,
+  /micro[\s-]?entreprise/i,
+  /holding/i,
+  /\bgroup\b/i,
+  // Formes étrangères
   /ltd/i,
   /inc\./i,
   /gmbh/i,
   /corp\./i,
+  /\bllc\b/i,
+  // Activités de services / bureaux
   /agence/i,
+  /agenc/i,
   /startup/i,
-  / cabinet /i,
+  /cabinet/i,
   /bureau/i,
   /conseil/i,
   /consulting/i,
   /studio/i,
-  /agenc/i,
+  /clinique/i,
+  /institut/i,
+  /kin[eé]/i,
+  /coiff/i,
+  // Commerces & activités (signal B2B fort en France)
+  /restaurant/i,
+  /\bresto\b/i,
+  /bistr(o|ot)/i,
+  /brasserie/i,
+  /caf[eé]/i,
+  /boulangerie/i,
+  /pâtisserie/i,
+  /boucherie/i,
+  /pharmacie/i,
+  /garage/i,
+  /h[oô]tel/i,
+  /boutique/i,
+  /magasin/i,
+  /commerce/i,
+  /marchand/i,
+  /atelier/i,
+  /usine/i,
+  /transport/i,
+  /\btaxi\b/i,
 ];
 
 /**

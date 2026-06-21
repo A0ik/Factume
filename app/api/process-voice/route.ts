@@ -209,7 +209,8 @@ Retourne UNIQUEMENT du JSON valide (le document MODIFIÉ complet) :
   "discount_percent": null,
   "discount_amount": null,
   "discount_type": null,
-  "uncertain_fields": []
+  "uncertain_fields": [],
+  "confidence": "high"
 }
 
 RÈGLES ABSOLUES :
@@ -223,9 +224,13 @@ RÈGLES ABSOLUES :
 - Ne modifie que ce que l'utilisateur demande explicitement, conserve le reste à l'identique à partir de l'ÉTAT ACTUEL
 - summary doit être en français, court et précis
 
-INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
-Ne signale QUE si l'information a 2+ interprétations très différentes (ex: "deux" vs "douze") ou est inaudible.
-Si tu es raisonnablement confiant → "uncertain_fields": []
+INCERTITUDE — CHAMPS uncertain_fields + confidence :
+Évalue TA propre confiance sur chaque champ clé (montant, quantité, client).
+- "confidence": "high" si tout est clair et certain.
+- "confidence": "medium" si un montant ou un nom est approximatif (ajoute-le dans uncertain_fields).
+- "confidence": "low" si un nombre clé est ambigu ("deux" vs "douze", "cent" vs "sans") ou inaudible (ajoute-le dans uncertain_fields).
+Signale dans uncertain_fields DÈS QUE tu n'es pas certain d'un montant ou d'un nom (current_value = ce que tu as entendu, suggestion = ton meilleur choix).
+Si tu es pleinement confiant → "uncertain_fields": [], "confidence": "high".
 Exemple de signal légitime :
 
 CALCUL JOURNALIER - MODIFICATION :
@@ -291,25 +296,27 @@ Format JSON attendu:
   "discount_type": "percent | amount",
   "uncertain_fields": [
     {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
-  ]
+  ],
+  "confidence": "high | medium | low"
 }
 
-INCERTITUDE — CHAMPS uncertain_fields (UNIQUEMENT SI VRAIMENT AMBIGU) :
-Ne signale un champ QUE si l'information est réellement ambiguë ou inaudible.
-NE PAS signaler si tu es raisonnablement confiant (même si tu n'es pas à 100%).
-Signale UNIQUEMENT dans ces cas :
-- Le mot entendu a 2+ interprétations très différentes (ex: "deux" vs "douze", "cent" vs "sans")
-- Un nombre clé est couvert par du bruit ou inaudible
-- L'utilisateur se contredit dans la même phrase (ex: "500... non 1500")
-NE PAS signaler :
-- Les noms propres légèrement imprécis (prends ton meilleur choix)
-- Les petits doutes normaux d'une transcription (l'IA gère ça)
-- Les montants clairement énoncés même si le contexte est vague
-Si aucun doute réel → "uncertain_fields": []
+INCERTITUDE — ÉVALUE TA CONFIANCE (uncertain_fields + confidence) :
+Tu n'es pas infaillible : évalue ta certitude sur chaque champ clé (montant, quantité, nom du client) et ose signaler ton doute.
+- "confidence": "high" → tout est clair et certain.
+- "confidence": "medium" → un montant ou un nom est approximatif ; ajoute-le dans uncertain_fields.
+- "confidence": "low" → un nombre clé est ambigu ou inaudible ; ajoute-le dans uncertain_fields.
+Signale dans uncertain_fields DÈS QUE tu hésites sur un montant ou un nom (current_value = ce que tu as entendu, suggestion = ton meilleur choix).
+Signale notamment :
+- Un mot à 2 interprétations très différentes ("deux" vs "douze", "cent" vs "sans")
+- Un nombre couvert par du bruit ou inaudible
+- Une contradiction dans la phrase ("500... non 1500")
+- Un montant qui pourrait être HT ou TTC (le contexte ne le précise pas)
+- Un nom propre partiellement entendu (current_value = ton meilleur choix, suggestion = alternative)
+NE signale pas les petits doutes normaux d'une transcription parfaitement limpide.
+Si tout est clair → "uncertain_fields": [], "confidence": "high".
 Exemples de signaux légitimes :
-- "uncertain_fields": [{"field": "items[0].unit_price", "current_value": 500, "reason": "L'utilisateur a dit 'cinq cent' mais pourrait vouloir dire 15 000", "suggestion": 500}]
-- "uncertain_fields": [{"field": "client_name", "current_value": "Dupont", "reason": "Nom partiellement entendu, pourrait être Dupond ou Du Pont", "suggestion": "Dupont"}]
-Si tout est clair et certain, retourne : "uncertain_fields": []
+- {"uncertain_fields": [{"field": "items[0].unit_price", "current_value": 500, "reason": "L'utilisateur a dit 'cinq cent' mais pourrait vouloir dire 15 000", "suggestion": 500}], "confidence": "low"}
+- {"uncertain_fields": [{"field": "client_name", "current_value": "Dupont", "reason": "Nom partiellement entendu, pourrait être Dupond ou Du Pont", "suggestion": "Dupont"}], "confidence": "medium"}
 
 RÈGLES ABSOLUES pour les descriptions :
 - NE JAMAIS recopier mot pour mot ce que l'utilisateur a dit
@@ -475,8 +482,8 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
 
         if (isB2CClient(clientInfo)) {
           isB2C = true;
-          (parsed as unknown as Record<string, unknown>).is_b2c = true;
-          (parsed as unknown as Record<string, unknown>).client_type = 'individual';
+          parsed.is_b2c = true;
+          parsed.client_type = 'individual';
 
           // If no explicit TVA rate and client is B2C, default to 0%
           // Only apply when ALL items still have the default 20% rate (meaning AI didn't pick up a specific rate)
@@ -518,8 +525,51 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
         }
       }
 
-      if (!isB2C) {
-        (parsed as unknown as Record<string, unknown>).client_type = 'business';
+      // CIBLE 3 (AEGIS) — on ne taggue 'business' QUE si un client est réellement
+      // présent. Sinon, un document sans client se retrouvait marqué B2B par défaut
+      // (isB2C restant false quand le nom est vide), faussant l'auto-détection.
+      if (!isB2C && parsed.client_name) {
+        parsed.client_type = 'business';
+      }
+
+      // ─── CIBLE 4 (AEGIS) — Déclencheurs déterministes de faible confiance ───
+      // L'IA reste trop conservatrice sur uncertain_fields ; on ajoute des signaux
+      // objectifs pour qu'une demande de confirmation remonte quand un champ crucial
+      // (montant ou nom du client) est objectivement ambigu. On ne fait que baisser
+      // la confiance et ajouter un doute — jamais modifier les valeurs entendues.
+      try {
+        if (!parsed.confidence) parsed.confidence = 'high';
+
+        // (a) Forfait unique peu spécifique, sans client identifié : un seul montant
+        //     global entendu → le montant mérite confirmation.
+        const GENERIC_DESC = /^(prestation|service|vente|forfait|travail|intervention|conseil|mission|produit|honoraire)/i;
+        if (parsed.items?.length === 1 && !parsed.client_name) {
+          const it = parsed.items[0];
+          const generic = !it.description || GENERIC_DESC.test(String(it.description).trim());
+          if (generic && !parsed.uncertain_fields?.some((f) => f.field === 'items[0].unit_price')) {
+            parsed.uncertain_fields = [...(parsed.uncertain_fields ?? []), {
+              field: 'items[0].unit_price',
+              current_value: Number(it.unit_price) || 0,
+              reason: "Un seul montant global a été entendu — confirmez le montant de la ligne.",
+              suggestion: Number(it.unit_price) || 0,
+            }];
+            if (parsed.confidence === 'high') parsed.confidence = 'medium';
+          }
+        }
+
+        // (b) Nom de client suspect (trop court ou contient un chiffre) → confirmer.
+        const clientName = parsed.client_name?.trim() ?? '';
+        if (clientName && (clientName.length < 3 || /\d/.test(clientName)) && !parsed.uncertain_fields?.some((f) => f.field === 'client_name')) {
+          parsed.uncertain_fields = [...(parsed.uncertain_fields ?? []), {
+            field: 'client_name',
+            current_value: clientName,
+            reason: "Le nom du client semble partiellement entendu — merci de confirmer.",
+            suggestion: clientName,
+          }];
+          if (parsed.confidence === 'high') parsed.confidence = 'medium';
+        }
+      } catch (e) {
+        console.error('[process-voice] confidence triggers failed:', e);
       }
     } catch (err) {
       console.error('[process-voice] Failed to parse AI response:', err);

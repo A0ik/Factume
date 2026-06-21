@@ -832,11 +832,17 @@ export interface VoiceParsedResponse {
   client_postal_code?: string | null;
   client_siret?: string | null;
   client_vat_number?: string | null;
+  /** 'business' (B2B) ou 'individual' (B2C) — déduit côté serveur du SIRET / nom. */
+  client_type?: 'business' | 'individual' | null;
+  /** true si le client est un particulier (B2C). */
+  is_b2c?: boolean;
   items: VoiceExistingItem[];
   due_days: number | null;
   notes: string | null;
   discount_percent?: number;
   uncertain_fields?: VoiceUncertainField[];
+  /** Niveau de confiance auto-évalué par l'IA sur la dictée ('high' = tout clair). */
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 export interface VoiceProcessResponse {

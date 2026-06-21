@@ -15,6 +15,7 @@ import { CompanySearch } from '@/components/ui/CompanySearch';
 import { useDocumentSessionStore } from '../documentSessionStore';
 import { DOC_TYPE_CONFIGS } from '../config/documentTypeConfig';
 import InlineDoubtCard from '../DoubtResolution/InlineDoubtCard';
+import DoubtFallback from '../DoubtResolution/DoubtFallback';
 import TemplateSelector from './TemplateSelector';
 import PaymentTermsSelector from '@/components/ui/PaymentTermsSelector';
 import FacturXWarnings from '@/components/ui/FacturXWarnings';
@@ -957,23 +958,35 @@ export default function DocumentFormPanel({
         </FormSection>
       </div>
 
-      {/* ─── Inline Doubt Cards ────────────────────────── */}
+      {/* ─── Inline Doubt Cards (champs ancrés du formulaire) ────────────────────────── */}
       <AnimatePresence>
-        {pendingDoubts.length > 0 && pendingDoubts.map((doubt) => {
-          const targetRef = { current: fieldRefMap.current.get(doubt.field) || null };
-          if (!targetRef.current) return null;
-          return (
-            <InlineDoubtCard
-              key={doubt.field}
-              doubt={doubt}
-              targetRef={targetRef as React.RefObject<HTMLElement>}
-              onConfirm={(val) => handleDoubtConfirm(doubt, val)}
-              onCorrect={(val) => handleDoubtCorrect(doubt, val)}
-              onDismiss={() => handleDoubtDismiss(doubt)}
-            />
-          );
-        })}
+        {pendingDoubts.length > 0 && pendingDoubts
+          .filter((d) => fieldRefMap.current.has(d.field))
+          .map((doubt) => {
+            const targetRef = { current: fieldRefMap.current.get(doubt.field) || null };
+            return (
+              <InlineDoubtCard
+                key={doubt.field}
+                doubt={doubt}
+                targetRef={targetRef as React.RefObject<HTMLElement>}
+                onConfirm={(val) => handleDoubtConfirm(doubt, val)}
+                onCorrect={(val) => handleDoubtCorrect(doubt, val)}
+                onDismiss={() => handleDoubtDismiss(doubt)}
+              />
+            );
+          })}
       </AnimatePresence>
+
+      {/* CIBLE 4 (AEGIS) — Doutes « orphelins » (champs NON ancrés : client_name,
+          items[N].*…). Avant, ces doutes étaient silencieusement droppés et le
+          pop-up ne s'affichait jamais. Ils sont désormais rendus dans une boîte
+          centrée pour confirmation. */}
+      <DoubtFallback
+        doubts={pendingDoubts.filter((d) => !fieldRefMap.current.has(d.field))}
+        onConfirm={handleDoubtConfirm}
+        onCorrect={handleDoubtCorrect}
+        onDismiss={handleDoubtDismiss}
+      />
 
       {/* ─── Catalogue produits (modal partagé) ─── */}
       <ProductCatalogModal

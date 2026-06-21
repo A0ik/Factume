@@ -178,8 +178,8 @@ export default function PaywallPage() {
               <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg">
                 {trialLoading ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
               </div>
-              <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <h3 className={cn('text-lg font-bold', isDark ? 'text-emerald-400' : 'text-emerald-700')}>
                     Essai Gratuit 7 Jours
                   </h3>
@@ -220,7 +220,7 @@ export default function PaywallPage() {
                 )}>
                   {remaining > 0 ? <Zap size={22} className="text-primary" /> : <Lock size={22} className={isDark ? 'text-red-400' : 'text-red-500'} />}
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <h3 className={cn(
                     'mb-1 text-lg font-bold',
                     remaining > 0 ? isDark ? 'text-emerald-400' : 'text-primary' : isDark ? 'text-red-400' : 'text-red-700',

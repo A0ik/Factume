@@ -179,7 +179,7 @@ function PaywallSection() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#09090B] dark:via-[#0C0C0F] dark:to-[#09090B] flex items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full rounded-3xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0C0C0F] p-8 text-center shadow-xl shadow-black/5"
+        className="max-w-md w-full rounded-3xl border border-gray-200 dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0C0C0F] p-8 text-center shadow-xl shadow-black/5"
       >
         <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/25">
           <Scan className="w-7 h-7 text-white" />
@@ -216,7 +216,7 @@ function Field({
   );
 }
 
-const inputCls = "w-full rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition";
+const inputCls = "w-full rounded-lg border border-gray-200 dark:border-white/[0.08] bg-[#F4F4F5] dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition";
 
 // ════════════════════════════════════════════════════════════════════════════
 // PAGE
@@ -235,6 +235,8 @@ export default function OcrPage() {
 
   // Review state (queue files)
   const [reviewingFile, setReviewingFile] = useState<ScannedFile | null>(null);
+  const reviewingFileRef = useRef<ScannedFile | null>(null);
+  reviewingFileRef.current = reviewingFile;
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<ExtractedData | null>(null);
 
@@ -301,6 +303,19 @@ export default function OcrPage() {
   useEffect(() => { fetchDbExpenses(); }, [fetchDbExpenses]);
   useEffect(() => { if (user) fetchDbExpenses(); }, [user]);
 
+  // ── Garder le fichier révisé synchronisé avec files (preview + extraction fraîches) ─
+  useEffect(() => {
+    if (!reviewingFile) return;
+    const fresh = files.find(f => f.id === reviewingFile.id);
+    if (!fresh) { setReviewingFile(null); setEditMode(false); return; }
+    if (fresh !== reviewingFile) {
+      setReviewingFile(fresh);
+      if (fresh.status === 'complete' && fresh.result?.extracted && !editMode) {
+        setEditData({ ...fresh.result.extracted });
+      }
+    }
+  }, [files, reviewingFile, editMode]);
+
   // ── PDF source preview URL ───────────────────────────────────────────────
   useEffect(() => {
     if (pdfObjectUrl) { URL.revokeObjectURL(pdfObjectUrl); setPdfObjectUrl(null); }
@@ -329,6 +344,10 @@ export default function OcrPage() {
       status: 'pending', progress: 0,
     }));
     setFiles(prev => [...prev, ...mapped]);
+    // Auto-preview du premier document uploadé si rien n'est en cours de révision
+    if (!reviewingFileRef.current && mapped[0]) {
+      setReviewingFile(mapped[0]);
+    }
   }, []);
 
   const removeFile = useCallback((id: string) => {
@@ -642,9 +661,9 @@ export default function OcrPage() {
   if (!isBusiness) return <PaywallSection />;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#09090B] text-gray-900 dark:text-zinc-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#09090B] text-gray-900 dark:text-zinc-100 overflow-hidden">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <header className="flex-shrink-0 border-b border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0C0C0F] px-5 py-3 flex items-center justify-between">
+      <header className="flex-shrink-0 border-b border-gray-200 dark:border-white/[0.06] bg-[#FFFFFF] dark:bg-[#0C0C0F] px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md shadow-emerald-500/20">
             <Scan className="w-5 h-5 text-white" />
@@ -671,7 +690,7 @@ export default function OcrPage() {
       {/* ── Body : 3 zones ─────────────────────────────────────────────────── */}
       <div className="flex-1 flex min-h-0">
         {/* ═══ RAIL INBOX ═══ */}
-        <aside className="w-[340px] flex-shrink-0 border-r border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0C0C0F] flex flex-col min-h-0">
+        <aside className="w-[340px] flex-shrink-0 border-r border-gray-200 dark:border-white/[0.06] bg-[#FFFFFF] dark:bg-[#0C0C0F] flex flex-col min-h-0">
           {/* Dropzone */}
           <div className="p-3">
             <div
@@ -725,7 +744,7 @@ export default function OcrPage() {
             )}
 
             {activeTab === 'inbox' && inboxFiles.map(f => (
-              <FileRow key={f.id} file={f} active={reviewingFile?.id === f.id} onClick={() => f.status === 'complete' ? openFileReview(f) : undefined} onRemove={() => removeFile(f.id)} />
+              <FileRow key={f.id} file={f} active={reviewingFile?.id === f.id} onClick={() => openFileReview(f)} onRemove={() => removeFile(f.id)} />
             ))}
             {activeTab === 'review' && reviewableFiles.map(f => (
               <FileRow key={f.id} file={f} active={reviewingFile?.id === f.id} onClick={() => openFileReview(f)} onRemove={() => removeFile(f.id)} />
@@ -765,7 +784,7 @@ export default function OcrPage() {
           ) : (
             <>
               {/* ═══ Aperçu document (gauche, "papier sur le bureau") ═══ */}
-              <section className="flex-1 min-h-0 bg-gray-100 dark:bg-[#070708] flex flex-col">
+              <section className="flex-1 min-h-0 bg-[#F4F4F5] dark:bg-[#09090B] flex flex-col">
                 <div className="flex-shrink-0 px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-white/[0.04]">
                   <p className="text-xs font-medium text-gray-500 dark:text-zinc-400 truncate max-w-[60%]">
                     {reviewingFile ? (reviewingFile.sourcePdfName || reviewingFile.file.name) : (reviewingDbExpense?.vendor || 'Document')}
@@ -800,7 +819,7 @@ export default function OcrPage() {
               </section>
 
               {/* ═══ Pièce comptable (droite, formulaire de validation) ═══ */}
-              <section className="w-[420px] flex-shrink-0 border-l border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0C0C0F] flex flex-col min-h-0">
+              <section className="w-[420px] flex-shrink-0 border-l border-gray-200 dark:border-white/[0.06] bg-[#FFFFFF] dark:bg-[#0C0C0F] flex flex-col min-h-0">
                 <ReviewForm
                   reviewingFile={reviewingFile}
                   reviewingDbExpense={reviewingDbExpense}
@@ -861,7 +880,7 @@ function FileRow({ file, active, onClick, onRemove }: {
   const ext = file.result?.extracted;
   const conf = ext ? getConfidenceColor(ext.confidence) : null;
   const isProcessing = file.status === 'uploading' || file.status === 'analyzing' || file.status === 'segmenting';
-  const clickable = file.status === 'complete' && onClick;
+  const clickable = !!onClick;
 
   return (
     <div onClick={onClick}
@@ -940,7 +959,7 @@ function SegmentConfirmer({ pending, edited, onEdit, onCancel, onConfirm, proces
 }) {
   return (
     <div className="flex-1 flex items-center justify-center p-10">
-      <div className="max-w-lg w-full rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0C0C0F] p-6 shadow-xl">
+      <div className="max-w-lg w-full rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-[#FFFFFF] dark:bg-[#0C0C0F] p-6 shadow-xl">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-emerald-500" />
           <h2 className="text-base font-bold">{pending.segments.length} factures détectées</h2>
@@ -1019,6 +1038,23 @@ function ReviewForm(props: {
 
       {/* Corps */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3.5 min-h-0">
+        {f && !ext && !props.editMode && (
+          <div className="text-center py-12">
+            {f.status === 'error' ? (
+              <>
+                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-500" />
+                <p className="text-sm font-semibold text-rose-500">Échec de l'analyse</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">{f.error}</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-8 h-8 mx-auto mb-3 text-emerald-500 animate-spin" />
+                <p className="text-sm font-semibold">{f.status === 'pending' ? "En attente d'analyse" : 'Analyse en cours…'}</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">Lancez l'analyse depuis l'en-tête pour extraire les données.</p>
+              </>
+            )}
+          </div>
+        )}
         {f && !props.editMode && ext && (
           <>
             {ext.is_duplicate && (
@@ -1105,7 +1141,7 @@ function ReviewForm(props: {
 
       {/* Actions */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-white/[0.06] px-5 py-3 flex items-center gap-2">
-        {f && !props.editMode && (
+        {f && !props.editMode && ext && (
           <>
             <button onClick={props.onStartEdit} className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-white/[0.1] py-2.5 text-sm font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition">
               <Edit2 className="w-4 h-4" /> Corriger
