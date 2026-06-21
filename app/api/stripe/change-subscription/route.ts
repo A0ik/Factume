@@ -121,56 +121,72 @@ export async function POST(req: NextRequest) {
     if (currentSubscriptionId && currentPlan && currentPlan !== 'free') {
       try {
         const currentSubscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
+        const subStatus = currentSubscription.status;
 
-        // Prorata calculé depuis les timestamps Stripe (précis)
-        prorataInfo = calculateProrata(
-          currentPlan,
-          plan,
-          currentSubscription.current_period_start,
-          currentSubscription.current_period_end,
-        );
+        // États terminaux/non-mutables : un abonnement canceled / incomplete_expired
+        // (ou incomplete = premier paiement échoué) NE PEUT PAS être mis à jour — Stripe
+        // renvoie l'erreur fatale "A canceled subscription can only update its
+        // cancellation_details and metadata." On nettoie l'ID périmé en base puis on
+        // crée un nouvel abonnement (chemin de création plus bas).
+        const TERMINAL_STATUSES = ['canceled', 'incomplete_expired', 'incomplete'];
+        if (!TERMINAL_STATUSES.includes(subStatus)) {
+          // Prorata calculé depuis les timestamps Stripe (précis)
+          prorataInfo = calculateProrata(
+            currentPlan,
+            plan,
+            currentSubscription.current_period_start,
+            currentSubscription.current_period_end,
+          );
 
-        const isUpgrade = prorataInfo.isUpgrade;
+          const isUpgrade = prorataInfo.isUpgrade;
 
-        const itemId = currentSubscription.items.data[0]?.id;
-        if (!itemId) {
-          return NextResponse.json({ error: 'Aucun article d\'abonnement trouvé dans Stripe. Veuillez contacter le support.' }, { status: 400 });
+          const itemId = currentSubscription.items.data[0]?.id;
+          if (!itemId) {
+            return NextResponse.json({ error: 'Aucun article d\'abonnement trouvé dans Stripe. Veuillez contacter le support.' }, { status: 400 });
+          }
+
+          // Mise à jour de la souscription existante avec proration Stripe native
+          await stripe.subscriptions.update(currentSubscriptionId, {
+            items: [{
+              id: itemId,
+              price: priceId,
+            }],
+            // Pour les upgrades : facturer immédiatement le différentiel
+            // Pour les downgrades : créer la proratisation sur la prochaine facture
+            proration_behavior: isUpgrade ? 'always_invoice' : 'create_prorations',
+            metadata: { plan, userId },
+          });
+
+          // Tier sera mis à jour par le webhook customer.subscription.updated
+          // Ne PAS updater ici pour éviter de donner l'accès avant confirmation Stripe
+
+          return NextResponse.json({
+            success: true,
+            prorata: prorataInfo,
+            message: isUpgrade
+              ? `Abonnement mis à niveau vers ${plan}. Le différentiel a été facturé.`
+              : `Abonnement modifié vers ${plan}. Le crédit sera appliqué à votre prochaine facture.`,
+          });
         }
 
-        // Mise à jour de la souscription existante avec proration Stripe native
-        await stripe.subscriptions.update(currentSubscriptionId, {
-          items: [{
-            id: itemId,
-            price: priceId,
-          }],
-          // Pour les upgrades : facturer immédiatement le différentiel
-          // Pour les downgrades : créer la proratisation sur la prochaine facture
-          proration_behavior: isUpgrade ? 'always_invoice' : 'create_prorations',
-          metadata: { plan, userId },
-        });
-
-        // Tier sera mis à jour par le webhook customer.subscription.updated
-        // Ne PAS updater ici pour éviter de donner l'accès avant confirmation Stripe
-
-        return NextResponse.json({
-          success: true,
-          prorata: prorataInfo,
-          message: isUpgrade
-            ? `Abonnement mis à niveau vers ${plan}. Le différentiel a été facturé.`
-            : `Abonnement modifié vers ${plan}. Le crédit sera appliqué à votre prochaine facture.`,
-        });
+        // Abonnement terminal → on nettoie l'ID périmé puis on tombe vers la création.
+        await supabase.from('profiles').update({ stripe_subscription_id: null }).eq('id', userId);
 
       } catch (stripeError: unknown) {
         const se = stripeError as Error & { code?: string };
         // Si la subscription n'existe plus dans Stripe (annulée, test, etc.),
         // on tombe sur le chemin "nouvelle souscription" au lieu de retourner une erreur.
         const isNotFound = se.code === 'resource_missing' || se.message?.includes('No such subscription');
-        if (!isNotFound) {
+        // Filet de sécurité : si Stripe rejette l'update d'un abonnement terminal malgré
+        // la vérification de statut ci-dessus, on bascule aussi vers la création.
+        const isNotUpdatable = !!se.message?.includes('can only update') || !!se.message?.includes('canceled');
+        if (!isNotFound && !isNotUpdatable) {
           console.error('[change-subscription] Erreur Stripe:', se.message);
           logStripeError('change-subscription', stripeError);
           return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
         }
-        // Subscription invalide → on continue vers la création d'une nouvelle
+        // Subscription invalide/non-mutable → on nettoie l'ID puis on crée une nouvelle
+        await supabase.from('profiles').update({ stripe_subscription_id: null }).eq('id', userId);
       }
     }
 

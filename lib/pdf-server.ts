@@ -4,7 +4,7 @@
  */
 import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage, RGB, PDFImage } from 'pdf-lib';
 import { resolveTermsText } from './payment-terms';
-import { bestTextRGB01, type RGB01 } from './color-contrast';
+import { bestTextRGB01, legibleAccentRGB01, type RGB01 } from './color-contrast';
 
 /** Fetch a remote image and embed it. Returns null on any error so callers can skip gracefully. */
 async function fetchAndEmbedImage(pdfDoc: PDFDocument, url: string): Promise<PDFImage | null> {
@@ -48,6 +48,18 @@ function bestTextOn(bg: RGB, accent?: RGB): RGB {
   const pick = bestTextRGB01(to01(bg), accent ? to01(accent) : undefined);
   return rgb(pick.r, pick.g, pick.b);
 }
+
+// TITAN (CIBLE contraste) — Variante « accent lisible » pour les libellés en
+// accent sur fond clair : conserve l'accent s'il passe AA (4.5:1), sinon
+// l'assombrit juste assez pour rester lisible (préserve la teinte de marque).
+function legibleAccentOn(bg: RGB, accent: RGB): RGB {
+  const to01 = (c: RGB): RGB01 => ({ r: c.red, g: c.green, b: c.blue });
+  const pick = legibleAccentRGB01(to01(bg), to01(accent));
+  return rgb(pick.r, pick.g, pick.b);
+}
+
+const sameColor = (a: RGB, b: RGB): boolean =>
+  a.red === b.red && a.green === b.green && a.blue === b.blue;
 
 // ── Safe text (WinAnsiEncoding — French accented chars ARE supported: e9=e8=e0=ea=eb=e7...) ──
 
@@ -429,21 +441,28 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
       });
     }
 
+    // TITAN (CIBLE contraste) — tous les textes de la bande d'en-tête sont calculés
+    // contre headerBg (qui vaut l'accent utilisateur pour les templates 3 & 8).
+    // bestTextOn garantit du noir OU du blanc selon la luminance du fond : le SIRET,
+    // l'adresse et les infos légales restent lisibles quelle que soit la couleur
+    // choisie (fini le gris sur fond vert ou le blanc sur jaune clair).
+    const headerText = bestTextOn(style.headerBg);
+
     // Doc label — right side
-    rightText(page, docLabel, W - margin, H - 28, 9, titleFont, rgb(0.85, 0.85, 0.88));
+    rightText(page, docLabel, W - margin, H - 28, 9, titleFont, headerText);
 
     // Dates — right side, below doc label
-    rightText(page, `Emis le ${fmtDate(invoice.issue_date)}`, W - margin, H - 46, 8.5, reg, rgb(0.78, 0.78, 0.82));
+    rightText(page, `Emis le ${fmtDate(invoice.issue_date)}`, W - margin, H - 46, 8.5, reg, headerText);
     if (invoice.due_date) {
-      rightText(page, `Echeance : ${fmtDate(invoice.due_date)}`, W - margin, H - 60, 8.5, bold, rgb(0.85, 0.85, 0.88));
+      rightText(page, `Echeance : ${fmtDate(invoice.due_date)}`, W - margin, H - 60, 8.5, bold, headerText);
     }
 
     // Company name below logo area (inside header, bottom-left)
     if (!logoImage) {
-      drawText(page, senderName, margin, H - 50, 14, titleFont, white);
+      drawText(page, senderName, margin, H - 50, 14, titleFont, headerText);
     }
     if (profile?.siret) {
-      drawText(page, `SIRET : ${safe(profile.siret)}`, margin, H - style.headerH + 12, 7, reg, rgb(0.6, 0.6, 0.65));
+      drawText(page, `SIRET : ${safe(profile.siret)}`, margin, H - style.headerH + 12, 7, reg, headerText);
     }
 
     y = H - style.headerH - 20;
@@ -469,11 +488,14 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
 
     // Doc label + dates — right side
     const infoX = W - margin;
-    drawText(page, safe(docLabel), infoX - 150, y + 50, 10, titleFont, accent);
+    // TITAN (CIBLE contraste) — libellés en accent sur fond clair : accent conservé
+    // s'il passe AA, sinon assombri (legibleAccentOn) pour rester lisible.
+    const accentOnBody = legibleAccentOn(style.bodyBg, accent);
+    drawText(page, safe(docLabel), infoX - 150, y + 50, 10, titleFont, accentOnBody);
     const dateStr = fmtDate(invoice.issue_date);
     drawText(page, `Emis le ${dateStr}`, infoX - 150, y + 34, 8.5, reg, muted);
     if (invoice.due_date) {
-      drawText(page, `Echeance : ${fmtDate(invoice.due_date)}`, infoX - 150, y + 18, 8.5, bold, accent);
+      drawText(page, `Echeance : ${fmtDate(invoice.due_date)}`, infoX - 150, y + 18, 8.5, bold, accentOnBody);
     }
 
     // Company name if no logo
@@ -497,7 +519,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // Le nom de l'entreprise n'est répété dans le corps QUE si l'en-tête affiche le
   // logo (et donc pas le nom). Sinon le nom est déjà dans la bande d'en-tête : on
   // évite la duplication qui le faisait apparaître « au milieu » du document.
-  drawText(page, 'EMETTEUR', margin, ly, 7, bold, accent);
+  drawText(page, 'EMETTEUR', margin, ly, 7, bold, legibleAccentOn(style.bodyBg, accent));
   ly -= 14;
   if (logoImage) {
     drawText(page, senderName, margin, ly, 10, bold, ink, halfX - margin - 16);
@@ -545,7 +567,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // Accent bar on left of client card
   page.drawRectangle({ x: clientBoxX - 8, y: ry - clientBoxH + 4, width: 3, height: clientBoxH, color: accent });
 
-  drawText(page, 'FACTURER A', clientBoxX, ry - 4, 7, bold, accent);
+  drawText(page, 'FACTURER A', clientBoxX, ry - 4, 7, bold, legibleAccentOn(style.bodyBg, accent));
   drawText(page, clientName, clientBoxX, ry - 18, 10, bold, ink, clientBoxW);
   ry -= 28;
   if (client?.address) { drawText(page, safe(client.address), clientBoxX, ry, 8.5, reg, muted, clientBoxW); ry -= 12; }
@@ -579,12 +601,21 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // Table header
   const thH = 24;
   page.drawRectangle({ x: margin, y: y - thH + 6, width: contentW, height: thH, color: style.thBg });
+  // TITAN (CIBLE contraste) — couleur de texte d'en-tête de tableau garantie lisible :
+  //   • fond = accent (AUDACE)         → noir/blanc strict (bestTextOn)
+  //   • texte = accent sur fond clair  → accent assombri si besoin (legibleAccentOn)
+  //   • couleurs fixes délibérées      → inchangées (gris/vert sur fond foncé)
+  const thText = sameColor(style.thBg, accent)
+    ? bestTextOn(style.thBg)
+    : sameColor(style.thText, accent)
+      ? legibleAccentOn(style.thBg, accent)
+      : style.thText;
   const thY = y - 10;
-  drawText(page, 'PRESTATION / DESCRIPTION', col.desc + 8, thY, 7, bold, style.thText);
-  drawText(page, 'QTE', col.qty, thY, 7, bold, style.thText);
-  drawText(page, 'P.U. HT', col.price, thY, 7, bold, style.thText);
-  drawText(page, 'TVA', col.vat, thY, 7, bold, style.thText);
-  rightText(page, 'TOTAL HT', rightEdge - 8, thY, 7, bold, style.thText);
+  drawText(page, 'PRESTATION / DESCRIPTION', col.desc + 8, thY, 7, bold, thText);
+  drawText(page, 'QTE', col.qty, thY, 7, bold, thText);
+  drawText(page, 'P.U. HT', col.price, thY, 7, bold, thText);
+  drawText(page, 'TVA', col.vat, thY, 7, bold, thText);
+  rightText(page, 'TOTAL HT', rightEdge - 8, thY, 7, bold, thText);
   y -= thH;
 
   // Item rows

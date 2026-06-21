@@ -181,12 +181,14 @@ function PricingToggle({
   const confettiRef = useRef<HTMLDivElement>(null);
   const monthlyBtnRef = useRef<HTMLButtonElement>(null);
   const annualBtnRef = useRef<HTMLButtonElement>(null);
-  const [pillStyle, setPillStyle] = useState<Record<string, number>>({});
+  // Position de la pastille animée : width + x (motion values interpolables par Framer Motion).
+  // (anciennement passé via `transform` dans `style` — non animé, la pastille restait figée)
+  const [pillStyle, setPillStyle] = useState<{ width: number; x: number }>({ width: 0, x: 0 });
 
   useEffect(() => {
     const btnRef = isMonthly ? monthlyBtnRef : annualBtnRef;
     if (btnRef.current) {
-      setPillStyle({ width: btnRef.current.offsetWidth, transform: btnRef.current.offsetLeft });
+      setPillStyle({ width: btnRef.current.offsetWidth, x: btnRef.current.offsetLeft });
     }
   }, [isMonthly]);
 
@@ -215,7 +217,8 @@ function PricingToggle({
       <div ref={confettiRef} className="relative flex w-fit items-center rounded-full border border-border/60 bg-muted/60 p-1 backdrop-blur">
         <motion.div
           className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 p-1 shadow-md"
-          style={pillStyle}
+          initial={false}
+          animate={{ width: pillStyle.width, x: pillStyle.x }}
           transition={{ type: 'spring', stiffness: 500, damping: 40 }}
         />
         <button

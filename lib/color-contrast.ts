@@ -91,3 +91,46 @@ export function bestTextHex(bgHex: string, accentHex?: string): string {
     bestTextRGB01(hexToRGB01(bgHex), accentHex ? hexToRGB01(accentHex) : undefined),
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TITAN (CIBLE contraste) — Variante « accent lisible » pour les LIBELLÉS en
+// accent posés sur un fond clair (EMETTEUR, FACTURÉ À, en-têtes de tableau).
+//
+// bestTextRGB01/max-contraste basculerait systématiquement en noir (l'accent
+// émeraude sur blanc ne fait que ~2.7:1) → perte de l'identité de marque.
+//
+// legibleAccent* conserve l'accent S'IL atteint AA (4.5:1) ; sinon l'assombrit
+// par paliers vers le noir juste assez pour passer AA (teinte de marque
+// préservée) ; en dernier recours, noir/blanc pur. Lisibilité garantie sans
+// rupture esthétique pour les accents foncés (souvent inchangés).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BLACK01: RGB01 = { r: 0, g: 0, b: 0 };
+
+/** Mélange pondéré de deux couleurs (alpha = poids de c1). */
+function mixRGB01(c1: RGB01, c2: RGB01, alpha: number): RGB01 {
+  return {
+    r: c1.r * alpha + c2.r * (1 - alpha),
+    g: c1.g * alpha + c2.g * (1 - alpha),
+    b: c1.b * alpha + c2.b * (1 - alpha),
+  };
+}
+
+/**
+ * Couleur de texte lisible pour un libellé en accent sur `bg`.
+ * Conserve l'accent s'il passe AA (4.5:1), sinon l'assombrit vers le noir par
+ * paliers jusqu'à passer AA, en dernier recours noir/blanc (bestTextRGB01).
+ */
+export function legibleAccentRGB01(bg: RGB01, accent: RGB01): RGB01 {
+  if (contrastRatio(bg, accent) >= 4.5) return accent;
+  for (const alpha of [0.45, 0.3, 0.15]) {
+    const darkened = mixRGB01(accent, BLACK01, alpha);
+    if (contrastRatio(bg, darkened) >= 4.5) return darkened;
+  }
+  return bestTextRGB01(bg);
+}
+
+/** Variante hex (pour react-pdf / CSS). */
+export function legibleAccentText(bgHex: string, accentHex: string): string {
+  return rgb01ToHex(legibleAccentRGB01(hexToRGB01(bgHex), hexToRGB01(accentHex)));
+}

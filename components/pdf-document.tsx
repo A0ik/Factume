@@ -162,6 +162,10 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
   const tpl = getTplStyle(profile.template_id || 1, accent);
   const meta = DOC_META[invoice.document_type] || DOC_META.invoice;
   const wm = WATERMARKS[invoice.status];
+  // TITAN (CIBLE contraste) — texte d'en-tête lisible (noir/blanc) quelle que soit
+  // la couleur de bande choisie (headerColor = accent pour le template 3). Le SIRET
+  // et les adresses restent lisibles même sur un accent clair.
+  const headerText = bestTextHex(tpl.headerColor);
 
   const f = (n: number) => fmtCurrency(n, currency, locale);
   const fd = (s: string) => fmtDate(s, locale);
@@ -280,20 +284,20 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
                 {profile.logo_url ? (
                   <Image src={profile.logo_url} style={{ height: 64, maxWidth: 220, objectFit: 'contain' }} />
                 ) : (
-                  <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff' }}>{companyName}</Text>
+                  <Text style={{ fontSize: 18, fontFamily: bold, color: headerText }}>{companyName}</Text>
                 )}
               </View>
               <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
-                <Text style={{ fontSize: 9, fontFamily: bold, color: '#ffffff', letterSpacing: 2.5 }}>{meta.label}</Text>
+                <Text style={{ fontSize: 9, fontFamily: bold, color: headerText, letterSpacing: 2.5 }}>{meta.label}</Text>
               </View>
             </View>
             {profile.logo_url && companyName && (
-              <Text style={{ fontSize: 14, fontFamily: bold, color: '#ffffff', marginTop: 8 }}>{companyName}</Text>
+              <Text style={{ fontSize: 14, fontFamily: bold, color: headerText, marginTop: 8 }}>{companyName}</Text>
             )}
             {senderInfo.length > 0 && (
               <View style={{ marginTop: 6 }}>
                 {senderInfo.slice(0, 4).map((line, i) => (
-                  <Text key={i} style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.65)', marginBottom: 1.5 }}>{line}</Text>
+                  <Text key={i} style={{ fontSize: 8.5, color: headerText, marginBottom: 1.5 }}>{line}</Text>
                 ))}
               </View>
             )}

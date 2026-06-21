@@ -16,7 +16,6 @@ import {
   Info, Calculator,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MultiInvoiceUpload } from '@/components/ui/MultiInvoiceUpload';
 import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
 
 interface Expense {
@@ -192,7 +191,7 @@ function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate, isDar
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className={cn("text-sm font-semibold truncate", isDark ? "text-white" : "text-gray-900")}>{expense.vendor}</p>
+            <p className={cn("text-sm font-semibold truncate", isDark ? "text-white" : "text-gray-900")}>{expense.vendor || 'Fournisseur inconnu'}</p>
             <p className={cn("text-sm font-bold flex-shrink-0", isDark ? "text-white" : "text-gray-900")}>{formatCurrency(expense.amount)}</p>
           </div>
           <div className="flex items-center gap-2 mt-1">
@@ -265,7 +264,7 @@ function DesktopTableRow({ expense, onEdit, onDelete, onValidate, isDark }: {
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <span className={cn('w-2 h-2 rounded-full flex-shrink-0', cat.dot)} />
-          <span className={cn("text-sm", isDark ? "text-zinc-300" : "text-gray-700")}>{expense.vendor}</span>
+          <span className={cn("text-sm", isDark ? "text-zinc-300" : "text-gray-700")}>{expense.vendor || 'Fournisseur inconnu'}</span>
         </div>
       </td>
       <td className="px-5 py-4">
@@ -328,7 +327,6 @@ export default function ExpensesPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [showMultiInvoiceModal, setShowMultiInvoiceModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -560,7 +558,7 @@ export default function ExpensesPage() {
     if (format === 'fec') {
       const fecContent = validated.map((e, idx) => {
         const date = e.date.replace(/-/g, '');
-        return `${date.padEnd(8, '0')}000000   ${e.category.padEnd(4, '0')}   625000        DEPENSE         ${(e.amount / 100).toFixed(2).padStart(15, ' ')}          ${e.vendor.padEnd(30, ' ')}       ${e.description?.padEnd(30, ' ')}         ${idx + 1}`;
+        return `${date.padEnd(8, '0')}000000   ${e.category.padEnd(4, '0')}   625000        DEPENSE         ${(e.amount / 100).toFixed(2).padStart(15, ' ')}          ${(e.vendor || '').padEnd(30, ' ')}       ${e.description?.padEnd(30, ' ')}         ${idx + 1}`;
       }).join('\n');
       const blob = new Blob([fecContent], { type: 'text/plain;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -578,7 +576,8 @@ export default function ExpensesPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return expenses.filter((e) => {
-      const matchSearch = !q || e.vendor.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q);
+      if (!e) return false; // garde anti-crash : une dépense nulle n'est jamais rendue
+      const matchSearch = !q || (e.vendor || '').toLowerCase().includes(q) || e.description?.toLowerCase().includes(q);
       const matchCat = !filterCat || e.category === filterCat;
       const matchStatus = !filterStatus || e.status === filterStatus;
       return matchSearch && matchCat && matchStatus;
@@ -627,7 +626,7 @@ export default function ExpensesPage() {
             <span className="hidden sm:inline">Nouvelle dépense</span>
             <span className="sm:hidden">Ajouter</span>
           </button>
-          <button onClick={() => setShowMultiInvoiceModal(true)}
+          <Link href="/ocr"
             className={cn(
               "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors",
               isDark
@@ -636,7 +635,7 @@ export default function ExpensesPage() {
             )}>
             <Sparkles size={16} />
             <span className="hidden sm:inline">Multi-factures</span>
-          </button>
+          </Link>
           <Link href="/expenses/analytics"
             className={cn(
               "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors",
@@ -1374,55 +1373,7 @@ export default function ExpensesPage() {
         )}
       </AnimatePresence>
 
-      {/* ─── Modal Multi-Factures ──────────────────────────────── */}
-      <AnimatePresence>
-        {showMultiInvoiceModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowMultiInvoiceModal(false); }}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.98 }}
-              transition={{ duration: 0.3, ease }}
-              className={cn(
-                "w-full md:max-w-4xl md:rounded-2xl rounded-t-2xl p-5 max-h-[90vh] overflow-hidden flex flex-col",
-                isDark
-                  ? "bg-[#111113] border border-white/[0.08]"
-                  : "bg-white border border-gray-200"
-              )}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className={cn("text-lg font-semibold flex items-center gap-2", isDark ? "text-white" : "text-gray-900")}>
-                    <Sparkles className="w-4 h-4 text-purple-400" />
-                    Upload Multi-Factures
-                  </h2>
-                  <p className={cn("text-xs mt-0.5", isDark ? "text-zinc-500" : "text-gray-500")}>L'IA détecte automatiquement chaque facture dans votre PDF</p>
-                </div>
-                <button onClick={() => setShowMultiInvoiceModal(false)}
-                  className={cn("p-2 rounded-lg transition-colors", isDark ? "hover:bg-white/[0.06] text-zinc-400 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-gray-900")}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto">
-                <MultiInvoiceUpload
-                  onExtracted={(expenses) => {
-                    setExpenses(prev => [...expenses, ...prev]);
-                    setShowMultiInvoiceModal(false);
-                    toast.success(`${expenses.length} facture(s) extraite(s) avec succès`);
-                  }}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Module Multi-Factures → page /ocr dédiée (workflow Dext.com double-écran) */}
     </div>
   );
 }
