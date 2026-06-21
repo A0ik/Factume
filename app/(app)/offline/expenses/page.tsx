@@ -185,6 +185,11 @@ export default function ExpensesPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // SAGE (CIBLE 2) — LOI du justificatif (front). Un trigger DB rejette aussi l'insertion.
+    if (!receiptUrl) {
+      toast.error('Un justificatif est obligatoire pour enregistrer une note de frais.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {

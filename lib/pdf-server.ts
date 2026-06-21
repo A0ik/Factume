@@ -4,6 +4,7 @@
  */
 import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage, RGB, PDFImage } from 'pdf-lib';
 import { resolveTermsText } from './payment-terms';
+import { bestTextRGB01, type RGB01 } from './color-contrast';
 
 /** Fetch a remote image and embed it. Returns null on any error so callers can skip gracefully. */
 async function fetchAndEmbedImage(pdfDoc: PDFDocument, url: string): Promise<PDFImage | null> {
@@ -37,6 +38,15 @@ function hexToRgb(hex: string): RGB {
 
 function mixRgb(c: RGB, alpha: number, bg: RGB = rgb(1, 1, 1)): RGB {
   return rgb(c.red * alpha + bg.red * (1 - alpha), c.green * alpha + bg.green * (1 - alpha), c.blue * alpha + bg.blue * (1 - alpha));
+}
+
+// SAGE (CIBLE 1) — Contraste WCAG du TOTAL TTC : choisit la couleur de texte la plus
+// lisible (noir / blanc / accent) selon la luminance du fond, pour qu'un accent clair
+// ne rende jamais le total illisible. Adapte le pdf-lib RGB (0..1) au helper partagé.
+function bestTextOn(bg: RGB, accent?: RGB): RGB {
+  const to01 = (c: RGB): RGB01 => ({ r: c.red, g: c.green, b: c.blue });
+  const pick = bestTextRGB01(to01(bg), accent ? to01(accent) : undefined);
+  return rgb(pick.r, pick.g, pick.b);
 }
 
 // ── Safe text (WinAnsiEncoding — French accented chars ARE supported: e9=e8=e0=ea=eb=e7...) ──
@@ -617,24 +627,30 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     if (isFinal) {
       const ts = style.totalStyle || 'bar';
       if (ts === 'flat') {
-        // ATELIER (CIBLE 4) — PUR : total à plat (filet accent + grand chiffre accent).
+        // ATELIER (CIBLE 4) — PUR : total à plat (filet accent + grand chiffre).
+        // SAGE (CIBLE 1) — valeur en couleur lisible (noir/blanc/accent) selon le fond.
         page.drawLine({ start: { x: totX - 12, y: y + 4 }, end: { x: totRight, y: y + 4 }, thickness: 1.2, color: accent });
         drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
-        rightText(page, value, totRight, y - 14, 20, titleFont, accent);
+        rightText(page, value, totRight, y - 14, 20, titleFont, bestTextOn(style.bodyBg, accent));
         y -= 34;
       } else if (ts === 'boxed') {
-        // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent, valeur accent (CIBLE 2 : arrondi).
+        // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent (CIBLE 2 : arrondi).
+        // SAGE (CIBLE 1) — valeur en couleur lisible sur fond blanc.
         const boxH = 34;
-        drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: rgb(1, 1, 1), borderColor: accent, borderWidth: 1 });
+        const boxBg = rgb(1, 1, 1);
+        drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: boxBg, borderColor: accent, borderWidth: 1 });
         drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
-        rightText(page, value, totRight, y - 10, 16, titleFont, accent);
+        rightText(page, value, totRight, y - 10, 16, titleFont, bestTextOn(boxBg, accent));
         y -= boxH + 6;
       } else {
         // 'bar' (templates 1-6) ou 'card' (AUDACE) : bande pleine couleur totalBg (CIBLE 2 : arrondi).
+        // SAGE (CIBLE 1) — texte (label + valeur) en couleur lisible selon la luminance du fond,
+        // pour qu'un accent clair ne rende jamais le TOTAL illisible.
         const boxH = 34;
         drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: style.totalBg });
-        drawText(page, label, totX - 4, y - 8, 9, titleFont, rgb(0.85, 0.85, 0.88));
-        rightText(page, value, totRight, y - 10, 16, titleFont, style.totalValueColor(accent));
+        const totalFg = bestTextOn(style.totalBg, accent);
+        drawText(page, label, totX - 4, y - 8, 9, titleFont, totalFg);
+        rightText(page, value, totRight, y - 10, 16, titleFont, totalFg);
         y -= boxH + 6;
       }
     } else {

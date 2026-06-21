@@ -8,10 +8,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 // ---------------------------------------------------------------------------
 
 export async function GET(req: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret — fail-closed si CRON_SECRET absent (CIBLE 3d)
   const authHeader = req.headers.get('authorization');
-  const cronSecret = authHeader?.replace('Bearer ', '');
-  if (cronSecret !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

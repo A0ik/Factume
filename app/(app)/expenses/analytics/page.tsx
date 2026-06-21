@@ -224,13 +224,33 @@ export default function ExpenseAnalyticsPage() {
     .filter((e) => e.is_deductible === false)
     .reduce((s, e) => s + e.amount, 0);
 
-  // Estimated VAT by rate (heuristic based on common French rates)
-  const vatByRate = [
-    { rate: '20%', amount: Math.round(totalVat * 0.65 * 100) / 100, color: 'bg-blue-500' },
-    { rate: '10%', amount: Math.round(totalVat * 0.20 * 100) / 100, color: 'bg-cyan-500' },
-    { rate: '5.5%', amount: Math.round(totalVat * 0.10 * 100) / 100, color: 'bg-teal-500' },
-    { rate: '2.1%', amount: Math.round(totalVat * 0.05 * 100) / 100, color: 'bg-green-500' },
-  ];
+  // Répartition RÉELLE de la TVA par taux : dérivée des montants HT/TVA de chaque
+  // dépense (taux effectif = vat / ht), puis rapprochée du taux français standard le
+  // plus proche. Avant, ces montants étaient fabriqués (répartition fixe 65/20/10/5%).
+  const RATE_COLORS: Record<string, string> = {
+    '20%': 'bg-blue-500',
+    '10%': 'bg-cyan-500',
+    '5.5%': 'bg-teal-500',
+    '2.1%': 'bg-green-500',
+    '0%': 'bg-zinc-500',
+  };
+  const STANDARD_RATES = [20, 10, 5.5, 2.1, 0];
+  const vatByRateMap = new Map<string, number>();
+  filteredExpenses.forEach((e) => {
+    const ttc = e.amount || 0;
+    const vat = e.vat_amount || 0;
+    if (vat <= 0) return;
+    const ht = ttc - vat;
+    if (ht <= 0) return;
+    const rate = (vat / ht) * 100;
+    const standard = STANDARD_RATES.reduce((best, r) =>
+      Math.abs(rate - r) < Math.abs(rate - best) ? r : best, 20);
+    const key = standard === 0 ? '0%' : `${standard}%`;
+    vatByRateMap.set(key, (vatByRateMap.get(key) || 0) + vat);
+  });
+  const vatByRate = Array.from(vatByRateMap.entries())
+    .map(([rate, amount]) => ({ rate, amount: Math.round(amount * 100) / 100, color: RATE_COLORS[rate] || 'bg-zinc-500' }))
+    .sort((a, b) => b.amount - a.amount);
 
   // ---- Recent activity ----
   const recentExpenses = filteredExpenses.slice(0, 10);
@@ -270,7 +290,7 @@ export default function ExpenseAnalyticsPage() {
   // ---- Loading state ----
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#09090B] dark:via-[#0C0C0F] dark:to-[#09090B] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-14 h-14 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-sm font-medium text-gray-400">Chargement des analytics...</p>
@@ -326,7 +346,7 @@ export default function ExpenseAnalyticsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#09090B] dark:via-[#0C0C0F] dark:to-[#09090B] p-4 md:p-6 lg:p-8">
 
       {/* ================================================================== */}
       {/* HEADER                                                              */}
@@ -334,7 +354,7 @@ export default function ExpenseAnalyticsPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
+        className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
@@ -348,7 +368,7 @@ export default function ExpenseAnalyticsPage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Period selector */}
-            <div className="flex items-center bg-white/50 dark:bg-slate-700/50 rounded-2xl border border-gray-200 dark:border-gray-600 p-1 gap-1">
+            <div className="flex items-center bg-white/50 dark:bg-white/[0.05] rounded-2xl border border-gray-200 dark:border-gray-600 p-1 gap-1">
               {PERIODS.map((p) => (
                 <button
                   key={p.value}
@@ -376,14 +396,14 @@ export default function ExpenseAnalyticsPage() {
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="px-3 py-2 rounded-xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 text-xs"
+                  className="px-3 py-2 rounded-xl bg-white/50 dark:bg-white/[0.05] border border-gray-200 dark:border-gray-600 text-xs"
                 />
                 <span className="text-gray-400 text-xs">→</span>
                 <input
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  className="px-3 py-2 rounded-xl bg-white/50 dark:bg-slate-700/50 border border-gray-200 dark:border-gray-600 text-xs"
+                  className="px-3 py-2 rounded-xl bg-white/50 dark:bg-white/[0.05] border border-gray-200 dark:border-gray-600 text-xs"
                 />
               </motion.div>
             )}
@@ -417,7 +437,7 @@ export default function ExpenseAnalyticsPage() {
               whileHover={{ y: -4 }}
               className="relative group"
             >
-              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
+              <div className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-5 overflow-hidden">
                 <div className={cn('absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500', kpi.color)} />
                 <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5" />
                 <div className="relative">
@@ -450,7 +470,7 @@ export default function ExpenseAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
+          className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
@@ -493,7 +513,7 @@ export default function ExpenseAnalyticsPage() {
                         {pct.toFixed(1)}%
                       </span>
                     </div>
-                    <div className="h-3 bg-gray-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                    <div className="h-3 bg-gray-100 dark:bg-white/[0.05] rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${barWidth}%` }}
@@ -513,7 +533,7 @@ export default function ExpenseAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
+          className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -558,7 +578,7 @@ export default function ExpenseAnalyticsPage() {
                           'w-full rounded-t-xl transition-colors',
                           isCurrent
                             ? 'bg-gradient-to-t from-primary to-primary/70 shadow-lg shadow-primary/30'
-                            : 'bg-gray-200 dark:bg-slate-700 group-hover:bg-gray-300'
+                            : 'bg-gray-200 dark:bg-white/[0.08] group-hover:bg-gray-300'
                         )}
                       />
                     </div>
@@ -586,7 +606,7 @@ export default function ExpenseAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
+          className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
@@ -613,7 +633,7 @@ export default function ExpenseAnalyticsPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.55 + idx * 0.06 }}
-                    className="group p-4 rounded-2xl bg-white/40 dark:bg-slate-700/30 border border-gray-100 dark:border-slate-600/30 hover:border-primary/30 transition-all"
+                    className="group p-4 rounded-2xl bg-white/40 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] hover:border-primary/30 transition-all"
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className={cn(
@@ -621,7 +641,7 @@ export default function ExpenseAnalyticsPage() {
                         idx === 0 ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
                         idx === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-500' :
                         idx === 2 ? 'bg-gradient-to-br from-orange-600 to-orange-700' :
-                        'bg-gradient-to-br from-gray-300 to-gray-400 dark:from-slate-600 dark:to-slate-500'
+                        'bg-gradient-to-br from-gray-300 to-gray-400 dark:from-white/[0.15] dark:to-white/[0.10]'
                       )}>
                         {idx + 1}
                       </div>
@@ -638,7 +658,7 @@ export default function ExpenseAnalyticsPage() {
                         {formatCurrency(v.total)}
                       </span>
                     </div>
-                    <div className="h-2 bg-gray-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                    <div className="h-2 bg-gray-100 dark:bg-white/[0.05] rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${barWidth}%` }}
@@ -658,7 +678,7 @@ export default function ExpenseAnalyticsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
+          className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
@@ -692,7 +712,7 @@ export default function ExpenseAnalyticsPage() {
                 return (
                   <div key={v.rate} className="flex items-center gap-3">
                     <span className="text-xs font-bold text-gray-600 dark:text-gray-400 w-10 text-right">{v.rate}</span>
-                    <div className="flex-1 h-5 bg-gray-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
+                    <div className="flex-1 h-5 bg-gray-100 dark:bg-white/[0.05] rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${barW}%` }}
@@ -746,7 +766,7 @@ export default function ExpenseAnalyticsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
+        className="bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -795,7 +815,7 @@ export default function ExpenseAnalyticsPage() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.75 + idx * 0.04 }}
-                  className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50/80 dark:hover:bg-slate-700/30 transition-all"
+                  className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-50/80 dark:hover:bg-white/[0.04] transition-all"
                 >
                   <span className="text-lg flex-shrink-0 flex items-center"><cat.Icon size={18} /></span>
 

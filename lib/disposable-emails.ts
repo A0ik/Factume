@@ -70,9 +70,16 @@ export function normalizeEmail(email: string): string | null {
   return `${local}@${domain}`;
 }
 
+// GUARDIAN (CIBLE 3) — Couche heuristique regex, miroir du trigger backend
+// (public.block_disposable_signup). Intercepte instantanément côté client les variants
+// de temp-mail non listés explicitement. La BDD reste le mur dur (55 000+ domaines).
+const DISPOSABLE_REGEX = /(temp[-_]?mail|throwaway|trash[-_]?mail|mailinator|guerrilla|yopmail|10minute|fake[-_]?box|disposable|mail[-_]?drop|incognito[-_]?mail|burner[-_]?mail|getairmail|mailnesia|sharklasers|spambog|discard\.|dropmail|tempinbox|mintemail|mohmal|nada\.email|notmailinator|spam4\.me)/;
+
 export function isDisposableEmail(email: string): boolean {
   const normalized = normalizeEmail(email);
   if (!normalized) return false;
   const domain = normalized.split('@')[1];
-  return DISPOSABLE_DOMAINS.has(domain);
+  if (DISPOSABLE_DOMAINS.has(domain)) return true;
+  if (DISPOSABLE_REGEX.test(domain)) return true;
+  return false;
 }

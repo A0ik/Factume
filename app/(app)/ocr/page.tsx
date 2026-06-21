@@ -669,10 +669,17 @@ export default function OCRPage() {
 
       updateFile(scannedFile.id, { status: 'uploading', progress: 30 });
 
-      const response = await fetch('/api/ai/ocr-receipt', {
-        method: 'POST',
-        body: formData,
-      });
+      // SAGE (CIBLE 3) — moteur OCR hybride Mistral (2 stages : Mistral OCR → Gemini Flash)
+      // en premier : moins cher et plus précis (surclasse Dext sur les layouts atypiques).
+      // Repli automatique sur Gemini (ocr-receipt) si Mistral est indisponible ou échoue.
+      let response = await fetch('/api/ai/ocr-mistral', { method: 'POST', body: formData });
+
+      if (!response.ok && response.status !== 207) {
+        console.warn('[OCR] Mistral indisponible, repli sur Gemini ocr-receipt:', response.status);
+        const fallbackForm = new FormData();
+        fallbackForm.append('file', scannedFile.file);
+        response = await fetch('/api/ai/ocr-receipt', { method: 'POST', body: fallbackForm });
+      }
 
       if (progressInterval) {
         clearInterval(progressInterval);

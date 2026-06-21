@@ -240,6 +240,42 @@ export async function POST(req: NextRequest) {
         const userId = setupIntent.metadata?.userId;
         const plan = setupIntent.metadata?.plan || 'business';
 
+        // GUARDIAN (CIBLE 4) — récupère l'empreinte carte (card.fingerprint) pour la
+        // déduplication anti-fraude multi-comptes (même carte = essai unique).
+        let cardFingerprint: string | null = null;
+        if (setupIntent.payment_method) {
+          try {
+            const pm = await stripe.paymentMethods.retrieve(setupIntent.payment_method as string);
+            cardFingerprint = pm.card?.fingerprint ?? null;
+          } catch {}
+        }
+
+        // GUARDIAN (CIBLE 4) — anti-doublon : la MÊME carte déjà utilisée pour un essai
+        // sur un AUTRE compte = fraude. On annule l'abonnement et on n'active PAS l'essai.
+        if (userId && cardFingerprint) {
+          const { data: dup } = await supabase
+            .from('profiles')
+            .select('id')
+            .neq('id', userId)
+            .eq('trial_card_fingerprint', cardFingerprint)
+            .limit(1);
+
+          if (dup && dup.length > 0) {
+            console.warn('[webhook] GUARDIAN: carte réutilisée détectée (fraude essai) user=', userId);
+            if (subscriptionId) {
+              try { await stripe.subscriptions.cancel(subscriptionId); } catch {}
+            }
+            await supabase.from('profiles').update({
+              is_trial_active: false,
+              subscription_tier: 'free',
+              stripe_subscription_id: null,
+              has_used_trial: true,            // bloque tout nouvel essai sur ce compte
+              trial_card_fingerprint: cardFingerprint,
+            }).eq('id', userId);
+            break; // pas d'activation de l'essai
+          }
+        }
+
         // Link the confirmed payment method to the trial subscription
         if (subscriptionId && setupIntent.payment_method) {
           await stripe.subscriptions.update(subscriptionId, {
@@ -266,6 +302,9 @@ export async function POST(req: NextRequest) {
             trial_end_date: trialEnd,
             is_trial_active: true,
             subscription_tier: 'trial',
+            has_used_trial: true,
+            trial_selected_plan: plan,
+            trial_card_fingerprint: cardFingerprint,
           }).eq('id', userId);
         }
         break;

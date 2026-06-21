@@ -8,6 +8,8 @@ import React from 'react';
 import { Document, Page, Text, View, Image, Link } from '@react-pdf/renderer';
 import { Invoice, Profile } from '@/types';
 import { resolvePaymentLink } from '@/lib/payment-link';
+import { resolveTermsText } from '@/lib/payment-terms';
+import { bestTextHex } from '@/lib/color-contrast';
 
 // ── Document type metadata ────────────────────────────────────────────────────
 
@@ -211,19 +213,15 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
     legalParts.push('Pénalités de retard : 3× taux légal — Indemnité forfaitaire : 40 EUR (art. L.441-6 c. com.)');
   const legalText = profile.legal_mention || legalParts.join(' • ');
 
-  const payTermsText = (() => {
-    const terms = profile.payment_terms;
-    if (!terms) {
-      return "Paiement à réception de la facture. En cas de retard de paiement, une indemnité forfaitaire de 40 EUR sera appliquée (art. L.441-6 c. com.). Pénalités de retard : 3× le taux légal.";
-    }
-    const numMatch = terms.match(/^\d+$/);
-    if (numMatch) {
-      const days = parseInt(terms, 10);
-      if (days === 0) return "Paiement à réception de la facture.";
-      return `Paiement sous ${days} jours. En cas de retard de paiement, une indemnité forfaitaire de 40 EUR sera appliquée (art. L.441-6 c. com.). Pénalités de retard : 3× le taux légal.`;
-    }
-    return terms;
-  })();
+  // SAGE (CIBLE 1) — on lit D'ABORD le terme choisi sur la facture (termId sémantique
+  // persisté : reception/days15/…/end_of_month/custom-N), puis le défaut profil.
+  // Avant, le preview lisait profile.payment_terms ('30') → « 30 jours » quel que soit
+  // le choix. On utilise le MÊME résolveur que le PDF final (lib/payment-terms.ts) pour
+  // une parité affichage parfaite. Retourne null quand rien n'est résolvable → le bloc
+  // n'est pas rendu (parité avec le PDF qui ne dessine rien dans ce cas).
+  const payTermsText = resolveTermsText(
+    (invoice as any).payment_terms ?? profile.payment_terms ?? null,
+  );
 
   const isFullHeader = tpl.headerType === 'full';
 
@@ -433,11 +431,12 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
               </View>
             )}
             <View style={{ height: 1, backgroundColor: tpl.borderColor, marginVertical: 5 }} />
+            {/* SAGE (CIBLE 1) — couleur du TOTAL lisible (noir/blanc/accent) selon le fond, WCAG. */}
             <View style={{ backgroundColor: tpl.totalBg, padding: '12 16', borderRadius: 6, flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-              <Text style={{ fontSize: 7.5, fontFamily: bold, color: 'rgba(255,255,255,0.75)', letterSpacing: 1, textAlign: 'right' }}>
+              <Text style={{ fontSize: 7.5, fontFamily: bold, color: bestTextHex(tpl.totalBg, accent), opacity: 0.75, letterSpacing: 1, textAlign: 'right' }}>
                 {meta.totalLabel}
               </Text>
-              <Text style={{ fontSize: 18, fontFamily: bold, color: '#ffffff', textAlign: 'right' }}>
+              <Text style={{ fontSize: 18, fontFamily: bold, color: bestTextHex(tpl.totalBg, accent), textAlign: 'right' }}>
                 {f(invoice.total)}
               </Text>
             </View>
@@ -506,7 +505,7 @@ export function PdfDocument({ invoice, profile }: { invoice: Invoice; profile: P
           </View>
         )}
 
-        {(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && (
+        {(invoice.document_type === 'invoice' || invoice.document_type === 'deposit') && payTermsText && (
           <View style={{ marginHorizontal: 44, marginBottom: 10, backgroundColor: tpl.sectionBg, borderRadius: 6, padding: '10 14' }} wrap={false}>
             <Text style={{ fontSize: 7, fontFamily: bold, color: accent, letterSpacing: 1.5, marginBottom: 3 }}>CONDITIONS DE PAIEMENT</Text>
             <Text style={{ fontSize: 8, color: '#6b7280', lineHeight: 1.5 }}>{payTermsText}</Text>

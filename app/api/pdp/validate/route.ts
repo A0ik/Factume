@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase-server';
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { generatePdfBuffer } from '@/lib/pdf';
 import { createFacturXPdf } from '@/lib/facturx';
 
@@ -16,6 +16,13 @@ import { createFacturXPdf } from '@/lib/facturx';
  */
 export async function POST(req: NextRequest) {
   try {
+    // ── Auth : sans session valide, on ne génère rien (anti-IDOR — CIBLE 3a) ──
+    // Avant, la route n'avait AUCUNE auth et n'était pas bornée par user_id : tout
+    // porteur d'un UUID facture déclenchait la génération PDF + un audit log.
+    const supabaseAuth = await createServerSupabaseClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
     const body = await req.json();
     const { invoiceId } = body;
 
@@ -25,11 +32,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Récupérer d'abord l'invoice pour avoir le user_id
+    // Récupérer la facture, BORNÉE à l'utilisateur authentifié (anti-IDOR).
     const { data: invoice } = await supabase
       .from('invoices')
       .select('*')
       .eq('id', invoiceId)
+      .eq('user_id', user.id)
       .single();
 
     if (!invoice) {

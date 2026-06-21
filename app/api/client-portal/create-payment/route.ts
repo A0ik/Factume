@@ -9,18 +9,35 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Verify the invoice and get details
+    // ── Valider le token d'accès au portail client (anti-IDOR — CIBLE 3b) ──────
+    // Avant, le token était accepté SANS vérification : n'importe qui avec un UUID
+    // de facture pouvait spawn un checkout Stripe sur la facture d'autrui (flux
+    // argent). On résout le token comme la route GET /[token], on vérifie l'expiry
+    // et on borne la facture au client + user du token.
+    const { data: portalToken, error: tokenError } = await supabase
+      .from('client_portal_tokens')
+      .select('client_id, user_id, expires_at')
+      .eq('token', token)
+      .single();
+
+    if (tokenError || !portalToken) {
+      return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 404 });
+    }
+    if (portalToken.expires_at && new Date(portalToken.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Lien expiré' }, { status: 410 });
+    }
+
+    // Verify the invoice, BOUNDED to the token's client + user (anti-IDOR)
     const { data: invoice } = await supabase
       .from('invoices')
       .select('*, client:client_id(*)')
       .eq('id', invoiceId)
+      .eq('user_id', portalToken.user_id)
+      .eq('client_id', portalToken.client_id)
       .single();
 
     if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     if (invoice.status === 'paid') return NextResponse.json({ error: 'Already paid' }, { status: 400 });
-
-    // Verify access token (simple check: invoice share token or client portal token)
-    // For now, just check the invoice exists and is not paid
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 

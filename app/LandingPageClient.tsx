@@ -283,7 +283,7 @@ const plans = [
 ];
 
 const faqItems = [
-  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Starter est 100% gratuit (3 factures/mois avec dictée vocale IA). Pour tester les plans payants, profitez de 14 jours d\'essai gratuit, sans carte bancaire.' },
+  { q: 'Est-ce vraiment gratuit ?', a: 'Oui, le plan Starter est 100% gratuit (3 factures/mois avec dictée vocale IA). Pour tester les plans payants, profitez de 7 jours d\'essai gratuit (carte bancaire requise pour éviter les abus, 0€ débité).' },
   { q: 'Mes données sont-elles en sécurité ?', a: 'Absolument. Vos données sont chiffrées, hébergées en France, et chaque utilisateur ne peut accéder qu\'à ses propres données.' },
   { q: 'L\'IA comprend-elle vraiment ce que je dis ?', a: 'Oui, l\'IA comprend parfaitement le français naturel. Dites "5 jours de dev à 600€" et elle crée la facture complète. Vous n\'avez qu\'à vérifier et envoyer.' },
   { q: 'Est-ce conforme pour les impôts français ?', a: 'Oui, les mentions légales sont ajoutées automatiquement. Vos factures électroniques sont conformes et prêtes pour l\'obligation 2026. L\'export officiel pour les impôts est disponible sur tous les plans.' },

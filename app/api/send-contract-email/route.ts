@@ -9,6 +9,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Données manquantes' }, { status: 400 });
     }
 
+    // SAGE (CIBLE 5) — LOI : aucun envoi de contrat (même un simple email, sans
+    // demande de signature) tant que l'employeur n'a pas signé. Cohérent avec le
+    // gate /api/contract-signing/create et le trigger DB enforce_contract_signatures.
+    const employerSig = (contractData as any)?.employer_signature;
+    if (!employerSig || (typeof employerSig === 'string' && employerSig.trim() === '')) {
+      return NextResponse.json(
+        {
+          error: "L'employeur doit signer le contrat avant tout envoi. Signez dans la section prévisualisation, puis renvoyez.",
+          code: 'EMPLOYER_SIGNATURE_REQUIRED',
+        },
+        { status: 400 },
+      );
+    }
+
     const BREVO_API_KEY = process.env.BREVO_API_KEY;
     if (!BREVO_API_KEY) {
       return NextResponse.json({ error: 'Service email non configuré (BREVO_API_KEY manquante)' }, { status: 500 });

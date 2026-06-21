@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { changeLanguage } from '@/i18n';
 import { SumUpTutorialModal } from '@/components/ui/SumUpTutorialModal';
 import { SuperPdpConnect } from '@/components/ui/SuperPdpConnect';
+import { areShortcutsDisabled, setShortcutsDisabled } from '@/hooks/useKeyboardShortcuts';
 import Link from 'next/link';
 
 const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
@@ -625,7 +626,7 @@ export default function SettingsPage() {
             {profile?.logo_url ? (
               <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-2xl font-black text-slate-500">{(form.company_name || 'F').charAt(0)}</span>
+              <span className="text-2xl font-black text-slate-600 dark:text-slate-500">{(form.company_name || 'F').charAt(0)}</span>
             )}
           </div>
         </div>
@@ -634,7 +635,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
           >
             {uploading ? (
               <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -643,7 +644,7 @@ export default function SettingsPage() {
             )}
             {profile?.logo_url ? 'Changer' : 'Ajouter un logo'}
           </button>
-          <p className="text-xs text-slate-500 mt-1">PNG, JPG · max 2MB</p>
+          <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">PNG, JPG · max 2MB</p>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
         </div>
       </div>
@@ -698,7 +699,7 @@ export default function SettingsPage() {
         <Input label="RCS" value={form.rcs_number} onChange={(e) => set('rcs_number', e.target.value)} placeholder="RCS Paris 123 456 789" />
         <div>
           <Input label="RM" value={form.rm_number} onChange={(e) => set('rm_number', e.target.value)} placeholder="RM 1234567" />
-          <p className="text-[10px] text-slate-500 mt-0.5">Uniquement pour les artisans</p>
+          <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5">Uniquement pour les artisans</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -715,7 +716,7 @@ export default function SettingsPage() {
       ]} />
       <div>
         <Textarea label="Conditions Générales de Vente" value={form.cgv_text} onChange={(e) => set('cgv_text', e.target.value)} rows={4} placeholder="Saisissez vos CGV ici..." />
-        <p className="text-[10px] text-slate-500 mt-0.5">Ces conditions seront ajoutées automatiquement à vos factures et devis</p>
+        <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5">Ces conditions seront ajoutées automatiquement à vos factures et devis</p>
       </div>
     </div>
   );
@@ -745,24 +746,24 @@ export default function SettingsPage() {
             key={t.id}
             type="button"
             onClick={() => { if (!profile?.custom_template_html) set('template_id', t.id); }}
-            className={`relative p-3 rounded-xl border text-center transition-all duration-300 ${
-              profile?.custom_template_html ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-100/20'
+            className={`relative p-3 rounded-control border text-center transition-all duration-300 ${
+              profile?.custom_template_html ? 'opacity-40 cursor-not-allowed border-border bg-muted/50'
               : form.template_id === t.id
-                ? 'border-emerald-500/50 bg-emerald-500/10'
-                : 'border-gray-200 bg-gray-100/20 hover:border-gray-300'
+                ? 'border-primary/50 bg-primary/10 shadow-elev-1'
+                : 'border-border bg-muted/40 hover:border-primary/40 hover:-translate-y-0.5'
             }`}
             style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
           >
-            <div className="w-full h-14 rounded-lg bg-gray-200 mb-2 overflow-hidden flex flex-col border border-gray-200">
+            <div className="w-full h-16 rounded-lg bg-muted border border-border mb-2 overflow-hidden flex flex-col">
               <div style={{ backgroundColor: t.headerColor }} className={`${t.headerH} w-full`} />
               <div className="flex-1 p-1.5 space-y-1">
-                <div className="bg-slate-600/40 h-1.5 rounded-full w-2/3" />
-                <div className="bg-slate-600/20 h-1 rounded-full w-full" />
-                <div className="bg-slate-600/20 h-1 rounded-full w-4/5" />
+                <div className="bg-foreground/25 h-1.5 rounded-full w-2/3" />
+                <div className="bg-foreground/10 h-1 rounded-full w-full" />
+                <div className="bg-foreground/10 h-1 rounded-full w-4/5" />
               </div>
             </div>
             <p className="text-xs font-bold text-gray-900 dark:text-white">{t.name}</p>
-            <p className="text-[10px] text-slate-500">{t.desc}</p>
+            <p className="text-[10px] text-slate-600 dark:text-slate-500">{t.desc}</p>
             {form.template_id === t.id && !profile?.custom_template_html && (
               <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
                 <CheckCircle2 size={10} />
@@ -781,7 +782,7 @@ export default function SettingsPage() {
             <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">PRO</span>
           )}
         </div>
-        <p className="text-xs text-slate-500 mb-3">Uploadez une facture et l'IA créera un template basé sur son style.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-500 mb-3">Uploadez une facture et l'IA créera un template basé sur son style.</p>
 
         {sub.canUseCustomTemplate ? (
           <div className="space-y-3">
@@ -793,12 +794,12 @@ export default function SettingsPage() {
               {analyzingTemplate ? (
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-xs font-semibold text-slate-400">L'IA analyse votre facture...</p>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">L'IA analyse votre facture...</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <Upload size={20} className="text-slate-500" />
-                  <p className="text-xs font-semibold text-slate-400">Glissez ou <span className="text-emerald-400">parcourez</span></p>
+                  <Upload size={20} className="text-slate-600 dark:text-slate-500" />
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Glissez ou <span className="text-emerald-400">parcourez</span></p>
                   <p className="text-[10px] text-gray-400">PNG, JPG, PDF</p>
                 </div>
               )}
@@ -817,7 +818,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowTemplatePreview(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors"
                   >
                     <Eye size={13} /> Aperçu
                   </button>
@@ -847,7 +848,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-center">
-            <p className="text-xs text-slate-500">Disponible avec le plan Pro</p>
+            <p className="text-xs text-slate-600 dark:text-slate-500">Disponible avec le plan Pro</p>
             <button onClick={() => router.push('/paywall')} className="mt-2 text-xs text-emerald-400 font-bold hover:text-emerald-300 transition-colors">Voir les offres →</button>
           </div>
         )}
@@ -865,7 +866,7 @@ export default function SettingsPage() {
 
   const renderStripeSection = () => (
     <div className="space-y-4">
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         Connectez votre compte Stripe professionnel pour accepter des paiements en ligne directement sur vos factures.
       </p>
 
@@ -918,8 +919,8 @@ export default function SettingsPage() {
               { label: 'Mise à jour auto', desc: 'Facture passée en "Payée"' },
             ].map((f) => (
               <div key={f.label} className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                <p className="text-xs font-bold text-slate-300">{f.label}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{f.desc}</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{f.label}</p>
+                <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -944,13 +945,13 @@ export default function SettingsPage() {
   const renderSumUpSection = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Acceptez des paiements en ligne directement sur vos factures avec SumUp.
         </p>
         <button
           type="button"
           onClick={() => setShowSumupTutorial(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-medium text-slate-400 hover:text-slate-300 hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-gray-100 transition-colors"
         >
           <HelpCircle size={12} />
           Aide
@@ -971,7 +972,7 @@ export default function SettingsPage() {
               <p className="text-xs text-emerald-400/60 font-mono truncate">{sumupMerchantCode}</p>
               {sumupTokenExpiresAt && (
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-600 dark:text-slate-500">
                     Token expire : {new Date(sumupTokenExpiresAt).toLocaleDateString('fr-FR')}
                   </p>
                   {new Date(sumupTokenExpiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 && (
@@ -1017,9 +1018,9 @@ export default function SettingsPage() {
               { label: 'Auto', desc: 'Statut mis à jour', icon: RefreshCw },
             ].map((f) => (
               <div key={f.label} className="p-2.5 bg-gray-50 rounded-lg border border-gray-200">
-                <f.icon size={16} className="text-slate-500 mx-auto mb-1" />
-                <p className="text-[10px] font-semibold text-slate-300">{f.label}</p>
-                <p className="text-[9px] text-slate-500">{f.desc}</p>
+                <f.icon size={16} className="text-slate-600 dark:text-slate-500 mx-auto mb-1" />
+                <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">{f.label}</p>
+                <p className="text-[9px] text-slate-600 dark:text-slate-500">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -1038,7 +1039,7 @@ export default function SettingsPage() {
               </>
             )}
           </button>
-          <p className="text-[10px] text-slate-500 text-center">
+          <p className="text-[10px] text-slate-600 dark:text-slate-500 text-center">
             Vous serez redirigé vers SumUp pour autoriser l'accès à votre compte en toute sécurité.
           </p>
         </div>
@@ -1048,7 +1049,7 @@ export default function SettingsPage() {
 
   const renderSignatureSection = () => (
     <div className="space-y-4">
-      <p className="text-sm text-slate-400">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
+      <p className="text-sm text-slate-600 dark:text-slate-400">Ajoutez votre signature manuscrite. Elle apparaîtra automatiquement en bas de vos factures et devis.</p>
 
       <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/15">
         <div className="flex items-start gap-3">
@@ -1057,10 +1058,10 @@ export default function SettingsPage() {
           </div>
           <div className="flex-1">
             <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">À quoi sert la signature électronique ?</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Votre signature manuscrite sera <strong className="text-slate-300">ajoutée automatiquement en bas de tous vos documents PDF</strong>. Cela donne un aspect professionnel et authentique à vos documents.
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Votre signature manuscrite sera <strong className="text-slate-700 dark:text-slate-300">ajoutée automatiquement en bas de tous vos documents PDF</strong>. Cela donne un aspect professionnel et authentique à vos documents.
             </p>
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-2 text-xs text-slate-600 dark:text-slate-500">
               <strong className="text-blue-400">Note :</strong> Cette signature est différente de la signature client par email (disponible avec Pro). Ici, c'est VOTRE signature.
             </div>
           </div>
@@ -1074,7 +1075,7 @@ export default function SettingsPage() {
           ) : (
             <div className="text-center">
               <PenTool size={20} className="text-gray-400 mx-auto mb-1" />
-              <p className="text-xs text-slate-500">Aucune signature</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500">Aucune signature</p>
             </div>
           )}
         </div>
@@ -1083,7 +1084,7 @@ export default function SettingsPage() {
             type="button"
             onClick={() => sigFileRef.current?.click()}
             disabled={uploadingSig}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 text-sm font-medium hover:bg-white/15 transition-colors disabled:opacity-50"
           >
             {uploadingSig ? (
               <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
@@ -1098,7 +1099,7 @@ export default function SettingsPage() {
               Supprimer la signature
             </button>
           )}
-          <p className="text-xs text-slate-500">PNG transparent recommandé · max 1MB</p>
+          <p className="text-xs text-slate-600 dark:text-slate-500">PNG transparent recommandé · max 1MB</p>
           <input ref={sigFileRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
         </div>
       </div>
@@ -1115,13 +1116,13 @@ export default function SettingsPage() {
       <Select label="Langue" value={form.language} onChange={(e) => set('language', e.target.value)} options={LANG_OPTS} />
 
       {/* Keyboard shortcuts */}
-      <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-xl border border-gray-200">
+      <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-control border border-border">
         <div className="flex items-center gap-3">
-          <Keyboard size={18} className="text-slate-400" />
+          <Keyboard size={18} className="text-muted-foreground" />
           <div>
-            <label className="text-sm font-semibold text-gray-900 dark:text-white block">Raccourcis clavier</label>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+            <label className="text-sm font-semibold text-foreground block">Raccourcis clavier</label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {areShortcutsDisabled()
                 ? 'Désactivés — Utilisez le bouton ? pour réactiver'
                 : 'Activés — Appuyez sur ? pour voir la liste'}
             </p>
@@ -1130,22 +1131,21 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => {
-            const { areShortcutsDisabled, setShortcutsDisabled } = require('@/hooks/useKeyboardShortcuts');
             const newState = !areShortcutsDisabled();
             setShortcutsDisabled(newState);
             toast.success(newState ? 'Raccourcis clavier désactivés' : 'Raccourcis clavier activés');
             forceUpdate();
           }}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
-            !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
-              ? 'bg-emerald-500'
-              : 'bg-slate-700'
+            !areShortcutsDisabled()
+              ? 'bg-primary'
+              : 'bg-muted-foreground/30'
           }`}
           style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
-              !require('@/hooks/useKeyboardShortcuts').areShortcutsDisabled()
+              !areShortcutsDisabled()
                 ? 'translate-x-6'
                 : 'translate-x-1'
             }`}
@@ -1156,7 +1156,7 @@ export default function SettingsPage() {
 
       {/* Accent color */}
       <div>
-        <label className="text-sm font-semibold text-slate-300 block mb-2">Couleur accent</label>
+        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">Couleur accent</label>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -1167,10 +1167,10 @@ export default function SettingsPage() {
               className="w-6 h-6 rounded-full border border-gray-300"
               style={{ backgroundColor: form.accent_color }}
             />
-            <span className="text-sm font-medium text-slate-300">{form.accent_color}</span>
-            <Palette size={14} className="text-slate-500" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{form.accent_color}</span>
+            <Palette size={14} className="text-slate-600 dark:text-slate-500" />
           </button>
-          <span className="text-xs text-slate-500">Cliquez pour personnaliser</span>
+          <span className="text-xs text-slate-600 dark:text-slate-500">Cliquez pour personnaliser</span>
         </div>
 
         <Dialog open={accentOpen} onOpenChange={setAccentOpen}>
@@ -1180,14 +1180,14 @@ export default function SettingsPage() {
                 <Palette className="h-5 w-5" />
                 Choisir la couleur accent
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-slate-600 dark:text-slate-400">
                 Personnalisez la couleur principale de votre espace de travail
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <div className="space-y-4">
                 <div>
-                  <Label className="mb-2 block text-sm font-medium text-slate-300">Couleurs prédéfinies</Label>
+                  <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Couleurs prédéfinies</Label>
                   <div className="grid grid-cols-8 gap-2">
                     {ACCENT_COLORS.map((c) => (
                       <button
@@ -1205,7 +1205,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <Label className="mb-2 block text-sm font-medium text-slate-300">Couleur personnalisée</Label>
+                  <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Couleur personnalisée</Label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
@@ -1250,7 +1250,7 @@ export default function SettingsPage() {
   const renderWebhooksSection = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Recevez des notifications HTTP POST quand une facture est créée, envoyée ou payée.
         </p>
         <button
@@ -1265,7 +1265,7 @@ export default function SettingsPage() {
       {webhooks.length === 0 ? (
         <div className="text-center py-8 rounded-xl border border-dashed border-gray-300">
           <Globe size={22} className="text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">Aucun webhook configuré</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Aucun webhook configuré</p>
           <p className="text-xs text-gray-400 mt-1">Ajoutez une URL pour recevoir des notifications</p>
         </div>
       ) : (
@@ -1292,7 +1292,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => handleToggleWebhookActive(wh)}
-                  className="text-xs text-slate-500 hover:text-emerald-400 transition-colors font-medium"
+                  className="text-xs text-slate-600 dark:text-slate-500 hover:text-emerald-400 transition-colors font-medium"
                   title={wh.active ? 'Désactiver' : 'Activer'}
                 >
                   {wh.active ? 'Désactiver' : 'Activer'}
@@ -1333,7 +1333,7 @@ export default function SettingsPage() {
       {sub.isFree && (
         <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
           <p className="text-sm font-semibold text-emerald-300 mb-1">Passez à Pro</p>
-          <p className="text-xs text-slate-400 mb-3">Factures illimitées, dictée vocale IA, templates premium et bien plus.</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">Factures illimitées, dictée vocale IA, templates premium et bien plus.</p>
           <button onClick={() => router.push('/paywall')} className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-400 transition-colors">
             <Zap size={14} />
             Voir les offres
@@ -1352,13 +1352,13 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Abonnement actif</p>
-                <p className="text-xs text-slate-500">Gérez votre facturation et vos méthodes de paiement</p>
+                <p className="text-xs text-slate-600 dark:text-slate-500">Gérez votre facturation et vos méthodes de paiement</p>
               </div>
             </div>
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
             >
               {portalLoading ? <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /> : <ArrowUpRight size={14} />}
               Gérer
@@ -1371,8 +1371,8 @@ export default function SettingsPage() {
                 <XCircle size={16} className="text-red-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-300">Résilier l&apos;abonnement</p>
-                <p className="text-xs text-slate-500">Accédez au portail Stripe pour résilier</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Résilier l&apos;abonnement</p>
+                <p className="text-xs text-slate-600 dark:text-slate-500">Accédez au portail Stripe pour résilier</p>
               </div>
             </div>
             <button
@@ -1405,12 +1405,12 @@ export default function SettingsPage() {
                 <p className="text-sm font-bold text-gray-900 dark:text-white">Équipe</p>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/20">BUSINESS</span>
               </div>
-              <p className="text-xs text-slate-500">Invitez des collaborateurs et attribuez des rôles</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500">Invitez des collaborateurs et attribuez des rôles</p>
             </div>
           </div>
           <Link
             href="/settings/team"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:border-white/20 hover:text-gray-900 transition-colors flex-shrink-0"
           >
             <ArrowUpRight size={14} />
             Gérer
@@ -1421,13 +1421,13 @@ export default function SettingsPage() {
       {/* Accounting export */}
       <div className="pt-4 border-t border-gray-200">
         <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Export comptabilité</h4>
-        <p className="text-xs text-slate-400 mb-3">Exportez vos écritures comptables au format FEC pour votre expert-comptable.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">Exportez vos écritures comptables au format FEC pour votre expert-comptable.</p>
         <div className="flex gap-2 flex-wrap">
           {[new Date().getFullYear(), new Date().getFullYear() - 1].map((year) => (
             <a
               key={year}
               href={`/api/export/fec?year=${year}`}
-              className="flex items-center gap-2 border border-gray-300 text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold hover:border-white/20 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 border border-gray-300 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-semibold hover:border-white/20 hover:text-gray-900 transition-colors"
             >
               <Download size={14} />
               FEC {year}
@@ -1441,13 +1441,13 @@ export default function SettingsPage() {
         {/* Logout */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-300">Se déconnecter</p>
-            <p className="text-xs text-slate-500">Vous serez redirigé vers la page de connexion</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Se déconnecter</p>
+            <p className="text-xs text-slate-600 dark:text-slate-500">Vous serez redirigé vers la page de connexion</p>
           </div>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-400 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:border-white/20 hover:text-gray-900 transition-colors disabled:opacity-50"
           >
             {loggingOut ? (
               <>
@@ -1466,8 +1466,8 @@ export default function SettingsPage() {
         {/* RGPD Export */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-300">Exporter mes données (RGPD)</p>
-            <p className="text-xs text-slate-500">Téléchargez une archive ZIP de vos données personnelles.</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Exporter mes données (RGPD)</p>
+            <p className="text-xs text-slate-600 dark:text-slate-500">Téléchargez une archive ZIP de vos données personnelles.</p>
           </div>
           <a
             href="/api/export/rgpd"
@@ -1483,7 +1483,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-red-400">Supprimer le compte</p>
-            <p className="text-xs text-slate-500">Supprime définitivement votre compte, vos factures et vos clients. Irréversible.</p>
+            <p className="text-xs text-slate-600 dark:text-slate-500">Supprime définitivement votre compte, vos factures et vos clients. Irréversible.</p>
           </div>
           <button
             onClick={() => setShowDeleteModal(true)}
@@ -1532,7 +1532,7 @@ export default function SettingsPage() {
         <div className="min-h-screen">
           {/* Page header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Paramètres</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Paramètres</h2>
             {!sub.isFree && (
               <div className="flex items-center gap-1.5 bg-emerald-500/15 px-3 py-1.5 rounded-full">
                 <Crown size={14} className="text-emerald-400" />
@@ -1550,7 +1550,7 @@ export default function SettingsPage() {
             >
               <Crown size={22} className="text-amber-300 flex-shrink-0" />
               <div>
-                <p className="font-bold text-gray-900 dark:text-white">Passer à Pro</p>
+                <p className="font-bold text-white">Passer à Pro</p>
                 <p className="text-sm text-emerald-100/80">Factures illimitées, dictée vocale, templates...</p>
               </div>
             </button>
@@ -1568,7 +1568,7 @@ export default function SettingsPage() {
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       activeTab === tab.key
                         ? 'bg-emerald-500/15 text-emerald-400'
-                        : 'text-slate-400 hover:text-slate-300 hover:bg-gray-100'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-gray-100'
                     }`}
                     style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
                   >
@@ -1589,7 +1589,7 @@ export default function SettingsPage() {
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-300 ${
                       activeTab === tab.key
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-gray-50 text-slate-400 border border-gray-200 hover:text-slate-300'
+                        : 'bg-gray-50 text-slate-600 dark:text-slate-400 border border-gray-200 hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                     style={{ transitionTimingFunction: `cubic-bezier(${EASE.join(',')})` }}
                   >
@@ -1603,13 +1603,22 @@ export default function SettingsPage() {
             {/* Content area */}
             <div className="flex-1 min-w-0">
               <form onSubmit={handleSave} className="space-y-4">
-                {/* Active section card */}
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
-                    {sectionLabels[activeTab]}
-                  </h3>
-                  {sectionRenderers[activeTab]?.()}
-                </div>
+                {/* Active section card — OBSIDIAN tokens + elevation + icon-headed header
+                    (remplace le slab gris plat : chaque onglet devient une carte élevée
+                    avec en-tête iconé, cohérente en clair/sombre via les tokens) */}
+                <section className="bg-card text-card-foreground border border-border rounded-card shadow-elev-1 overflow-hidden">
+                  <header className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-border bg-muted/50">
+                    <span className="flex items-center justify-center w-9 h-9 rounded-control bg-primary/10 text-primary">
+                      {TABS.find((t) => t.key === activeTab)?.icon}
+                    </span>
+                    <h3 className="text-sm font-semibold tracking-wide text-foreground">
+                      {sectionLabels[activeTab]}
+                    </h3>
+                  </header>
+                  <div className="p-5 sm:p-6">
+                    {sectionRenderers[activeTab]?.()}
+                  </div>
+                </section>
 
                 {/* Save button (for form sections) */}
                 {['company', 'billing', 'template', 'bank', 'preferences'].includes(activeTab) && (
@@ -1655,7 +1664,7 @@ export default function SettingsPage() {
           >
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-semibold text-slate-300 block mb-1.5">URL de destination</label>
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">URL de destination</label>
                 <input
                   type="url"
                   value={webhookForm.url}
@@ -1665,7 +1674,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-slate-300 block mb-2">Événements à écouter</label>
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">Événements à écouter</label>
                 <div className="space-y-2">
                   {WEBHOOK_EVENTS.map((ev) => (
                     <label key={ev.value} className="flex items-center gap-2.5 cursor-pointer group">
@@ -1675,8 +1684,8 @@ export default function SettingsPage() {
                         onChange={() => handleToggleWebhookEvent(ev.value)}
                         className="w-4 h-4 rounded border-slate-600 bg-gray-100 text-emerald-500 focus:ring-emerald-500/30"
                       />
-                      <span className="text-sm text-slate-300 group-hover:text-gray-900 transition-colors">{ev.label}</span>
-                      <span className="text-[11px] text-slate-500 font-mono">{ev.value}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-gray-900 transition-colors">{ev.label}</span>
+                      <span className="text-[11px] text-slate-600 dark:text-slate-500 font-mono">{ev.value}</span>
                     </label>
                   ))}
                 </div>
@@ -1690,7 +1699,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowWebhookModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                 >
                   Annuler
                 </button>
@@ -1731,7 +1740,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowTemplatePreview(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                   >
                     Fermer
                   </button>
@@ -1767,7 +1776,7 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <ul className="text-sm text-slate-400 space-y-1 pl-4">
+              <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 pl-4">
                 <li className="list-disc">Vos données personnelles seront anonymisées</li>
                 <li className="list-disc">Votre abonnement Stripe sera annulé</li>
                 <li className="list-disc">Vos connexions tierces (Google, SumUp) seront supprimées</li>
@@ -1775,7 +1784,7 @@ export default function SettingsPage() {
               </ul>
 
               <div>
-                <label className="text-sm font-semibold text-slate-300 block mb-2">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">
                   Mot de passe <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -1788,7 +1797,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-slate-300 block mb-2">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">
                   Tapez <span className="font-black text-red-400">SUPPRIMER</span> pour confirmer
                 </label>
                 <input
@@ -1804,7 +1813,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); setDeletePassword(''); }}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
+                  className="flex-1 py-2.5 rounded-xl bg-gray-100 text-slate-700 dark:bg-white/[0.06] dark:text-slate-300 text-sm font-semibold hover:bg-white/15 transition-colors"
                 >
                   Annuler
                 </button>

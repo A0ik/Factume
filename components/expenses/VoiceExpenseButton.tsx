@@ -137,7 +137,9 @@ export default function VoiceExpenseButton({
         status: 'pending',
         source: 'voice',
         receipt_url: urlData?.signedUrl || null,
-        receipt_file_path: filePath,
+        // SAGE (CIBLE 2) — la colonne s'appelle receipt_storage_path (et non receipt_file_path,
+        // qui n'existe pas en base → l'insert voice échouait en silence avec une erreur PostgREST).
+        receipt_storage_path: filePath,
         has_receipt: true,
       }).select().single();
 

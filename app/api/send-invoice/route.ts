@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
     console.log('[send-invoice] Email envoyé avec succès, id:', resendData?.id);
 
     // ── Transmission électronique Super PDP (en arrière-plan) ──────────
-    let pdpResult: { transmitted: boolean; superPdpId?: string; error?: string } | null = null;
+    let pdpResult: { transmitted: boolean; attempted?: boolean; notConnected?: boolean; superPdpId?: string; error?: string } | null = null;
 
     try {
       // Vérifier si la transmission PDP est activée et éligible
@@ -294,58 +294,69 @@ export async function POST(req: NextRequest) {
           const eligibility = isFacturXEligible(invoice, profile || {});
 
           if (eligibility.eligible) {
-            console.log('[send-invoice] Transmission Super PDP en cours pour', invoice.number, '...');
-
-            // Transmettre à Super PDP (ne bloque pas la réponse en cas d'erreur)
-            const result = await transmitInvoice(invoice, profile || {});
-
-            if (result.success) {
-              // Sauvegarder l'ID de transmission en base
-              await supabase
-                .from('invoices')
-                .update({
-                  pdp_transmission_id: result.superPdpId,
-                  pdp_status: 'transmitted',
-                  pdp_transmitted_at: new Date().toISOString(),
-                  pdp_last_error: null,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', invoiceId);
-
-              pdpResult = { transmitted: true, superPdpId: result.superPdpId };
-              console.log('[send-invoice] Facture transmise légalement. ID PDP:', result.superPdpId);
-
-            } else if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
-              // Pas de plateforme connectée → silencieux (pas un échec). L'email
-              // part quand même ; la transmission suivra dès le branchement SuperPDP.
-              await supabase
-                .from('invoices')
-                .update({
-                  pdp_status: 'not_transmitted',
-                  pdp_last_error: null,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', invoiceId);
-
-              pdpResult = { transmitted: false, error: 'Plateforme non connectée' };
-              console.log('[send-invoice] SuperPDP non connecté — transmission différée');
+            // ── Anti-double transmission (CIBLE 2) ─────────────────────────────
+            // SuperPDP /invoices n'expose PAS de clé d'idempotence (doc §3.2) :
+            // un 2e POST = une 2e facture légale (doublon côté État). Garde haute
+            // (épargne l'appel API) en plus du filet bas dans transmitInvoice().
+            if (invoice.pdp_status === 'transmitted' && invoice.pdp_transmission_id) {
+              console.log('[send-invoice] Facture déjà transmise (id', invoice.pdp_transmission_id, ') — skip anti-double');
+              pdpResult = { transmitted: true, attempted: false, superPdpId: invoice.pdp_transmission_id };
             } else {
-              // Erreur de transmission — on loggue mais on ne bloque pas l'envoi email
-              const retryable = isRetryableError(result);
-              await supabase
-                .from('invoices')
-                .update({
-                  pdp_status: retryable ? 'pending_retry' : 'failed',
-                  pdp_last_error: result.error,
-                  pdp_retry_count: 1,
-                  pdp_next_retry_at: retryable ? new Date(Date.now() + 10 * 60 * 1000).toISOString() : null,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', invoiceId);
+              console.log('[send-invoice] Transmission Super PDP en cours pour', invoice.number, '...');
 
-              pdpResult = { transmitted: false, error: result.error };
-              console.warn('[send-invoice] Transmission PDP échouée:', result.error, retryable ? '(retry programmé)' : '(définitif)');
-            }
+              // Transmettre à Super PDP (ne bloque pas la réponse en cas d'erreur)
+              const result = await transmitInvoice(invoice, profile || {});
+
+              if (result.success) {
+                // Sauvegarder l'ID de transmission en base
+                await supabase
+                  .from('invoices')
+                  .update({
+                    pdp_transmission_id: result.superPdpId,
+                    pdp_status: 'transmitted',
+                    pdp_transmitted_at: new Date().toISOString(),
+                    pdp_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoiceId);
+
+                pdpResult = { transmitted: true, attempted: true, superPdpId: result.superPdpId };
+                console.log('[send-invoice] Facture transmise légalement. ID PDP:', result.superPdpId);
+
+              } else if (result.errorCode === 'SUPERPDP_NOT_CONNECTED') {
+                // Pas de plateforme connectée → silencieux (pas un échec). L'email
+                // part quand même ; la transmission suivra dès le branchement SuperPDP.
+                await supabase
+                  .from('invoices')
+                  .update({
+                    pdp_status: 'not_transmitted',
+                    pdp_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoiceId);
+
+                // notConnected + attempted:false → le front SAIT qu'il ne faut PAS
+                // afficher la popup « transmission en cours » (CIBLE 1 : fantôme).
+                pdpResult = { transmitted: false, attempted: false, notConnected: true };
+                console.log('[send-invoice] SuperPDP non connecté — transmission différée');
+              } else {
+                // Erreur de transmission — on loggue mais on ne bloque pas l'envoi email
+                const retryable = isRetryableError(result);
+                await supabase
+                  .from('invoices')
+                  .update({
+                    pdp_status: retryable ? 'pending_retry' : 'failed',
+                    pdp_last_error: result.error,
+                    pdp_retry_count: 1,
+                    pdp_next_retry_at: retryable ? new Date(Date.now() + 10 * 60 * 1000).toISOString() : null,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoiceId);
+
+                pdpResult = { transmitted: false, attempted: true, error: result.error };
+                console.warn('[send-invoice] Transmission PDP échouée:', result.error, retryable ? '(retry programmé)' : '(définitif)');
+              }
+            } // end anti-double else
           } else {
             console.log('[send-invoice] Facture non éligible Factur-X:', eligibility.reason);
           }

@@ -5,6 +5,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { Profile } from '@/types';
 import { changeLanguage } from '@/i18n';
 import { isDisposableEmail } from '@/lib/disposable-emails';
+import { useThemeStore } from '@/stores/themeStore';
 
 let _authUnsubscribe: (() => void) | null = null;
 
@@ -89,7 +90,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
     if (isDisposableEmail(email)) throw new Error('Les adresses email jetables ne sont pas acceptées. Veuillez utiliser une adresse email valide.');
     try {
-      const { data, error } = await getSupabaseClient().auth.signUp({ email, password, options: { data: { cgu_accepted: true, cgu_accepted_at: new Date().toISOString() } } });
+      // GUARDIAN (CIBLE 1) — transmet le thème choisi à l'onboarding pour persistance (trigger handle_new_user).
+      const storedTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('theme') : null;
+      const themePref: 'light' | 'dark' = storedTheme === 'light' ? 'light' : 'dark';
+      const { data, error } = await getSupabaseClient().auth.signUp({ email, password, options: { data: { cgu_accepted: true, cgu_accepted_at: new Date().toISOString(), theme_preference: themePref } } });
       if (error) throw error;
       if (!data.user) throw new Error('Erreur lors de la création du compte');
       set({ user: data.user, session: data.session });
@@ -231,6 +235,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ profile: data });
       }
       if (data.language) changeLanguage(data.language).catch(() => {});
+      // GUARDIAN (CIBLE 1) — synchronise le thème depuis la préférence serveur (cross-device).
+      if (data.theme_preference === 'light' || data.theme_preference === 'dark') {
+        try { useThemeStore.getState().setTheme(data.theme_preference); } catch {}
+      }
       // Web Push enregistré en différé (30s) pour ne pas interrompre l'expérience
       setTimeout(() => registerWebPush(userId).catch(() => {}), 30_000);
     }

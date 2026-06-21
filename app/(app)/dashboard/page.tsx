@@ -21,7 +21,9 @@ import {
  */
 
 const springTransition = { type: 'spring' as const, damping: 25, stiffness: 200 };
-const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899'];
+// Palette adoucie (teintes -400) : moins de chroma en mode sombre, reste
+// distinguable — cohérente avec la loi de désaturation OBSIDIAN.
+const COLORS = ['#10b981', '#60a5fa', '#a78bfa', '#fbbf24', '#f472b6'];
 
 export default function DashboardPage() {
   const { profile } = useAuthStore();
@@ -262,12 +264,20 @@ export default function DashboardPage() {
 
               {actionDocs.length === 0 ? (
                 <div className="text-center py-10 px-4">
-                  <div className="w-12 h-12 bg-gray-50 dark:bg-white/[0.04] rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Receipt size={22} className="text-gray-400 dark:text-zinc-500" />
-                  </div>
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500">Tout est à jour</p>
-                  <p className="text-xs text-gray-400 dark:text-zinc-500 mt-0.5 mb-4">Aucune facture en attente</p>
-                  <Link href="/documents/create?type=invoice" className="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors active:scale-95">
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={springTransition}
+                    className="relative w-14 h-14 mx-auto mb-3"
+                  >
+                    <div className="absolute inset-0 bg-primary/15 rounded-2xl blur-md" />
+                    <div className="relative w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center">
+                      <Receipt size={22} className="text-primary" />
+                    </div>
+                  </motion.div>
+                  <p className="text-sm font-semibold text-foreground">Tout est à jour</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-4">Aucune facture en attente. Beau boulot.</p>
+                  <Link href="/documents/create?type=invoice" className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-elev-1 transition-colors active:scale-95">
                     <Plus size={13} /> Créer une facture
                   </Link>
                 </div>

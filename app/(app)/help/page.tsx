@@ -102,8 +102,10 @@ const CATEGORIES = [
     bg: 'bg-rose-50 dark:bg-rose-500/10',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 14 jours disponible, sans carte bancaire.' },
-      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur "Passer à Pro" dans le menu ou dans Paramètres. Le paiement est sécurisé par Stripe. Vous pouvez annuler à tout moment depuis les paramètres. Essai gratuit de 14 jours sans carte bancaire.' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 7 jours disponible (carte bancaire requise, 0€ débité).' },
+      { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur « Passer à Pro » dans le menu ou sur la page Tarifs. Le paiement s\'effectue directement sur factu.me via Stripe Elements (carte bancaire, Apple Pay, Google Pay) — sans redirection vers un site externe. Vous pouvez annuler à tout moment depuis les paramètres.' },
+      { q: 'Faut-il une carte bancaire pour l\'essai gratuit ?', a: 'Oui. Pour éviter les abus (multi-comptes, robots), l\'essai gratuit de 7 jours nécessite une carte bancaire. Aucun débit n\'est effectué pendant l\'essai : nous procédons à une simple vérification de la carte (autorisation à 0€ via Stripe). Vous pouvez annuler à tout moment avant la fin des 7 jours et rien ne sera facturé.' },
+      { q: 'Comment fonctionne le prorata lors d\'un changement de plan ?', a: 'Si vous montez de plan (ex. Pro → Business), Stripe calcule le différentiel au prorata des jours restants de votre période et le facture immédiatement. Si vous descendez de plan (Business → Pro), le crédit correspondant est reporté sur votre prochaine facture. Le montant exact vous est toujours affiché avant que vous ne confirmiez.' },
       { q: 'Mes données sont-elles conservées si je résilie ?', a: 'Oui, vos factures et clients sont conservés. Votre compte repasse en plan Starter avec les limitations associées.' },
     ],
   },
@@ -112,7 +114,7 @@ const CATEGORIES = [
     icon: Download,
     label: 'Comptabilité',
     color: 'text-gray-700 dark:text-zinc-300',
-    bg: 'bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04]',
+    bg: 'bg-gray-100 dark:bg-white/[0.04]',
     description: 'Exports comptables et FEC',
     faqs: [
       { q: 'Qu\'est-ce que l\'export FEC ?', a: 'Le Fichier des Écritures Comptables (FEC) est un format réglementaire français que votre expert-comptable peut importer directement. Il contient toutes vos écritures de ventes et encaissements, conformément aux exigences de la DGFiP.' },
@@ -179,7 +181,7 @@ const CATEGORIES = [
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Basse', color: 'text-gray-500 dark:text-zinc-400', bg: 'bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04]' },
+  { value: 'low', label: 'Basse', color: 'text-gray-500 dark:text-zinc-400', bg: 'bg-gray-100 dark:bg-white/[0.04]' },
   { value: 'normal', label: 'Normale', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-500/10' },
   { value: 'high', label: 'Haute', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10' },
   { value: 'urgent', label: 'Urgente', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
@@ -188,7 +190,7 @@ const PRIORITY_OPTIONS = [
 function FAQItem({ faq }: { faq: FAQ }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={cn('border-b border-gray-100 dark:border-white/[0.06] last:border-0', open && 'bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]')}>
+    <div className={cn('border-b border-gray-100 dark:border-white/[0.06] last:border-0', open && 'bg-gray-50/50 dark:bg-white/[0.02]')}>
       <button
         className="w-full flex items-start justify-between gap-3 px-5 py-4 text-left group hover:bg-gray-50/80 dark:hover:bg-white/[0.03] transition-colors"
         onClick={() => setOpen(!open)}
@@ -197,7 +199,7 @@ function FAQItem({ faq }: { faq: FAQ }) {
           {faq.q}
         </span>
         <motion.span
-          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04] text-gray-400 dark:text-zinc-500"
+          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors bg-gray-100 dark:bg-white/[0.04] text-gray-400 dark:text-zinc-500"
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
@@ -279,7 +281,7 @@ function ContactForm() {
 
   return (
     <div className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white/[0.02]">
         <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
           <Headphones size={15} className="text-primary" />
         </div>
@@ -331,7 +333,7 @@ function ContactForm() {
                   type="text"
                   value={profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : ''}
                   disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white dark:bg-white/[0.03]/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
                 />
               </div>
               <div>
@@ -340,7 +342,7 @@ function ContactForm() {
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white dark:bg-white/[0.03]/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-500 dark:text-zinc-400 cursor-not-allowed"
                 />
               </div>
             </div>
@@ -462,8 +464,8 @@ export default function HelpPage() {
             <HelpCircle size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Centre d&apos;aide</h1>
-            <p className="text-sm text-gray-400 dark:text-zinc-500">{totalFaqs} questions pour maîtriser Factu.me</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Centre d&apos;aide</h1>
+            <p className="text-sm text-muted-foreground">{totalFaqs} questions pour maîtriser Factu.me</p>
           </div>
         </div>
       </motion.div>
@@ -483,7 +485,7 @@ export default function HelpPage() {
                 <Icon size={16} className={stat.color} />
               </div>
               <div>
-                <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">{stat.value}</p>
+                <p className="text-lg font-bold text-foreground leading-tight tabular-nums">{stat.value}</p>
                 <p className="text-[11px] text-gray-400 dark:text-zinc-500">{stat.label}</p>
               </div>
             </div>
@@ -557,7 +559,7 @@ export default function HelpPage() {
               transition={{ duration: 0.2 }}
               className="bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] shadow-sm overflow-hidden"
             >
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white dark:bg-white/[0.03]/[0.02]">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white/[0.02]">
                 <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0', cat.bg)}>
                   <Icon size={15} className={cat.color} />
                 </div>
@@ -594,7 +596,7 @@ export default function HelpPage() {
         className="space-y-4"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-gray-900 dark:text-white">Besoin d&apos;aide ?</h2>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">Besoin d&apos;aide ?</h2>
           <Link
             href="/help/tickets"
             className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
@@ -627,7 +629,7 @@ export default function HelpPage() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/[0.06] p-4 hover:border-primary/30 hover:shadow-md transition-all group shadow-sm"
             >
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white dark:bg-white/[0.03]/[0.04] flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/[0.04] flex items-center justify-center flex-shrink-0">
                 <BookOpen size={17} className="text-gray-600 dark:text-zinc-400" />
               </div>
               <div className="flex-1 min-w-0">
@@ -666,7 +668,7 @@ export default function HelpPage() {
               )}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-100 dark:to-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={17} className="text-purple-600 dark:text-purple-400 dark:text-purple-400" />
+                <Sparkles size={17} className="text-purple-600 dark:text-purple-400" />
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <p className="font-bold text-gray-900 dark:text-white text-sm">Assistant IA</p>
@@ -702,7 +704,7 @@ export default function HelpPage() {
                       <Bot size={18} />
                       <span className="font-semibold text-sm">Assistant Factu.me</span>
                     </div>
-                    <button onClick={() => setShowAIChat(false)} className="rounded-full hover:bg-white dark:bg-white/[0.03]/20 p-1 transition-colors">
+                    <button onClick={() => setShowAIChat(false)} className="rounded-full hover:bg-white/[0.03] p-1 transition-colors">
                       <ChevronDown size={16} />
                     </button>
                   </div>

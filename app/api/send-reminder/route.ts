@@ -7,7 +7,10 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    const { invoiceId, email, profile, confirmed = false } = await req.json();
+    // CIBLE 3c — on n'accepte plus de `profile` depuis le client : send-invoice
+    // re-fetch le profil depuis la DB côté serveur (server-authoritative), on ne
+    // propage donc aucune donnée sensible fournie par le client.
+    const { invoiceId, email, confirmed = false } = await req.json();
     if (!invoiceId || !email) return NextResponse.json({ error: 'invoiceId and email required' }, { status: 400 });
 
     // LOI 3 : Confirmation humaine obligatoire avant envoi de relance
@@ -22,7 +25,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-invoice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invoiceId, email, profile, isReminder: true }),
+      body: JSON.stringify({ invoiceId, email, isReminder: true }),
     });
 
     const data = await res.json();

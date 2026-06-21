@@ -41,9 +41,9 @@ const GoogleIcon = (props: React.ComponentProps<'svg'>) => (
 /* ——— Separator ——— */
 const AuthSeparator = () => (
   <div className="flex w-full items-center py-1">
-    <div className="h-px flex-1 bg-white/[0.08]" />
-    <span className="px-3 text-[11px] font-medium text-white/25 uppercase tracking-widest">ou</span>
-    <div className="h-px flex-1 bg-white/[0.08]" />
+    <div className="h-px flex-1 bg-slate-200 dark:bg-white/[0.08]" />
+    <span className="px-3 text-[11px] font-medium text-slate-400 dark:text-white/25 uppercase tracking-widest">ou</span>
+    <div className="h-px flex-1 bg-slate-200 dark:bg-white/[0.08]" />
   </div>
 );
 
@@ -51,7 +51,7 @@ const AuthSeparator = () => (
 function AuthBackground() {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#09090B] via-[#111113] to-[#09090B]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-[#09090B] dark:via-[#111113] dark:to-[#09090B]" />
       <div
         className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] blur-[120px]"
         style={{ background: 'rgba(16,185,129,0.10)', animation: 'blob 8s ease-in-out infinite' }}
@@ -237,10 +237,10 @@ export function AuthPage({
     : email.length > 0 && allChecksPassed && password === confirmPassword && cguAccepted;
 
   const inputCls =
-    "w-full rounded-xl bg-white/[0.06] border border-white/[0.06] py-3 pl-10 pr-10 text-sm text-white placeholder:text-zinc-500 focus:border-emerald-500/50 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all";
+    "w-full rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.06] py-3 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-emerald-500/50 focus:bg-white dark:focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all";
 
   return (
-    <main className="relative min-h-screen lg:h-screen lg:overflow-hidden lg:grid lg:grid-cols-2 bg-[#09090B]">
+    <main className="relative min-h-screen lg:h-screen lg:overflow-hidden lg:grid lg:grid-cols-2 bg-slate-50 dark:bg-[#09090B]">
 
       <AuthBackground />
 
@@ -251,8 +251,8 @@ export function AuthPage({
           <div className="relative z-10 flex items-center gap-3">
             <Image src="/logo-lg.png" alt="Factu.me" width={44} height={44} className="w-11 h-11 rounded-xl" priority style={{ borderRadius: '12px' }} />
             <div className="flex items-baseline gap-0.5">
-              <span className="text-xl font-black text-white">Factu</span>
-              <span className="text-xl font-black text-emerald-400">.me</span>
+              <span className="text-xl font-black text-slate-900 dark:text-white">Factu</span>
+              <span className="text-xl font-black text-emerald-500 dark:text-emerald-400">.me</span>
             </div>
           </div>
         </AuthReveal>
@@ -261,13 +261,13 @@ export function AuthPage({
 
           <AuthReveal delay={150}>
             <div className="mb-6">
-              <h2 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-3">
+              <h2 className="text-3xl xl:text-4xl font-black text-slate-900 dark:text-white leading-tight mb-3">
                 Factures, CRM,<br />
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
                   tout centralisé.
                 </span>
               </h2>
-              <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto">
+              <p className="text-slate-600 dark:text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto">
                 Relances IA, scan de reçus, pipeline de ventes et comptabilité. Gérez votre activité sans friction.
               </p>
             </div>
@@ -288,14 +288,14 @@ export function AuthPage({
                     { l: 'S', cls: 'bg-purple-500/20 text-purple-300' },
                     { l: 'A', cls: 'bg-emerald-500/20 text-emerald-300' },
                   ].map((a) => (
-                    <div key={a.l} className={`w-9 h-9 rounded-full border-2 border-[#09090B] flex items-center justify-center shadow-lg font-bold text-sm ${a.cls}`}>
+                    <div key={a.l} className={`w-9 h-9 rounded-full border-2 border-slate-100 dark:border-[#09090B] flex items-center justify-center shadow-lg font-bold text-sm ${a.cls}`}>
                       {a.l}
                     </div>
                   ))}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-bold text-white">Ils nous font confiance</p>
-                  <p className="text-xs text-zinc-500">Rejoignez +2&nbsp;000 freelances</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">Ils nous font confiance</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-500">Rejoignez +2&nbsp;000 freelances</p>
                 </div>
               </div>
             </div>
@@ -306,7 +306,7 @@ export function AuthPage({
       {/* ——— Right panel / Mobile form ——— CSS-only stagger, no FM initial="hidden" */}
       <div className="relative z-10 flex min-h-screen flex-col justify-center p-5 sm:p-8">
 
-        <Link href="/" className="absolute top-6 left-5 z-20 inline-flex items-center gap-1.5 text-sm text-white/40 hover:text-white/80 transition-colors">
+        <Link href="/" className="absolute top-6 left-5 z-20 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-white/40 dark:hover:text-white/80 transition-colors">
           <ChevronLeft className="size-4" /> Accueil
         </Link>
 
@@ -317,8 +317,8 @@ export function AuthPage({
             <div className="flex items-center gap-3 mb-8 lg:hidden">
               <Image src="/logo-lg.png" alt="Factu.me" width={40} height={40} className="w-10 h-10 rounded-xl" priority style={{ borderRadius: '12px' }} />
               <div className="flex items-baseline gap-0.5">
-                <span className="text-lg font-black text-white">Factu</span>
-                <span className="text-lg font-black text-emerald-400">.me</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white">Factu</span>
+                <span className="text-lg font-black text-emerald-500 dark:text-emerald-400">.me</span>
               </div>
             </div>
           </AuthReveal>
@@ -326,10 +326,10 @@ export function AuthPage({
           {/* Heading */}
           <AuthReveal delay={150}>
             <div className="mb-6">
-              <h1 className="text-[26px] font-bold tracking-tight text-white">
+              <h1 className="text-[26px] font-bold tracking-tight text-slate-900 dark:text-white">
                 {isLogin ? 'Connexion' : 'Créer un compte'}
               </h1>
-              <p className="text-sm text-zinc-400 mt-1.5">
+              <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1.5">
                 {isLogin ? 'Connectez-vous à votre espace Factu.me.' : 'Commencez votre facturation intelligente.'}
               </p>
             </div>
@@ -341,7 +341,7 @@ export function AuthPage({
             disabled={loading}
             onClick={onGoogleLogin}
             whileTap={{ scale: 0.97 }}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-white/[0.06] border border-white/[0.06] py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.08] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.06] py-3 text-sm font-semibold text-slate-900 dark:text-white transition-colors hover:bg-slate-200 dark:hover:bg-white/[0.08] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <GoogleIcon className="size-4" /> Continuer avec Google
           </motion.button>
@@ -361,7 +361,7 @@ export function AuthPage({
                 required
                 className={inputCls}
               />
-              <AtSign className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <AtSign className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
             </div>
 
             <div className="relative">
@@ -374,11 +374,11 @@ export function AuthPage({
                 minLength={isLogin ? 1 : 8}
                 className={inputCls}
               />
-              <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -404,9 +404,9 @@ export function AuthPage({
                   transition={SPRING_GENTLE}
                   className="overflow-hidden"
                 >
-                  <div className="space-y-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] p-3.5">
+                  <div className="space-y-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] p-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-1 bg-white/[0.08] rounded-full overflow-hidden">
+                      <div className="flex-1 h-1 bg-slate-200 dark:bg-white/[0.08] rounded-full overflow-hidden">
                         <motion.div
                           className="h-full rounded-full"
                           style={{ backgroundColor: strength.color }}
@@ -458,11 +458,11 @@ export function AuthPage({
                   required
                   className={inputCls}
                 />
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400 dark:text-zinc-500" />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
                 >
                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -517,12 +517,12 @@ export function AuthPage({
                       className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center ${
                         cguAccepted
                           ? 'bg-emerald-500 border-emerald-500'
-                          : 'bg-white/[0.06] border-white/[0.12] hover:border-emerald-500/50'
+                          : 'bg-slate-100 border-slate-300 hover:border-emerald-500/50 dark:bg-white/[0.06] dark:border-white/[0.12]'
                       }`}
                     >
                       {cguAccepted && <Check size={10} className="text-white" strokeWidth={3} />}
                     </button>
-                    <span className="text-[11px] text-zinc-400 leading-relaxed">
+                    <span className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
                       J'accepte les{' '}
                       <Link href="/legal/cgu" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors">
                         CGU
@@ -548,7 +548,7 @@ export function AuthPage({
                   transition={SPRING_GENTLE}
                   className="overflow-hidden"
                 >
-                  <div className="rounded-xl bg-red-500/[0.1] border border-red-500/20 px-3.5 py-2.5 text-sm text-red-300">
+                  <div className="rounded-xl bg-red-500/[0.1] border border-red-500/20 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-300">
                     {error}
                   </div>
                 </motion.div>
@@ -576,7 +576,7 @@ export function AuthPage({
 
           {/* Toggle */}
           {toggleHref && (
-            <p className="text-center text-sm text-zinc-500 mt-6">
+            <p className="text-center text-sm text-slate-500 dark:text-zinc-500 mt-6">
               {isLogin ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
               <Link href={toggleHref} className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">
                 {isLogin ? 'Créer un compte' : 'Se connecter'}
@@ -586,19 +586,19 @@ export function AuthPage({
 
           {/* Trust Signals */}
           <div className="space-y-3 pt-3 mt-5">
-            <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500">
+            <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500 dark:text-zinc-500">
               <span className="flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Données hébergées en France 🇫🇷
               </span>
-              <span className="h-3 w-px bg-white/10" />
+              <span className="h-3 w-px bg-slate-300 dark:bg-white/10" />
               <span>Essai gratuit 7 jours</span>
-              <span className="h-3 w-px bg-white/10" />
+              <span className="h-3 w-px bg-slate-300 dark:bg-white/10" />
               <span>Annulation en 1 clic</span>
             </div>
-            <p className="text-center text-[10px] text-zinc-600">
+            <p className="text-center text-[10px] text-slate-500 dark:text-zinc-600">
               En continuant, vous acceptez nos{' '}
               <Link href="/legal/cgu" className="underline underline-offset-2 hover:text-zinc-400 transition-colors">CGU</Link>{' '}
               et notre{' '}

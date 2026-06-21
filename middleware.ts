@@ -247,6 +247,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
+  // ── GUARDIAN (CIBLE 2) — Email Confirmé Gate ─────────────────────────────
+  // Défense en profondeur SERVEUR : aucune route protégée n'est accessible tant que
+  // l'email n'est pas vérifié par OTP. email_confirmed_at provient directement de
+  // getUser() (LOI 1 SENTINEL) — aucune requête supplémentaire. Les users OAuth
+  // (Google) ont toujours ce champ rempli (email vérifié par le provider).
+  // Note : ce gate n'opère que si "Confirm email" est activé côté dashboard Supabase
+  // (sinon Supabase auto-remplit email_confirmed_at à l'inscription).
+  if (!user.email_confirmed_at) {
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Email non vérifié' }, { status: 403 });
+    }
+    const verifyUrl = new URL('/register', req.url);
+    verifyUrl.searchParams.set('verify', '1');
+    return NextResponse.redirect(verifyUrl);
+  }
+
   // ── ARBITER: Onboarding Gate ──────────────────────────────────────────
   // LOI 3 (PERSISTANCE DE L'ÉTAT) : si onboarding_done !== true,
   // l'utilisateur NE PEUT PAS accéder aux pages protégées autres que /onboarding.

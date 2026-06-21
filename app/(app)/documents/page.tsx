@@ -134,6 +134,13 @@ function getDocTypeIcon(type: string) {
   return icons[type] || FileText;
 }
 
+// Formatage monétaire cohérent (fr-FR EUR) — utilisé partout dans la liste au lieu
+// du toFixed(2) + ' €' qui produisait « 1500.00 € » au lieu de « 1 500,00 € ».
+const fmtEUR = (n: number | undefined | null): string =>
+  n != null && !Number.isNaN(n)
+    ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
+    : '—';
+
 const listContainerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
@@ -234,15 +241,15 @@ export default function DocumentsPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <div className="flex items-center justify-between mb-1">
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
             {activeType === 'all' ? 'Documents' : currentConfig.label}
           </h1>
-          <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-colors active:scale-95">
+          <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-semibold rounded-control shadow-elev-1 transition-colors hover:bg-primary/90 active:scale-95">
             <Plus size={16} />
             <span className="hidden sm:inline">Nouveau</span>
           </Link>
         </div>
-        <p className="text-sm text-slate-500 mb-5">{stats.total} documents · {stats.totalAmount.toFixed(2)} €</p>
+        <p className="text-sm text-muted-foreground mb-5">{stats.total} documents · {fmtEUR(stats.totalAmount)}</p>
       </motion.div>
 
       {/* Segment Control — Document Type Tabs */}
@@ -316,38 +323,47 @@ export default function DocumentsPage() {
       {/* List */}
       {filteredDocs.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-          <div className="w-14 h-14 bg-gray-100 border border-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FileText className="text-gray-400" size={28} />
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 bg-primary/10 rounded-card rotate-6" />
+            <div className="relative w-16 h-16 bg-card border border-border rounded-card flex items-center justify-center shadow-elev-1">
+              <FileText className="text-primary" size={26} />
+            </div>
           </div>
-          <p className="text-sm text-slate-400 font-medium">Aucun document</p>
-          <p className="text-xs text-gray-400 mt-1 mb-5">Créez votre premier document</p>
-          <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 bg-emerald-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors active:scale-95">
-            <Plus size={16} /> Créer
+          <p className="text-sm font-semibold text-foreground">Aucun document pour l'instant</p>
+          <p className="text-xs text-muted-foreground mt-1 mb-5">Créez votre première facture, devis ou avoir en quelques secondes.</p>
+          <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-control shadow-elev-1 transition-colors hover:bg-primary/90 active:scale-95">
+            <Plus size={16} /> Créer un document
           </Link>
         </motion.div>
       ) : (
         <>
           {/* Desktop table */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-gray-200">
-              <div className="col-span-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type</div>
-              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Numéro</div>
-              <div className="col-span-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client</div>
-              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date</div>
-              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Total</div>
-              <div className="col-span-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Statut</div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-card border border-border rounded-card shadow-elev-1 overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-border bg-muted/40">
+              <div className="col-span-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Type</div>
+              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Numéro</div>
+              <div className="col-span-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Client</div>
+              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Date</div>
+              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Total</div>
+              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Statut</div>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-border">
               {filteredDocs.map((doc) => {
                 const s = getStatusDisplay(doc.status || 'draft');
                 const TypeIcon = getDocTypeIcon(doc.document_type || 'invoice');
+                const clientName = doc.client?.name || doc.client_name_override || '';
                 return (
-                  <Link key={doc.id} href={`/invoices/${doc.id}`} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors items-center group">
-                    <div className="col-span-1"><TypeIcon size={16} className="text-slate-400" /></div>
-                    <div className="col-span-2 text-sm font-semibold text-emerald-400 group-hover:underline">{doc.number || '—'}</div>
-                    <div className="col-span-3 text-sm text-slate-500 truncate">{doc.client?.name || doc.client_name_override || '—'}</div>
-                    <div className="col-span-2 text-sm text-slate-500">{doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('fr-FR') : '—'}</div>
-                    <div className="col-span-2 text-sm font-bold text-gray-900 dark:text-white text-right">{doc.total ? doc.total.toFixed(2) + ' €' : '—'}</div>
+                  <Link key={doc.id} href={`/invoices/${doc.id}`} className="grid grid-cols-12 gap-4 px-5 py-3.5 even:bg-muted/20 hover:bg-muted/60 transition-colors items-center group">
+                    <div className="col-span-1"><TypeIcon size={16} className="text-muted-foreground" /></div>
+                    <div className="col-span-2 text-sm font-semibold text-primary group-hover:underline">{doc.number || '—'}</div>
+                    <div className="col-span-3 flex items-center gap-2.5 min-w-0">
+                      <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center uppercase">
+                        {(clientName || '?').trim().charAt(0)}
+                      </span>
+                      <span className="text-sm text-foreground truncate">{clientName || '—'}</span>
+                    </div>
+                    <div className="col-span-2 text-sm text-muted-foreground">{doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('fr-FR') : '—'}</div>
+                    <div className="col-span-2 text-sm font-bold text-foreground text-right tabular-nums">{fmtEUR(doc.total)}</div>
                     <div className="col-span-2 flex items-center gap-2">
                       <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold', s.color)}>
                         <div className={cn('w-1.5 h-1.5 rounded-full', s.dot)} />{s.label}
@@ -365,7 +381,7 @@ export default function DocumentsPage() {
             {filteredDocs.map((doc) => {
               const s = getStatusDisplay(doc.status || 'draft');
               const clientName = doc.client?.name || doc.client_name_override || 'Client inconnu';
-              const amount = doc.total ? doc.total.toFixed(2) + ' €' : '—';
+              const amount = fmtEUR(doc.total);
               const date = doc.issue_date ? new Date(doc.issue_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
               const TypeIcon = getDocTypeIcon(doc.document_type || 'invoice');
               return (

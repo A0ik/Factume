@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { AuthPage } from '@/components/ui/auth-page';
+import { ThemeOnboarding } from '@/components/onboarding/ThemeOnboarding';
 
 
 const PASSWORD_CHECKS = [
@@ -22,6 +23,9 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [confirmEmail, setConfirmEmail] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+
+  // GUARDIAN (CIBLE 1) — Étape 0 : choix du thème AVANT le formulaire.
+  const [step, setStep] = useState<'theme' | 'form'>('theme');
 
   // BASTION (CIBLE 2) — État du code OTP.
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
@@ -134,13 +138,18 @@ export default function RegisterPage() {
     catch (err: any) { setError(err.message); }
   };
 
+  // GUARDIAN (CIBLE 1) — Étape 0 : choix du thème avant tout le reste.
+  if (step === 'theme') {
+    return <ThemeOnboarding onDone={() => setStep('form')} />;
+  }
+
   if (confirmEmail) {
     const codeComplete = otp.every((d) => d !== '');
     return (
-      <main className="relative min-h-screen flex items-center justify-center p-5 bg-[#09090B]">
+      <main className="relative min-h-screen flex items-center justify-center p-5 bg-slate-50 dark:bg-[#09090B] transition-colors">
         {/* Animated background */}
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#09090B] via-[#111113] to-[#09090B]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-[#09090B] dark:via-[#111113] dark:to-[#09090B]" />
           <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] blur-[120px]" style={{ background: 'rgba(16,185,129,0.10)', animation: 'blob 8s ease-in-out infinite' }} />
           <div className="absolute -bottom-[20%] -left-[10%] w-[400px] h-[400px] blur-[100px]" style={{ background: 'rgba(20,184,166,0.06)', animation: 'blob 8s ease-in-out infinite 2s' }} />
         </div>
@@ -149,19 +158,19 @@ export default function RegisterPage() {
           <div className="flex items-center justify-center gap-3">
             <Image src="/logo-lg.png" alt="Factu.me" width={40} height={40} className="w-10 h-10 rounded-xl" priority style={{ borderRadius: '12px' }} />
             <div className="flex items-baseline gap-0.5">
-              <span className="text-lg font-black text-white">Factu</span>
-              <span className="text-lg font-black text-emerald-400">.me</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">Factu</span>
+              <span className="text-lg font-black text-emerald-500 dark:text-emerald-400">.me</span>
             </div>
           </div>
 
           <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-            <ShieldCheck size={28} className="text-emerald-400" />
+            <ShieldCheck size={28} className="text-emerald-500 dark:text-emerald-400" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-white">Vérifiez votre email</h2>
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              Saisissez le code à 6 chiffres envoyé à <strong className="text-white break-all">{pendingEmail}</strong>.
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Vérifiez votre email</h2>
+            <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Saisissez le code à 6 chiffres envoyé à <strong className="text-slate-900 dark:text-white break-all">{pendingEmail}</strong>.
             </p>
           </div>
 
@@ -178,13 +187,13 @@ export default function RegisterPage() {
                 value={digit}
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                className="w-11 h-14 sm:w-12 sm:h-14 rounded-xl bg-white/[0.06] border border-white/[0.08] text-center text-2xl font-bold text-white focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                className="w-11 h-14 sm:w-12 sm:h-14 rounded-xl bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-center text-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
               />
             ))}
           </div>
 
           {otpError && (
-            <p className="text-sm text-red-300">{otpError}</p>
+            <p className="text-sm text-red-500 dark:text-red-300">{otpError}</p>
           )}
 
           <button
@@ -206,7 +215,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => { setConfirmEmail(false); setError(''); }}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               <ArrowLeft size={13} /> Changer d'email
             </button>
@@ -214,7 +223,7 @@ export default function RegisterPage() {
               type="button"
               onClick={handleResend}
               disabled={resendCooldown > 0}
-              className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw size={13} />
               {resendCooldown > 0 ? `Renvoyer (${resendCooldown}s)` : 'Renvoyer le code'}
@@ -223,7 +232,7 @@ export default function RegisterPage() {
 
           <Link
             href="/login"
-            className="block pt-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="block pt-2 text-xs text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 transition-colors"
           >
             Déjà un compte ? Se connecter
           </Link>

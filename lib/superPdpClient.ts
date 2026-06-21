@@ -560,6 +560,22 @@ export async function transmitInvoice(
       };
     }
 
+    // ── 0b. Idempotence — une facture déjà transmise ne se re-transmet JAMAIS ──
+    // SuperPDP /invoices n'expose PAS de clé d'idempotence (doc §3.2) : un 2e POST
+    // créerait une 2e facture légale (doublon côté État). On garde donc au plus bas
+    // pour protéger TOUS les callers (send-invoice, transmit, cron). Statut
+    // 'transmitted' + un pdp_transmission_id présent = déjà acquittée côté État.
+    const curPdpStatus = (invoice as any)?.pdp_status;
+    const curTransmissionId = (invoice as any)?.pdp_transmission_id;
+    if (curPdpStatus === 'transmitted' && curTransmissionId) {
+      console.log('[SuperPDP] Facture', invoice.number, 'déjà transmise (id', curTransmissionId, ') — skip idempotent (anti-double transmission)');
+      return {
+        success: true,
+        superPdpId: curTransmissionId,
+        status: 'already_transmitted',
+      };
+    }
+
     // ── 1. Vérification d'éligibilité ────────────────────────────────────
     const eligibility = isFacturXEligible(invoice, profile);
     if (!eligibility.eligible) {

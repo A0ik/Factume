@@ -1,15 +1,12 @@
 'use client';
 
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState } from 'react';
 import { Check, Shield, Loader2, Lock, Sparkles, Crown, Zap, Rocket, Clock, BadgeCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '@/stores/themeStore';
-
-const stripePk = process.env.NEXT_PUBLIC_STRIPE_PK;
-const stripePromise = stripePk ? loadStripe(stripePk) : null;
+import { getStripe, hasStripePublishableKey } from '@/lib/stripe-client';
 
 export interface PlanInfo {
   id: string;
@@ -192,7 +189,9 @@ function getDarkAppearance(primaryColor: string) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Plan Config — colors per plan
+   Plan Config — couleurs par plan
+   ALCHEMIST : doctrine « un seul accent chromatique » (Émeraude raffiné).
+   Pro = émeraude vif (héros), Business = émeraude profond (premium).
    ═══════════════════════════════════════════════════════════════ */
 
 const PLAN_CONFIG: Record<string, {
@@ -213,32 +212,36 @@ const PLAN_CONFIG: Record<string, {
     lightRing: 'ring-emerald-200', darkRing: 'ring-emerald-500/30',
   },
   business: {
-    icon: Crown, gradient: 'from-purple-600 to-violet-700', color: '#9333EA',
-    lightBg: 'bg-purple-50', darkBg: 'bg-purple-500/10',
-    lightText: 'text-purple-700', darkText: 'text-purple-400',
-    lightRing: 'ring-purple-200', darkRing: 'ring-purple-500/30',
+    icon: Crown, gradient: 'from-emerald-700 to-emerald-900', color: '#047857',
+    lightBg: 'bg-emerald-50', darkBg: 'bg-emerald-700/10',
+    lightText: 'text-emerald-800', darkText: 'text-emerald-400',
+    lightRing: 'ring-emerald-300', darkRing: 'ring-emerald-600/30',
   },
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   CheckoutForm — inner form with PaymentElement
-   LOI 9: Elegant error handling, no page reload
-   LOI 7: Micro-reassurance under submit button
+   CheckoutForm — formulaire interne avec PaymentElement
+   LOI 9: Gestion d'erreurs élégante, pas de rechargement de page
+   LOI 7: Micro-réassurance sous le bouton de validation
+   ALCHEMIST: redirect:'if_required' (3DS uniquement) + onSuccess callback
    ═══════════════════════════════════════════════════════════════ */
 
 function CheckoutForm({
   planInfo,
   isSetupMode,
   isDark,
+  onSuccess,
 }: {
   userId: string;
   planInfo: PlanInfo;
   isSetupMode: boolean;
   isDark: boolean;
+  onSuccess?: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
+  const [succeeded, setSucceeded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.pro;
@@ -252,19 +255,54 @@ function CheckoutForm({
     setError(null);
     const returnUrl = `${window.location.origin}/dashboard?success=true${isSetupMode ? '&trial=true' : ''}`;
 
-    const { error: err } = isSetupMode
-      ? await stripe.confirmSetup({ elements, confirmParams: { return_url: returnUrl } })
-      : await stripe.confirmPayment({ elements, confirmParams: { return_url: returnUrl } });
+    // redirect:'if_required' → les paiements sans 3DS se terminent in-app,
+    // seules les cartes nécessitant une authentification redirigent (puis reviennent).
+    const result = isSetupMode
+      ? await stripe.confirmSetup({ elements, redirect: 'if_required', confirmParams: { return_url: returnUrl } })
+      : await stripe.confirmPayment({ elements, redirect: 'if_required', confirmParams: { return_url: returnUrl } });
 
-    if (err) {
-      setError(err.message || 'Une erreur est survenue');
+    if (result.error) {
+      setError(result.error.message || 'Une erreur est survenue');
       setIsLoading(false);
+    } else {
+      setSucceeded(true);
+      onSuccess?.();
     }
   };
 
+  // ── État de succès (carte validée sans 3DS) ──
+  if (succeeded) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={cn(
+          "rounded-2xl border p-8 text-center",
+          isDark ? "bg-emerald-500/10 border-emerald-500/20" : "bg-emerald-50 border-emerald-200"
+        )}
+      >
+        <motion.div
+          initial={{ scale: 0 }} animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+          className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg"
+        >
+          <Check size={28} strokeWidth={3} />
+        </motion.div>
+        <h3 className={cn("text-lg font-bold", isDark ? "text-white" : "text-gray-900")}>
+          {isSetupMode ? 'Essai démarré !' : 'Paiement confirmé !'}
+        </h3>
+        <p className={cn("mt-1 text-sm", isDark ? "text-zinc-400" : "text-gray-600")}>
+          {isSetupMode
+            ? 'Votre carte est validée. Redirection vers votre tableau de bord…'
+            : 'Merci ! Redirection vers votre tableau de bord…'}
+        </p>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Plan summary card — dual theme */}
+      {/* Carte récap du plan — dual theme */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,7 +346,7 @@ function CheckoutForm({
                 "text-xl font-black",
                 isDark ? config.darkText : config.lightText
               )}>
-                {planInfo.price}€
+                {planInfo.price}
               </span>
               <span className={cn(
                 "text-xs",
@@ -339,7 +377,7 @@ function CheckoutForm({
         </div>
       </motion.div>
 
-      {/* Payment form — LOI 9: Error handling */}
+      {/* Formulaire de paiement — LOI 9: gestion d'erreur */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -347,7 +385,7 @@ function CheckoutForm({
         className="space-y-4"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* LOI 8: Stripe Appearance adapts to theme */}
+          {/* LOI 8: l'apparence Stripe s'adapte au thème */}
           <div className={cn(
             "relative overflow-hidden rounded-xl border",
             isDark
@@ -367,7 +405,7 @@ function CheckoutForm({
             />
           </div>
 
-          {/* LOI 9: Error display — theme-aware */}
+          {/* LOI 9: affichage d'erreur — theme-aware */}
           <AnimatePresence>
             {error && (
               <motion.div
@@ -387,7 +425,7 @@ function CheckoutForm({
             )}
           </AnimatePresence>
 
-          {/* Submit button */}
+          {/* Bouton de validation */}
           <motion.button
             type="submit"
             disabled={!stripe || isLoading}
@@ -414,7 +452,7 @@ function CheckoutForm({
             )}
           </motion.button>
 
-          {/* LOI 7: Micro-reassurance */}
+          {/* LOI 7: micro-réassurance */}
           <div className="flex items-center justify-center gap-4 pt-1">
             <div className={cn(
               "flex items-center gap-1.5 text-[11px]",
@@ -447,8 +485,8 @@ function CheckoutForm({
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   EmbeddedCheckout — Wrapper with dynamic Stripe Appearance
-   LOI 8: Dynamically switches between light/dark Stripe themes
+   EmbeddedCheckout — Wrapper avec apparence Stripe dynamique
+   LOI 8: bascule dynamique entre les thèmes Stripe light/dark
    ═══════════════════════════════════════════════════════════════ */
 
 export default function EmbeddedCheckout({
@@ -456,11 +494,13 @@ export default function EmbeddedCheckout({
   userId,
   planInfo,
   isSetupMode = false,
+  onSuccess,
 }: {
   clientSecret: string;
   userId: string;
   planInfo: PlanInfo;
   isSetupMode?: boolean;
+  onSuccess?: () => void;
 }) {
   const { resolvedTheme } = useThemeStore();
   const isDark = resolvedTheme === 'dark';
@@ -468,7 +508,7 @@ export default function EmbeddedCheckout({
   const config = PLAN_CONFIG[planInfo.id] || PLAN_CONFIG.pro;
   const primaryColor = config.color;
 
-  // LOI 8: Build Stripe Appearance dynamically
+  // LOI 8: construit l'apparence Stripe dynamiquement
   const appearance = isDark
     ? getDarkAppearance(primaryColor)
     : getLightAppearance(primaryColor);
@@ -478,24 +518,25 @@ export default function EmbeddedCheckout({
     appearance,
   };
 
-  if (!stripePromise) {
+  if (!hasStripePublishableKey) {
     return (
       <div className={cn(
-        "p-4 rounded-xl",
+        "p-4 rounded-xl text-sm",
         isDark ? "text-red-400 bg-red-500/10" : "text-red-500 bg-red-50"
       )}>
-        Configuration Stripe manquante.
+        Configuration Stripe manquante. Ajoutez NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY à votre environnement.
       </div>
     );
   }
 
   return (
-    <Elements options={options} stripe={stripePromise}>
+    <Elements options={options} stripe={getStripe()}>
       <CheckoutForm
         userId={userId}
         planInfo={planInfo}
         isSetupMode={isSetupMode}
         isDark={isDark}
+        onSuccess={onSuccess}
       />
     </Elements>
   );

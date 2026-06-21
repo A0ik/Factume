@@ -221,7 +221,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
               <button
                 onClick={handleSaveEdits}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 bg-green-500 rounded-lg text-gray-900 dark:text-white hover:bg-green-600 text-xs font-semibold disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 text-xs font-semibold disabled:opacity-60"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Enregistrer

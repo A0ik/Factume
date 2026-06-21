@@ -214,6 +214,10 @@ export async function POST(req: NextRequest) {
         p_linked_invoice_id: linked_invoice_id || null,
         p_idempotency_id: idempotency_id || crypto.randomUUID(),
         p_client_type: client_type || null,
+        // SAGE (CIBLE 1) — persistance ATOMIQUE du terme (termId sémantique) via le RPC.
+        // Avant, seul un .update() best-effort (try/catch swallowé) le persistait → factures
+        // récentes encore NULL (FACT-2026-088) → le PDF repliait sur profiles.payment_terms ('30').
+        p_payment_terms: typeof payment_terms === 'string' ? payment_terms : null,
       });
 
     if (rpcError || !invoiceId) {

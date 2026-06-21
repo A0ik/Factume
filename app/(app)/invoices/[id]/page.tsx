@@ -191,23 +191,36 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   // « if (!invoice) return » le rend inactif tant que la facture est nulle.
   useEffect(() => {
     if (!invoice) return;
+    // SAGE (CIBLE 1) — FIX boucle infinie /api/stripe-connect/create-payment-link.
+    // Cause racine : (a) l'effet appelait handleCreatePaymentLink(force=true) à chaque
+    // oscillation du flag `payment_link_stale` true↔false — or le PATCH (stale=true) ET la
+    // route create-payment-link (stale=false) écrivent chacun en base → 2 events Realtime
+    // livrés dans le désordre → l'état local oscillait → recréation du lien en boucle
+    // (cadence ~3s = heartbeat Realtime). (b) le garde était réarmé dès que stale passait
+    // à false, donc re-déclenchable immédiatement.
+    // Fix : garde STICKY par montant (clé `${id}:${total}`) — on ne tente JAMAIS deux fois
+    // pour le même total — + déclenchement conditionné à une DIVERGENCE RÉELLE entre le
+    // total et le montant figé du lien (comparaison client-side). L'effet devient insensible
+    // à l'oscillation du flag stale. Une nouvelle édition de prix change le total → nouvelle
+    // clé → exactement une régénération par changement de montant. Plus de réarmage.
+    const total = Number(invoice.total ?? 0);
+    const linkAmount = invoice.payment_link_amount != null ? Number(invoice.payment_link_amount) : null;
+    const amountDiverges = linkAmount != null && Math.abs(total - linkAmount) > 0.01;
+    const regenKey = `${invoice.id}:${total}`;
     if (
       invoice.payment_link_stale &&
       invoice.payment_provider &&
-      autoRegenAttemptedRef.current !== invoice.id
+      amountDiverges &&
+      autoRegenAttemptedRef.current !== regenKey
     ) {
-      autoRegenAttemptedRef.current = invoice.id;
+      autoRegenAttemptedRef.current = regenKey;
       const provider = invoice.payment_provider;
       (provider === 'stripe' ? handleCreatePaymentLink(true, true) : handleSumUpLink(true, true)).catch(() => {
         toast.error('Lien de paiement obsolète — recréez-le via « Lien de paiement ».');
       });
     }
-    // Le lien n'est plus stale (régén réussie) → on réarme le verrou.
-    if (!invoice.payment_link_stale && autoRegenAttemptedRef.current === invoice.id) {
-      autoRegenAttemptedRef.current = null;
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider]);
+  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider, invoice?.total, invoice?.payment_link_amount]);
 
   if (!invoice) {
     return (
@@ -256,10 +269,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) throw new Error(data.error);
       if (invoice.status === 'draft') await updateInvoiceStatus(id, 'sent');
       toast.success(`Facture envoyée à ${email} !`);
-      // Notification e-invoicing PDP
+      // CIBLE 1 (popup fantôme) — la popup « transmission en cours » ne s'affiche
+      // QUE si une transmission a VRAIMENT été tentée (utilisateur connecté SuperPDP
+      // + facture B2B éligible). Hors connexion (notConnected) ou pas de tentative →
+      // email classique silencieux, point final (règle d'or e-invoicing).
       if (data.pdpTransmission?.transmitted) {
         toast.success("Facture envoyée et transmise à l'État", { duration: 6000 });
-      } else if (data.pdpTransmission && !data.pdpTransmission.transmitted) {
+      } else if (data.pdpTransmission?.attempted && !data.pdpTransmission.transmitted) {
         toast.info("Facture envoyée. Transmission électronique en cours...", { duration: 4000 });
       }
     } catch (e: any) {

@@ -302,13 +302,30 @@ export const useContractStore = create<ContractState>((set, get) => ({
     // Valider la transition
     const { data: contract } = await supabase
       .from(TABLE_MAP[contractType])
-      .select('document_status')
+      .select('document_status, employer_signature, employee_signature')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
 
     if (contract && !canTransition(contract.document_status as ContractStatus, status)) {
       throw new Error(`Transition non autorisée: ${contract.document_status} → ${status}`);
+    }
+
+    // SAGE (CIBLE 5) — Verrouillage total : impossible de passer à 'signed'/'active'
+    // sans les signatures employeur + salarié. Le trigger DB enforce_contract_signatures
+    // rejette aussi l'écriture (backstop absolu), mais on valide ici pour un message
+    // clair avant l'appel. Les contrats déjà signés/actifs restent éditables.
+    if (contract && (status === 'signed' || status === 'active')) {
+      const cur = contract.document_status as ContractStatus;
+      const alreadyThere = cur === 'signed' || cur === 'active';
+      if (!alreadyThere) {
+        if (!contract.employer_signature) {
+          throw new Error("Signature de l'employeur requise pour marquer ce contrat « signé » ou « actif ».");
+        }
+        if (!contract.employee_signature) {
+          throw new Error('Signature du salarié requise pour marquer ce contrat « signé » ou « actif ».');
+        }
+      }
     }
 
     const row: any = { document_status: status, updated_at: new Date().toISOString() };

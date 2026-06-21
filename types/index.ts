@@ -68,6 +68,10 @@ export interface Profile {
   website?: string;
   // MONOLITH LOI 1: Cabinet actif persisté en BDD
   active_cabinet_id?: string;
+  // GUARDIAN (CIBLE 1) — préférence thème cross-device
+  theme_preference?: 'light' | 'dark' | null;
+  // GUARDIAN (CIBLE 4) — empreinte carte pour la déduplication anti-fraude essai
+  trial_card_fingerprint?: string | null;
   created_at: string;
 }
 

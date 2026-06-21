@@ -315,7 +315,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme-storage');var p=t?JSON.parse(t):null;var d=p&&p.state&&p.state.theme?p.state.theme:'dark';if(d==='system')d=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.classList.add(d)}catch(e){document.documentElement.classList.add('dark')}})()` }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `(function(){try{var d=localStorage.getItem('theme')||'dark';if(d==='system'){d=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.classList.add(d);document.documentElement.style.colorScheme=d}catch(e){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}})()` }} />
         <script
           type="application/ld+json"
           nonce={nonce}

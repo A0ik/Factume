@@ -129,7 +129,13 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
         const formContext = buildFormContext();
         formData.append('formContext', JSON.stringify(formContext));
         const hasContent = items?.some((i) => i.description || i.unit_price > 0);
-        if (hasContent) formData.append('existingItems', JSON.stringify(items));
+        // SAGE (BUG VOIX) — on signale l'édition (isEdit) UNIQUEMENT s'il y a de vraies
+        // lignes. Sinon le serveur empruntait le path « modification d'un doc vide » peu
+        // fiable, et la première ligne dictée d'une nouvelle facture n'était pas créée.
+        if (hasContent) {
+          formData.append('existingItems', JSON.stringify(items));
+          formData.append('isEdit', 'true');
+        }
 
         try {
           const controller = new AbortController();
@@ -148,7 +154,15 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
               transcriptTimerRef.current = setTimeout(() => setTranscript(''), 8000);
             }
 
-            applyAIParsedResult(data.parsed || data, 'voice');
+            const parsedResult = data.parsed || data;
+            applyAIParsedResult(parsedResult, 'voice');
+
+            // SAGE (BUG VOIX) — filet de sécurité : si l'IA n'a extrait AUCUNE ligne alors
+            // que l'utilisateur a dicté quelque chose, on l'indique clairement au lieu
+            // d'échouer en silence (l'ancien comportement donnait « aucune ligne » sans explication).
+            if (data.transcript && !(parsedResult?.items?.length)) {
+              toast.error("Je n'ai pas pu extraire de ligne de votre dictée. Précisez la prestation et le montant, puis réessayez.");
+            }
 
             if (data.wasTranslated && data.originalLanguage) {
               const langMap: Record<string, { flag: string; label: string }> = {

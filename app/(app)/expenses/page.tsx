@@ -459,6 +459,13 @@ export default function ExpensesPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // SAGE (CIBLE 2) — LOI du justificatif (front) : aucune note de frais sans justificatif.
+    // Légalement obligatoire (art. L.123-22 Code de commerce / CGI). Un trigger DB rejette
+    // aussi toute insertion sans receipt_url (défense en profondeur).
+    if (!receiptUrl) {
+      toast.error('Un justificatif est obligatoire pour enregistrer une note de frais.');
+      return;
+    }
     setSaving(true);
     try {
       let taxFreeAmount = 0;
@@ -476,6 +483,7 @@ export default function ExpensesPage() {
         description: form.description,
         payment_method: form.payment_method,
         receipt_url: receiptUrl,
+        has_receipt: true,
         status: 'pending' as const,
         user_id: user.id,
         location_city: form.location_city || null,
@@ -863,7 +871,7 @@ export default function ExpensesPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="p-5 space-y-5 overflow-y-auto flex-1">
+              <form id="expense-form" onSubmit={handleSave} className="p-5 space-y-5 overflow-y-auto flex-1">
                 {/* Category Selection */}
                 <div>
                   <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</label>
@@ -1254,8 +1262,8 @@ export default function ExpensesPage() {
                   )}>
                   Annuler
                 </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                <button type="submit" form="expense-form" disabled={saving || !receiptUrl}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                   {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
                   {editingId ? 'Enregistrer' : 'Ajouter la dépense'}
                 </button>

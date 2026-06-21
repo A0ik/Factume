@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { ANNUAL_DISCOUNT_BADGE } from '@/lib/plans';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
-import { toast } from 'sonner';
+import CheckoutModal, { type CheckoutMode } from '@/components/ui/CheckoutModal';
 
 /**
  * LOI 5 + LOI 9 (Arbiter) — /trial est une COPIE CONFORME de la section Tarifs
@@ -78,13 +78,18 @@ export default function TrialPage() {
   const sub = useSubscription();
 
   const [billing, setBilling] = React.useState<'monthly' | 'yearly'>('monthly');
-  const [loadingPlan, setLoadingPlan] = React.useState<string | null>(null);
+  const [loadingPlan] = React.useState<string | null>(null);
+  const [checkout, setCheckout] = React.useState<{
+    open: boolean;
+    mode: CheckoutMode;
+    planId: 'pro' | 'business';
+  }>({ open: false, mode: 'payment', planId: 'pro' });
 
   const currentTier = (profile?.subscription_tier || 'free').toLowerCase(); // free | pro | business …
   const trialActive = !!sub?.isTrialActive;
 
-  // Souscription directe via Stripe Checkout Hosted (LOI 6 — sans friction ToS)
-  const subscribe = async (planName: string) => {
+  // ALCHEMIST — souscription on-site via Stripe Elements (no redirect).
+  const subscribe = (planName: string) => {
     const plan = planName.toLowerCase();
     if (plan === 'starter') {
       router.push(profile?.id ? '/dashboard' : '/register');
@@ -94,25 +99,13 @@ export default function TrialPage() {
       router.push(`/register?plan=${plan}&billing=${billing}`);
       return;
     }
-
-    setLoadingPlan(planName);
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, yearly: billing === 'yearly' }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Impossible de démarrer le paiement.');
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-      throw new Error("Stripe n'a pas retourné d'URL de paiement.");
-    } catch (e: any) {
-      toast.error(e?.message || 'Erreur lors de la souscription.');
-      setLoadingPlan(null);
-    }
+    if (plan === currentTier && !trialActive) return;
+    const hasRealStripeSubscription = !sub?.isFree && !!profile?.stripe_subscription_id;
+    setCheckout({
+      open: true,
+      mode: hasRealStripeSubscription ? 'change' : 'payment',
+      planId: plan as 'pro' | 'business',
+    });
   };
 
   const ctaFor = (planName: string): { label: string; disabled: boolean } => {
@@ -287,6 +280,17 @@ export default function TrialPage() {
           )}
         </div>
       </section>
+
+      {/* ALCHEMIST — checkout on-site (no redirect) */}
+      <CheckoutModal
+        open={checkout.open}
+        onOpenChange={(o) => setCheckout((c) => ({ ...c, open: o }))}
+        mode={checkout.mode}
+        planId={checkout.planId}
+        billing={billing}
+        currentPlan={currentTier}
+        userId={profile?.id}
+      />
     </div>
   );
 }

@@ -106,7 +106,15 @@ export async function POST(req: NextRequest) {
     } catch {
       formCtx = null;
     }
-    const isContextualEdit = !!(formCtx || (isEdit && existingItems.length));
+    // SAGE (BUG VOIX FACTURE) — on n'emprunte le path « modification d'un document
+    // existant » QUE s'il y a de VRAIES lignes existantes (isEdit + existingItems).
+    // Avant, la simple présence de formContext (toujours envoyé par VoiceOneShot)
+    // basculait une facture NOUVELLE dans le prompt « modification » avec
+    // existingList='(aucune ligne)' → l'IA (Llama 3.3) renvoyait parfois items:[] ou
+    // pas d'items → applyAIParsedResult sautait silencieusement la pose de lignes →
+    // « il n'y avait aucune ligne ». Une nouvelle facture utilise désormais le path
+    // d'extraction (else), fiable, qui retourne toujours les lignes dictées.
+    const isContextualEdit = !!(isEdit && existingItems.length);
 
     let systemPrompt: string;
 
