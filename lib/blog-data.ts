@@ -1479,42 +1479,6 @@ export const blogPosts: BlogPost[] = [
       },
     ],
   },
-  {
-    slug: 'referral-parrainage-factume',
-    title: 'Programme de parrainage Factu.me : gagnez des mois gratuits',
-    description: 'Découvrez le programme de parrainage Factu.me : comment parrainer, combien gagner et comment utiliser vos mois offerts.',
-    date: '2025-05-01',
-    author: 'Équipe Factu.me',
-    readTime: '3 min',
-    category: 'Outils',
-    image: '/blog/parrainage-factume.jpg',
-    content: [
-      {
-        title: 'Comment fonctionne le parrainage Factu.me',
-        paragraphs: [
-          'Le programme de parrainage Factu.me vous permet de gagner des mois d\'abonnement gratuits en invitant d\'autres entrepreneurs a découvrir la plateforme. Pour chaque filleul qui s\'inscrit et souscrit a un plan payant, vous gagnez un mois gratuit.',
-          'Le principe est simple : partagez votre lien de parrainage unique avec vos contacts, sur les réseaux sociaux ou dans les groupes d\'entrepreneurs. Quand un filleul s\'inscrit via votre lien et active un abonnement, votre récompense est automatiquement créditée.',
-          'Il n\'y a pas de limite de parrainages. Si vous parrainez 12 personnes dans l\'année, c\'est un an d\'abonnement gratuit. C\'est notre façon de remercier ceux qui nous recommandent.',
-        ],
-      },
-      {
-        title: 'Comment partager votre lien de parrainage',
-        paragraphs: [
-          'Votre lien de parrainage est disponible dans votre espace Factu.me, section Paramètres > Parrainage. Il est unique et personnel. Partagez-le par email, messagerie, réseaux sociaux ou directement en face a face.',
-          'Vous pouvez également partager votre lien dans les groupes Facebook ou LinkedIn d\'entrepreneurs, les forums de freelances, les communautés d\'auto-entrepreneurs. Plus vous partagez, plus vous avez de chances de gagner des mois gratuits.',
-          'Le lien de parrainage peut être personnalisé avec un message qui explique pourquoi vous utilisez Factu.me. Les recommandations personnelles sont les plus efficaces.',
-        ],
-      },
-      {
-        title: 'Suivre vos parrainages',
-        paragraphs: [
-          'Le tableau de bord de parrainage affiche vos statistiques en temps réel : nombre de clics sur votre lien, inscriptions, abonnements activés et mois gagnés. Vous suivez l\'évolution de vos récompenses.',
-          'Les mois gagnés sont automatiquement appliqués a votre prochain renouvellement. Pas de démarche a effectuer : tout est automatique. Si vous avez gagné 3 mois, vos 3 prochaines factures d\'abonnement seront a 0€.',
-          'Le programme de parrainage est disponible pour tous les utilisateurs Factu.me, y compris les utilisateurs du plan gratuit. Parrainez et profitez de Factu.me gratuitement.',
-        ],
-      },
-    ],
-  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {

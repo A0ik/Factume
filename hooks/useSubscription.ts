@@ -50,7 +50,7 @@ export function useSubscription() {
   const isProOrAbove = tier === 'pro' || tier === 'business';
 
   const trialDocumentCount = profile?.trial_document_count || 0;
-  const trialDocLimit = 3;
+  const trialDocLimit = 15; // Unifié : essai = 15 documents (vs 3/mois en free). Cf. create_invoice_atomique.
 
   // Voice usage tracking (free tier)
   const voiceUsedThisMonth = isFree

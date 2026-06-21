@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       client_id, client_name_override, document_type, issue_date, due_date,
-      items, subtotal, vat_amount, discount_percent, discount_amount, total,
+      items, subtotal, vat_amount, discount_percent, discount_amount, discount_type, total,
       notes, prefix, linked_invoice_id, idempotency_id, client_type,
       client_siret, client_vat_number, client_email, client_phone,
       client_address, client_city, client_postal_code, payment_terms
@@ -90,6 +90,13 @@ export async function POST(req: NextRequest) {
       if (item.discount_percent !== undefined && item.discount_percent !== null) {
         if (typeof item.discount_percent !== 'number' || item.discount_percent < 0 || item.discount_percent > 100) {
           return NextResponse.json({ error: `Ligne ${i + 1} : remise invalide (0-100%).` }, { status: 400 });
+        }
+      }
+      // PROMETHEUS (CIBLE 3) — remise ligne en euros (0 ≤ montant ≤ total ligne)
+      if (item.discount_amount !== undefined && item.discount_amount !== null) {
+        const lineGross = item.quantity * item.unit_price;
+        if (typeof item.discount_amount !== 'number' || item.discount_amount < 0 || item.discount_amount > lineGross) {
+          return NextResponse.json({ error: `Ligne ${i + 1} : remise en euros invalide.` }, { status: 400 });
         }
       }
       // Validate each item's total matches quantity * unit_price
@@ -163,14 +170,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Recalculate totals server-side using shared cents arithmetic (BUG-08 fix)
+    // PROMETHEUS (CIBLE 3) — remises LIGNE (% ou €) + GLOBALE (% ou €).
+    const globalDisc =
+      discount_type === 'amount' && discount_amount && discount_amount > 0
+        ? { amount: discount_amount }
+        : discount_percent || 0;
     const serverTotals = calculateInvoiceTotals(
       items.map((i: any) => ({
         quantity: i.quantity,
         unit_price: i.unit_price,
         vat_rate: i.vat_rate,
         discount_percent: (i as any).discount_percent || 0,
+        discount_amount: (i as any).discount_amount || 0,
       })),
-      discount_percent || 0
+      globalDisc
     );
     const recalculatedTotal = serverTotals.total;
     // Allow 1 cent tolerance for rounding differences
@@ -238,6 +251,8 @@ export async function POST(req: NextRequest) {
       // OVERLORD (CIBLE 8) — toujours persister les conditions (même '' = à réception)
       // pour que le PDF lise la facture et non le défaut profil ('30').
       inlineFields.payment_terms = typeof payment_terms === 'string' ? payment_terms : '';
+      // PROMETHEUS (CIBLE 3) — type de remise globale (% ou €) non géré par le RPC.
+      inlineFields.discount_type = discount_type === 'amount' ? 'amount' : 'percent';
       try {
         await createAdminClient().from('invoices')
           .update({ ...inlineFields, updated_at: new Date().toISOString() })

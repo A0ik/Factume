@@ -14,6 +14,7 @@ import {
   LayoutGrid, Crown, Hammer,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { ANNUAL_DISCOUNT_BADGE } from '@/lib/plans';
 import { Marquee } from '@/components/ui/marquee';
 
 const ease = [0.16, 1, 0.3, 1] as const;
@@ -276,9 +277,9 @@ const testimonials = [
 ];
 
 const plans = [
-  { name: 'Starter', monthly: 0, yearly: 0, tag: 'Pour démarrer et tester', features: ['E-facturation certifiée', '3 factures & devis/mois', '1 cabinet, 10 clients', 'Dictée vocale IA activée', 'Support email'], popular: false },
-  { name: 'Pro', monthly: 14.99, yearly: 12.50, tag: 'Indépendants & TPE', features: ['Factures & devis illimités', 'Contrats CDI/CDD', 'OCR reçus', 'Signature électronique', 'Voice Expense illimité', 'IK & notes de frais', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'], popular: true },
-  { name: 'Business', monthly: 39.99, yearly: 33.33, tag: 'PME & Experts-comptables', features: ['E-facturation certifiée', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
+  { name: 'Starter', monthly: 0, yearly: 0, tag: 'Pour démarrer et tester', features: ['3 factures & devis/mois', '1 cabinet, 10 clients', 'Dictée vocale IA activée', 'Support email'], popular: false },
+  { name: 'Pro', monthly: 14.99, yearly: 12.50, tag: 'Indépendants & TPE', features: ['Factures & devis illimités', 'Facture électronique B2B', 'Contrats CDI/CDD', 'OCR reçus', 'Signature électronique', 'Voice Expense illimité', 'IK & notes de frais', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'], popular: true },
+  { name: 'Business', monthly: 39.99, yearly: 33.33, tag: 'PME & Experts-comptables', features: ['Facture électronique B2B', 'Tout Pro inclus', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
 ];
 
 const faqItems = [
@@ -1092,7 +1093,7 @@ export default function LandingPageClient() {
                   <button onClick={() => switchBilling('monthly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200', billing === 'monthly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>Mensuel</button>
                   <button onClick={() => switchBilling('yearly')} className={cn('relative z-10 px-7 sm:px-9 py-3 min-h-[44px] text-sm sm:text-base font-bold rounded-full transition-colors duration-200 inline-flex items-center gap-2', billing === 'yearly' ? 'text-neutral-950' : 'text-neutral-400 hover:text-white')}>
                     Annuel
-                    <span className={cn('text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full', billing === 'yearly' ? 'bg-neutral-950/15 text-neutral-950' : 'bg-emerald-500/15 text-emerald-400')}>−17%</span>
+                    <span className={cn('text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded-full', billing === 'yearly' ? 'bg-neutral-950/15 text-neutral-950' : 'bg-emerald-500/15 text-emerald-400')}>{ANNUAL_DISCOUNT_BADGE}</span>
                   </button>
                 </div>
               </div>

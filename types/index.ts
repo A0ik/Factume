@@ -66,7 +66,6 @@ export interface Profile {
   voice_usage_month?: string;
   voice_usage_count?: number;
   website?: string;
-  referral_code?: string;
   // MONOLITH LOI 1: Cabinet actif persisté en BDD
   active_cabinet_id?: string;
   created_at: string;
@@ -140,7 +139,8 @@ export interface InvoiceItem {
   unit_price: number;
   vat_rate: number;
   total: number;
-  discount_percent?: number;
+  discount_percent?: number; // remise ligne en % (0-100)
+  discount_amount?: number;  // remise ligne en € (prioritaire si > 0)
 }
 
 /** Article du catalogue produits (table `products`). Réutilisable dans tout document. */
@@ -178,6 +178,8 @@ export interface Invoice {
   vat_amount: number;
   discount_percent?: number | null;
   discount_amount?: number | null;
+  /** Type de remise globale saisie : 'percent' (% input) ou 'amount' (€ input). */
+  discount_type?: 'percent' | 'amount' | null;
   total: number;
   notes?: string;
   pdf_url?: string;
@@ -233,7 +235,14 @@ export interface Invoice {
 
 export interface ParsedVoiceInvoice {
   client_name: string | null;
-  items: Array<{ description: string; quantity: number; unit_price: number; vat_rate: number }>;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    vat_rate: number;
+    discount_percent?: number; // remise ligne en % ("remise 10%")
+    discount_amount?: number;  // remise ligne en € ("réduction de 10 euros")
+  }>;
   notes: string | null;
   due_days: number;
 }
@@ -277,6 +286,8 @@ export interface InvoiceFormData {
   notes?: string;
   linked_invoice_id?: string;
   discount_percent?: number;
+  discount_amount?: number;         // remise globale en € (saisie quand discount_type='amount')
+  discount_type?: 'percent' | 'amount'; // type de la remise globale saisie
   client_email?: string;
   client_phone?: string;
   client_address?: string;

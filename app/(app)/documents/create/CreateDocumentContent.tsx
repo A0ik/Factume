@@ -43,10 +43,26 @@ export default function CreateDocumentContent() {
   const effectiveType = isValidType ? docType : 'invoice';
 
   // ─── Initialize session ────────────────────────────
+  // PROMETHEUS (CIBLE 8) — hydratation A→Z depuis la fiche client quand on arrive
+  // de /client (DocPickerModal → ?clientId=…). On passe tous les champs à init().
+  // Si clients[] n'est pas encore chargé au mount, l'effet d'auto-fill ci-dessous
+  // (qui dépend de [session.clientId, clients]) complète dès que les données
+  // arrivent — y compris le clientType, qui n'était JAMAIS pré-rempli auparavant.
+  const initClient = paramClientId ? clients.find((c) => c.id === paramClientId) : undefined;
+
   useEffect(() => {
     session.init(effectiveType, {
       clientId: paramClientId || undefined,
-      clientName: paramClientName || undefined,
+      clientName: paramClientName || initClient?.name,
+      clientEmail: initClient?.email,
+      clientPhone: initClient?.phone,
+      clientAddress: initClient?.address,
+      clientCity: initClient?.city,
+      clientPostalCode: initClient?.postal_code,
+      clientSiret: initClient?.siret,
+      clientVatNumber: initClient?.vat_number,
+      // B2B si la fiche porte un SIRET, sinon B2C — sinon on laisse l'utilisateur choisir.
+      clientType: initClient?.siret ? 'b2b' : initClient ? 'b2c' : undefined,
       linkedInvoiceId: paramLinkedInvoiceId || undefined,
     });
 
@@ -80,6 +96,9 @@ export default function CreateDocumentContent() {
     if (session.clientPostalCode !== (c.postal_code || '')) session.updateField('clientPostalCode', c.postal_code || '');
     if (session.clientSiret !== (c.siret || '')) session.updateField('clientSiret', c.siret || '');
     if (session.clientVatNumber !== (c.vat_number || '')) session.updateField('clientVatNumber', c.vat_number || '');
+    // PROMETHEUS (CIBLE 8) — clientType était JAMAIS pré-rempli (b2b si SIRET, sinon b2c).
+    const inferredType = c.siret ? 'b2b' : 'b2c';
+    if (session.clientType !== inferredType) session.updateField('clientType', inferredType);
   }, [session.clientId, clients]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Save handler ──────────────────────────────────
@@ -128,11 +147,17 @@ export default function CreateDocumentContent() {
             document_type: effectiveType,
             issue_date: session.issueDate,
             due_date: session.dueDate || undefined,
-            // OVERLORD (CIBLE 8) — '' pour « à réception », sinon le nombre de jours.
-            payment_terms: session.paymentDays > 0 ? String(session.paymentDays) : '',
+            // PROMETHEUS (CIBLE 1) — on persiste le termId SÉMANTIQUE (reception /
+            // days15 / … / end_of_month / custom-N) au lieu d'un simple nombre de
+            // jours. C'est le seul moyen d'exprimer « fin de mois » et de fixer le
+            // bug « toujours 30 jours » (la colonne invoices.payment_terms existe
+            // désormais via la migration 20260620000005). Voir lib/payment-terms.ts.
+            payment_terms: session.paymentTermId,
             items: session.items,
             notes: session.notes || undefined,
-            discount_percent: session.discountPercent > 0 ? session.discountPercent : undefined,
+            discount_percent: session.discountType === 'percent' && session.discountPercent > 0 ? session.discountPercent : undefined,
+            discount_amount: session.discountType === 'amount' && session.discountAmountInput > 0 ? session.discountAmountInput : undefined,
+            discount_type: session.discountType,
             client_email: session.clientId ? undefined : session.clientEmail || undefined,
             client_phone: session.clientId ? undefined : session.clientPhone || undefined,
             client_address: session.clientId ? undefined : session.clientAddress || undefined,

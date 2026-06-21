@@ -3,6 +3,7 @@
  * Supports templates 1-6, logo embedding, payment links, and proper French character encoding.
  */
 import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage, RGB, PDFImage } from 'pdf-lib';
+import { resolveTermsText } from './payment-terms';
 
 /** Fetch a remote image and embed it. Returns null on any error so callers can skip gracefully. */
 async function fetchAndEmbedImage(pdfDoc: PDFDocument, url: string): Promise<PDFImage | null> {
@@ -45,11 +46,10 @@ function safe(str: unknown): string {
     .replace(/\u2013/g, '-').replace(/\u2014/g, '--')
     .replace(/[\u2018\u2019]/g, "'").replace(/[""]/g, '"')
     .replace(/\u2026/g, '...')
-    .replace(/\u20AC/g, 'EUR')             // Euro sign -> "EUR" (WinAnsiEncoding lacks byte 0x80)
-    .replace(/\u0153/g, 'oe').replace(/\u0152/g, 'OE')  // ligatures
-    .replace(/\u00AB/g, '<<').replace(/\u00BB/g, '>>')   // guillemets
-    .replace(/\u2022/g, '-').replace(/\u2024/g, '.')     // bullet
-    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');  // bytes 0x80-0x9F NOT in WinAnsiEncoding
+    // PROMETHEUS (CIBLE 2) \u2014 VERIFI\u00C9 par test round-trip : pdf-lib + StandardFonts
+    // rendent \u20AC (U+20AC), les accents fran\u00E7ais et les ligatures (\u0153). L'ancienne
+    // ligne `\u20AC \u2192 "EUR"` \u00E9tait un BUG qui affichait le mot "EUR". On ne strippe plus.
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // retire uniquement les contr\u00F4les C0 (garde \t\n\r)
 }
 
 // ── Drawing primitives ────────────────────────────────────────────────────────
@@ -122,6 +122,39 @@ function wrapLines(text: string, maxW: number, size: number, font: PDFFont): num
   return Math.max(1, count);
 }
 
+// ── Rounded rectangle (CIBLE 2) ──────────────────────────────────────────────
+// pdf-lib n'a pas de rectangle arrondi natif. On compose un chemin SVG (4 quarts
+// de cercle + segments) et on s'appuie sur page.drawSvgPath, qui inverse LUI-MÊME
+// l'axe Y (scale(1,-1) — voir pdf-lib operations.js). On passe donc un path en
+// coordonnées SVG (0,0)→(w,h), origine x = bord gauche, y = bord GAUCHE-BAS, et
+// drawSvgPath reçoit y = bottomY + height (le haut PDF) pour retomber sur ses pieds.
+// Convention (x, y) = coin bas-gauche, identique à page.drawRectangle.
+export function drawRoundedRect(
+  page: PDFPage,
+  opts: {
+    x: number; y: number; width: number; height: number;
+    radius?: number;
+    color?: RGB; borderColor?: RGB; borderWidth?: number;
+  },
+): void {
+  const { x, y, width, height, color, borderColor, borderWidth } = opts;
+  const radius = opts.radius ?? 6;
+  const w = Math.max(0, width);
+  const h = Math.max(0, height);
+  // Sature le rayon pour ne jamais dépasser la demi-largeur/hauteur (sinon auto-intersection).
+  const r = Math.max(0, Math.min(radius, w / 2, h / 2));
+  const path = r <= 0
+    ? `M 0 0 H ${w} V ${h} H 0 Z`
+    : `M ${r} 0 H ${w - r} Q ${w} 0 ${w} ${r} V ${h - r} Q ${w} ${h} ${w - r} ${h} H ${r} Q 0 ${h} 0 ${h - r} V ${r} Q 0 0 ${r} 0 Z`;
+  page.drawSvgPath(path, {
+    x,
+    y: y + h, // SVG (0,0)=haut-gauche → on ancre au HAUT PDF (bottomY + height)
+    color,
+    borderColor,
+    borderWidth,
+  });
+}
+
 /**
  * ATELIER (CIBLE 3) — Ajoute une annotation de lien cliquable (URI) sur une zone
  * rectangulaire de la page. Recette officielle pdf-lib (context.obj + register +
@@ -170,7 +203,7 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
       return {
         useSerif: true, headerFull: true,
         headerBg: rgb(0.102, 0.102, 0.18),
-        headerH: 120,
+        headerH: 104,
         bodyBg: rgb(1, 1, 1),
         rowEven: rgb(1, 1, 1), rowOdd: rgb(0.98, 0.98, 0.98),
         thBg: rgb(0.102, 0.102, 0.18), thText: rgb(0.9, 0.9, 0.9),
@@ -183,7 +216,7 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
       return {
         useSerif: false, headerFull: true,
         headerBg: accent,
-        headerH: 120,
+        headerH: 104,
         bodyBg: rgb(1, 1, 1),
         rowEven: rgb(1, 1, 1), rowOdd: rgb(0.985, 0.985, 0.99),
         thBg: rgb(0.97, 0.97, 0.97), thText: accent,
@@ -209,7 +242,7 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
       return {
         useSerif: false, headerFull: true,
         headerBg: rgb(0.118, 0.161, 0.235),
-        headerH: 120,
+        headerH: 104,
         bodyBg: rgb(1, 1, 1),
         rowEven: rgb(1, 1, 1), rowOdd: rgb(0.973, 0.98, 0.992),
         thBg: rgb(0.118, 0.161, 0.235), thText: rgb(0.58, 0.635, 0.72),
@@ -222,9 +255,9 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
       return {
         useSerif: false, headerFull: true,
         headerBg: rgb(0.086, 0.388, 0.204),
-        headerH: 120,
+        headerH: 104,
         bodyBg: rgb(1, 1, 1),
-        rowEven: rgb(1, 1, 1), rowOdd: rgb(0.941, 0.992, 0.957),
+        rowEven: rgb(1, 1, 1), rowOdd: rgb(0.97, 0.995, 0.98),
         thBg: rgb(0.941, 0.992, 0.957), thText: rgb(0.086, 0.502, 0.29),
         totalBg: rgb(0.086, 0.388, 0.204),
         totalValueColor: () => rgb(1, 1, 1),
@@ -307,8 +340,12 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   const accent = hexToRgb(accentHex);
   const style = getStyle(templateId, accent);
 
-  const bold = style.useSerif ? timesBold : helvBold;
-  const reg = style.useSerif ? timesReg : helvReg;
+  // PROMETHEUS (CIBLE 2) — « serif (titres) + sans (corps) » : les TITRES héroïques
+  // (label du document, nom de société, TOTAL TTC) en Times (serif prestige), le
+  // corps reste Helvetica (sans, lisible). Choix utilisateur validé.
+  const titleFont = timesBold;
+  const bold = helvBold;
+  const reg = helvReg;
 
   const ink = rgb(0.07, 0.07, 0.07);
   const muted = rgb(0.42, 0.45, 0.50);
@@ -370,7 +407,8 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
 
     // ── Logo inside the header (top-left, BIG) ──
     if (logoImage) {
-      const maxLogoH = 70;
+      // CIBLE 2 — logo allégé (60 au lieu de 70) pour un en-tête moins massif.
+      const maxLogoH = 60;
       const maxLogoW = 220;
       const dims = logoImage.scaleToFit(maxLogoW, maxLogoH);
       page.drawImage(logoImage, {
@@ -382,7 +420,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     }
 
     // Doc label — right side
-    rightText(page, docLabel, W - margin, H - 28, 9, bold, rgb(0.85, 0.85, 0.88));
+    rightText(page, docLabel, W - margin, H - 28, 9, titleFont, rgb(0.85, 0.85, 0.88));
 
     // Dates — right side, below doc label
     rightText(page, `Emis le ${fmtDate(invoice.issue_date)}`, W - margin, H - 46, 8.5, reg, rgb(0.78, 0.78, 0.82));
@@ -392,7 +430,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
 
     // Company name below logo area (inside header, bottom-left)
     if (!logoImage) {
-      drawText(page, senderName, margin, H - 50, 14, bold, white);
+      drawText(page, senderName, margin, H - 50, 14, titleFont, white);
     }
     if (profile?.siret) {
       drawText(page, `SIRET : ${safe(profile.siret)}`, margin, H - style.headerH + 12, 7, reg, rgb(0.6, 0.6, 0.65));
@@ -421,7 +459,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
 
     // Doc label + dates — right side
     const infoX = W - margin;
-    drawText(page, safe(docLabel), infoX - 150, y + 50, 10, bold, accent);
+    drawText(page, safe(docLabel), infoX - 150, y + 50, 10, titleFont, accent);
     const dateStr = fmtDate(invoice.issue_date);
     drawText(page, `Emis le ${dateStr}`, infoX - 150, y + 34, 8.5, reg, muted);
     if (invoice.due_date) {
@@ -430,7 +468,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
 
     // Company name if no logo
     if (!logoImage) {
-      drawText(page, senderName, margin, y, 18, bold, ink);
+      drawText(page, senderName, margin, y, 18, titleFont, ink);
       y -= 24;
     }
 
@@ -492,8 +530,8 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   if (client?.phone) clientFieldCount++;
   const clientBoxH = 40 + clientFieldCount * 12;
 
-  // Client card background — adapts to content, uses template colors
-  page.drawRectangle({ x: clientBoxX - 8, y: ry - clientBoxH + 4, width: clientBoxW + 16, height: clientBoxH, color: style.sectionBoxBg, borderColor: style.dividerColor, borderWidth: 0.5 });
+  // Client card background — adapts to content, uses template colors (CIBLE 2 : arrondi)
+  drawRoundedRect(page, { x: clientBoxX - 8, y: ry - clientBoxH + 4, width: clientBoxW + 16, height: clientBoxH, radius: 8, color: style.sectionBoxBg, borderColor: style.dividerColor, borderWidth: 0.5 });
   // Accent bar on left of client card
   page.drawRectangle({ x: clientBoxX - 8, y: ry - clientBoxH + 4, width: 3, height: clientBoxH, color: accent });
 
@@ -581,22 +619,22 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
       if (ts === 'flat') {
         // ATELIER (CIBLE 4) — PUR : total à plat (filet accent + grand chiffre accent).
         page.drawLine({ start: { x: totX - 12, y: y + 4 }, end: { x: totRight, y: y + 4 }, thickness: 1.2, color: accent });
-        drawText(page, label, totX - 4, y - 8, 9, bold, muted);
-        rightText(page, value, totRight, y - 14, 20, bold, accent);
+        drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
+        rightText(page, value, totRight, y - 14, 20, titleFont, accent);
         y -= 34;
       } else if (ts === 'boxed') {
-        // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent, valeur accent.
-        const boxH = 38;
-        page.drawRectangle({ x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, color: rgb(1, 1, 1), borderColor: accent, borderWidth: 1 });
-        drawText(page, label, totX - 4, y - 8, 9, bold, muted);
-        rightText(page, value, totRight, y - 10, 16, bold, accent);
+        // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent, valeur accent (CIBLE 2 : arrondi).
+        const boxH = 34;
+        drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: rgb(1, 1, 1), borderColor: accent, borderWidth: 1 });
+        drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
+        rightText(page, value, totRight, y - 10, 16, titleFont, accent);
         y -= boxH + 6;
       } else {
-        // 'bar' (templates 1-6) ou 'card' (AUDACE) : bande pleine couleur totalBg.
-        const boxH = 38;
-        page.drawRectangle({ x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, color: style.totalBg });
-        drawText(page, label, totX - 4, y - 8, 9, bold, rgb(0.85, 0.85, 0.88));
-        rightText(page, value, totRight, y - 10, 16, bold, style.totalValueColor(accent));
+        // 'bar' (templates 1-6) ou 'card' (AUDACE) : bande pleine couleur totalBg (CIBLE 2 : arrondi).
+        const boxH = 34;
+        drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: style.totalBg });
+        drawText(page, label, totX - 4, y - 8, 9, titleFont, rgb(0.85, 0.85, 0.88));
+        rightText(page, value, totRight, y - 10, 16, titleFont, style.totalValueColor(accent));
         y -= boxH + 6;
       }
     } else {
@@ -615,6 +653,43 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   totRow('TOTAL TTC', fmt(invoice.total ?? 0), true);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ── VALIDITY / DOC-TYPE MENTIONS (hors factures & acomptes) ─────────────
+  // PROMETHEUS (CIBLE 7) — chaque type de document porte ses mentions propres.
+  // Les factures & acomptes ont leur bloc CONDITIONS DE PAIEMENT dédié plus bas.
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    let validity = '';
+    if (invoice.document_type === 'quote') {
+      validity = "Devis valable 30 jours à compter de la date d'émission. Acceptation par signature électronique ou versement d'un acompte. Prix exprimés en euros (€), hors taxe sauf mention contraire.";
+    } else if (invoice.document_type === 'credit_note') {
+      validity = "Avoir relatif à la facture d'origine. Le présent avoir annule tout ou partie de la facture susvisée, conformément à l'article L.441-9 du Code de commerce.";
+    } else if (invoice.document_type === 'purchase_order') {
+      validity = "Bon de commande. L'acceptation par le vendeur vaut contrat de vente aux conditions définies ci-dessus.";
+    } else if (invoice.document_type === 'delivery_note') {
+      validity = "Bon de livraison. La marchandise a été réceptionnée conformément au présent document.";
+    }
+    if (validity) {
+      needPage();
+      y -= 8;
+      const vMaxW = contentW - 20;
+      const vLineH = 12;
+      const vlines = wrapLines(validity, vMaxW, 8.5, bold);
+      const vboxH = vlines * vLineH + 16;
+      if (y - vboxH < minY) {
+        page = pdfDoc.addPage([W, H]);
+        if (style.bodyBg.red < 0.99) page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: style.bodyBg });
+        y = H - 40;
+      }
+      const vboxBottom = y - vboxH;
+      drawRoundedRect(page, { x: margin, y: vboxBottom, width: contentW, height: vboxH, radius: 8, color: style.sectionBoxBg });
+      page.drawRectangle({ x: margin, y: vboxBottom, width: 3, height: vboxH, color: accent });
+      y -= 15;
+      y = drawWrapped(page, safe(validity), margin + 10, y, vMaxW, 8.5, bold, ink, vLineH, vboxBottom + 8);
+      y = vboxBottom - 10;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // ── PAYMENT LINK ─────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -626,7 +701,10 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   const paymentUrl = resolvedPayment.url;
   const providerName = resolvedPayment.provider === 'stripe' ? 'Stripe' : resolvedPayment.provider === 'sumup' ? 'SumUp' : '';
 
-  if (paymentUrl) {
+  // PROMETHEUS (CIBLE 6) — QR de paiement JAMAIS sur un devis / bon de commande
+  // / bon de livraison / avoir : ces documents ne sont pas payables en ligne.
+  // Factures & acomptes uniquement (l'acompte est bien exigible → lien de paiement).
+  if (paymentUrl && (invoice.document_type === 'invoice' || invoice.document_type === 'deposit')) {
     // ATELIER (CIBLE 2 & 3) — URL courte préférée pour le QR (payload ~35 chars →
     // code moins dense) ET pour le lien cliquable. Repli sur l'URL provider si la
     // facture n'a pas encore de token (legacy non backfillé).
@@ -669,7 +747,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     y -= 8;
 
     const boxBottom = y - boxH;
-    page.drawRectangle({ x: margin, y: boxBottom, width: contentW, height: boxH, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
+    drawRoundedRect(page, { x: margin, y: boxBottom, width: contentW, height: boxH, radius: 8, color: mixRgb(accent, 0.08), borderColor: mixRgb(accent, 0.25), borderWidth: 0.5 });
     page.drawRectangle({ x: margin, y: boxBottom, width: 3, height: boxH, color: accent });
 
     const methodLabel = providerName ? `PAIEMENT EN LIGNE (${providerName.toUpperCase()})` : 'PAIEMENT EN LIGNE';
@@ -711,7 +789,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     y -= 8;
     // Box background
     const notesH = 30;
-    page.drawRectangle({ x: margin, y: y - notesH, width: contentW, height: notesH + 14, color: style.sectionBoxBg });
+    drawRoundedRect(page, { x: margin, y: y - notesH, width: contentW, height: notesH + 14, radius: 8, color: style.sectionBoxBg });
     drawText(page, 'Notes', margin + 10, y, 8, bold, ink);
     y -= 13;
     y = drawWrapped(page, safe(invoice.notes), margin + 10, y, contentW - 20, 8.5, reg, muted, 13, minY);
@@ -731,7 +809,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     if (profile.iban) bankFieldCount++;
     if (profile.bic) bankFieldCount++;
     const bankBoxH = 20 + bankFieldCount * 12;
-    page.drawRectangle({ x: margin, y: y - bankBoxH, width: contentW, height: bankBoxH, color: style.sectionBoxBg, borderColor: style.dividerColor, borderWidth: 0.5 });
+    drawRoundedRect(page, { x: margin, y: y - bankBoxH, width: contentW, height: bankBoxH, radius: 8, color: style.sectionBoxBg, borderColor: style.dividerColor, borderWidth: 0.5 });
     page.drawRectangle({ x: margin, y: y - bankBoxH, width: 3, height: bankBoxH, color: accent });
 
     drawText(page, 'COORDONNEES BANCAIRES', margin + 12, y - 6, 7, bold, accent);
@@ -743,32 +821,24 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ── PAYMENT TERMS ────────────────────────────────────────────────────────
+  // ── PAYMENT TERMS (factures & acomptes uniquement) ──────────────────────
+  // PROMETHEUS (CIBLE 1 + CIBLE 7) — résolveur unique (lib/payment-terms.ts).
+  //   • CIBLE 1 : le terme est lu depuis invoice.payment_terms (termId sémantique)
+  //     au lieu de toujours afficher « 30 jours ». Repli sur profiles.payment_terms
+  //     pour les vieilles factures (colonne absente avant migration 20260620000005).
+  //   • CIBLE 7 : ce bloc légal (indemnité 40 €, pénalités, CGV) ne concerne QUE
+  //     les factures et acomptes — JAMAIS un devis / bon de commande / avoir.
+  //   • Fix overlap : titleH 24 (était 18) — le titre dessiné à y-13 ne chevauche
+  //     plus la 1re ligne du drawWrapped.
   // ═══════════════════════════════════════════════════════════════════════════
 
-  {
-    // Build proper payment terms text — handle numeric values like "30".
-    // OVERLORD (CIBLE 8) — priorité à la facture (choix utilisateur persisté) ;
-    // repli sur le défaut du profil. ?? (et non ||) pour garder '' = à réception.
-    const rawTerms = (invoice.payment_terms ?? profile?.payment_terms ?? '').trim();
-    let termsText = '';
-    if (/^\d+$/.test(rawTerms)) {
-      // Numeric value like "30" → full formatted sentence
-      termsText = `Paiement sous ${rawTerms} jours a reception de la presente facture. En cas de retard de paiement, une indemnite forfaitaire pour frais de recouvrement de 40 euros sera appliquee, conformement a l'article L.441-6 du Code de commerce. Les penalites de retard sont calculees sur la base de trois fois le taux d'interet legal en vigueur. Tout litige relatif a la presente facture sera soumis a la competence exclusive du Tribunal de Commerce du siege social du prestataire. L'acceptation de la presente facture vaut accord sur les conditions generales de vente.`;
-    } else if (rawTerms) {
-      termsText = rawTerms;
-    }
-    if (!termsText) {
-      termsText = "Paiement a reception de la presente facture. En cas de retard de paiement, une indemnite forfaitaire pour frais de recouvrement de 40 euros sera appliquee, conformement a l'article L.441-6 du Code de commerce. Les penalites de retard sont calculees sur la base de trois fois le taux d'interet legal en vigueur. Tout litige relatif a la presente facture sera soumis a la competence exclusive du Tribunal de Commerce du siege social du prestataire. L'acceptation de la presente facture vaut accord sur les conditions generales de vente.";
-    }
+  if (invoice.document_type === 'invoice' || invoice.document_type === 'deposit') {
+    const termsText = resolveTermsText(invoice.payment_terms ?? profile?.payment_terms ?? null);
     if (termsText) {
-      // ATELIER (CIBLE 1) — boîte mesurée : on compte les lignes AVANT de dessiner
-      // pour dimensionner le fond, et on garantit la place (nouvelle page si besoin)
-      // au lieu d'avaler les conditions en silence quand y < minY+40 (bug inverse).
       const termsMaxW = contentW - 20;
       const termsLineH = 12;
       const lines = wrapLines(termsText, termsMaxW, 8, reg);
-      const titleH = 18;
+      const titleH = 24; // CIBLE 1 — fix chevauchement titre/contenu (était 18)
       const boxH = titleH + lines * termsLineH + 10;
 
       // Garde zone footer : pas la place → nouvelle page (le bloc est toujours rendu).
@@ -779,11 +849,11 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
       }
 
       const boxBottom = y - boxH;
-      page.drawRectangle({ x: margin, y: boxBottom, width: contentW, height: boxH, color: style.sectionBoxBg });
+      drawRoundedRect(page, { x: margin, y: boxBottom, width: contentW, height: boxH, radius: 8, color: style.sectionBoxBg });
       page.drawRectangle({ x: margin, y: boxBottom, width: 3, height: boxH, color: accent });
-      drawText(page, 'CONDITIONS DE PAIEMENT', margin + 10, y - 12, 7, bold, accent);
+      drawText(page, 'CONDITIONS DE PAIEMENT', margin + 10, y - 13, 7.5, bold, accent);
       y -= titleH;
-      y = drawWrapped(page, safe(termsText), margin + 10, y, termsMaxW, 8, reg, muted, termsLineH, boxBottom + 6);
+      y = drawWrapped(page, safe(termsText), margin + 10, y, termsMaxW, 8, reg, muted, termsLineH, boxBottom + 8);
       y = boxBottom - 10;
     }
   }
@@ -793,15 +863,21 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // ═══════════════════════════════════════════════════════════════════════════
 
   {
+    // PROMETHEUS (CIBLE 7) — mentions légales adaptées au type de document.
+    // Les « pénalités de retard / indemnité 40 € » et la mention « double
+    // exemplaire » ne concernent QUE les factures & acomptes. La mention
+    // e-invoicing (Factur-X) s'applique aux factures, avoirs et acomptes.
+    const dt = invoice.document_type;
     const defaultLegalParts: string[] = [];
     if (profile?.siret) defaultLegalParts.push(`SIRET : ${safe(profile.siret)}`);
     if (profile?.vat_number) defaultLegalParts.push(`TVA : ${safe(profile.vat_number)}`);
     if (profile?.legal_status === 'auto-entrepreneur') { defaultLegalParts.push("Dispense d'immatriculation au RCS et au RM"); defaultLegalParts.push('TVA non applicable, art. 293 B du CGI'); }
-    if (invoice.document_type === 'invoice' || invoice.document_type === 'deposit') defaultLegalParts.push('Penalites de retard : 3x taux legal - Indemnite forfaitaire pour frais de recouvrement : 40 EUR (art. L.441-6 c. com.)');
-    defaultLegalParts.push("Conformement a l'article L.441-9 du Code de commerce, la facture est emise en double exemplaire.");
-    // Mention legale e-invoicing obligatoire (reforme francaise 2026)
-    if (['invoice', 'credit_note', 'deposit'].includes(invoice.document_type)) {
-      defaultLegalParts.push('Facture electronique conformement a la loi francaise 2026 - Format Factur-X (EN 16931) - Transmise via PDP agreee');
+    if (dt === 'invoice' || dt === 'deposit') {
+      defaultLegalParts.push('Pénalités de retard : 3× taux légal — Indemnité forfaitaire pour frais de recouvrement : 40 € (art. L.441-6 c. com.)');
+      defaultLegalParts.push("Conformément à l'article L.441-9 du Code de commerce, la facture est émise en double exemplaire.");
+    }
+    if (dt === 'invoice' || dt === 'credit_note' || dt === 'deposit') {
+      defaultLegalParts.push('Facture électronique conforme à la loi française 2026 — Format Factur-X (EN 16931) — Transmise via PDP agréée');
     }
     const legalText = profile?.legal_mention || defaultLegalParts.join(' - ');
     if (legalText && y > minY + 30) {

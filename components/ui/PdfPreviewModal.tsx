@@ -11,9 +11,8 @@ import {
   Share,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import React from 'react';
 import { Invoice, Profile } from '@/types';
-import { withQrDataUrl, getPaymentUrl } from '@/lib/pdf';
+import { getPaymentUrl } from '@/lib/pdf';
 
 interface PdfPreviewModalProps {
   invoice: Invoice;
@@ -28,26 +27,26 @@ function isMobile(): boolean {
   );
 }
 
-type RenderMode = 'loading' | 'canvas' | 'iframe' | 'error';
+type RenderMode = 'loading' | 'canvas' | 'error';
 
 /**
- * PdfPreviewModal -- 2026 Canvas-Based PDF Preview
+ * PdfPreviewModal — 2026 Canvas-Based PDF Preview.
  *
- * Problem: iOS Safari (WebKit) cannot render PDF blob URLs in iframes.
- * All iOS browsers use Apple's WebKit engine, so they all share this bug.
+ * PROMETHEUS (CIBLE 4) — parité stricte preview == download.
  *
- * Solution: Use pdfjs-dist (already installed) to render PDF pages
- * directly to HTML5 Canvas elements, then display as images.
- * This bypasses ALL iframe/WebKit/blob issues because it's pure Canvas.
+ * On ne rend JAMAIS via @react-pdf/renderer : ce moteur n'implémentait pas les
+ * templates 7/8/9 (PUR/AUDACE/ÉLÉGANCE) et divergeait donc du PDF téléchargé.
+ * Désormais l'aperçu provient UNIQUEMENT du même endpoint serveur pdf-lib que le
+ * téléchargement (/api/download/pdf/[id]?mode=preview) — les octets sont identiques,
+ * le rendu l'est donc aussi (au pixel près). Si le serveur est injoignable, on
+ * affiche l'état d'erreur (avec le bouton de téléchargement, qui frappe le même
+ * endpoint) plutôt qu'un aperçu trompeusement différent.
  *
- * Fallback chain:
- *   1. Canvas rendering (pdfjs-dist) -- works on ALL platforms
- *   2. Iframe with blob URL -- works on desktop/Android
- *   3. Error state with download/new-tab buttons -- always available
+ * Rendu Canvas via pdfjs-dist : fonctionne sur TOUTES les plateformes, y compris
+ * iOS Safari/WebKit (qui ne sait pas afficher un blob PDF en iframe).
  */
 export function PdfPreviewModal({
   invoice,
-  profile,
   onClose,
 }: PdfPreviewModalProps) {
   const [mode, setMode] = useState<RenderMode>('loading');
@@ -55,8 +54,6 @@ export function PdfPreviewModal({
   const [numPages, setNumPages] = useState(0);
   const [pageImages, setPageImages] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
-  const [iframeUrl, setIframeUrl] = useState('');
-  const iframeUrlRef = useRef<string>('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ALCHEMIST — l'URL résolue change quand l'utilisateur crée/régénère un lien de
@@ -64,15 +61,11 @@ export function PdfPreviewModal({
   // lieu de garder un QR absent/obsolète (l'ancien code ne dépendait que de invoice.id).
   const paymentUrl = getPaymentUrl(invoice);
 
-  // Load PDF and render to canvas images
+  // Load PDF (serveur pdf-lib) and render to canvas images
   useEffect(() => {
     let cancelled = false;
 
     const loadAndRender = async () => {
-      // FIXER (BUG 1) : enrichir le QR côté client avant tout rendu @react-pdf/renderer,
-      // sinon l'aperçu affiche le fallback texte au lieu du QR code.
-      const pdfInvoice = await withQrDataUrl(invoice);
-      // === LEVEL 1: Canvas rendering via pdfjs-dist ===
       try {
         const pdfjsLib = await import('pdfjs-dist');
 
@@ -83,28 +76,12 @@ export function PdfPreviewModal({
           // Worker failed to load -- will run in main thread (slower but functional)
         }
 
-        // Get PDF binary data
-        let arrayBuffer: ArrayBuffer;
-
-        try {
-          // OVERLORD (CIBLE 7) — TOUJOURS rendre via le serveur pdf-lib (le MÊME
-          // moteur que le téléchargement) pour garantir preview == PDF au pixel
-          // près. L'ancienne branche @react-pdf/renderer n'implémentait PAS les
-          // templates 7/8/9 (PUR/AUDACE/ÉLÉGANCE) et divergeait du PDF téléchargé.
-          const response = await fetch(`/api/download/pdf/${invoice.id}?mode=preview`);
-          if (!response.ok) throw new Error('Erreur serveur');
-          arrayBuffer = await (await response.blob()).arrayBuffer();
-        } catch {
-          // Repli réseau : rendu client @react-pdf/renderer (QR injecté via withQrDataUrl).
-          const { pdf } = await import('@react-pdf/renderer');
-          const { PdfDocument } = await import('@/components/pdf-document');
-          const element = React.createElement(PdfDocument, {
-            invoice: pdfInvoice,
-            profile: profile || ({} as Profile),
-          });
-          const blob = await (pdf as any)(element).toBlob();
-          arrayBuffer = await blob.arrayBuffer();
-        }
+        // OVERLORD/PROMETHEUS (CIBLE 4) — UNIQUEMENT le serveur pdf-lib (même moteur
+        // que le téléchargement) → preview == download garanti. Aucun repli
+        // @react-pdf/renderer (templates 7/8/9 absents → divergence).
+        const response = await fetch(`/api/download/pdf/${invoice.id}?mode=preview`);
+        if (!response.ok) throw new Error('Erreur serveur');
+        const arrayBuffer = await (await response.blob()).arrayBuffer();
 
         if (cancelled) return;
 
@@ -141,55 +118,54 @@ export function PdfPreviewModal({
 
         setPageImages(images);
         setMode('canvas');
-        return; // Success -- skip fallbacks
       } catch {
-        // Canvas rendering failed -- proceed to fallback
-      }
-
-      if (cancelled) return;
-
-      // === LEVEL 2: Iframe fallback (works on desktop/Android) ===
-      try {
-        const { pdf } = await import('@react-pdf/renderer');
-        const { PdfDocument } = await import('@/components/pdf-document');
-        const element = React.createElement(PdfDocument, {
-          invoice: pdfInvoice,
-          profile: profile || ({} as Profile),
-        });
-        const blob = await (pdf as any)(element).toBlob();
+        // Serveur injoignable ou rendu échoué. Pas de repli @react-pdf : on
+        // affiche l'état d'erreur (le bouton Télécharger frappe le même endpoint).
         if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        iframeUrlRef.current = url;
-        setIframeUrl(url);
-        setMode('iframe');
-        return;
-      } catch {
-        // Iframe fallback also failed
+        setError(
+          "Impossible de générer l'aperçu. Vous pouvez télécharger le PDF.",
+        );
+        setMode('error');
       }
-
-      if (cancelled) return;
-
-      // === LEVEL 3: Error state with download buttons ===
-      setError(
-        "Impossible de generer l'apercu. Vous pouvez telecharger le PDF.",
-      );
-      setMode('error');
     };
 
     loadAndRender();
 
     return () => {
       cancelled = true;
-      if (iframeUrlRef.current) {
-        URL.revokeObjectURL(iframeUrlRef.current);
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoice.id, paymentUrl]);
 
   const serverPdfUrl = `/api/download/pdf/${invoice.id}`;
 
-  const handleDownload = () => {
+  // PROMETHEUS (CIBLE 5) — téléchargement mobile parfait : sur iOS/Android on
+  // récupère le blob et on invoque navigator.share({files}) pour ouvrir la feuille
+  // de partage NATIVE avec le vrai fichier PDF (enregistrer dans Fichiers,
+  // WhatsApp, mail…). Sur desktop, on laisse la navigation (attachment →
+  // téléchargement). Repli sur navigation si l'API share/files est absente.
+  const handleDownload = async () => {
+    const mobile = isMobile();
+    if (mobile && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        const res = await fetch(serverPdfUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          const file = new File(
+            [blob],
+            `${invoice.number.replace(/[/\r\n"']/g, '-')}.pdf`,
+            { type: 'application/pdf' },
+          );
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: invoice.number });
+            return; // partage effectué (ou annulé par l'utilisateur)
+          }
+        }
+      } catch (e: any) {
+        // Annulation utilisateur → on ne fait rien ; autre erreur → repli navigation.
+        if (e?.name === 'AbortError') return;
+      }
+    }
     window.location.href = serverPdfUrl;
   };
 
@@ -225,7 +201,7 @@ export function PdfPreviewModal({
           </div>
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-              Apercu
+              Aperçu
             </h2>
             <p className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">
               {invoice.number}
@@ -279,7 +255,7 @@ export function PdfPreviewModal({
                 className="animate-spin text-primary mx-auto mb-3"
               />
               <p className="text-sm text-gray-500 dark:text-zinc-400">
-                Generation de l&apos;apercu...
+                Génération de l&apos;aperçu...
               </p>
             </div>
           </div>
@@ -301,7 +277,7 @@ export function PdfPreviewModal({
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all"
                 >
                   <Download size={16} />
-                  Telecharger PDF
+                  Télécharger PDF
                 </button>
                 <button
                   onClick={handleOpenNewTab}
@@ -343,15 +319,6 @@ export function PdfPreviewModal({
             ))}
           </div>
         )}
-
-        {/* Iframe fallback (desktop/Android) */}
-        {mode === 'iframe' && (
-          <iframe
-            src={iframeUrl}
-            className="w-full h-full border-0 bg-white"
-            title="PDF Preview"
-          />
-        )}
       </div>
 
       {/* ── Bottom Actions ── */}
@@ -384,7 +351,7 @@ export function PdfPreviewModal({
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-all active:scale-[0.98]"
         >
           <Download size={16} />
-          {isMobile() ? 'Ouvrir / Partager' : 'Telecharger PDF'}
+          {isMobile() ? 'Ouvrir / Partager' : 'Télécharger PDF'}
         </button>
 
         <button

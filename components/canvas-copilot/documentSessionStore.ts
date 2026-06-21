@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { Invoice, InvoiceItem, DocumentType, VoiceUncertainField } from '@/types';
 import { generateId } from '@/lib/utils';
 import { mergeInvoiceItems } from '@/lib/voice-merge';
+import { parseStoredTerm } from '@/lib/payment-terms';
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -27,7 +28,9 @@ export interface DocumentSessionState {
   // ─── Document Data ───────────────────────────────────
   items: Omit<InvoiceItem, 'total'>[];
   notes: string;
-  discountPercent: number;
+  discountPercent: number;          // remise globale en % (saisie quand discountType='percent')
+  discountType: 'percent' | 'amount'; // type de la remise globale saisie
+  discountAmountInput: number;      // remise globale en € (saisie quand discountType='amount')
   issueDate: string;
   paymentDays: number;
   paymentTermId: string;
@@ -54,6 +57,7 @@ export interface DocumentSessionState {
   subtotal: number;
   vatAmount: number;
   globalDiscountAmount: number;
+  lineDiscountAmount: number;
   total: number;
   dueDate: string;
 
@@ -103,6 +107,17 @@ export interface DocumentSessionState {
 export interface InitParams {
   clientId?: string;
   clientName?: string;
+  // PROMETHEUS (CIBLE 8) — hydratation A→Z depuis la fiche client (flux /client →
+  // « créer une facture »). Permet de pré-remplir toute la fiche en un seul init()
+  // au lieu de dépendre d'un effet de remplissage différé.
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  clientCity?: string;
+  clientPostalCode?: string;
+  clientSiret?: string;
+  clientVatNumber?: string;
+  clientType?: 'b2b' | 'b2c';
   linkedInvoiceId?: string;
 }
 
@@ -111,7 +126,8 @@ export interface InitParams {
 const SNAP_FIELDS = [
   'clientId', 'clientName', 'clientEmail', 'clientPhone',
   'clientAddress', 'clientCity', 'clientPostalCode', 'clientSiret', 'clientVatNumber',
-  'items', 'notes', 'discountPercent', 'issueDate', 'paymentDays', 'paymentTermId',
+  'items', 'notes', 'discountPercent', 'discountType', 'discountAmountInput',
+  'issueDate', 'paymentDays', 'paymentTermId',
   'linkedInvoiceId', 'depositPercent', 'templateId',
 ] as const;
 
@@ -120,25 +136,49 @@ type Snapshot = Pick<DocumentSessionState, SnapField>;
 
 // ─── Helpers ───────────────────────────────────────────
 
-function computeFromItems(items: Omit<InvoiceItem, 'total'>[], discountPercent: number) {
-  const lineItemSubtotals = items.map((i) => {
-    const lineHT = i.quantity * i.unit_price;
-    const lineDisc = (i as any).discount_percent ?? 0;
-    return lineHT * (1 - lineDisc / 100);
+function computeFromItems(
+  items: Omit<InvoiceItem, 'total'>[],
+  discountType: 'percent' | 'amount',
+  discountPercent: number,
+  discountAmountInput: number,
+) {
+  // Remise par ligne : € (discount_amount) prioritaire sur % (discount_percent).
+  const lines = items.map((i: any) => {
+    const gross = i.quantity * i.unit_price;
+    let lineDisc = 0;
+    if (i.discount_amount && i.discount_amount > 0) {
+      lineDisc = Math.min(i.discount_amount, gross); // remise € plafonnée à la ligne
+    } else if (i.discount_percent && i.discount_percent > 0) {
+      lineDisc = gross * (i.discount_percent / 100);
+    }
+    return { gross, net: gross - lineDisc, lineDisc, vat_rate: i.vat_rate };
   });
 
-  const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const subtotalAfterLineDiscounts = lineItemSubtotals.reduce((s, v) => s + v, 0);
-  const vatAmount = items.reduce((s, i, idx) => s + lineItemSubtotals[idx] * (i.vat_rate / 100), 0);
-  const globalDiscountAmount = discountPercent > 0 ? subtotalAfterLineDiscounts * (discountPercent / 100) : 0;
-  const discountedSubtotal = subtotalAfterLineDiscounts - globalDiscountAmount;
-  const recalculatedVat = items.reduce((s, i, idx) => {
-    const afterGlobalDisc = lineItemSubtotals[idx] * (discountPercent > 0 ? 1 - discountPercent / 100 : 1);
-    return s + afterGlobalDisc * (i.vat_rate / 100);
-  }, 0);
-  const total = discountedSubtotal + recalculatedVat;
+  const subtotal = lines.reduce((s, l) => s + l.gross, 0); // sous-total HT brut
+  const lineDiscountAmount = lines.reduce((s, l) => s + l.lineDisc, 0);
+  const subtotalAfterLineDiscounts = lines.reduce((s, l) => s + l.net, 0);
 
-  return { subtotal, vatAmount: recalculatedVat, globalDiscountAmount, total };
+  // Remise globale : € quand discountType='amount', sinon %.
+  let globalDiscountAmount = 0;
+  if (discountType === 'amount' && discountAmountInput > 0) {
+    globalDiscountAmount = Math.min(discountAmountInput, subtotalAfterLineDiscounts);
+  } else if (discountType === 'percent' && discountPercent > 0) {
+    globalDiscountAmount = subtotalAfterLineDiscounts * (discountPercent / 100);
+  }
+  const discountedSubtotal = subtotalAfterLineDiscounts - globalDiscountAmount;
+
+  // TVA — on répartit la remise globale € proportionnellement par ligne (justesse par bande).
+  const vatAmount = lines.reduce((s, l) => {
+    if (subtotalAfterLineDiscounts <= 0) return s;
+    const share = globalDiscountAmount > 0
+      ? (globalDiscountAmount * l.net) / subtotalAfterLineDiscounts
+      : 0;
+    return s + (l.net - share) * (l.vat_rate / 100);
+  }, 0);
+
+  const total = discountedSubtotal + vatAmount;
+
+  return { subtotal, lineDiscountAmount, vatAmount, globalDiscountAmount, total };
 }
 
 function computeDueDate(issueDate: string, paymentDays: number): string {
@@ -201,6 +241,8 @@ const initialState = {
   ] as Omit<InvoiceItem, 'total'>[],
   notes: '',
   discountPercent: 0,
+  discountType: 'percent' as 'percent' | 'amount',
+  discountAmountInput: 0,
   issueDate: SAFE_DATE,
   paymentDays: 30,
   paymentTermId: 'days30',
@@ -222,6 +264,7 @@ const initialState = {
   subtotal: 0,
   vatAmount: 0,
   globalDiscountAmount: 0,
+  lineDiscountAmount: 0,
   total: 0,
   dueDate: '',
   canUndo: false,
@@ -247,7 +290,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     const realItems = [
       { id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 },
     ] as Omit<InvoiceItem, 'total'>[];
-    const computed = computeFromItems(realItems, 0);
+    const computed = computeFromItems(realItems, 'percent', 0, 0);
 
     set({
       ...initialState,
@@ -256,6 +299,15 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       sessionId: generateId(),
       clientId: params?.clientId || null,
       clientName: params?.clientName || '',
+      // CIBLE 8 — hydratation complète de la fiche client passée à init().
+      clientEmail: params?.clientEmail || '',
+      clientPhone: params?.clientPhone || '',
+      clientAddress: params?.clientAddress || '',
+      clientCity: params?.clientCity || '',
+      clientPostalCode: params?.clientPostalCode || '',
+      clientSiret: params?.clientSiret || '',
+      clientVatNumber: params?.clientVatNumber || '',
+      clientType: params?.clientType || null,
       linkedInvoiceId: params?.linkedInvoiceId || null,
       issueDate: realToday,
       ...computed,
@@ -277,9 +329,9 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
 
     set({ [key]: value } as any);
     // Recompute totals if relevant
-    if (['items', 'discountPercent'].includes(key as string) || key === 'paymentDays' || key === 'issueDate') {
+    if (['items', 'discountPercent', 'discountType', 'discountAmountInput'].includes(key as string) || key === 'paymentDays' || key === 'issueDate') {
       const newState = get();
-      const computed = computeFromItems(newState.items, newState.discountPercent);
+      const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
       set({
         ...computed,
         dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
@@ -303,7 +355,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     });
     set({ items: newItems });
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set(computed);
   },
 
@@ -322,7 +374,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     };
     set({ items: [...state.items, newItem] });
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set(computed);
   },
 
@@ -335,7 +387,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
 
     set({ items: state.items.filter((i) => i.id !== id) });
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set(computed);
   },
 
@@ -353,7 +405,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       ),
     });
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set(computed);
   },
 
@@ -370,7 +422,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     next.splice(idx + 1, 0, copy);
     set({ items: next });
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set(computed);
   },
 
@@ -414,18 +466,40 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     // re-parler/re-écrire modifie au lieu de supprimer les articles existants.
     if (parsed?.items?.length) {
       const merged = mergeInvoiceItems(state.items as any, parsed.items as any, parsed?.action);
-      updates.items = merged.map((item: any) => ({
-        id: generateId(),
-        description: item.description || '',
-        quantity: Number(item.quantity) || 1,
-        unit_price: Number(item.unit_price) || 0,
-        vat_rate: Number(item.vat_rate) || 20,
-      }));
+      updates.items = merged.map((item: any) => {
+        const line: any = {
+          id: generateId(),
+          description: item.description || '',
+          quantity: Number(item.quantity) || 1,
+          unit_price: Number(item.unit_price) || 0,
+          vat_rate: Number(item.vat_rate) || 20,
+        };
+        // Préserve la remise ligne (% ou €) renvoyée par l'IA / déjà présente.
+        if (item.discount_amount && Number(item.discount_amount) > 0) {
+          line.discount_amount = Number(item.discount_amount);
+        } else if (item.discount_percent && Number(item.discount_percent) > 0) {
+          line.discount_percent = Number(item.discount_percent);
+        } else if (item.discount_percent != null || item.discount_amount != null) {
+          // explicite 0 → on neutralise
+          delete line.discount_percent;
+          delete line.discount_amount;
+        }
+        return line;
+      });
     }
 
     // Other fields
     if (parsed?.notes) updates.notes = parsed.notes;
-    if (parsed?.discount_percent) updates.discountPercent = parsed.discount_percent;
+    // Remise globale : % (« remise 10% ») ou € (« réduction de 10 euros »).
+    if (parsed?.discount_type === 'amount' || (parsed?.discount_amount && Number(parsed.discount_amount) > 0 && !parsed.discount_percent)) {
+      updates.discountType = 'amount';
+      updates.discountAmountInput = Number(parsed.discount_amount) || 0;
+      updates.discountPercent = 0;
+    } else if (parsed?.discount_percent && Number(parsed.discount_percent) > 0) {
+      updates.discountType = 'percent';
+      updates.discountPercent = Number(parsed.discount_percent);
+      updates.discountAmountInput = 0;
+    }
     if (parsed?.due_days != null) {
       updates.paymentDays = parsed.due_days;
       const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
@@ -436,7 +510,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
 
     // Recompute totals
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set({
       ...computed,
       dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
@@ -471,7 +545,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
         if (Object.keys(correctedUpdates).length > 0) {
           set(correctedUpdates);
           const latestState = get();
-          const recomputed = computeFromItems(latestState.items, latestState.discountPercent);
+          const recomputed = computeFromItems(latestState.items, latestState.discountType, latestState.discountPercent, latestState.discountAmountInput);
           set(recomputed);
         }
       });
@@ -522,7 +596,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       canRedo: true,
     } as any);
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set({
       ...computed,
       dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
@@ -542,7 +616,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       canRedo: history.future.length > 0,
     } as any);
     const newState = get();
-    const computed = computeFromItems(newState.items, newState.discountPercent);
+    const computed = computeFromItems(newState.items, newState.discountType, newState.discountPercent, newState.discountAmountInput);
     set({
       ...computed,
       dueDate: computeDueDate(newState.issueDate, newState.paymentDays),
@@ -569,22 +643,21 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
   // ─── Edition — hydratation depuis une facture existante ───
   hydrate: (invoice) => {
     const issueDate = invoice.issue_date || new Date().toISOString().split('T')[0];
-    // OVERLORD (CIBLE 8) — préférer le terme persisté sur la facture : '' = à
-    // réception (0 jour), '15'/'30'/… = N jours. Repli sur due_date pour les
-    // factures antérieures (colonne absente avant migration).
+    // PROMETHEUS (CIBLE 1) — résolveur unique (lib/payment-terms.ts). Le terme
+    // persisté est désormais le termId sémantique (reception / days15 / … /
+    // end_of_month / custom-N). Repli sur l'écart due_date→issue_date pour les
+    // vieilles factures (colonne payment_terms absente avant la migration
+    // 20260620000005), puis sur 30 jours.
     const rawTerms = (invoice as any).payment_terms;
-    const fromTerms: number | null =
-      typeof rawTerms === 'string' && rawTerms.trim() !== '' && /^\d+$/.test(rawTerms.trim())
-        ? parseInt(rawTerms.trim(), 10)
-        : rawTerms === ''
-          ? 0
-          : null;
-    const initialDays = fromTerms !== null
-      ? fromTerms
-      : invoice.due_date
-        ? Math.max(0, Math.round((new Date(invoice.due_date).getTime() - new Date(issueDate).getTime()) / (1000 * 60 * 60 * 24)))
-        : 30;
-    const termMap: Record<number, string> = { 0: 'reception', 15: 'days15', 30: 'days30', 45: 'days45', 60: 'days60' };
+    let parsed: { days: number; termId: string };
+    if (rawTerms != null && String(rawTerms).trim() !== '') {
+      parsed = parseStoredTerm(rawTerms);
+    } else if (invoice.due_date) {
+      const days = Math.max(0, Math.round((new Date(invoice.due_date).getTime() - new Date(issueDate).getTime()) / (1000 * 60 * 60 * 24)));
+      parsed = parseStoredTerm(String(days));
+    } else {
+      parsed = parseStoredTerm(null);
+    }
 
     const rawItems = (invoice.items?.length ? invoice.items : []).map((i) => {
       const base: Omit<InvoiceItem, 'total'> = {
@@ -602,7 +675,13 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       : [{ id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 }] as Omit<InvoiceItem, 'total'>[];
 
     const discountPercent = invoice.discount_percent || 0;
-    const computed = computeFromItems(items, discountPercent);
+    const discountType: 'percent' | 'amount' =
+      (invoice as any).discount_type === 'amount' ? 'amount' : 'percent';
+    // En mode 'amount', la valeur saisie est le montant € (discount_amount).
+    const discountAmountInput = discountType === 'amount'
+      ? (Number(invoice.discount_amount) || 0)
+      : 0;
+    const computed = computeFromItems(items, discountType, discountPercent, discountAmountInput);
 
     set({
       ...initialState,
@@ -624,12 +703,14 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       items,
       notes: invoice.notes || '',
       discountPercent,
+      discountType,
+      discountAmountInput,
       issueDate,
-      paymentDays: initialDays,
-      paymentTermId: termMap[initialDays] || `custom-${initialDays}`,
+      paymentDays: parsed.days,
+      paymentTermId: parsed.termId,
       linkedInvoiceId: invoice.linked_invoice_id || null,
       ...computed,
-      dueDate: computeDueDate(issueDate, initialDays),
+      dueDate: computeDueDate(issueDate, parsed.days),
       canUndo: false,
       canRedo: false,
     });

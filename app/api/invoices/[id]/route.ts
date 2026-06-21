@@ -104,7 +104,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { items, discount_percent, ...rest } = body;
+    const { items, discount_percent, discount_type, discount_amount, ...rest } = body;
 
     // Colonnes protégées : jamais éditables via PATCH.
     // INSPECTOR (BUG 3) — les colonnes de lien de paiement sont protégées : seul
@@ -139,11 +139,23 @@ export async function PATCH(
         if (typeof it.vat_rate !== 'number' || it.vat_rate < 0 || it.vat_rate > 100) {
           return NextResponse.json({ error: `Ligne ${i + 1} : taux TVA invalide.` }, { status: 400 });
         }
+        // PROMETHEUS (CIBLE 3) — remises ligne % et €
+        if (it.discount_percent != null && (typeof it.discount_percent !== 'number' || it.discount_percent < 0 || it.discount_percent > 100)) {
+          return NextResponse.json({ error: `Ligne ${i + 1} : remise invalide (0-100%).` }, { status: 400 });
+        }
+        if (it.discount_amount != null && (typeof it.discount_amount !== 'number' || it.discount_amount < 0 || it.discount_amount > it.quantity * it.unit_price)) {
+          return NextResponse.json({ error: `Ligne ${i + 1} : remise en euros invalide.` }, { status: 400 });
+        }
       }
       const discPct = typeof discount_percent === 'number' ? discount_percent : 0;
-      const totals = calculateInvoiceTotals(items, discPct);
+      // Remise globale : € si discount_type='amount', sinon %.
+      const globalDisc = (discount_type === 'amount' && discount_amount && discount_amount > 0)
+        ? { amount: discount_amount }
+        : discPct;
+      const totals = calculateInvoiceTotals(items, globalDisc);
       update.items = items;
       update.discount_percent = discPct || null;
+      update.discount_type = discount_type === 'amount' ? 'amount' : 'percent';
       update.subtotal = totals.subtotal;
       update.vat_amount = totals.vatAmount;
       update.discount_amount = totals.discountAmount || null;

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Check, Crown, ShieldCheck, Zap, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ANNUAL_DISCOUNT_BADGE } from '@/lib/plans';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
@@ -182,7 +183,7 @@ export default function TrialPage() {
                   billing === 'yearly' ? 'bg-emerald-500 text-white' : 'bg-neutral-900 text-neutral-400 hover:text-white',
                 )}
               >
-                Annuel <span className="text-xs opacity-70">(-20%)</span>
+                Annuel <span className="text-xs opacity-70">({ANNUAL_DISCOUNT_BADGE})</span>
               </button>
             </div>
           </div>

@@ -129,11 +129,13 @@ export default function EditDocumentContent({ invoiceId }: { invoiceId: string }
           document_type: session.documentType,
           issue_date: session.issueDate,
           due_date: session.dueDate || undefined,
-          // OVERLORD (CIBLE 8) — '' pour « à réception », sinon le nombre de jours.
-          payment_terms: session.paymentDays > 0 ? String(session.paymentDays) : '',
+          // PROMETHEUS (CIBLE 1) — termId sémantique (reception/days15/…/end_of_month/custom-N).
+          payment_terms: session.paymentTermId,
           items: session.items as InvoiceItem[],
           notes: session.notes || undefined,
-          discount_percent: session.discountPercent > 0 ? session.discountPercent : undefined,
+          discount_percent: session.discountType === 'percent' && session.discountPercent > 0 ? session.discountPercent : undefined,
+          discount_amount: session.discountType === 'amount' && session.discountAmountInput > 0 ? session.discountAmountInput : undefined,
+          discount_type: session.discountType,
           client_email: session.clientEmail || undefined,
           client_phone: session.clientPhone || undefined,
           client_address: session.clientAddress || undefined,

@@ -57,14 +57,18 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
       client_postal_code: s.clientPostalCode || null,
       client_siret: s.clientSiret || null,
       client_vat_number: s.clientVatNumber || null,
-      items: s.items.map((i) => ({
+      items: s.items.map((i: any) => ({
         description: i.description,
         quantity: i.quantity,
         unit_price: i.unit_price,
         vat_rate: i.vat_rate,
+        discount_percent: i.discount_percent ?? null,
+        discount_amount: i.discount_amount ?? null,
       })),
       notes: s.notes || null,
       discount_percent: s.discountPercent || null,
+      discount_amount: s.discountType === 'amount' ? (s.discountAmountInput || null) : null,
+      discount_type: s.discountType || null,
       due_days: s.paymentDays,
       issue_date: s.issueDate || null,
     };

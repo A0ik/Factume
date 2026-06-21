@@ -174,6 +174,77 @@ function FormInput({ label, value, onChange, placeholder, type = 'text', icon, r
   );
 }
 
+// ─── Line Discount Control (% or €) ─────────────────────
+
+interface LineDiscountControlProps {
+  item: any;
+  onChange: (field: string, value: number) => void;
+}
+
+/** Sélecteur de remise par ligne : bascule % / € + valeur. La remise € est
+ *  prioritaire si présente. Mode persistant via champ actif. */
+function LineDiscountControl({ item, onChange }: LineDiscountControlProps) {
+  const inferredMode: 'percent' | 'amount' = Number(item.discount_amount) > 0 ? 'amount' : 'percent';
+  const [mode, setMode] = useState<'percent' | 'amount'>(inferredMode);
+  // Resync quand l'item change extérieurement (hydratation, IA, undo).
+  useEffect(() => { setMode(inferredMode); }, [Number(item.discount_amount) > 0]);
+
+  const value = mode === 'amount' ? (item.discount_amount ?? '') : (item.discount_percent ?? '');
+
+  const switchMode = (m: 'percent' | 'amount') => {
+    if (m === mode) return;
+    if (m === 'amount') onChange('discount_percent', 0);
+    else onChange('discount_amount', 0);
+    setMode(m);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        Remise ligne
+      </span>
+      <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-white/[0.08]">
+        <button
+          type="button"
+          onClick={() => switchMode('percent')}
+          className={cn(
+            'px-2 py-1 text-[10px] font-bold transition-colors',
+            mode === 'percent'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
+          )}
+        >
+          %
+        </button>
+        <button
+          type="button"
+          onClick={() => switchMode('amount')}
+          className={cn(
+            'px-2 py-1 text-[10px] font-bold transition-colors',
+            mode === 'amount'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
+          )}
+        >
+          €
+        </button>
+      </div>
+      <input
+        type="number"
+        inputMode="decimal"
+        value={value}
+        min={0}
+        onChange={(e) => {
+          const v = e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0);
+          onChange(mode === 'amount' ? 'discount_amount' : 'discount_percent', v);
+        }}
+        placeholder="0"
+        className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+      />
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────
 
 interface DocumentFormPanelProps {
@@ -202,12 +273,15 @@ export default function DocumentFormPanel({
     items,
     notes,
     discountPercent,
+    discountType,
+    discountAmountInput,
     issueDate,
     paymentDays,
     paymentTermId,
     subtotal,
     vatAmount,
     globalDiscountAmount,
+    lineDiscountAmount,
     total,
     pendingDoubts,
     resolveDoubts,
@@ -328,7 +402,12 @@ export default function DocumentFormPanel({
   };
 
   const lineTotal = (item: typeof items[0]) => {
-    return item.quantity * item.unit_price;
+    const gross = item.quantity * item.unit_price;
+    const it = item as any;
+    // Remise ligne : € (discount_amount) prioritaire sur % (discount_percent).
+    const discAmount = Number(it.discount_amount) > 0 ? Math.min(Number(it.discount_amount), gross) : 0;
+    const discPct = Number(it.discount_percent) > 0 ? gross * (Number(it.discount_percent) / 100) : 0;
+    return gross - (discAmount || discPct);
   };
 
   // ─── Client Type Badge ──────────────────────────────
@@ -659,6 +738,12 @@ export default function DocumentFormPanel({
                   </div>
                 </div>
 
+                {/* Remise ligne (% ou €) */}
+                <LineDiscountControl
+                  item={item}
+                  onChange={(field, value) => updateItem(item.id, field, value)}
+                />
+
                 {/* Line total */}
                 {item.unit_price > 0 && (
                   <motion.div
@@ -707,28 +792,74 @@ export default function DocumentFormPanel({
           </div>
 
           <div className="px-4 pb-4 space-y-2">
-            {/* Subtotal */}
+            {/* Subtotal (brut) */}
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Sous-total HT</span>
-              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(subtotal)} EUR</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(subtotal)} €</span>
             </div>
 
-            {/* Discount */}
-            {discountPercent > 0 && (
+            {/* Remises par ligne (somme) */}
+            {lineDiscountAmount > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 className="flex justify-between text-sm"
               >
-                <span className="text-orange-500">Remise ({discountPercent}%)</span>
-                <span className="font-medium text-orange-500">-{formatPrice(globalDiscountAmount)} EUR</span>
+                <span className="text-orange-500">Remises lignes</span>
+                <span className="font-medium text-orange-500">−{formatPrice(lineDiscountAmount)} €</span>
               </motion.div>
             )}
+
+            {/* Remise globale éditable (% ou €) */}
+            <div className="flex items-center justify-between gap-2 py-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Remise globale</span>
+                <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => updateField('discountType', 'percent')}
+                    className={cn(
+                      'px-2 py-0.5 text-[10px] font-bold transition-colors',
+                      discountType === 'percent'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
+                    )}
+                  >%</button>
+                  <button
+                    type="button"
+                    onClick={() => updateField('discountType', 'amount')}
+                    className={cn(
+                      'px-2 py-0.5 text-[10px] font-bold transition-colors',
+                      discountType === 'amount'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
+                    )}
+                  >€</button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  value={discountType === 'amount' ? (discountAmountInput || '') : (discountPercent || '')}
+                  onChange={(e) => {
+                    const v = e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0);
+                    updateField(discountType === 'amount' ? 'discountAmountInput' : 'discountPercent', v);
+                  }}
+                  placeholder="0"
+                  className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                />
+                {globalDiscountAmount > 0 && (
+                  <span className="text-xs font-medium text-orange-500 whitespace-nowrap">−{formatPrice(globalDiscountAmount)} €</span>
+                )}
+              </div>
+            </div>
 
             {/* VAT */}
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">TVA</span>
-              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(vatAmount)} EUR</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatPrice(vatAmount)} €</span>
             </div>
 
             {/* Divider */}

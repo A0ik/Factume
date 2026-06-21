@@ -864,10 +864,15 @@ export async function lookupCompany(sirenOrSiret: string): Promise<DirectoryLook
  * Permet de suivre : acceptation, refus, paiement, litige...
  */
 export async function getInvoiceEvents(
-  superPdpInvoiceId: string
+  superPdpInvoiceId: string,
+  userId?: string
 ): Promise<InvoiceEventResult> {
   try {
-    const token = await getAccessToken();
+    // Les factures sont transmises sous le token de LEUR utilisateur (modèle
+    // multi-SIRET marque grise) → on récupère les événements avec ce MÊME token.
+    // Sans userId, repli sur le token plateforme (lecture annuaire/publique).
+    const userToken = userId ? await getAccessTokenForUser(userId) : null;
+    const token = userToken?.token || (await getAccessToken());
 
     const response = await fetch(
       `${BASE_URL}/invoice_events?invoice_id=${encodeURIComponent(superPdpInvoiceId)}&limit=50`,

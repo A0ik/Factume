@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ShieldCheck, RefreshCw, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -18,8 +18,6 @@ const PASSWORD_CHECKS = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const referralCode = searchParams.get('ref');
   const { signUp, verifyEmailOtp, resendSignupOtp, signInWithGoogle, loading } = useAuthStore();
   const [error, setError] = useState('');
   const [confirmEmail, setConfirmEmail] = useState(false);
@@ -111,19 +109,6 @@ export default function RegisterPage() {
     try {
       // Crée la session UNIQUEMENT si le code est valide.
       await verifyEmailOtp(pendingEmail, code);
-      // Suivi du parrainage après conversion réelle (email vérifié).
-      const userId = useAuthStore.getState().user?.id;
-      if (referralCode && userId) {
-        try {
-          await fetch('/api/referral/track', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ referredUserId: userId, referralCode }),
-          });
-        } catch {
-          // Referral tracking failure should not block registration
-        }
-      }
       router.push('/onboarding/quick');
     } catch (err: any) {
       setOtpError(err.message || 'Code invalide ou expiré');

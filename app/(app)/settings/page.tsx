@@ -1418,26 +1418,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Referral */}
-      {sub.isFree && (
-        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/15">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap size={16} className="text-emerald-400" />
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Parrainage</h4>
-          </div>
-          <p className="text-xs text-slate-400 mb-3">
-            Parrainez un ami et gagnez 1 mois gratuit pour chaque inscription !
-          </p>
-          <button
-            onClick={() => router.push('/settings/referral')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-400 transition-colors"
-          >
-            <Zap size={14} />
-            Mon lien de parrainage
-          </button>
-        </div>
-      )}
-
       {/* Accounting export */}
       <div className="pt-4 border-t border-gray-200">
         <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Export comptabilité</h4>

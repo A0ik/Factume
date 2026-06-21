@@ -160,6 +160,24 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', invoiceId);
 
+      // ── Tracer la transmission dans pdp_transmissions (audit) ──────────────
+      // La table était « morte » (jamais insérée) → le cron pdp-sync faisait un
+      // UPDATE sur 0 ligne. On crée/met à jour la ligne d'audit à la transmission.
+      await admin
+        .from('pdp_transmissions')
+        .upsert(
+          {
+            invoice_id: invoiceId,
+            user_id: invoice.user_id,
+            status: 'transmitted',
+            pdp_transmission_id: result.superPdpId || null,
+            transmitted_at: new Date().toISOString(),
+            error_message: null,
+          },
+          { onConflict: 'invoice_id' }
+        )
+        .eq('user_id', invoice.user_id);
+
       console.log('[transmit] Facture', invoice.number, 'transmise avec succès. ID:', result.superPdpId);
 
       return NextResponse.json({

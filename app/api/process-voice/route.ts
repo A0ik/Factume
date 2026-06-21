@@ -173,7 +173,10 @@ MODIFICATIONS DE CHAMPS (hors lignes) — mets à jour si l'utilisateur le deman
 - "change le client à X" / "pour [Société]" / "facturé à X" → client_name = "X"
 - "délai de paiement X jours" / "échéance dans X jours" / "payable sous X jours" → due_days = X
 - "passe la TVA à X%" / "TVA à X sur tout" / "applique X% de TVA partout" → applique vat_rate = X à TOUTES les lignes dans items[]
-- "remise de X%" / "rabais X%" → inclus dans items[].discount_percent
+- "remise de X%" / "rabais X%" sur un article précis → items[].discount_percent: X
+- "réduction de X euros" / "rabais de X€" sur un article précis → items[].discount_amount: X
+- "remise globale de X%" → discount_percent: X, discount_type: "percent"
+- "remise globale de X euros" / "réduction globale de X€" → discount_amount: X, discount_type: "amount"
 - "note : ..." / "ajoute la mention ..." → notes = "..."
 - "change le prix de la ligne N à X" / "mets la ligne 2 à 500" → MODIFIER uniquement cet item (quantity inchangée si non précisé)
 RÈGLE : si un champ n'est pas mentionné (client_name/due_days/notes = null), conserve sa valeur actuelle. Ne JAMAIS écraser un champ que l'utilisateur n'a pas demandé à modifier.
@@ -191,11 +194,13 @@ Retourne UNIQUEMENT du JSON valide (le document MODIFIÉ complet) :
   "client_siret": null,
   "client_vat_number": null,
   "items": [
-    { "description": "string", "quantity": number, "unit_price": number, "vat_rate": number }
+    { "description": "string", "quantity": number, "unit_price": number, "vat_rate": number, "discount_percent": number, "discount_amount": number }
   ],
   "due_days": null,
   "notes": null,
   "discount_percent": null,
+  "discount_amount": null,
+  "discount_type": null,
   "uncertain_fields": []
 }
 
@@ -270,10 +275,12 @@ Format JSON attendu:
   "client_postal_code": "string ou null — code postal du client",
   "client_siret": "string ou null — numéro SIRET du client (14 chiffres)",
   "client_vat_number": "string ou null — numéro de TVA intracommunautaire du client (format FRXX123456789)",
-  "items": [{"description": "string", "quantity": number, "unit_price": number, "vat_rate": number}],
+  "items": [{"description": "string", "quantity": number, "unit_price": number, "vat_rate": number, "discount_percent": number, "discount_amount": number}],
   "due_days": number,
   "notes": "string ou null",
   "discount_percent": number,
+  "discount_amount": number,
+  "discount_type": "percent | amount",
   "uncertain_fields": [
     {"field": "string", "current_value": "any", "reason": "string", "suggestion": "any"}
   ]
@@ -375,11 +382,19 @@ DÉLAI DE PAIEMENT :
 - "60 jours" → due_days: 60
 - "fin de mois" → due_days: 30 (valeur standard)
 
-REMISE:
-- NE JAMAIS mettre de remise par défaut
-- Uniquement si l'utilisateur le demande explicitement
-- "remise 10%" ou "10% de remise" → discount_percent: 10
-- Sans mention → discount_percent: 0
+REMISE (globale ET par ligne, en % OU en euros) :
+- NE JAMAIS mettre de remise par défaut (discount_percent: 0, discount_amount: 0)
+- Uniquement si l'utilisateur le demande explicitement. Synonymes : "remise", "rabais", "réduction", "discount".
+- "%" ou "pour cent" → remise en POURCENTAGE (discount_percent).
+- "euros", "€", "euro" → remise en MONTANT (discount_amount).
+- REMISE GLOBALE (sur l'ensemble du document) :
+  - "remise globale de 10%" → discount_type: "percent", discount_percent: 10, discount_amount: 0
+  - "réduction de 50 euros" / "rabais de 50€" → discount_type: "amount", discount_amount: 50, discount_percent: 0
+- REMISE PAR LIGNE (sur UN article précis) — mets-la dans items[].discount_percent ou items[].discount_amount, ET laisse discount_percent: 0 / discount_amount: 0 au niveau global :
+  - "remise de 10% sur le premier article" / "création de site web 300 euros remise 10 pourcent" → items[].discount_percent: 10
+  - "ajoute une réduction de 10 euros pour le premier article" / "rabais de 10€ sur la ligne 1" → items[].discount_amount: 10
+- RÈGLE : une remise sur UN article → items[].discount_* (et discount_* global à 0). Une remise sur TOUT → discount_* global (et items sans discount_*).
+- Sans mention de remise → discount_percent: 0, discount_amount: 0, items sans discount_percent/discount_amount.
 
 NOTES ET CONDITIONS :
 - Si l'utilisateur mentionne des conditions spéciales, les mettre dans "notes"

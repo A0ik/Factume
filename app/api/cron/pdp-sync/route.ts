@@ -78,8 +78,9 @@ async function handleSync(req: NextRequest) {
       try {
         if (!inv.pdp_transmission_id) continue;
 
-        // Récupérer les événements depuis Super PDP
-        const eventsResult = await getInvoiceEvents(inv.pdp_transmission_id);
+        // Récupérer les événements depuis Super PDP — avec le token de l'UTILISATEUR
+        // propriétaire de la facture (transmise sous son compte SuperPDP).
+        const eventsResult = await getInvoiceEvents(inv.pdp_transmission_id, inv.user_id);
 
         if (!eventsResult.events || eventsResult.events.length === 0) {
           syncedCount++;

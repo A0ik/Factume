@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
+import { ANNUAL_DISCOUNT_BADGE } from '@/lib/plans';
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES & PLAN DATA — 3 plans obligatoires : Gratuit / Pro / Business
@@ -47,7 +48,7 @@ const PLANS: Plan[] = [
       { label: '3 factures par mois', included: true },
       { label: '3 devis par mois', included: true },
       { label: 'Dictée vocale IA illimitée', included: true, highlight: true },
-      { label: 'E-facturation certifiée Factur-X', included: true },
+      { label: 'Facture électronique B2B', included: false },
       { label: '1 cabinet · 10 clients CRM', included: true },
       { label: 'Accès mobile & web', included: true },
       { label: 'Support email', included: true },
@@ -67,6 +68,7 @@ const PLANS: Plan[] = [
     cta: 'Choisir Pro',
     features: [
       { label: 'Factures & devis illimités', included: true, highlight: true },
+      { label: 'Facture électronique B2B', included: true, highlight: true },
       { label: 'Dictée vocale IA illimitée', included: true, highlight: true },
       { label: 'Contrats de travail (CDI/CDD)', included: true },
       { label: 'OCR analyse de reçus', included: true },
@@ -89,6 +91,7 @@ const PLANS: Plan[] = [
     cta: 'Choisir Business',
     features: [
       { label: 'Tout le plan Pro', included: true },
+      { label: 'Facture électronique B2B', included: true },
       { label: '5 cabinets', included: true, highlight: true },
       { label: 'Comptable Connect', included: true, highlight: true },
       { label: 'Copilot Factu IA (avancé)', included: true },
@@ -374,7 +377,7 @@ export default function PaywallPage() {
             Annuel
             <span className={cn('px-2 py-0.5 text-[10px] font-black rounded-full tracking-wide',
               isYearly ? 'bg-white/25 text-white' : isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-100 text-emerald-700')}>
-              -17%
+              {ANNUAL_DISCOUNT_BADGE}
             </span>
           </button>
         </div>
@@ -454,6 +457,10 @@ export default function PaywallPage() {
                 ) : isYearly ? (
                   <p className={cn('text-xs mt-1', isDark ? 'text-zinc-500' : 'text-gray-500')}>
                     {plan.priceYearly.toFixed(2).replace('.', ',')}€ facturés annuellement
+                    {/* CIBLE 3 — premium 2026 : économies réelles mises en avant (conversion). */}
+                    <span className={cn('block font-semibold', isDark ? 'text-emerald-400' : 'text-emerald-600')}>
+                      soit {Math.round(plan.priceMonthly * 12 - plan.priceYearly)}€ économisés/an
+                    </span>
                   </p>
                 ) : (
                   <p className={cn('text-xs mt-1', isDark ? 'text-zinc-500' : 'text-gray-500')}>Sans engagement</p>

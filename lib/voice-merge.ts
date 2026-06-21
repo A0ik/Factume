@@ -18,6 +18,8 @@ export interface MergeableItem {
   quantity: number;
   unit_price: number;
   vat_rate: number;
+  discount_percent?: number; // remise ligne en %
+  discount_amount?: number;  // remise ligne en €
 }
 
 export function normalizeDescription(s: string | undefined | null): string {

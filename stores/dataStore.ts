@@ -105,8 +105,15 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       // Calculate line total in cents to avoid float errors
       const lineTotalCents = Math.round(cents(item.quantity) * cents(item.unit_price) / 100);
+      // PROMETHEUS (CIBLE 3) — remise ligne : € (discount_amount) prioritaire sur %
       const lineDiscPct = (item as any).discount_percent || 0;
-      const lineDiscCents = lineDiscPct > 0 ? Math.round(lineTotalCents * cents(lineDiscPct) / 10000) : 0;
+      const lineDiscAmt = (item as any).discount_amount > 0 ? (item as any).discount_amount : 0;
+      let lineDiscCents = 0;
+      if (lineDiscAmt > 0) {
+        lineDiscCents = Math.min(cents(lineDiscAmt), lineTotalCents);
+      } else if (lineDiscPct > 0) {
+        lineDiscCents = Math.round(lineTotalCents * cents(lineDiscPct) / 10000);
+      }
       const lineNetCents = lineTotalCents - lineDiscCents;
       return { ...item, id: generateId(), total: roundMoney(fromCents(lineNetCents)) };
     });
@@ -114,15 +121,25 @@ export const useDataStore = create<DataState>((set, get) => ({
     // Subtotal after line discounts (in cents)
     const subtotalAfterLineDiscountsCents = items.reduce((s, i) => s + cents(i.total), 0);
     const discountPercent = formData.discount_percent || 0;
-    const discountAmountCents = discountPercent > 0 ? Math.round(subtotalAfterLineDiscountsCents * cents(discountPercent) / 10000) : 0;
+    // PROMETHEUS (CIBLE 3) — remise globale : € si discount_type='amount', sinon %
+    const discountType = (formData as any).discount_type || 'percent';
+    const discountAmountInput = Number((formData as any).discount_amount) || 0;
+    let discountAmountCents = 0;
+    if (discountType === 'amount' && discountAmountInput > 0) {
+      discountAmountCents = Math.min(cents(discountAmountInput), subtotalAfterLineDiscountsCents);
+    } else if (discountPercent > 0) {
+      discountAmountCents = Math.round(subtotalAfterLineDiscountsCents * cents(discountPercent) / 10000);
+    }
     const discountedSubtotalCents = subtotalAfterLineDiscountsCents - discountAmountCents;
 
     // TVA recalculated on each line's net after global discount
     const recalculatedVatCents = items.reduce((s, i) => {
       const lineNetCents = cents(i.total);
-      const afterGlobalDiscCents = discountPercent > 0
-        ? Math.round(lineNetCents * (10000 - cents(discountPercent)) / 10000)
-        : lineNetCents;
+      // Part de la remise globale revenue à cette ligne (proportionnelle).
+      const globalShareCents = discountAmountCents > 0 && subtotalAfterLineDiscountsCents > 0
+        ? Math.round((discountAmountCents * lineNetCents) / subtotalAfterLineDiscountsCents)
+        : 0;
+      const afterGlobalDiscCents = lineNetCents - globalShareCents;
       const lineVatCents = Math.round(afterGlobalDiscCents * cents(i.vat_rate) / 10000);
       return s + lineVatCents;
     }, 0);
@@ -158,7 +175,8 @@ export const useDataStore = create<DataState>((set, get) => ({
           subtotal: discountedSubtotal,
           vat_amount: recalculatedVat,
           discount_percent: formData.discount_percent || null,
-          discount_amount: discountAmount || null,
+          discount_amount: (discountType === 'amount' && discountAmountInput > 0 ? discountAmountInput : discountAmount) || null,
+          discount_type: discountType,
           total: finalTotal,
           notes: formData.notes || null,
           prefix,

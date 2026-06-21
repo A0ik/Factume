@@ -56,6 +56,8 @@ export async function GET(
         'Content-Disposition': disposition,
         'Content-Length': pdfBuffer.length.toString(),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
+        // PROMETHEUS (CIBLE 5) — empêche le sniff MIME (téléchargement strict).
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error: any) {

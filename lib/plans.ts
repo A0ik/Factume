@@ -9,6 +9,19 @@
 
 export type PlanTier = 'free' | 'pro' | 'business';
 
+// ── PROMETHEUS (CIBLE 3) — Badge de réduction annuelle unifié ─────────────────
+// Source de vérité UNIQUE pour les 3 surfaces de prix (paywall, landing, trial).
+// Avant : paywall « -17% », landing « −17% » (U+2212), trial « -20% » (FAUX — le
+// vrai taux Pro est 1 − 149,99/(14,99×12) ≈ 16,6 % → 17 %). On centralise pour
+// garantir cohérence + justesse. Le caractère « − » est le vrai moins typographique.
+export const ANNUAL_DISCOUNT_BADGE = '−17%';
+
+/** Taux de réduction annuelle réel d'un plan, arrondi (ex : 16,6 % → 17). */
+export function annualDiscountPercent(monthly: number, yearly: number): number {
+  if (!monthly) return 0;
+  return Math.round((1 - yearly / (monthly * 12)) * 100);
+}
+
 export interface PlanConfig {
   name: string;
   tier: PlanTier;
@@ -61,7 +74,6 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     features: [
       '3 factures par mois',
       '3 devis par mois',
-      'E-facturation certifiée',
       '1 cabinet',
       '10 clients CRM',
       'Dictée vocale IA illimitée',

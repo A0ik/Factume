@@ -44,6 +44,9 @@ export async function GET(
       .eq('user_id', user.id) // Sécurité : l'utilisateur ne peut voir que ses factures
       .single();
 
+    // Note : user_id récupéré ci-dessus sert à interroger SuperPDP avec le token
+    // du propriétaire de la facture (voir plus bas getInvoiceEvents).
+
     if (fetchError || !invoice) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
     }
@@ -93,7 +96,8 @@ export async function GET(
     // ── Polling en temps réel depuis SuperPDP ─────────────────────────────
     console.log('[einvoice-status] Polling SuperPDP pour facture', invoice.number);
 
-    const eventsResult = await getInvoiceEvents(invoice.pdp_transmission_id);
+    // Polling avec le token du propriétaire de la facture (transmise sous son compte).
+    const eventsResult = await getInvoiceEvents(invoice.pdp_transmission_id, invoice.user_id);
 
     if (!eventsResult.events || eventsResult.events.length === 0) {
       // Pas d'événements = facture toujours en transit
