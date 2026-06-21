@@ -498,8 +498,22 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
 
     // Other fields
     if (parsed?.notes) updates.notes = parsed.notes;
-    // Remise globale : % (« remise 10% ») ou € (« réduction de 10 euros »).
-    if (parsed?.discount_type === 'amount' || (parsed?.discount_amount && Number(parsed.discount_amount) > 0 && !parsed.discount_percent)) {
+    // AXIOM (CIBLE 1) — EXCLUSION MUTUELLE anti double-discount. Une remise ne
+    // peut pas être à la fois sur la ligne ET globale. Quand l'utilisateur dit
+    // « création de société 200 HT, remise 10 euros », l'IA peut émettre
+    // simultanément items[].discount_amount=10 ET discount_amount global=10 →
+    // soustraction double (20€). Si une ligne porte déjà une remise, on
+    // neutralise le global (priorité à la remise ligne la plus précise).
+    const itemsForDiscountCheck = updates.items ?? state.items ?? [];
+    const hasLineDiscount = itemsForDiscountCheck.some(
+      (it: any) => Number(it.discount_amount) > 0 || Number(it.discount_percent) > 0
+    );
+
+    if (hasLineDiscount) {
+      updates.discountType = 'percent';
+      updates.discountPercent = 0;
+      updates.discountAmountInput = 0;
+    } else if (parsed?.discount_type === 'amount' || (parsed?.discount_amount && Number(parsed.discount_amount) > 0 && !parsed.discount_percent)) {
       updates.discountType = 'amount';
       updates.discountAmountInput = Number(parsed.discount_amount) || 0;
       updates.discountPercent = 0;

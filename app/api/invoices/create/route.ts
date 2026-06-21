@@ -99,9 +99,26 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: `Ligne ${i + 1} : remise en euros invalide.` }, { status: 400 });
         }
       }
-      // Validate each item's total matches quantity * unit_price
-      const expectedTotal = Math.round(item.quantity * item.unit_price * 100) / 100;
-      if (item.total !== undefined && Math.abs(item.total - expectedTotal) > 0.02) {
+      // AXIOM (CIBLE 1) — Validation du total ligne consciente des remises.
+      // Le brut = quantité × prix unitaire. Mais si la ligne porte une remise
+      // (€ ou %), le client envoie le NET (brut − remise). Le codebase a DEUX
+      // conventions : dataStore/canvas voix envoient le net (route.ts:118),
+      // GenerateurForm envoie le brut (GenerateurForm.tsx:86). On accepte donc
+      // les DEUX — on ne rejette qu'une ligne réellement incohérente. Le
+      // contrôle global (mismatch du total facture) plus bas reste le garde-fou.
+      const lineGross = Math.round(item.quantity * item.unit_price * 100) / 100;
+      let lineDiscount = 0;
+      if (typeof item.discount_amount === 'number' && item.discount_amount > 0) {
+        lineDiscount = Math.min(item.discount_amount, lineGross);
+      } else if (typeof item.discount_percent === 'number' && item.discount_percent > 0) {
+        lineDiscount = Math.round(lineGross * (item.discount_percent / 100) * 100) / 100;
+      }
+      const lineNet = Math.round((lineGross - lineDiscount) * 100) / 100;
+      if (
+        item.total !== undefined &&
+        Math.abs(item.total - lineGross) > 0.02 &&
+        Math.abs(item.total - lineNet) > 0.02
+      ) {
         return NextResponse.json({ error: `Ligne "${item.description || `Ligne ${i + 1}`}": total incohérent avec quantité × prix unitaire.` }, { status: 400 });
       }
     }

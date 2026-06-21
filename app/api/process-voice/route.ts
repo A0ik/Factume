@@ -271,6 +271,7 @@ Exemples : "300 gross 10% VAT" → HT=272.73 | "300 HT 10%" → HT=300 | "300 br
 
 EXTRACTION OBLIGATOIRE :
 1. CLIENT: Toute mention de "client", "pour", "chez", "agence", "startup", "société", "entreprise"
+   B2B/B2C (client_type_hint) : si le client est une entreprise/société/immobilier/foncière/agence/cabinet/commerce/restauration → "b2b". Si c'est un PARTICULIER (nom propre seul, aucune société) → "b2c". Exemples : « iyad immobilier » → b2b ; « Jean Dupont » → b2c ; « Café du Centre » → b2b ; « pharmacie du marché » → b2b.
 2. LIGNES: Chaque prestation/produit mentionné avec quantité et prix
 3. DÉLAI: "30 jours", "60 jours", "à réception", "comptant", "15 jours"
 4. REMISE: Uniquement si explicite ("remise 10%", "faire une remise", "-10%")
@@ -288,6 +289,7 @@ Format JSON attendu:
   "client_postal_code": "string ou null — code postal du client",
   "client_siret": "string ou null — numéro SIRET du client (14 chiffres)",
   "client_vat_number": "string ou null — numéro de TVA intracommunautaire du client (format FRXX123456789)",
+  "client_type_hint": "b2b | b2c | null — b2b si le client est une ENTREPRISE/SOCIÉTÉ (mots-clés : entreprise, société, SARL, EURL, SAS, SCI, immobilier, foncière, agence, cabinet, holding, groupe, commerce, restauration…). b2c si c'est un PARTICULIER (personne physique, nom propre sans société). null SEULEMENT si le doute est réel.",
   "items": [{"description": "string", "quantity": number, "unit_price": number, "vat_rate": number, "discount_percent": number, "discount_amount": number}],
   "due_days": number,
   "notes": "string ou null",
@@ -408,7 +410,9 @@ REMISE (globale ET par ligne, en % OU en euros) :
 - REMISE PAR LIGNE (sur UN article précis) — mets-la dans items[].discount_percent ou items[].discount_amount, ET laisse discount_percent: 0 / discount_amount: 0 au niveau global :
   - "remise de 10% sur le premier article" / "création de site web 300 euros remise 10 pourcent" → items[].discount_percent: 10
   - "ajoute une réduction de 10 euros pour le premier article" / "rabais de 10€ sur la ligne 1" → items[].discount_amount: 10
-- RÈGLE : une remise sur UN article → items[].discount_* (et discount_* global à 0). Une remise sur TOUT → discount_* global (et items sans discount_*).
+- RÈGLE ABSOLUE (ANTI-DOUBLE-REMISE) : une remise s'applique à UN SEUL endroit. JAMAIS à la fois sur une ligne ET au global. Si tu poses items[].discount_*, alors discount_percent=0 ET discount_amount=0 OBLIGATOIRES. Réciproquement, si tu poses un discount_* global, AUCUNE ligne ne doit porter de discount_*.
+- CAS UNE SEULE LIGNE : si la facture ne contient qu'un seul article, TOUTE remise va dans items[].discount_* (et le global RESTE à 0). Exemple « création de société 200 HT remise 10 euros » → 1 ligne unit_price=200 avec items[0].discount_amount=10, discount_amount global=0, discount_percent=0.
+- CAS PLUSIEURS LIGNES : une remise qui dit « sur tout » / « globale » / « au total » → discount_* global. Une remise qui nomme UN article précis → items[].discount_* de CETTE ligne uniquement (les autres lignes sans discount_*).
 - Sans mention de remise → discount_percent: 0, discount_amount: 0, items sans discount_percent/discount_amount.
 
 NOTES ET CONDITIONS :
@@ -471,7 +475,11 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
         }));
       }
 
-      // --- B2C auto-detection: tag individual clients ---
+      // --- B2C auto-detection: heuristique + 2e signal IA (AXIOM CIBLE 2) ---
+      // Un client est B2C seulement si l'heuristique par mots-clés le dit ET que
+      // l'IA ne dit pas explicitement "b2b". L'IA est l'arbitre quand l'heuristique
+      // est imparfaite (ex : « iyad immobilier » → l'IA reconnaît l'entreprise même
+      // si l'ancienne liste manquait « immobilier » — désormais enrichie aussi).
       let isB2C = false;
       try {
         const clientInfo = {
@@ -479,8 +487,11 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
           siret: parsed.client_siret,
           address: parsed.client_address,
         };
+        const heuristicB2C = isB2CClient(clientInfo);
+        const llmHint = (parsed as any).client_type_hint;
+        const llmSaysB2B = llmHint === 'b2b' || parsed?.client_type === 'business';
 
-        if (isB2CClient(clientInfo)) {
+        if (heuristicB2C && !llmSaysB2B) {
           isB2C = true;
           parsed.is_b2c = true;
           parsed.client_type = 'individual';

@@ -302,6 +302,13 @@ export default function OcrPage() {
 
   useEffect(() => { fetchDbExpenses(); }, [fetchDbExpenses]);
   useEffect(() => { if (user) fetchDbExpenses(); }, [user]);
+  // AXIOM (CIBLE 4) — recharge les dépenses BDD dès qu'une extraction se termine
+  // (changement du nombre de fichiers 'complete'), pour que l'onglet « À vérifier »
+  // reflète immédiatement la persistance et que la déduplication session↔BDD soit juste.
+  const completedFilesCount = files.filter(f => f.status === 'complete').length;
+  useEffect(() => {
+    if (completedFilesCount > 0) fetchDbExpenses();
+  }, [completedFilesCount, fetchDbExpenses]);
 
   // ── Garder le fichier révisé synchronisé avec files (preview + extraction fraîches) ─
   useEffect(() => {
@@ -644,6 +651,18 @@ export default function OcrPage() {
   // ── Listes par onglet ─────────────────────────────────────────────────────
   const inboxFiles = files; // tous les fichiers de la session
   const reviewableFiles = files.filter(f => f.status === 'complete' && f.result);
+  // AXIOM (CIBLE 4) — persistance anti-amnésie : on fusionne les fichiers extraits
+  // de la session (state volatile, perdu au refresh) AVEC les dépenses BDD au
+  // statut 'pending'. Comme chaque extraction est déjà insérée en base
+  // (lib/ocr-core.ts: status 'pending'), les factures « À vérifier » survivent
+  // désormais au rafraîchissement. Dédup : une dépense déjà représentée par un
+  // fichier de session n'est pas réaffichée en double.
+  const sessionExpenseIds = new Set(
+    reviewableFiles.map(f => f.result?.expense?.id).filter(Boolean) as string[]
+  );
+  const pendingDbExpenses = dbExpenses.filter(
+    e => e.status === 'pending' && !sessionExpenseIds.has(e.id)
+  );
   const doneExpenses = dbExpenses.filter(e => e.status === 'validated' || e.status === 'exported' || e.status === 'reviewed');
 
   const pendingCount = files.filter(f => f.status === 'pending').length;
@@ -715,7 +734,7 @@ export default function OcrPage() {
           <div className="flex items-center gap-1 px-3 pb-2">
             {([
               { k: 'inbox', label: 'File d\'attente', count: inboxFiles.length },
-              { k: 'review', label: 'À vérifier', count: reviewableFiles.length },
+              { k: 'review', label: 'À vérifier', count: reviewableFiles.length + pendingDbExpenses.length },
               { k: 'done', label: 'Historique', count: doneExpenses.length },
             ] as const).map(t => (
               <button key={t.k} onClick={() => setActiveTab(t.k)}
@@ -736,7 +755,7 @@ export default function OcrPage() {
             {activeTab === 'inbox' && inboxFiles.length === 0 && (
               <EmptyHint icon={Inbox} text="Aucun fichier. Glissez une facture pour commencer." />
             )}
-            {activeTab === 'review' && reviewableFiles.length === 0 && (
+            {activeTab === 'review' && reviewableFiles.length === 0 && pendingDbExpenses.length === 0 && (
               <EmptyHint icon={Eye} text="Les factures extraites apparaissent ici pour vérification." />
             )}
             {activeTab === 'done' && doneExpenses.length === 0 && (
@@ -748,6 +767,9 @@ export default function OcrPage() {
             ))}
             {activeTab === 'review' && reviewableFiles.map(f => (
               <FileRow key={f.id} file={f} active={reviewingFile?.id === f.id} onClick={() => openFileReview(f)} onRemove={() => removeFile(f.id)} />
+            ))}
+            {activeTab === 'review' && pendingDbExpenses.map(e => (
+              <DbRow key={`db-${e.id}`} exp={e} active={reviewingDbExpense?.id === e.id} onClick={() => loadExpenseForReview(e)} />
             ))}
             {activeTab === 'done' && doneExpenses.map(e => (
               <DbRow key={e.id} exp={e} active={reviewingDbExpense?.id === e.id} onClick={() => loadExpenseForReview(e)} />

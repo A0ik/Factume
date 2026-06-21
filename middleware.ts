@@ -99,14 +99,14 @@ export async function middleware(req: NextRequest) {
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com https://unpkg.com`,
+    `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' blob: https://js.stripe.com https://www.googletagmanager.com https://unpkg.com`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: https://factu.me https://*.supabase.co https://lh3.googleusercontent.com`,
     `font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com`,
-    `connect-src 'self' blob: data: https://*.supabase.co https://supabase.co https://api.stripe.com https://maps.googleapis.com https://openrouter.ai https://*.ingest.sentry.io https://www.googletagmanager.com https://recherche-entreprises.api.gouv.fr wss://*.supabase.co wss://supabase.co${isDev ? ' ws://localhost:*' : ''}`,
-    `frame-src 'self' blob: data: https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com`,
+    `connect-src 'self' blob: data: https://*.supabase.co https://supabase.co https://api.stripe.com https://m.stripe.com https://m.stripe.network https://r.stripe.com https://maps.googleapis.com https://openrouter.ai https://*.ingest.sentry.io https://www.googletagmanager.com https://recherche-entreprises.api.gouv.fr wss://*.supabase.co wss://supabase.co${isDev ? ' ws://localhost:*' : ''}`,
+    `frame-src 'self' blob: data: https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com https://*.supabase.co`,
     `worker-src 'self' blob: data:`,
-    `child-src 'self' blob: data:`,
+    `child-src 'self' blob: data: https://*.supabase.co`,
     `form-action 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
@@ -143,12 +143,14 @@ export async function middleware(req: NextRequest) {
 
   if (pathname === '/api/stripe/trial-subscription') {
     shouldRateLimit = true;
-    rlLimit = 3;
-    rlWindow = 86_400_000; // 3 per day — anti-abuse
+    rlLimit = 20;
+    rlWindow = 600_000; // 20 / 10 min — anti-abuse sans bloquer l'usage légitime
   } else if (pathname === '/api/stripe/subscription') {
     shouldRateLimit = true;
-    rlLimit = 3;
-    rlWindow = 86_400_000; // 3 per day — anti-double-charge
+    rlLimit = 20;
+    rlWindow = 600_000; // 20 / 10 min — anti-double-charge réel géré côté serveur
+                          // (réutilisation abonnement pending + 409 si abo actif). L'ancien
+                          // seuil 3/JOUR bloquait l'utilisateur dès 3 clics sur 24h.
   } else if (isAuthRoute) {
     shouldRateLimit = true;
     rlLimit = 30;
@@ -172,7 +174,8 @@ export async function middleware(req: NextRequest) {
     if (isSsrPage) {
       console.error('[middleware] BUG: rate limiting triggered on SSR page:', pathname);
     } else {
-      const rlGroup = pathname.startsWith('/api/cabinet') ? 'api-cabinet'
+      const rlGroup = pathname.startsWith('/api/stripe/') ? 'stripe'
+        : pathname.startsWith('/api/cabinet') ? 'api-cabinet'
         : isApiRoute ? 'api'
         : 'auth';
 

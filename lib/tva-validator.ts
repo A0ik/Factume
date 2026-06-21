@@ -136,32 +136,47 @@ export function validateAndCorrectTVA(items: InvoiceItem[]): ValidationResult {
  * clients entreprise au nom « marque » (ex : « Café Croissant »).
  */
 const COMPANY_INDICATORS = [
-  // Formes juridiques françaises
+  // Formes juridiques françaises — AXIOM (CIBLE 2) : bornées (\b) pour ne plus
+  // matcher la lettre "s"/"sa"/"sc" n'importe où (ex: "Isabella", "pois") qui
+  // créait des faux positifs B2B. On exige la forme complète.
   /soci[eé]t[eé]/i,
   /entreprise/i,
-  /s\.?a\.?(r\.?l\.?)?/i,
-  /e\.?u\.?r\.?l\.?/i,
-  /s\.?a\.?s/i,
-  /sasu/i,
-  /eirl/i,
-  /s\.?c\.?i/i,
-  /s\.?c\.?o\.?p/i,
-  /s\.?n\.?c/i,
-  /s\.?c\.?p/i,
-  /s\.?c\.?a/i,
+  /\bs\.?a\.?r\.?l\.?\b/i,   // SARL
+  /\bs\.?a\.?s\.?u\.?\b/i,   // SASU
+  /\bsasu\b/i,
+  /\be\.?u\.?r\.?l\.?\b/i,   // EURL
+  /\bs\.?a\.?s\.?\b/i,       // SAS
+  /\beirl\b/i,
+  /\bautonom[ée]\b/i,
   /auto[\s-]?entrepreneu/i,
   /micro[\s-]?entreprise/i,
+  /entrepreneur\s+individuel/i,
+  // ── AXIOM (CIBLE 2) — secteur IMMOBILIER & foncier (MANQUANTS à l'origine :
+  // « iyad immobilier » était classé B2C). Couvre SCI/SCPI/promoteur/construction.
+  /\bs\.?c\.?i\b/i,           // Société Civile Immobilière
+  /\bscpi\b/i,                // Société Civile de Placement Immobilier
+  /immobili[eè]re/i,
+  /immobilier/i,
+  /fonci[eè]re/i,
+  /foncier/i,
+  /\bpromoteur\b/i,
+  /construct(?:ion|eur)/i,
+  /paysagiste/i,
+  // Sociétés civiles & commandite (formes courtes bornées)
+  /\bsnc\b/i,                 // Société en Nom Collectif
+  /\bscp\b/i,                 // Société Civile Professionnelle
+  /\bsca\b/i,                 // Société en Commandite par Actions
+  /\bscop\b/i,                // Société Coopérative
   /holding/i,
-  /\bgroup\b/i,
+  /\bgroup(?:e|es|us)?\b/i,   // groupe/group/groupes (FR + EN)
   // Formes étrangères
-  /ltd/i,
-  /inc\./i,
+  /\bltd\b/i,
+  /\binc\b/i,
   /gmbh/i,
-  /corp\./i,
+  /\bcorp\b/i,
   /\bllc\b/i,
   // Activités de services / bureaux
   /agence/i,
-  /agenc/i,
   /startup/i,
   /cabinet/i,
   /bureau/i,
