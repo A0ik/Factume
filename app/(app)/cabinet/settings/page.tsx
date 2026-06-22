@@ -27,7 +27,7 @@ export default function CabinetSettingsPage() {
 
   const [name, setName] = useState('');
   const [siret, setSiret] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#4f46e5');
+  const [primaryColor, setPrimaryColor] = useState('#10b981');
   const [logoUrl, setLogoUrl] = useState('');
   const [whiteLabelName, setWhiteLabelName] = useState('');
   const [hideFactuBranding, setHideFactuBranding] = useState(false);
@@ -260,7 +260,8 @@ export default function CabinetSettingsPage() {
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-lg transition-all disabled:opacity-60"
+          style={{ backgroundColor: primaryColor }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-60"
         >
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
           Sauvegarder
@@ -268,7 +269,7 @@ export default function CabinetSettingsPage() {
       </div>
 
       {/* Cabinet info */}
-      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
         <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
           <Building2 size={15} className="text-blue-500" />
           Informations du cabinet
@@ -326,7 +327,7 @@ export default function CabinetSettingsPage() {
       </div>
 
       {/* Contact & Address */}
-      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
         <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
           <MapPin size={15} className="text-emerald-500" />
           Coordonnées
@@ -413,7 +414,7 @@ export default function CabinetSettingsPage() {
       </div>
 
       {/* RIB / Bank Details */}
-      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
         <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
           <Landmark size={15} className="text-amber-500" />
           Coordonnées bancaires (RIB)
@@ -490,7 +491,7 @@ export default function CabinetSettingsPage() {
 
       {/* Inviter un expert-comptable — Comptable Connect (Business) */}
       {sub.canUseComptableConnect && isOwner && cabinet && (
-        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
             <Calculator size={15} className="text-emerald-500" />
             Inviter mon expert-comptable
@@ -530,7 +531,7 @@ export default function CabinetSettingsPage() {
 
       {/* Team Management */}
       {cabinet && (
-        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
             <Shield size={15} className="text-indigo-500" />
             Équipe du cabinet
@@ -614,7 +615,7 @@ export default function CabinetSettingsPage() {
 
       {/* White Label - only for Business plan */}
       {sub.isBusiness && (
-        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+        <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
             <Palette size={15} className="text-violet-500" />
             Marque blanche

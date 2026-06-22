@@ -1,252 +1,97 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Loader2, RefreshCw, Search, Plus, X,
-  Users, UserPlus, FileText, Clock, Briefcase,
-  Trash2, Filter, Crown, Shield, Building2, Download, Upload,
-  ChevronRight, Euro, Calendar, MapPin, Hash, BadgeCheck,
-  AlertCircle, CheckCircle2, Info,
-} from 'lucide-react';
+
+import { useState, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
+import {
+  Users, UserPlus, Briefcase, CheckCircle2, Clock, Plus, Loader2, Trash2,
+  ChevronRight, FileText, Hash, MapPin, Calendar, Euro, BadgeCheck,
+  AlertCircle, Building2,
+} from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { useCabinetData } from '@/hooks/useCabinetData';
 import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDate, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type ContractType = 'CDI' | 'CDD' | 'CDD usage' | 'Interim' | 'Stage' | 'Apprentissage' | 'Professionnalisation';
-type EmployeeStatus = 'actif' | 'suspendu' | 'termine';
-type TabKey = 'info' | 'documents' | 'historique';
-type Civility = 'M.' | 'Mme' | 'Mx';
+import {
+  SectionCard, DataTable, KpiCard, StatusBadge, Avatar, Modal, EmptyState, TableSkeleton,
+} from '@/components/cabinet/ui';
+import type { Column } from '@/components/cabinet/ui';
 
 interface Employee {
   id: string;
-  clientId: string;
-  clientName: string;
-  civilite: Civility;
-  nom: string;
-  prenom: string;
-  dateNaissance: string;
-  lieuNaissance: string;
-  nationalite: string;
-  nss: string;
-  adresse: string;
-  poste: string;
-  typeContrat: ContractType;
-  salaireBrut: number;
-  tauxHoraire: number;
-  heuresSemaine: number;
-  dateDebut: string;
-  dateFin: string | null;
-  status: EmployeeStatus;
-  createdAt: string;
+  client_id: string;
+  first_name: string;
+  last_name: string;
+  gender: 'M.' | 'Mme' | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  nationality: string | null;
+  social_security_number: string | null;
+  address: string | null;
+  job_title: string | null;
+  contract_type: string;
+  salary_brut_monthly: number | null;
+  hourly_rate: number | null;
+  hours_per_week: number | null;
+  start_date: string;
+  end_date: string | null;
+  status: 'active' | 'suspended' | 'ended';
+  notes: string | null;
 }
 
-interface EmployeeForm {
-  civilite: Civility;
-  nom: string;
-  prenom: string;
-  dateNaissance: string;
-  lieuNaissance: string;
-  nationalite: string;
-  nss: string;
-  adresse: string;
-  poste: string;
-  typeContrat: ContractType;
-  salaireBrut: string;
-  tauxHoraire: string;
-  heuresSemaine: string;
-  dateDebut: string;
-  dateFin: string;
-  clientId: string;
-}
-
-interface ClientOption {
-  id: string;
-  name: string;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const CONTRACT_TYPES: { value: ContractType; label: string }[] = [
-  { value: 'CDI', label: 'CDI' },
-  { value: 'CDD', label: 'CDD' },
-  { value: 'CDD usage', label: "CDD d'usage" },
-  { value: 'Interim', label: 'Interim' },
-  { value: 'Stage', label: 'Stage' },
-  { value: 'Apprentissage', label: 'Apprentissage' },
-  { value: 'Professionnalisation', label: 'Professionnalisation' },
+const CONTRACT_TYPES = [
+  'CDI', 'CDD', 'CDD_usage', 'Interim', 'Stage', 'Apprentissage', 'Professionnalisation', 'Portage', 'Freelance',
 ];
-
-const STATUS_CONFIG: Record<EmployeeStatus, { label: string; bg: string; text: string; dot: string }> = {
-  actif:    { label: 'Actif',    bg: 'bg-emerald-100 dark:bg-emerald-900/30',  text: 'text-emerald-700 dark:text-emerald-400',  dot: 'bg-emerald-500' },
-  suspendu: { label: 'Suspendu', bg: 'bg-amber-100 dark:bg-amber-900/30',     text: 'text-amber-700 dark:text-amber-400',     dot: 'bg-amber-500' },
-  termine:  { label: 'Termine',  bg: 'bg-gray-100 dark:bg-gray-800',          text: 'text-gray-500 dark:text-gray-400',       dot: 'bg-gray-400' },
+const CONTRACT_LABEL: Record<string, string> = {
+  CDD_usage: "CDD d'usage", Apprentissage: 'Apprentissage', Professionnalisation: 'Professionnalisation',
+};
+const CONTRACT_DOT: Record<string, string> = {
+  CDI: '#3b82f6', CDD: '#8b5cf6', CDD_usage: '#ec4899', Interim: '#f97316',
+  Stage: '#14b8a6', Apprentissage: '#6366f1', Professionnalisation: '#10b981', Portage: '#f59e0b', Freelance: '#6b7280',
 };
 
-const CIVILITIES: { value: Civility; label: string }[] = [
-  { value: 'M.', label: 'Monsieur' },
-  { value: 'Mme', label: 'Madame' },
-  { value: 'Mx', label: 'Autre' },
-];
+const NATIONALITIES = ['Française', 'Belge', 'Suisse', 'Allemande', 'Italienne', 'Espagnole', 'Portugaise', 'Britannique', 'Marocaine', 'Algérienne', 'Tunisienne', 'Autre'];
 
-const NATIONALITIES = [
-  'Francaise', 'Belge', 'Suisse', 'Allemande', 'Italienne', 'Espagnole',
-  'Portugaise', 'Britannique', 'Marocaine', 'Algerienne', 'Tunisienne',
-  'Senegalaise', 'Malienne', 'Ivoirienne', 'Camerounaise', 'Autre',
-];
-
-const EMPTY_FORM: EmployeeForm = {
-  civilite: 'M.',
-  nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', nationalite: 'Francaise',
-  nss: '', adresse: '', poste: '', typeContrat: 'CDI',
-  salaireBrut: '', tauxHoraire: '', heuresSemaine: '35',
-  dateDebut: '', dateFin: '', clientId: '',
+const EMPTY = {
+  clientId: '', civilite: 'M.' as 'M.' | 'Mme', nom: '', prenom: '',
+  dateNaissance: '', lieuNaissance: '', nationalite: 'Française', nss: '', adresse: '',
+  poste: '', typeContrat: 'CDI', salaireBrut: '', tauxHoraire: '', heuresSemaine: '35',
+  dateDebut: '', dateFin: '',
 };
-
-
-// ─── Helper Components ────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: EmployeeStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold', cfg.bg, cfg.text)}>
-      <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function ContractBadge({ type }: { type: ContractType }) {
-  const colorMap: Record<ContractType, string> = {
-    'CDI': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-    'CDD': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-    'CDD usage': 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400',
-    'Interim': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
-    'Stage': 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400',
-    'Apprentissage': 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400',
-    'Professionnalisation': 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-  };
-  return (
-    <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', colorMap[type] ?? 'bg-gray-100 text-gray-600')}>
-      {type}
-    </span>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CabinetSalariesPage() {
   const sub = useSubscription();
-  const { clients: storeClients } = useCabinetStore();
+  const { clients: storeClients, cabinet } = useCabinetStore();
+  const primaryColor = cabinet?.primary_color || '#10b981';
 
-  // Data hooks — employees fetched via useCabinetData, clients from store
-  const { data: apiEmployees, loading, error, refresh: refreshEmployees } = useCabinetData<any[]>('/api/cabinet/employees');
+  const { data: employees, loading, error, refresh } = useCabinetData<Employee[]>('/api/cabinet/employees');
 
-  // Build client lookup from store
-  const clientMap = useMemo(() => {
-    const map = new Map<string, string>();
-    const cabClients = (storeClients || []) as any[];
-    for (const c of cabClients) {
-      const name = c.client_type === 'manual'
-        ? (c.company_name || 'Client')
-        : (c.profile?.company_name || c.profile?.first_name || c.profile?.email || 'Client');
-      map.set(c.id, name);
-    }
-    return map;
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY });
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Employee | null>(null);
+
+  const clientName = useCallback((id: string) => {
+    const c: any = (storeClients as any[]).find((cl) => cl.id === id);
+    if (!c) return '—';
+    return c.client_type === 'manual' ? c.company_name || 'Client' : c.profile?.company_name || c.profile?.first_name || 'Client';
   }, [storeClients]);
 
-  const clients: ClientOption[] = useMemo(() => {
-    return ((storeClients || []) as any[]).map((c: any) => ({
-      id: c.id || c.client_user_id,
-      name: clientMap.get(c.id) || 'Client',
-    }));
-  }, [storeClients, clientMap]);
+  const list = employees || [];
 
-  // Map API employees to display type
-  const employees: Employee[] = useMemo(() => {
-    return (apiEmployees || []).map((e: any) => ({
-      id: e.id,
-      clientId: e.client_id,
-      clientName: clientMap.get(e.client_id) || '',
-      civilite: e.gender === 'F' ? 'Mme' : 'M.',
-      nom: e.last_name,
-      prenom: e.first_name,
-      dateNaissance: e.birth_date || '',
-      lieuNaissance: e.birth_place || '',
-      nationalite: e.nationality || 'Francaise',
-      nss: e.nss || '',
-      adresse: e.address || '',
-      poste: e.job_title || '',
-      typeContrat: e.contract_type || 'CDI',
-      salaireBrut: e.salary_brut_monthly || 0,
-      tauxHoraire: e.hourly_rate || 0,
-      heuresSemaine: e.weekly_hours || 35,
-      dateDebut: e.start_date || '',
-      dateFin: e.end_date || null,
-      status: e.status || 'actif',
-      createdAt: e.created_at || '',
-    }));
-  }, [apiEmployees, clientMap]);
+  const kpis = useMemo(() => ({
+    total: list.length,
+    actifs: list.filter((e) => e.status === 'active').length,
+    suspendus: list.filter((e) => e.status === 'suspended').length,
+    cdi: list.filter((e) => e.contract_type === 'CDI').length,
+  }), [list]);
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterClient, setFilterClient] = useState<string>('all');
-  const [filterContract, setFilterContract] = useState<ContractType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<EmployeeStatus | 'all'>('all');
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>('info');
-  const [form, setForm] = useState<EmployeeForm>({ ...EMPTY_FORM });
-  const [saving, setSaving] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-
-  // Filtered employees
-  const filteredEmployees = useMemo(() => {
-    let result = employees;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (e) => e.nom.toLowerCase().includes(q) || e.prenom.toLowerCase().includes(q) || e.nss.includes(q) || e.poste.toLowerCase().includes(q)
-      );
-    }
-    if (filterClient !== 'all') {
-      result = result.filter((e) => e.clientId === filterClient);
-    }
-    if (filterContract !== 'all') {
-      result = result.filter((e) => e.typeContrat === filterContract);
-    }
-    if (filterStatus !== 'all') {
-      result = result.filter((e) => e.status === filterStatus);
-    }
-    return result;
-  }, [employees, searchQuery, filterClient, filterContract, filterStatus]);
-
-  // KPIs
-  const kpis = useMemo(() => {
-    const total = employees.length;
-    const actifs = employees.filter((e) => e.status === 'actif').length;
-    const suspendus = employees.filter((e) => e.status === 'suspendu').length;
-    const cdiCount = employees.filter((e) => e.typeContrat === 'CDI').length;
-    return { total, actifs, suspendus, cdiCount };
-  }, [employees]);
-
-  // Form handlers
-  const handleFormChange = (field: keyof EmployeeForm, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveEmployee = async () => {
-    if (!form.nom.trim() || !form.prenom.trim() || !form.poste.trim() || !form.dateDebut || !form.clientId) {
-      toast.error('Veuillez remplir les champs obligatoires (nom, prenom, poste, date debut, client)');
+  const handleSave = async () => {
+    if (!form.clientId || !form.nom.trim() || !form.prenom.trim() || !form.poste.trim() || !form.dateDebut) {
+      toast.error('Client, nom, prénom, poste et date de début sont requis');
       return;
     }
     setSaving(true);
@@ -255,621 +100,387 @@ export default function CabinetSalariesPage() {
         client_id: form.clientId,
         first_name: form.prenom.trim(),
         last_name: form.nom.trim(),
-        gender: form.civilite === 'Mme' ? 'F' : 'M',
+        gender: form.civilite,
         birth_date: form.dateNaissance || null,
         birth_place: form.lieuNaissance || null,
         nationality: form.nationalite || null,
-        nss: form.nss || null,
+        social_security_number: form.nss || null,
         address: form.adresse || null,
         job_title: form.poste.trim(),
         contract_type: form.typeContrat,
-        salary_brut_monthly: parseFloat(form.salaireBrut) || 0,
-        hourly_rate: parseFloat(form.tauxHoraire) || 0,
-        weekly_hours: parseInt(form.heuresSemaine) || 35,
+        salary_brut_monthly: parseFloat(form.salaireBrut) || null,
+        hourly_rate: parseFloat(form.tauxHoraire) || null,
+        hours_per_week: parseInt(form.heuresSemaine) || null,
         start_date: form.dateDebut,
         end_date: form.dateFin || null,
       });
-
-      toast.success('Salarie ajoute avec succes');
-      setShowAddModal(false);
-      setForm({ ...EMPTY_FORM });
       clearCabinetCache('/api/cabinet/employees');
-      refreshEmployees();
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de l\'ajout');
+      toast.success('Salarié ajouté');
+      setShowAdd(false);
+      setForm({ ...EMPTY });
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'ajout");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (!confirm('Supprimer ce salarie ?')) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer ce salarié ?')) return;
+    setDeletingId(id);
     try {
       await cabinetMutation(`/api/cabinet/employees?id=${id}`, 'DELETE');
       clearCabinetCache('/api/cabinet/employees');
-      refreshEmployees();
-      toast.success('Salarie supprime');
-      if (selectedEmployee?.id === id) {
-        setShowDetailModal(false);
-        setSelectedEmployee(null);
-      }
-    } catch {
-      toast.error('Erreur lors de la suppression');
+      toast.success('Salarié supprimé');
+      if (detail?.id === id) setDetail(null);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur');
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const openDetail = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setActiveTab('info');
-    setShowDetailModal(true);
+  const handleExport = () => {
+    if (!list.length) return;
+    downloadXLSX(`cabinet-salaries-${new Date().toISOString().slice(0, 10)}.xlsx`, [
+      {
+        name: 'Salariés',
+        headers: ['Civilité', 'Nom', 'Prénom', 'NSS', 'Poste', 'Contrat', 'Salaire brut', 'Statut', 'Client', 'Début', 'Fin'],
+        rows: list.map((e) => [e.gender || '', e.last_name, e.first_name, e.social_security_number || '', e.job_title || '', e.contract_type, e.salary_brut_monthly || 0, e.status, clientName(e.client_id), e.start_date, e.end_date || '']),
+      },
+    ]);
+    toast.success('Export Excel téléchargé');
   };
 
-  // ─── Paywall ──────────────────────────────────────────────────────────────
   if (!sub.isBusiness && !sub.isTrialActive) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-violet-500/20">
-            <Users size={40} className="text-violet-500" />
+        <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: '#8b5cf61a' }}>
+          <Users size={40} className="text-violet-500" />
+        </div>
+        <h1 className="text-3xl font-black text-gray-900 mb-3">Dossiers salariés</h1>
+        <p className="text-gray-500 mb-8">Gérez les fiches salariés, contrats et documents sociaux de vos clients.</p>
+        <Link href="/paywall?plan=business" className="px-8 py-4 rounded-2xl text-white font-bold shadow-lg" style={{ backgroundColor: '#8b5cf6' }}>
+          Passer au plan Business
+        </Link>
+      </div>
+    );
+  }
+
+  const fullName = (e: Employee) => `${e.first_name} ${e.last_name}`;
+
+  const columns: Column<Employee>[] = [
+    {
+      key: 'name',
+      header: 'Nom',
+      sortValue: (e) => fullName(e),
+      sortable: true,
+      render: (e) => (
+        <button onClick={() => setDetail(e)} className="flex items-center gap-3 text-left min-w-0 group">
+          <Avatar name={fullName(e)} size="sm" />
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 text-sm truncate">
+              {e.gender ? `${e.gender} ` : ''}{fullName(e)}
+            </p>
+            <p className="text-xs text-gray-500 truncate">{e.job_title || '—'}</p>
           </div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Gestion des Salaries</h1>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            Gerez les fiches salariess de vos clients, contrats de travail et documents sociaux.
-            Disponible avec le plan Business.
-          </p>
-          <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/35 transition-all">
-            <Crown size={18} />
-            Passer au plan Business
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ─── Loading ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
-    );
-  }
-
-  // ─── Error ────────────────────────────────────────────────────────────────
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <AlertCircle size={36} className="text-red-400 mb-3" />
-        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
-        <p className="text-sm text-gray-400 mb-4">{error}</p>
-        <button onClick={refreshEmployees} className="px-5 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm">
-          Reessayer
         </button>
-      </div>
-    );
-  }
-
-  // ─── Render ───────────────────────────────────────────────────────────────
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-
-      {/* ─── Header ────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/cabinet" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0">
-            <ArrowLeft size={18} className="text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Salaries</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{employees.length} salaries · {clients.length} clients</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (filteredEmployees.length === 0) return;
-              downloadXLSX(
-                `cabinet-salaries-${new Date().toISOString().slice(0, 10)}.xlsx`,
-                [{
-                  name: 'Salaries',
-                  headers: ['Civilite', 'Nom', 'Prenom', 'NSS', 'Poste', 'Contrat', 'Salaire brut', 'Statut', 'Client', 'Date debut', 'Date fin'],
-                  rows: filteredEmployees.map((e) => [
-                    e.civilite, e.nom, e.prenom, e.nss, e.poste, e.typeContrat,
-                    e.salaireBrut, e.status, e.clientName, e.dateDebut, e.dateFin || '',
-                  ]),
-                }]
-              );
-              toast.success('Export Excel telecharge');
-            }}
-            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            title="Exporter Excel"
-          >
-            <Download size={16} />
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-          >
-            <Upload size={14} />
-            <span className="hidden sm:inline">Importer</span>
-          </button>
-          <button
-            onClick={() => { setForm({ ...EMPTY_FORM }); setShowAddModal(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all"
-          >
-            <Plus size={15} />
-            <span className="hidden sm:inline">Ajouter</span>
-          </button>
-          <button
-            onClick={() => refreshEmployees()}
-            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            title="Actualiser"
-          >
-            <RefreshCw size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* ─── KPIs ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Total salaries', value: String(kpis.total), icon: Users, color: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400' },
-          { label: 'Actifs', value: String(kpis.actifs), icon: CheckCircle2, color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
-          { label: 'Suspendus', value: String(kpis.suspendus), icon: Clock, color: 'from-amber-500 to-orange-500', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400' },
-          { label: 'CDI', value: String(kpis.cdiCount), icon: Briefcase, color: 'from-purple-500 to-violet-600', bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400' },
-        ].map(({ label, value, icon: Icon, color, bg, text }) => (
-          <div key={label} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
-            <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', color)}>
-              <Icon size={16} className="text-white" />
-            </div>
-            <p className={cn('text-xl font-black', text)}>{value}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ─── Search & Filters ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher par nom, prenom, NSS, poste..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
-          />
-        </div>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={cn(
-            'flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors flex-shrink-0',
-            showFilters
-              ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
-          )}
-        >
-          <Filter size={14} />
-          Filtres
-        </button>
-      </div>
-
-      {/* ─── Advanced Filters ──────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Client</label>
-                  <select value={filterClient} onChange={(e) => setFilterClient(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                    <option value="all">Tous les clients</option>
-                    {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Type de contrat</label>
-                  <select value={filterContract} onChange={(e) => setFilterContract(e.target.value as ContractType | 'all')} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                    <option value="all">Tous les types</option>
-                    {CONTRACT_TYPES.map((ct) => (<option key={ct.value} value={ct.value}>{ct.label}</option>))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Statut</label>
-                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as EmployeeStatus | 'all')} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                    <option value="all">Tous les statuts</option>
-                    <option value="actif">Actif</option>
-                    <option value="suspendu">Suspendu</option>
-                    <option value="termine">Termine</option>
-                  </select>
-                </div>
-              </div>
-              {(filterClient !== 'all' || filterContract !== 'all' || filterStatus !== 'all') && (
-                <button onClick={() => { setFilterClient('all'); setFilterContract('all'); setFilterStatus('all'); }} className="mt-3 flex items-center gap-1 text-xs text-red-500 hover:text-red-600 font-medium">
-                  <X size={12} />
-                  Reinitialiser les filtres
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ─── Employee Table ────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-          <Users size={16} className="text-emerald-500" />
-          <h3 className="font-bold text-gray-900 dark:text-white text-sm flex-1">
-            Liste des salaries ({filteredEmployees.length})
-          </h3>
-        </div>
-
-        {filteredEmployees.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <Users size={28} className="text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun salarie trouve</p>
-            <p className="text-sm text-gray-400 mb-5">Modifiez vos filtres ou ajoutez un salarie.</p>
-            <button onClick={() => { setForm({ ...EMPTY_FORM }); setShowAddModal(true); }} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm">
-              <Plus size={15} />
-              Ajouter un salarie
-            </button>
-          </div>
+      ),
+    },
+    {
+      key: 'nss',
+      header: 'NSS',
+      hideOnMobile: true,
+      render: (e) =>
+        e.social_security_number ? (
+          <span className="text-xs font-mono text-gray-500">{e.social_security_number}</span>
         ) : (
-          <>
-            <div className="hidden lg:grid grid-cols-[2.5fr_1fr_1fr_1fr_1.2fr_1fr_1fr_0.8fr] gap-2 px-5 py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-100 dark:border-white/5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              <span>Nom / Prenom</span>
-              <span className="text-center">NSS</span>
-              <span className="text-center">Poste</span>
-              <span className="text-center">Contrat</span>
-              <span className="text-right">Salaire brut</span>
-              <span className="text-center">Statut</span>
-              <span>Client</span>
-              <span />
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-              <AnimatePresence>
-                {filteredEmployees.map((emp, i) => (
-                  <motion.div key={emp.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}>
-                    <div className="hidden lg:grid grid-cols-[2.5fr_1fr_1fr_1fr_1.2fr_1fr_1fr_0.8fr] gap-2 px-5 py-3.5 items-center hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer text-sm" onClick={() => openDetail(emp)}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0', emp.status === 'actif' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : emp.status === 'suspendu' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500')}>
-                          {emp.prenom.charAt(0)}{emp.nom.charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white truncate">{emp.civilite} {emp.prenom} {emp.nom}</p>
-                        </div>
-                      </div>
-                      <span className="text-center text-xs text-gray-400 font-mono truncate">{emp.nss}</span>
-                      <span className="text-center text-gray-600 dark:text-gray-400 truncate">{emp.poste}</span>
-                      <div className="flex justify-center"><ContractBadge type={emp.typeContrat} /></div>
-                      <span className="text-right font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(emp.salaireBrut)}</span>
-                      <div className="flex justify-center"><StatusBadge status={emp.status} /></div>
-                      <span className="text-xs text-gray-400 truncate">{emp.clientName}</span>
-                      <div className="flex justify-end">
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(emp.id); }} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 transition-colors" title="Supprimer">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="lg:hidden px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => openDetail(emp)}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0', emp.status === 'actif' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : emp.status === 'suspendu' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500')}>
-                            {emp.prenom.charAt(0)}{emp.nom.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{emp.civilite} {emp.prenom} {emp.nom}</p>
-                            <p className="text-xs text-gray-400 truncate">{emp.poste} · {emp.clientName}</p>
-                          </div>
-                        </div>
-                        <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                      </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        <ContractBadge type={emp.typeContrat} />
-                        <StatusBadge status={emp.status} />
-                        <span className="text-xs font-semibold text-gray-500 ml-auto">{formatCurrency(emp.salaireBrut)}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </>
-        )}
+          <span className="text-gray-300">—</span>
+        ),
+    },
+    {
+      key: 'contract',
+      header: 'Contrat',
+      align: 'center',
+      render: (e) => {
+        const dot = CONTRACT_DOT[e.contract_type] || '#9ca3af';
+        return <StatusBadge dot={dot} size="sm">{CONTRACT_LABEL[e.contract_type] || e.contract_type}</StatusBadge>;
+      },
+    },
+    {
+      key: 'salary',
+      header: 'Brut/mois',
+      align: 'right',
+      sortValue: (e) => e.salary_brut_monthly || 0,
+      sortable: true,
+      hideOnMobile: true,
+      render: (e) => <span className="text-sm font-semibold text-gray-700">{e.salary_brut_monthly ? formatCurrency(e.salary_brut_monthly) : '—'}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Statut',
+      render: (e) => {
+        const tone = e.status === 'active' ? 'good' : e.status === 'suspended' ? 'warning' : 'neutral';
+        const label = e.status === 'active' ? 'Actif' : e.status === 'suspended' ? 'Suspendu' : 'Terminé';
+        return <StatusBadge tone={tone}>{label}</StatusBadge>;
+      },
+    },
+    {
+      key: 'client',
+      header: 'Client',
+      hideOnMobile: true,
+      render: (e) => <span className="text-xs text-gray-500 truncate">{clientName(e.client_id)}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (e) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <button onClick={() => setDetail(e)} className="p-1.5 rounded-lg text-gray-300 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <ChevronRight size={16} />
+          </button>
+          <button onClick={() => handleDelete(e.id)} disabled={deletingId === e.id} className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40">
+            {deletingId === e.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      {/* KPI */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard label="Total salariés" value={String(kpis.total)} icon={Users} accent="#10b981" />
+        <KpiCard label="Actifs" value={String(kpis.actifs)} icon={CheckCircle2} accent="#22c55e" />
+        <KpiCard label="Suspendus" value={String(kpis.suspendus)} icon={Clock} accent={kpis.suspendus > 0 ? '#f59e0b' : '#6b7280'} />
+        <KpiCard label="En CDI" value={String(kpis.cdi)} icon={Briefcase} accent="#3b82f6" />
       </div>
 
-      {/* ─── Add Employee Modal ────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="relative w-full bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col max-w-2xl">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                    <UserPlus size={18} className="text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Ajouter un salarie</h2>
-                    <p className="text-xs text-gray-400">Remplissez les informations du salarie</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowAddModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400"><X size={18} /></button>
-              </div>
-              <div className="overflow-y-auto flex-1 p-5 space-y-5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Client <span className="text-red-500">*</span></label>
-                  <select value={form.clientId} onChange={(e) => handleFormChange('clientId', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                    <option value="">Selectionner un client</option>
-                    {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-6 gap-3">
-                  <div className="col-span-1">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Civilite</label>
-                    <select value={form.civilite} onChange={(e) => handleFormChange('civilite', e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                      {CIVILITIES.map((c) => (<option key={c.value} value={c.value}>{c.value}</option>))}
-                    </select>
-                  </div>
-                  <div className="col-span-2.5">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Nom <span className="text-red-500">*</span></label>
-                    <input type="text" value={form.nom} onChange={(e) => handleFormChange('nom', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="Dupont" />
-                  </div>
-                  <div className="col-span-2.5">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Prenom <span className="text-red-500">*</span></label>
-                    <input type="text" value={form.prenom} onChange={(e) => handleFormChange('prenom', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="Jean" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Date naissance</label>
-                    <input type="date" value={form.dateNaissance} onChange={(e) => handleFormChange('dateNaissance', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Lieu naissance</label>
-                    <input type="text" value={form.lieuNaissance} onChange={(e) => handleFormChange('lieuNaissance', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="Paris" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Nationalite</label>
-                    <select value={form.nationalite} onChange={(e) => handleFormChange('nationalite', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                      {NATIONALITIES.map((n) => (<option key={n} value={n}>{n}</option>))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">NSS</label>
-                    <input type="text" value={form.nss} onChange={(e) => handleFormChange('nss', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm font-mono outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="1 84 05 75 103 042 67" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Adresse</label>
-                    <input type="text" value={form.adresse} onChange={(e) => handleFormChange('adresse', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="12 Rue de la Republique, 75001 Paris" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Poste <span className="text-red-500">*</span></label>
-                    <input type="text" value={form.poste} onChange={(e) => handleFormChange('poste', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="Developpeur" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Type contrat</label>
-                    <select value={form.typeContrat} onChange={(e) => handleFormChange('typeContrat', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                      {CONTRACT_TYPES.map((ct) => (<option key={ct.value} value={ct.value}>{ct.label}</option>))}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Salaire brut mensuel</label>
-                    <div className="relative">
-                      <input type="number" value={form.salaireBrut} onChange={(e) => handleFormChange('salaireBrut', e.target.value)} className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="2500" />
-                      <Euro size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Taux horaire</label>
-                    <div className="relative">
-                      <input type="number" value={form.tauxHoraire} onChange={(e) => handleFormChange('tauxHoraire', e.target.value)} className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="16.50" />
-                      <Euro size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Heures / semaine</label>
-                    <input type="number" value={form.heuresSemaine} onChange={(e) => handleFormChange('heuresSemaine', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="35" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Date debut <span className="text-red-500">*</span></label>
-                    <input type="date" value={form.dateDebut} onChange={(e) => handleFormChange('dateDebut', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Date fin (si CDD)</label>
-                    <input type="date" value={form.dateFin} onChange={(e) => handleFormChange('dateFin', e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-slate-800 flex-shrink-0">
-                <button onClick={() => setShowAddModal(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Annuler</button>
-                <button onClick={handleSaveEmployee} disabled={saving} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md shadow-emerald-500/20 hover:shadow-lg disabled:opacity-60 transition-all flex items-center gap-2">
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Enregistrer
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+      <SectionCard
+        title={`Salariés (${list.length})`}
+        icon={Users}
+        accent={primaryColor}
+        noPadding
+        action={
+          <>
+            <button onClick={handleExport} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors" title="Exporter Excel">
+              <FileText size={16} />
+            </button>
+            <button onClick={() => { setForm({ ...EMPTY }); setShowAdd(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold" style={{ backgroundColor: primaryColor }}>
+              <Plus size={14} /><span className="hidden sm:inline">Ajouter</span>
+            </button>
+          </>
+        }
+      >
+        {loading ? (
+          <TableSkeleton cols={6} />
+        ) : error ? (
+          <EmptyState icon={AlertCircle} title="Erreur de chargement" description={error} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={list}
+            getRowId={(e) => e.id}
+            searchable
+            searchPlaceholder="Rechercher par nom, prénom, NSS, poste…"
+            searchText={(e) => `${e.first_name} ${e.last_name} ${e.social_security_number || ''} ${e.job_title || ''}`}
+            emptyIcon={Users}
+            emptyTitle="Aucun salarié"
+            emptyDescription="Ajoutez les fiches salariés de vos clients pour suivre la paie et les contrats."
+            initialSort={{ key: 'name', dir: 'asc' }}
+          />
         )}
-      </AnimatePresence>
+      </SectionCard>
 
-      {/* ─── Employee Detail Modal ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showDetailModal && selectedEmployee && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDetailModal(false)} />
-            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="relative w-full bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col max-w-2xl">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center text-sm font-black', selectedEmployee.status === 'actif' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : selectedEmployee.status === 'suspendu' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500')}>
-                    {selectedEmployee.prenom.charAt(0)}{selectedEmployee.nom.charAt(0)}
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedEmployee.civilite} {selectedEmployee.prenom} {selectedEmployee.nom}</h2>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-400">{selectedEmployee.poste}</span>
-                      <span className="text-gray-300 dark:text-gray-600">·</span>
-                      <ContractBadge type={selectedEmployee.typeContrat} />
-                      <StatusBadge status={selectedEmployee.status} />
-                    </div>
-                  </div>
-                </div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400"><X size={18} /></button>
-              </div>
-              <div className="flex border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-slate-800/50 flex-shrink-0">
-                {([{ key: 'info' as TabKey, label: 'Informations', icon: Info }, { key: 'documents' as TabKey, label: 'Documents', icon: FileText }, { key: 'historique' as TabKey, label: 'Historique', icon: Clock }]).map((tab) => (
-                  <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={cn('flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors border-b-2 -mb-px', activeTab === tab.key ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-900/50' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300')}>
-                    <tab.icon size={14} />
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              <div className="overflow-y-auto flex-1 p-5">
-                <AnimatePresence mode="wait">
-                  {activeTab === 'info' && (
-                    <motion.div key="info" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-                      <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40">
-                        <Building2 size={16} className="text-emerald-500" />
-                        <div>
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Client</p>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedEmployee.clientName}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Etat civil</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { label: 'Date de naissance', value: selectedEmployee.dateNaissance ? formatDate(selectedEmployee.dateNaissance) : '-', icon: Calendar },
-                            { label: 'Lieu de naissance', value: selectedEmployee.lieuNaissance || '-', icon: MapPin },
-                            { label: 'Nationalite', value: selectedEmployee.nationalite || '-', icon: BadgeCheck },
-                            { label: 'NSS', value: selectedEmployee.nss || '-', icon: Hash },
-                          ].map(({ label, value, icon: Icon }) => (
-                            <div key={label} className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02]">
-                              <Icon size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p><p className="text-sm text-gray-900 dark:text-white font-medium">{value}</p></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      {selectedEmployee.adresse && (
-                        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02]">
-                          <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Adresse</p><p className="text-sm text-gray-900 dark:text-white font-medium">{selectedEmployee.adresse}</p></div>
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Contrat</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { label: 'Poste', value: selectedEmployee.poste, icon: Briefcase },
-                            { label: 'Type de contrat', value: selectedEmployee.typeContrat, icon: FileText },
-                            { label: 'Salaire brut mensuel', value: formatCurrency(selectedEmployee.salaireBrut), icon: Euro },
-                            { label: 'Taux horaire', value: `${selectedEmployee.tauxHoraire} EUR/h`, icon: Euro },
-                            { label: 'Heures / semaine', value: `${selectedEmployee.heuresSemaine}h`, icon: Clock },
-                            { label: 'Date de debut', value: formatDate(selectedEmployee.dateDebut), icon: Calendar },
-                          ].map(({ label, value, icon: Icon }) => (
-                            <div key={label} className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02]">
-                              <Icon size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                              <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p><p className="text-sm text-gray-900 dark:text-white font-medium">{value}</p></div>
-                            </div>
-                          ))}
-                        </div>
-                        {selectedEmployee.dateFin && (
-                          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 mt-3">
-                            <Calendar size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                            <div><p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Date de fin</p><p className="text-sm text-gray-900 dark:text-white font-medium">{formatDate(selectedEmployee.dateFin)}</p></div>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                  {activeTab === 'documents' && (
-                    <motion.div key="documents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                      {[
-                        { name: 'Contrat de travail', type: 'PDF', date: selectedEmployee.dateDebut, status: 'signe' },
-                        { name: 'Bulletin de salaire - Avril 2026', type: 'PDF', date: '2026-04-30', status: 'emis' },
-                        { name: 'Bulletin de salaire - Mars 2026', type: 'PDF', date: '2026-03-31', status: 'emis' },
-                        { name: 'Avenant temps partiel', type: 'PDF', date: '2026-02-15', status: 'brouillon' },
-                      ].map((doc, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors cursor-pointer">
-                          <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0"><FileText size={16} className="text-red-500" /></div>
-                          <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{doc.name}</p><p className="text-xs text-gray-400">{doc.type} · {formatDate(doc.date)}</p></div>
-                          <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0', doc.status === 'signe' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : doc.status === 'emis' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500')}>{doc.status === 'signe' ? 'Signe' : doc.status === 'emis' ? 'Emis' : 'Brouillon'}</span>
-                        </div>
-                      ))}
-                      <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-gray-400 hover:text-emerald-500 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"><Plus size={14} />Ajouter un document</button>
-                    </motion.div>
-                  )}
-                  {activeTab === 'historique' && (
-                    <motion.div key="historique" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-                      {[
-                        { event: 'BS avril 2026 emis', date: '2026-04-30', icon: FileText, color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
-                        { event: 'BS mars 2026 emis', date: '2026-03-31', icon: FileText, color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30' },
-                        { event: 'Contrat signe', date: selectedEmployee.dateDebut, icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30' },
-                        { event: 'DSN mensuelle envoyee', date: '2026-04-15', icon: Shield, color: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30' },
-                        { event: 'Entretien annuel', date: '2026-01-20', icon: Users, color: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02]">
-                          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', item.color)}><item.icon size={14} /></div>
-                          <div className="flex-1"><p className="text-sm font-semibold text-gray-900 dark:text-white">{item.event}</p><p className="text-xs text-gray-400 mt-0.5">{formatDate(item.date)}</p></div>
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 dark:border-slate-800 flex-shrink-0">
-                <button onClick={() => handleDeleteEmployee(selectedEmployee.id)} className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 font-medium"><Trash2 size={14} />Supprimer</button>
-                <button onClick={() => setShowDetailModal(false)} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md shadow-emerald-500/20">Fermer</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modale ajout */}
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Ajouter un salarié"
+        icon={UserPlus}
+        accent={primaryColor}
+        size="lg"
+        footer={
+          <>
+            <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Annuler</button>
+            <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2" style={{ backgroundColor: primaryColor }}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Enregistrer
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <Lbl>Client *</Lbl>
+            <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })} className={inputCls}>
+              <option value="">Sélectionner un client…</option>
+              {(storeClients as any[]).map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.client_type === 'manual' ? c.company_name : c.profile?.company_name || c.profile?.first_name || 'Client'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-6 gap-3">
+            <div className="col-span-1">
+              <Lbl>Civ.</Lbl>
+              <select value={form.civilite} onChange={(e) => setForm({ ...form, civilite: e.target.value as any })} className={inputCls}>
+                <option value="M.">M.</option>
+                <option value="Mme">Mme</option>
+              </select>
+            </div>
+            <div className="col-span-5 sm:col-span-2">
+              <Lbl>Nom *</Lbl>
+              <input value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} className={inputCls} placeholder="Dupont" />
+            </div>
+            <div className="col-span-6 sm:col-span-3">
+              <Lbl>Prénom *</Lbl>
+              <input value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} className={inputCls} placeholder="Jean" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <Lbl>Naissance</Lbl>
+              <input type="date" value={form.dateNaissance} onChange={(e) => setForm({ ...form, dateNaissance: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <Lbl>Lieu</Lbl>
+              <input value={form.lieuNaissance} onChange={(e) => setForm({ ...form, lieuNaissance: e.target.value })} className={inputCls} placeholder="Paris" />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Lbl>Nationalité</Lbl>
+              <select value={form.nationalite} onChange={(e) => setForm({ ...form, nationalite: e.target.value })} className={inputCls}>
+                {NATIONALITIES.map((n) => <option key={n}>{n}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-1">
+              <Lbl>NSS</Lbl>
+              <input value={form.nss} onChange={(e) => setForm({ ...form, nss: e.target.value })} className={cn(inputCls, 'font-mono')} placeholder="1 84 05…" />
+            </div>
+            <div className="col-span-2">
+              <Lbl>Adresse</Lbl>
+              <input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} className={inputCls} placeholder="12 Rue de la République, 75001 Paris" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Lbl>Poste *</Lbl>
+              <input value={form.poste} onChange={(e) => setForm({ ...form, poste: e.target.value })} className={inputCls} placeholder="Maçon" />
+            </div>
+            <div>
+              <Lbl>Type de contrat</Lbl>
+              <select value={form.typeContrat} onChange={(e) => setForm({ ...form, typeContrat: e.target.value })} className={inputCls}>
+                {CONTRACT_TYPES.map((c) => <option key={c} value={c}>{CONTRACT_LABEL[c] || c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Lbl>Brut mensuel (€)</Lbl>
+              <input type="number" value={form.salaireBrut} onChange={(e) => setForm({ ...form, salaireBrut: e.target.value })} className={inputCls} placeholder="2500" />
+            </div>
+            <div>
+              <Lbl>Taux horaire (€)</Lbl>
+              <input type="number" value={form.tauxHoraire} onChange={(e) => setForm({ ...form, tauxHoraire: e.target.value })} className={inputCls} placeholder="16.50" />
+            </div>
+            <div>
+              <Lbl>Heures/sem.</Lbl>
+              <input type="number" value={form.heuresSemaine} onChange={(e) => setForm({ ...form, heuresSemaine: e.target.value })} className={inputCls} placeholder="35" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Lbl>Début *</Lbl>
+              <input type="date" value={form.dateDebut} onChange={(e) => setForm({ ...form, dateDebut: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <Lbl>Fin (si CDD)</Lbl>
+              <input type="date" value={form.dateFin} onChange={(e) => setForm({ ...form, dateFin: e.target.value })} className={inputCls} />
+            </div>
+          </div>
+        </div>
+      </Modal>
 
-      {/* ─── Import Modal ──────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showImportModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
-            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="relative w-full bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[70vh] flex flex-col max-w-md">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Importer des salaries</h2>
-                <button onClick={() => setShowImportModal(false)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400"><X size={18} /></button>
+      {/* Modale détail */}
+      <Modal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail ? fullName(detail) : ''}
+        icon={Users}
+        accent={primaryColor}
+        footer={
+          detail && (
+            <button onClick={() => handleDelete(detail.id)} className="px-4 py-2 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2 mr-auto">
+              <Trash2 size={14} /> Supprimer
+            </button>
+          )
+        }
+      >
+        {detail && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200">
+              <Building2 size={16} className="text-gray-400" />
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Client</p>
+                <p className="text-sm font-bold text-gray-900">{clientName(detail.client_id)}</p>
               </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Client source</label>
-                  <select className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20">
-                    <option value="">Selectionner un client</option>
-                    {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                  </select>
-                </div>
-                <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center">
-                  <Upload size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Glissez un fichier CSV ici</p>
-                  <p className="text-xs text-gray-400">ou cliquez pour selectionner</p>
-                </div>
-                <p className="text-xs text-gray-400">Format attendu : CSV avec colonnes Nom, Prenom, NSS, Poste, Type contrat, Salaire brut, Date debut.</p>
+            </div>
+            <InfoBlock title="État civil">
+              <Info icon={Calendar} label="Naissance" value={detail.birth_date ? formatDate(detail.birth_date) : '—'} />
+              <Info icon={MapPin} label="Lieu" value={detail.birth_place || '—'} />
+              <Info icon={BadgeCheck} label="Nationalité" value={detail.nationality || '—'} />
+              <Info icon={Hash} label="NSS" value={detail.social_security_number || '—'} mono />
+            </InfoBlock>
+            {detail.address && (
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50">
+                <MapPin size={14} className="text-gray-400 mt-0.5" />
+                <p className="text-sm text-gray-700">{detail.address}</p>
               </div>
-              <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-slate-800">
-                <button onClick={() => setShowImportModal(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-semibold">Annuler</button>
-                <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md shadow-emerald-500/20">Importer</button>
-              </div>
-            </motion.div>
-          </motion.div>
+            )}
+            <InfoBlock title="Contrat">
+              <Info icon={Briefcase} label="Poste" value={detail.job_title || '—'} />
+              <Info icon={FileText} label="Contrat" value={CONTRACT_LABEL[detail.contract_type] || detail.contract_type} />
+              <Info icon={Euro} label="Brut/mois" value={detail.salary_brut_monthly ? formatCurrency(detail.salary_brut_monthly) : '—'} />
+              <Info icon={Clock} label="Heures/sem." value={detail.hours_per_week ? `${detail.hours_per_week} h` : '—'} />
+              <Info icon={Calendar} label="Début" value={formatDate(detail.start_date)} />
+              <Info icon={Calendar} label="Fin" value={detail.end_date ? formatDate(detail.end_date) : '—'} />
+            </InfoBlock>
+          </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </motion.div>
+  );
+}
+
+const inputCls = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40';
+
+function Lbl({ children }: { children: React.ReactNode }) {
+  return <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">{children}</label>;
+}
+
+function InfoBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">{title}</h4>
+      <div className="grid grid-cols-2 gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Info({ icon: Icon, label, value, mono }: { icon: any; label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-gray-50">
+      <Icon size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className={cn('text-sm text-gray-900 font-medium truncate', mono && 'font-mono')}>{value}</p>
+      </div>
+    </div>
   );
 }

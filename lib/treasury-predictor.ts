@@ -35,7 +35,7 @@ export interface TreasuryPrediction {
 // ---------------------------------------------------------------------------
 
 interface OutstandingInvoice {
-  total_ttc: number;
+  total: number;
   due_date: string;
   status: string;
 }
@@ -68,8 +68,8 @@ export function predictTreasury(params: {
     ? Math.round(historicalPaymentDelays.reduce((s, d) => s + d, 0) / historicalPaymentDelays.length)
     : 15;
 
-  const totalOutstanding = outstandingInvoices.reduce((s, inv) => s + (inv.total_ttc || 0), 0);
-  const totalOverdue = overdueInvoices.reduce((s, inv) => s + (inv.total_ttc || 0), 0);
+  const totalOutstanding = outstandingInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
+  const totalOverdue = overdueInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
 
   // Build daily projections
   function buildProjection(days: number): TreasuryDataPoint[] {
@@ -93,7 +93,7 @@ export function predictTreasury(params: {
 
       for (const inv of outstandingInvoices) {
         if (inv.due_date?.slice(0, 10) === adjustedDateStr) {
-          inflow += inv.total_ttc || 0;
+          inflow += inv.total || 0;
         }
       }
 

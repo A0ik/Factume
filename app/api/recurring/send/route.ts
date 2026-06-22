@@ -159,16 +159,17 @@ export async function POST(request: NextRequest) {
             user_id: recurring.user_id,
             client_id: recurring.client_id,
             client_name_override: recurring.client_name_override,
-            invoice_number: invoiceNumber,
+            number: invoiceNumber,
             issue_date: new Date().toISOString().split('T')[0],
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 jours
             status: 'sent',
-            subtotal_ht: totalHT,
+            subtotal: totalHT,
             discount_amount: 0,
             vat_amount: totalVAT,
-            total_ttc: totalTTC,
+            total: totalTTC,
             notes: `Facture générée automatiquement depuis le modèle récurrent ID: ${recurring.id}`,
-            recurring_id: recurring.id,
+            // HEPHAISTOS — `recurring_id` n'existe pas sur la table invoices ; le lien
+            // modèle→facture se retraçait via ce champ fantôme (insert en échec 400).
             items: recurring.items,
           })
           .select()

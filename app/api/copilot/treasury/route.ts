@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     // Current balance = total paid - total expenses
     const { data: paidInvoices } = await supabase
       .from('invoices')
-      .select('total_ttc')
+      .select('total')
       .eq('user_id', user.id)
       .eq('status', 'paid');
 
@@ -38,21 +38,21 @@ export async function GET(req: NextRequest) {
       .select('amount')
       .eq('user_id', user.id);
 
-    const totalIncome = (paidInvoices || []).reduce((s, inv) => s + (inv.total_ttc || 0), 0);
+    const totalIncome = (paidInvoices || []).reduce((s, inv) => s + (inv.total || 0), 0);
     const totalExpenses = (expenses || []).reduce((s, exp) => s + (exp.amount || 0), 0);
     const currentBalance = totalIncome - totalExpenses;
 
     // Outstanding invoices (sent but not paid)
     const { data: outstandingInvoices } = await supabase
       .from('invoices')
-      .select('total_ttc, due_date, status')
+      .select('total, due_date, status')
       .eq('user_id', user.id)
       .in('status', ['sent', 'overdue']);
 
     // Overdue invoices
     const { data: overdueInvoices } = await supabase
       .from('invoices')
-      .select('total_ttc, due_date, status')
+      .select('total, due_date, status')
       .eq('user_id', user.id)
       .eq('status', 'overdue');
 
@@ -76,22 +76,52 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Recurring expenses
+    // HEPHAISTOS (CIBLE 3) — Décaissements : ALGORITHME HYBRIDE.
+    //  (a) Dépenses récurrentes flaggées (is_recurring=true) projetées selon recurring_frequency.
+    //  (b) Run-rate : moyenne mensuelle des dépenses NON récurrentes sur 90 jours, en complément.
+    //      → toujours un chiffre réel même si rien n'est flaggé ; pas de double-comptage.
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().slice(0, 10);
+
     const { data: recurringExps } = await supabase
       .from('expenses')
-      .select('amount')
+      .select('amount, recurring_frequency')
       .eq('user_id', user.id)
       .eq('is_recurring', true);
 
-    const avgRecurringMonthly = (recurringExps || []).reduce((s, e) => s + (e.amount || 0), 0);
+    const { data: recentExpenses } = await supabase
+      .from('expenses')
+      .select('amount, is_recurring')
+      .eq('user_id', user.id)
+      .gte('date', ninetyDaysAgoStr);
+
+    const normalizeFrequency = (raw: string | null): 'monthly' | 'weekly' | 'yearly' => {
+      const f = (raw || '').toLowerCase();
+      if (f.includes('week') || f.includes('heb')) return 'weekly';
+      if (f.includes('year') || f.includes('ann')) return 'yearly';
+      return 'monthly'; // défaut prudent : mensuel
+    };
+
+    const recurringExpenses = (recurringExps || []).map((e: any) => ({
+      amount: e.amount || 0,
+      frequency: normalizeFrequency(e.recurring_frequency),
+    }));
+
+    // Run-rate mensuel = (somme des dépenses non récurrentes sur 90 j) / 3 mois
+    const runRateMonthly = (recentExpenses || [])
+      .filter((e: any) => !e.is_recurring)
+      .reduce((s, e: any) => s + (e.amount || 0), 0) / 3;
+
+    if (runRateMonthly > 0) {
+      recurringExpenses.push({ amount: runRateMonthly, frequency: 'monthly' });
+    }
 
     const prediction = predictTreasury({
       currentBalance,
       outstandingInvoices: (outstandingInvoices || []) as any[],
       overdueInvoices: (overdueInvoices || []) as any[],
-      recurringExpenses: avgRecurringMonthly > 0
-        ? [{ amount: avgRecurringMonthly, frequency: 'monthly' as const }]
-        : [],
+      recurringExpenses,
       historicalPaymentDelays: paymentDelays,
     });
 

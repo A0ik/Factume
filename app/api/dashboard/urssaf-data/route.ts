@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     // Sum of paid invoices (status = 'paid') within the date range
     const { data: invoices, error } = await supabase
       .from('invoices')
-      .select('total_ttc, paid_at, status')
+      .select('total, paid_at, status')
       .eq('user_id', user.id)
       .eq('status', 'paid')
       .gte('paid_at', startDate)
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     }
 
     const totalRevenue = (invoices || []).reduce((sum, inv) => {
-      const amount = typeof inv.total_ttc === 'number' ? inv.total_ttc : 0;
+      const amount = typeof inv.total === 'number' ? inv.total : 0;
       return sum + amount;
     }, 0);
 

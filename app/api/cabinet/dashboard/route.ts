@@ -60,6 +60,31 @@ function getFrenchFiscalDeadlines(now: Date): UpcomingDeadline[] {
   return deadlines.sort((a, b) => a.daysUntil - b.daysUntil);
 }
 
+// Agrège les factures des clients sur les 6 derniers mois (graphique dashboard).
+function computeMonthlyBilling(invoices: any[], now: Date) {
+  const months: { key: string; label: string; total: number; count: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+      total: 0,
+      count: 0,
+    });
+  }
+  const idx = new Map(months.map((m, i) => [m.key, i]));
+  for (const inv of invoices) {
+    const d = new Date(inv.issue_date || inv.created_at);
+    if (isNaN(d.getTime())) continue;
+    const i = idx.get(`${d.getFullYear()}-${d.getMonth()}`);
+    if (i !== undefined) {
+      months[i].total += Number(inv.total ?? inv.amount_ttc ?? 0) || 0;
+      months[i].count += 1;
+    }
+  }
+  return months;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -94,6 +119,7 @@ export async function GET(req: NextRequest) {
     let totalOverdue = 0;
     const clientStats = [];
     const alerts: Alert[] = [];
+    const allInvoices: any[] = [];
 
     for (const client of clients.filter((c: any) => c.status === 'active')) {
       const isManual = client.client_type === 'manual';
@@ -119,6 +145,7 @@ export async function GET(req: NextRequest) {
       totalRevenue += data.stats.totalRevenue;
       totalExpenses += data.stats.totalExpenses;
       totalOverdue += data.stats.overdueInvoices;
+      allInvoices.push(...(data.invoices || []));
       clientStats.push({
         id: client.id,
         client_user_id: client.client_user_id,
@@ -196,6 +223,33 @@ export async function GET(req: NextRequest) {
     // Fiscal deadlines
     const upcomingDeadlines = getFrenchFiscalDeadlines(now);
 
+    // ── Répartition des missions (donut) — échec non bloquant ──
+    let missionBreakdown: { label: string; value: number; fee: number; color: string }[] = [];
+    try {
+      const { data: missions } = await admin
+        .from('cabinet_missions')
+        .select('mission_type, monthly_fee')
+        .eq('cabinet_id', cabinet.id);
+      const acc = new Map<string, { count: number; fee: number }>();
+      for (const m of missions || []) {
+        const k = m.mission_type || 'Autre';
+        const cur = acc.get(k) || { count: 0, fee: 0 };
+        cur.count += 1;
+        cur.fee += Number(m.monthly_fee) || 0;
+        acc.set(k, cur);
+      }
+      const palette = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6'];
+      missionBreakdown = Array.from(acc.entries()).map(([label, v], i) => ({
+        label,
+        value: v.count,
+        fee: v.fee,
+        color: palette[i % palette.length],
+      }));
+    } catch {}
+
+    // ── Facturation mensuelle (6 derniers mois) ──
+    const monthlyBilling = computeMonthlyBilling(allInvoices, now);
+
     return NextResponse.json({
       cabinet,
       totalClients: clients.length,
@@ -204,6 +258,8 @@ export async function GET(req: NextRequest) {
       clientStats,
       alerts: alerts.slice(0, 10),
       upcomingDeadlines: upcomingDeadlines.slice(0, 8),
+      missionBreakdown,
+      monthlyBilling,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });

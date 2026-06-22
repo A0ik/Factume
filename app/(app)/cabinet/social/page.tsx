@@ -1,194 +1,99 @@
 'use client';
+
 import { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Loader2, RefreshCw, Users, Search, ChevronDown, ChevronLeft,
-  ChevronRight, FileText, Shield, AlertTriangle, CheckCircle2, Clock,
-  XCircle, Eye, MoreHorizontal, X, Send, Filter, CalendarDays,
-  UserCheck, FileCheck, FileWarning, StickyNote, Crown, Building2,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
+import {
+  Shield, Users, FileCheck, Send, ChevronLeft, ChevronRight, CalendarDays,
+  RefreshCw, Loader2, AlertTriangle, Pencil, StickyNote,
+} from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { useCabinetData } from '@/hooks/useCabinetData';
-import { clearCabinetCache } from '@/hooks/useCabinetFetch';
+import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import {
+  SectionCard, DataTable, KpiCard, StatusBadge, Modal, EmptyState, TableSkeleton,
+} from '@/components/cabinet/ui';
+import type { Column } from '@/components/cabinet/ui';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type DSNStatus = 'envoyee' | 'en_attente' | 'bloquee' | 'nc';
-
-interface ClientSocialRow {
+interface SocialRow {
   id: string;
-  clientName: string;
-  nbSalaries: number;
-  bsEmis: number;
-  bsValidated: number;
-  dsnStatus: DSNStatus;
-  stc: number;
-  contrats: number;
-  avenants: number;
-  atMp: number;
-  observations: string;
-}
-
-interface DocumentToProcess {
-  id: string;
-  clientName: string;
-  type: string;
-  description: string;
-  date: string;
-  priority: 'haute' | 'moyenne' | 'basse';
-}
-
-interface MonthlyTracking {
-  month: string; // 'YYYY-MM'
-  data: Record<string, ClientSocialRow>;
+  client_id: string;
+  client_name: string;
+  nb_employees: number;
+  bs_issued: number;
+  bs_validated: number;
+  dsn_status: 'sent' | 'pending' | 'blocked' | 'na' | null;
+  stc_status: any;
+  contracts_count: number;
+  amendments_count: number;
+  at_mp: boolean;
+  observations: string | null;
 }
 
 const MONTHS_FR = [
-  'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre',
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function dsnStatusConfig(status: DSNStatus) {
-  const map: Record<DSNStatus, { label: string; bg: string; text: string; dot: string }> = {
-    envoyee:   { label: 'Envoyee',   bg: 'bg-emerald-100 dark:bg-emerald-900/30',  text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500' },
-    en_attente:{ label: 'En attente',bg: 'bg-amber-100 dark:bg-amber-900/30',      text: 'text-amber-700 dark:text-amber-400',     dot: 'bg-amber-500' },
-    bloquee:   { label: 'Bloquee',   bg: 'bg-red-100 dark:bg-red-900/30',          text: 'text-red-700 dark:text-red-400',         dot: 'bg-red-500' },
-    nc:        { label: 'NC',        bg: 'bg-gray-100 dark:bg-gray-800',           text: 'text-gray-500 dark:text-gray-400',       dot: 'bg-gray-400' },
-  };
-  return map[status] ?? map.nc;
-}
-
-function DSNBadge({ status }: { status: DSNStatus }) {
-  const cfg = dsnStatusConfig(status);
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold', cfg.bg, cfg.text)}>
-      <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function toMonthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function monthLabel(key: string): string {
-  const [y, m] = key.split('-');
-  return `${MONTHS_FR[parseInt(m, 10) - 1]} ${y}`;
-}
-
-function shortMonth(key: string): string {
-  const [, m] = key.split('-');
-  return MONTHS_FR[parseInt(m, 10) - 1].slice(0, 3);
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+const DSN_CFG: Record<string, { label: string; dot: string }> = {
+  sent: { label: 'Envoyée', dot: '#10b981' },
+  pending: { label: 'En attente', dot: '#f59e0b' },
+  blocked: { label: 'Bloquée', dot: '#ef4444' },
+  na: { label: 'N/C', dot: '#9ca3af' },
+};
 
 export default function CabinetSocialPage() {
   const sub = useSubscription();
-  const router = useRouter();
-  const cabinet = useCabinetStore(state => state.cabinet);
+  const { cabinet } = useCabinetStore();
+  const primaryColor = cabinet?.primary_color || '#10b981';
 
-  // Month / Year selector
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [selectedMonth, setSelectedMonth] = useState(1);
-  const [periodReady, setPeriodReady] = useState(false);
+  const [year, setYear] = useState<number | null>(null);
+  const [month, setMonth] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [editing, setEditing] = useState<SocialRow | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [dsnFilter, setDsnFilter] = useState<string>('all');
 
   useEffect(() => {
     const now = new Date();
-    setSelectedYear(now.getFullYear());
-    setSelectedMonth(now.getMonth() + 1);
-    setPeriodReady(true);
+    setYear(now.getFullYear());
+    setMonth(now.getMonth() + 1);
   }, []);
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dsnFilter, setDsnFilter] = useState<DSNStatus | 'all'>('all');
-  const [showDSNSidebar, setShowDSNSidebar] = useState(false);
-  const [showAnnual, setShowAnnual] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const ready = year !== null && month !== null;
 
-  // Data — useCabinetData handles fetching, loading, error, and re-fetch on param changes
-  const { data: rawTracking, loading, error: fetchError, refresh } = useCabinetData<any[]>(
-    '/api/cabinet/social',
-    { params: { month: String(selectedMonth), year: String(selectedYear) } }
+  const { data: rawTracking, loading, error, refresh } = useCabinetData<SocialRow[]>(
+    ready ? '/api/cabinet/social' : null,
+    { params: { month: String(month), year: String(year) } },
   );
 
-  // Map raw API data to ClientSocialRow
-  const clientRows = useMemo<ClientSocialRow[]>(() => {
-    if (!rawTracking) return [];
-    return rawTracking.map((t: any) => ({
-      id: t.id || t.client_id,
-      clientName: t.client_name || '',
-      nbSalaries: t.nb_employees || 0,
-      bsEmis: t.bs_issued || 0,
-      bsValidated: t.bs_validated || 0,
-      dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
-      stc: t.stc || 0,
-      contrats: t.contracts_count || 0,
-      avenants: t.amendments_count || 0,
-      atMp: t.at_mp ? 1 : 0,
-      observations: t.observations || '',
-    }));
-  }, [rawTracking]);
+  const rows = rawTracking || [];
 
-  // Documents placeholder (no dedicated API endpoint yet)
-  const [documents] = useState<DocumentToProcess[]>([]);
+  const kpis = useMemo(() => {
+    const totalSalaries = rows.reduce((s, r) => s + (r.nb_employees || 0), 0);
+    const bsTraites = rows.reduce((s, r) => s + (r.bs_validated || 0), 0);
+    const dsnEnvoyees = rows.filter((r) => r.dsn_status === 'sent').length;
+    const dsnEnAttente = rows.filter((r) => r.dsn_status === 'pending').length;
+    return { totalSalaries, bsTraites, dsnEnvoyees, dsnEnAttente };
+  }, [rows]);
 
-  // Annual data — fetched via a second useCabinetData per visible year
-  const [annualData, setAnnualData] = useState<Map<string, ClientSocialRow[]>>(new Map());
+  const filtered = useMemo(() => {
+    if (dsnFilter === 'all') return rows;
+    return rows.filter((r) => (r.dsn_status || 'na') === dsnFilter);
+  }, [rows, dsnFilter]);
 
-  useEffect(() => {
-    if (!periodReady) return;
-    let cancelled = false;
+  const goPrev = () => {
+    if (month === 1) { setMonth(12); setYear((y) => (y || 0) - 1); }
+    else setMonth((m) => (m || 1) - 1);
+  };
+  const goNext = () => {
+    if (month === 12) { setMonth(1); setYear((y) => (y || 0) + 1); }
+    else setMonth((m) => (m || 1) + 1);
+  };
 
-    async function loadAnnual() {
-      try {
-        const { cabinetFetch } = await import('@/hooks/useCabinetFetch');
-        const aMap = new Map<string, ClientSocialRow[]>();
-
-        const annualPromises = Array.from({ length: 12 }, (_, m) => {
-          const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
-          return cabinetFetch<any[]>(`/api/cabinet/social?year=${selectedYear}&month=${m + 1}`, { dataKey: 'tracking' })
-            .then((monthTracking) => {
-              if (!cancelled) {
-                aMap.set(key, (monthTracking || []).map((t: any) => ({
-                  id: t.id || t.client_id,
-                  clientName: t.client_name || '',
-                  nbSalaries: t.nb_employees || 0,
-                  bsEmis: t.bs_issued || 0,
-                  bsValidated: t.bs_validated || 0,
-                  dsnStatus: (t.dsn_status || 'nc') as DSNStatus,
-                  stc: t.stc || 0,
-                  contrats: t.contracts_count || 0,
-                  avenants: t.amendments_count || 0,
-                  atMp: t.at_mp ? 1 : 0,
-                  observations: t.observations || '',
-                })));
-              }
-            })
-            .catch(() => {});
-        });
-        await Promise.all(annualPromises);
-        if (!cancelled) setAnnualData(aMap);
-      } catch (err) {
-        console.error('[loadAnnual] Error:', err);
-      }
-    }
-
-    loadAnnual();
-    return () => { cancelled = true; };
-  }, [selectedYear, periodReady]);
-
-  // Refresh handler
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -198,548 +103,265 @@ export default function CabinetSocialPage() {
     }
   };
 
-  // Filtered rows
-  const filteredRows = useMemo(() => {
-    let result = clientRows;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((r) => r.clientName.toLowerCase().includes(q));
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await cabinetMutation('/api/cabinet/social', 'PATCH', {
+        id: editing.id,
+        nb_employees: editing.nb_employees,
+        bs_issued: editing.bs_issued,
+        bs_validated: editing.bs_validated,
+        dsn_status: editing.dsn_status || 'na',
+        contracts_count: editing.contracts_count,
+        amendments_count: editing.amendments_count,
+        at_mp: editing.at_mp,
+        observations: editing.observations,
+      });
+      clearCabinetCache(`/api/cabinet/social?month=${month}&year=${year}`);
+      toast.success('Suivi social mis à jour');
+      setEditing(null);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la mise à jour');
+    } finally {
+      setSaving(false);
     }
-    if (dsnFilter !== 'all') {
-      result = result.filter((r) => r.dsnStatus === dsnFilter);
-    }
-    return result;
-  }, [clientRows, searchQuery, dsnFilter]);
-
-  // KPIs
-  const kpis = useMemo(() => {
-    const totalSalaries = clientRows.reduce((s, r) => s + r.nbSalaries, 0);
-    const bsTraites = clientRows.reduce((s, r) => s + r.bsValidated, 0);
-    const dsnEnvoyees = clientRows.filter((r) => r.dsnStatus === 'envoyee').length;
-    const docsATraiter = documents.length;
-    return { totalSalaries, bsTraites, dsnEnvoyees, docsATraiter };
-  }, [clientRows, documents]);
-
-  // DSN summary for sidebar
-  const dsnSummary = useMemo(() => ({
-    envoyee: clientRows.filter((r) => r.dsnStatus === 'envoyee').length,
-    en_attente: clientRows.filter((r) => r.dsnStatus === 'en_attente').length,
-    bloquee: clientRows.filter((r) => r.dsnStatus === 'bloquee').length,
-    nc: clientRows.filter((r) => r.dsnStatus === 'nc').length,
-  }), [clientRows]);
-
-  // Month navigation
-  const goPrev = () => {
-    if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear((y) => y - 1); }
-    else { setSelectedMonth((m) => m - 1); }
-  };
-  const goNext = () => {
-    if (selectedMonth === 12) { setSelectedMonth(1); setSelectedYear((y) => y + 1); }
-    else { setSelectedMonth((m) => m + 1); }
   };
 
-  // ─── Paywall ──────────────────────────────────────────────────────────────
   if (!sub.isBusiness && !sub.isTrialActive) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-violet-500/20">
-            <Shield size={40} className="text-violet-500" />
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Gestion Sociale & Paie</h1>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            Suivez les bulletins de salaire, DSN, contrats et obligations sociales de vos clients.
-            Disponible avec le plan Business.
-          </p>
-          <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/35 transition-all">
-            <Crown size={18} />
-            Passer au plan Business
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ─── Loading ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
-    );
-  }
-
-  // ─── Error state ──────────────────────────────────────────────────────────
-  if (fetchError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
-          <AlertTriangle size={28} className="text-red-500" />
+        <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: '#8b5cf61a' }}>
+          <Shield size={40} className="text-violet-500" />
         </div>
-        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
-        <p className="text-sm text-gray-400 mb-4">{fetchError}</p>
+        <h1 className="text-3xl font-black text-gray-900 mb-3">Gestion Sociale & Paie</h1>
+        <p className="text-gray-500 mb-8">Suivez bulletins, DSN et obligations sociales de vos clients.</p>
+        <Link href="/paywall?plan=business" className="px-8 py-4 rounded-2xl text-white font-bold shadow-lg" style={{ backgroundColor: '#8b5cf6' }}>
+          Passer au plan Business
+        </Link>
+      </div>
+    );
+  }
+
+  const columns: Column<SocialRow>[] = [
+    {
+      key: 'client',
+      header: 'Client',
+      sortValue: (r) => r.client_name,
+      sortable: true,
+      render: (r) => <span className="font-semibold text-gray-900 text-sm truncate">{r.client_name || '—'}</span>,
+    },
+    { key: 'nb', header: 'Salariés', align: 'center', sortValue: (r) => r.nb_employees, sortable: true, render: (r) => <span className="font-semibold text-gray-700">{r.nb_employees || 0}</span> },
+    { key: 'bs_issued', header: 'BS émis', align: 'center', hideOnMobile: true, render: (r) => <span className="text-gray-600">{r.bs_issued || 0}</span> },
+    { key: 'bs_val', header: 'BS validés', align: 'center', hideOnMobile: true, render: (r) => <span className="text-gray-600">{r.bs_validated || 0}</span> },
+    {
+      key: 'dsn',
+      header: 'DSN',
+      align: 'center',
+      render: (r) => {
+        const cfg = DSN_CFG[r.dsn_status || 'na'] || DSN_CFG.na;
+        return <StatusBadge dot={cfg.dot} size="sm">{cfg.label}</StatusBadge>;
+      },
+    },
+    { key: 'contrats', header: 'Contrats', align: 'center', hideOnMobile: true, render: (r) => <span className="text-gray-600">{r.contracts_count || 0}</span> },
+    {
+      key: 'atmp',
+      header: 'AT/MP',
+      align: 'center',
+      hideOnMobile: true,
+      render: (r) => (
+        <span className={cn('text-xs font-semibold', r.at_mp ? 'text-red-600' : 'text-gray-400')}>
+          {r.at_mp ? 'Oui' : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'obs',
+      header: 'Observations',
+      hideOnMobile: true,
+      render: (r) =>
+        r.observations ? (
+          <span className="text-xs text-gray-500 truncate inline-flex items-center gap-1">
+            <StickyNote size={11} className="text-amber-500 flex-shrink-0" />
+            {r.observations}
+          </span>
+        ) : (
+          <span className="text-gray-300">—</span>
+        ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (r) => (
         <button
-          onClick={handleRefresh}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+          onClick={() => setEditing({ ...r })}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          title="Modifier"
         >
-          <RefreshCw size={14} />
-          Reessayer
+          <Pencil size={14} />
         </button>
-      </div>
-    );
-  }
+      ),
+    },
+  ];
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-
-      {/* ─── Header ────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/cabinet" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0">
-            <ArrowLeft size={18} className="text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Gestion Sociale</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Paie, DSN & obligations sociales</p>
-          </div>
-        </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      {/* Sélecteur de période */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowDSNSidebar(!showDSNSidebar)}
-            className={cn(
-              'flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors',
-              showDSNSidebar
-                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
-            )}
-          >
-            <Shield size={14} />
-            DSN
+          <button onClick={goPrev} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <ChevronLeft size={18} />
           </button>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            title="Actualiser"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
-
-      {/* ─── Month/Year Selector ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={goPrev} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-            <ChevronLeft size={18} className="text-gray-400" />
-          </button>
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 shadow-sm">
-            <CalendarDays size={16} className="text-emerald-500" />
-            <span className="font-bold text-gray-900 dark:text-white text-sm">
-              {MONTHS_FR[selectedMonth - 1]} {selectedYear}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white shadow-sm">
+            <CalendarDays size={15} style={{ color: primaryColor }} />
+            <span className="font-bold text-gray-900 text-sm">
+              {month ? MONTHS_FR[month - 1] : ''} {year}
             </span>
           </div>
-          <button onClick={goNext} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-            <ChevronRight size={18} className="text-gray-400" />
+          <button onClick={goNext} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <ChevronRight size={18} />
           </button>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowAnnual(!showAnnual)}
-            className={cn(
-              'flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors',
-              showAnnual
-                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
-            )}
-          >
-            <Eye size={14} />
-            Vue annuelle
-          </button>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              'flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors',
-              showFilters
-                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
-            )}
-          >
-            <Filter size={14} />
-            Filtres
-          </button>
-        </div>
+        <button onClick={handleRefresh} disabled={refreshing} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors" title="Actualiser">
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+        </button>
       </div>
 
-      {/* ─── KPIs ──────────────────────────────────────────────────────────── */}
+      {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard label="Total salariés" value={String(kpis.totalSalaries)} icon={Users} accent="#10b981" />
+        <KpiCard label="BS validés" value={String(kpis.bsTraites)} icon={FileCheck} accent="#3b82f6" />
+        <KpiCard label="DSN envoyées" value={String(kpis.dsnEnvoyees)} icon={Send} accent="#22c55e" hint={`${rows.length} client(s)`} />
+        <KpiCard label="DSN en attente" value={String(kpis.dsnEnAttente)} icon={AlertTriangle} accent={kpis.dsnEnAttente > 0 ? '#f59e0b' : '#6b7280'} />
+      </div>
+
+      {/* Filtre DSN */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {[
-          { label: 'Total salaries', value: String(kpis.totalSalaries), icon: Users, color: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400' },
-          { label: 'BS traites', value: String(kpis.bsTraites), icon: FileCheck, color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
-          { label: 'DSN envoyees', value: String(kpis.dsnEnvoyees), icon: Send, color: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400' },
-          { label: 'Documents a traiter', value: String(kpis.docsATraiter), icon: FileWarning, color: kpis.docsATraiter > 0 ? 'from-amber-500 to-orange-500' : 'from-gray-400 to-gray-500', bg: kpis.docsATraiter > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-900/20', text: kpis.docsATraiter > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400' },
-        ].map(({ label, value, icon: Icon, color, bg, text }) => (
-          <div key={label} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
-            <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', color)}>
-              <Icon size={16} className="text-white" />
-            </div>
-            <p className={cn('text-xl font-black', text)}>{value}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ─── Filters ───────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Search */}
-                <div className="relative">
-                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher un client..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                {/* DSN Status filter */}
-                <div>
-                  <select
-                    value={dsnFilter}
-                    onChange={(e) => setDsnFilter(e.target.value as DSNStatus | 'all')}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    <option value="all">Tous les statuts DSN</option>
-                    <option value="envoyee">Envoyee</option>
-                    <option value="en_attente">En attente</option>
-                    <option value="bloquee">Bloquee</option>
-                    <option value="nc">Non concernee</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ─── Main Content Area ─────────────────────────────────────────────── */}
-      <div className={cn('grid gap-6 transition-all', showDSNSidebar ? 'lg:grid-cols-[1fr_320px]' : 'grid-cols-1')}>
-
-        {/* ─── Left: Main Table ──────────────────────────────────────────────── */}
-        <div className="space-y-6">
-
-          {/* Client Social Table */}
-          <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-              <Building2 size={16} className="text-emerald-500" />
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm flex-1">
-                Suivi social mensuel ({filteredRows.length} clients)
-              </h3>
-              {!showFilters && (
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher..."
-                    className="pl-8 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-48"
-                  />
-                </div>
+          { id: 'all', label: 'Tous' },
+          { id: 'sent', label: 'Envoyées' },
+          { id: 'pending', label: 'En attente' },
+          { id: 'blocked', label: 'Bloquées' },
+          { id: 'na', label: 'N/C' },
+        ].map((f) => {
+          const active = dsnFilter === f.id;
+          const count = f.id === 'all' ? rows.length : rows.filter((r) => (r.dsn_status || 'na') === f.id).length;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setDsnFilter(f.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition-colors flex-shrink-0',
+                active ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50',
               )}
-            </div>
-
-            {filteredRows.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Users size={28} className="text-gray-300 dark:text-gray-600" />
-                </div>
-                <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun client trouve</p>
-                <p className="text-sm text-gray-400">Modifiez vos filtres de recherche.</p>
-              </div>
-            ) : (
-              <>
-                {/* Table header */}
-                <div className="hidden lg:grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.6fr_0.6fr_0.6fr_0.6fr_2fr_0.6fr] gap-2 px-5 py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-100 dark:border-white/5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <span>Client</span>
-                  <span className="text-center">Salaries</span>
-                  <span className="text-center">BS Emis</span>
-                  <span className="text-center">BS Valides</span>
-                  <span className="text-center">DSN</span>
-                  <span className="text-center">STC</span>
-                  <span className="text-center">Contrats</span>
-                  <span className="text-center">Avenants</span>
-                  <span className="text-center">AT/MP</span>
-                  <span>Observations</span>
-                  <span />
-                </div>
-
-                {/* Table rows */}
-                <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                  <AnimatePresence>
-                    {filteredRows.map((row, i) => (
-                      <motion.div
-                        key={row.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.03 }}
-                      >
-                        {/* Desktop row */}
-                        <div className="hidden lg:grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.6fr_0.6fr_0.6fr_0.6fr_2fr_0.6fr] gap-2 px-5 py-3.5 items-center hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors text-sm">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-                              {row.clientName.charAt(0)}
-                            </div>
-                            <span className="font-semibold text-gray-900 dark:text-white truncate">{row.clientName}</span>
-                          </div>
-                          <span className="text-center font-semibold text-gray-700 dark:text-gray-300">{row.nbSalaries}</span>
-                          <span className="text-center text-gray-600 dark:text-gray-400">{row.bsEmis}</span>
-                          <span className="text-center text-gray-600 dark:text-gray-400">{row.bsValidated}</span>
-                          <div className="flex justify-center"><DSNBadge status={row.dsnStatus} /></div>
-                          <span className="text-center text-gray-600 dark:text-gray-400">{row.stc > 0 ? formatCurrency(row.stc) : '-'}</span>
-                          <span className="text-center text-gray-600 dark:text-gray-400">{row.contrats || '-'}</span>
-                          <span className="text-center text-gray-600 dark:text-gray-400">{row.avenants || '-'}</span>
-                          <span className={cn('text-center', row.atMp > 0 ? 'text-red-500 font-semibold' : 'text-gray-400')}>{row.atMp || '-'}</span>
-                          <span className="text-xs text-gray-400 truncate">{row.observations || '-'}</span>
-                          <div className="flex justify-center">
-                            <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                              <MoreHorizontal size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Mobile row */}
-                        <div className="lg:hidden px-5 py-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-                                {row.clientName.charAt(0)}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{row.clientName}</p>
-                                <p className="text-xs text-gray-400">{row.nbSalaries} salaries</p>
-                              </div>
-                            </div>
-                            <DSNBadge status={row.dsnStatus} />
-                          </div>
-                          <div className="grid grid-cols-4 gap-2 text-center">
-                            <div>
-                              <p className="text-xs text-gray-400">BS Emis</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{row.bsEmis}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400">BS Val.</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{row.bsValidated}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400">Contrats</p>
-                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{row.contrats || '-'}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400">AT/MP</p>
-                              <p className={cn('text-sm font-semibold', row.atMp > 0 ? 'text-red-500' : 'text-gray-400')}>{row.atMp || '-'}</p>
-                            </div>
-                          </div>
-                          {row.observations && (
-                            <div className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
-                              <StickyNote size={12} className="flex-shrink-0 mt-0.5" />
-                              {row.observations}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* ─── Documents to Process Panel ────────────────────────────────────── */}
-          <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-              <FileWarning size={16} className="text-amber-500" />
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm flex-1">Documents a traiter</h3>
-              <span className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-black',
-                documents.length > 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-              )}>
-                {documents.length}
-              </span>
-            </div>
-            {documents.length === 0 ? (
-              <div className="text-center py-10">
-                <CheckCircle2 size={32} className="text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">Tous les documents ont ete traites</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <div className={cn(
-                      'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
-                      doc.priority === 'haute' ? 'bg-red-100 dark:bg-red-900/30' : doc.priority === 'moyenne' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
-                    )}>
-                      <FileText size={16} className={doc.priority === 'haute' ? 'text-red-600 dark:text-red-400' : doc.priority === 'moyenne' ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{doc.description}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-400">{doc.clientName}</span>
-                        <span className="text-gray-300 dark:text-gray-600">.</span>
-                        <span className="text-xs text-gray-400">{doc.type}</span>
-                      </div>
-                    </div>
-                    <span className={cn(
-                      'text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0',
-                      doc.priority === 'haute' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : doc.priority === 'moyenne' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                    )}>
-                      {doc.priority === 'haute' ? 'Urgent' : doc.priority === 'moyenne' ? 'Moyen' : 'Faible'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ─── Annual Tracking Table ─────────────────────────────────────────── */}
-          <AnimatePresence>
-            {showAnnual && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-                    <CalendarDays size={16} className="text-emerald-500" />
-                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">Suivi annuel {selectedYear}</h3>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50/80 dark:bg-slate-800/50">
-                          <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-slate-800">Client</th>
-                          {Array.from({ length: 12 }, (_, m) => (
-                            <th key={m} className="text-center px-2 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider min-w-[80px]">
-                              {MONTHS_FR[m].slice(0, 3)}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                        {clientRows.slice(0, 6).map((client) => (
-                          <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                            <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white sticky left-0 bg-white dark:bg-slate-900 truncate max-w-[160px]">
-                              {client.clientName}
-                            </td>
-                            {Array.from({ length: 12 }, (_, m) => {
-                              const key = `${selectedYear}-${String(m + 1).padStart(2, '0')}`;
-                              const monthData = annualData.get(key)?.find((r) => r.id === client.id);
-                              return (
-                                <td key={m} className="text-center px-2 py-3">
-                                  {monthData ? (
-                                    <div className="flex flex-col items-center gap-0.5">
-                                      <DSNBadge status={monthData.dsnStatus} />
-                                      <span className="text-[10px] text-gray-400">{monthData.bsValidated}/{monthData.bsEmis} BS</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-300 dark:text-gray-600">-</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ─── Right: DSN Sidebar Panel ──────────────────────────────────────── */}
-        <AnimatePresence>
-          {showDSNSidebar && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
+              style={active ? { backgroundColor: primaryColor } : undefined}
             >
-              {/* DSN Status Summary */}
-              <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                    <Shield size={15} className="text-emerald-500" />
-                    Statut DSN
-                  </h3>
-                  <span className="text-xs text-gray-400">{MONTHS_FR[selectedMonth - 1]}</span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {([
-                    { key: 'envoyee' as DSNStatus, label: 'Envoyees', icon: CheckCircle2, color: 'text-emerald-500' },
-                    { key: 'en_attente' as DSNStatus, label: 'En attente', icon: Clock, color: 'text-amber-500' },
-                    { key: 'bloquee' as DSNStatus, label: 'Bloquees', icon: XCircle, color: 'text-red-500' },
-                    { key: 'nc' as DSNStatus, label: 'Non concernees', icon: AlertTriangle, color: 'text-gray-400' },
-                  ] as const).map(({ key, label, icon: Icon, color }) => (
-                    <button
-                      key={key}
-                      onClick={() => setDsnFilter(dsnFilter === key ? 'all' : key)}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left',
-                        dsnFilter === key
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40'
-                          : 'bg-gray-50 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/[0.04] border border-transparent'
-                      )}
-                    >
-                      <Icon size={16} className={cn(color, 'flex-shrink-0')} />
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white flex-1">{label}</span>
-                      <span className={cn('text-sm font-black', color)}>{dsnSummary[key]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {dsnFilter !== 'all' && (
-                  <button
-                    onClick={() => setDsnFilter('all')}
-                    className="w-full mt-3 px-4 py-2 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-                  >
-                    Reinitialiser le filtre
-                  </button>
-                )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 shadow-sm">
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-4">Actions rapides</h3>
-                <div className="space-y-2">
-                  {[
-                    { label: 'Envoyer DSN en attente', icon: Send, count: dsnSummary.en_attente },
-                    { label: 'Valider BS en attente', icon: UserCheck, count: clientRows.reduce((s, r) => s + (r.bsEmis - r.bsValidated), 0) },
-                  ].map(({ label, icon: ActionIcon, count }) => (
-                    <button
-                      key={label}
-                      disabled={count === 0}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] hover:bg-gray-100 dark:hover:bg-white/[0.04] transition-colors text-left disabled:opacity-40"
-                    >
-                      <ActionIcon size={15} className="text-emerald-500 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{label}</span>
-                      <span className="text-sm font-black text-gray-900 dark:text-white">{count}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {f.label}
+              <span className={cn('px-1.5 rounded-full text-[10px]', active ? 'bg-white/25' : 'bg-gray-100')}>{count}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* Table */}
+      <SectionCard title={`Suivi social — ${month ? MONTHS_FR[month - 1] : ''} ${year}`} icon={Shield} accent={primaryColor} noPadding>
+        {loading ? (
+          <TableSkeleton cols={6} />
+        ) : error ? (
+          <EmptyState icon={AlertTriangle} title="Erreur de chargement" description={error} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowId={(r) => r.id}
+            searchable
+            searchPlaceholder="Rechercher un client…"
+            searchText={(r) => r.client_name || ''}
+            emptyIcon={Users}
+            emptyTitle="Aucun suivi social"
+            emptyDescription="Aucune donnée sociale pour ce mois. Ajoutez des salariés pour alimenter le suivi."
+          />
+        )}
+      </SectionCard>
+
+      {/* Modale édition */}
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing?.client_name}
+        icon={Pencil}
+        accent={primaryColor}
+        footer={
+          <>
+            <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Annuler</button>
+            <button onClick={handleSaveEdit} disabled={saving} className="px-5 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2" style={{ backgroundColor: primaryColor }}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+              Enregistrer
+            </button>
+          </>
+        }
+      >
+        {editing && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <NumField label="Nb salariés" value={editing.nb_employees} onChange={(v) => setEditing({ ...editing, nb_employees: v })} />
+              <NumField label="BS émis" value={editing.bs_issued} onChange={(v) => setEditing({ ...editing, bs_issued: v })} />
+              <NumField label="BS validés" value={editing.bs_validated} onChange={(v) => setEditing({ ...editing, bs_validated: v })} />
+              <NumField label="Contrats" value={editing.contracts_count} onChange={(v) => setEditing({ ...editing, contracts_count: v })} />
+              <NumField label="Avenants" value={editing.amendments_count} onChange={(v) => setEditing({ ...editing, amendments_count: v })} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Statut DSN</label>
+              <select
+                value={editing.dsn_status || 'na'}
+                onChange={(e) => setEditing({ ...editing, dsn_status: e.target.value as any })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              >
+                <option value="sent">Envoyée</option>
+                <option value="pending">En attente</option>
+                <option value="blocked">Bloquée</option>
+                <option value="na">Non concernée</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!editing.at_mp}
+                onChange={(e) => setEditing({ ...editing, at_mp: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500/30"
+              />
+              <span className="text-sm text-gray-700">Accident du travail / maladie pro à déclarer</span>
+            </label>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observations</label>
+              <textarea
+                value={editing.observations || ''}
+                onChange={(e) => setEditing({ ...editing, observations: e.target.value })}
+                rows={3}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30 resize-none"
+                placeholder="Notes sur la paie du mois…"
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
     </motion.div>
+  );
+}
+
+function NumField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
+      <input
+        type="number"
+        min={0}
+        value={value || 0}
+        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+      />
+    </div>
   );
 }

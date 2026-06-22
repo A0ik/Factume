@@ -100,24 +100,36 @@ export async function POST(req: NextRequest) {
 async function executeIntent(intent: CommandIntent, userId: string, supabase: any) {
   switch (intent.intent) {
     case 'show_outstanding': {
-      let query = supabase
+      // HEPHAISTOS (CIBLE 4) — colonnes réelles : number (pas invoice_number), total (pas total_ttc),
+      // nom du client via la jointure clients (pas de colonne client_name sur invoices).
+      const { data } = await supabase
         .from('invoices')
-        .select('invoice_number, total_ttc, client_name, due_date, status')
+        .select('number, total, due_date, status, client:clients(name)')
         .eq('user_id', userId)
-        .in('status', ['sent', 'overdue']);
+        .in('status', ['sent', 'overdue'])
+        .order('due_date', { ascending: true })
+        .limit(50);
 
-      if (intent.client_name) {
-        query = query.ilike('client_name', `%${intent.client_name}%`);
-      }
+      // Filtrage client robuste côté JS (PostgREST ne filtre pas facilement sur la relation)
+      const wantClient = intent.client_name?.trim().toLowerCase();
+      const filtered = (data || []).filter((inv: any) => {
+        if (!wantClient) return true;
+        return ((inv.client?.name as string) || '').toLowerCase().includes(wantClient);
+      }).slice(0, 10);
 
-      const { data } = await query.order('due_date', { ascending: true }).limit(10);
-      const total = (data || []).reduce((s: number, inv: any) => s + (inv.total_ttc || 0), 0);
+      const total = filtered.reduce((s: number, inv: any) => s + (inv.total || 0), 0);
 
       return {
         type: 'outstanding_invoices',
-        invoices: data || [],
+        invoices: filtered.map((inv: any) => ({
+          number: inv.number,
+          total: inv.total,
+          due_date: inv.due_date,
+          status: inv.status,
+          client_name: inv.client?.name || null,
+        })),
         total,
-        count: data?.length || 0,
+        count: filtered.length,
       };
     }
 
@@ -136,12 +148,12 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
 
       const { data } = await supabase
         .from('invoices')
-        .select('total_ttc')
+        .select('total')
         .eq('user_id', userId)
         .eq('status', 'paid')
         .gte('paid_at', startDate);
 
-      const total = (data || []).reduce((s: number, inv: any) => s + (inv.total_ttc || 0), 0);
+      const total = (data || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
 
       return {
         type: 'revenue',
@@ -170,12 +182,12 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
 
       const { data: paidInvoices } = await supabase
         .from('invoices')
-        .select('total_ttc')
+        .select('total')
         .eq('user_id', userId)
         .eq('status', 'paid')
         .gte('paid_at', startIso);
 
-      const revenue = (paidInvoices || []).reduce((s: number, inv: any) => s + (inv.total_ttc || 0), 0);
+      const revenue = (paidInvoices || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
       const calc = calculateURSSAF(revenue, regime);
 
       return {
@@ -209,22 +221,23 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
     // Le Copilot génère un brouillon de relance mais N'ENVOIE JAMAIS automatiquement.
     // L'utilisateur doit voir l'email et approuver manuellement l'envoi.
     case 'send_reminder': {
-      // Find the most overdue unpaid invoice for the client
-      let query = supabase
+      // HEPHAISTOS (CIBLE 4) — colonnes réelles (total, pas total_ttc) + jointure clients.
+      const { data: overdueInvoices } = await supabase
         .from('invoices')
-        .select('id, number, total_ttc, total, due_date, issue_date, status, client:clients(id, name, email)')
+        .select('id, number, total, due_date, issue_date, status, client:clients(id, name, email)')
         .eq('user_id', userId)
         .in('status', ['sent', 'overdue'])
         .order('due_date', { ascending: true })
-        .limit(5);
+        .limit(50);
 
-      if (intent.client_name) {
-        query = query.ilike('client_name', `%${intent.client_name}%`);
-      }
+      // Filtrage client robuste côté JS (pas de colonne client_name sur invoices)
+      const wantClient = intent.client_name?.trim().toLowerCase();
+      const overdueFiltered = (overdueInvoices || []).filter((inv: any) => {
+        if (!wantClient) return true;
+        return ((inv.client?.name as string) || '').toLowerCase().includes(wantClient);
+      }).slice(0, 5);
 
-      const { data: overdueInvoices } = await query;
-
-      if (!overdueInvoices || overdueInvoices.length === 0) {
+      if (!overdueFiltered || overdueFiltered.length === 0) {
         return {
           type: 'reminder_draft',
           status: 'no_overdue',
@@ -242,7 +255,7 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
         .single();
 
       // Generate draft emails for ALL matching invoices (user picks which to send)
-      const drafts = overdueInvoices.map((inv: any) => {
+      const drafts = overdueFiltered.map((inv: any) => {
         const dueDate = new Date(inv.due_date || inv.issue_date);
         const today = new Date();
         const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
@@ -250,14 +263,14 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
         const clientName = inv.client?.name || 'Client';
         const subject = `Rappel : Facture ${inv.number} - ${profile?.company_name || 'Mon entreprise'}`;
 
-        const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${(inv.total || inv.total_ttc || 0).toFixed(2)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
+        const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${(inv.total || 0).toFixed(2)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
 
         return {
           invoiceId: inv.id,
           invoiceNumber: inv.number,
           clientName,
           clientEmail: inv.client?.email,
-          amount: inv.total || inv.total_ttc || 0,
+          amount: inv.total || 0,
           daysOverdue,
           subject,
           body,
@@ -275,7 +288,28 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
       };
     }
 
+    case 'create_invoice': {
+      // HEPHAISTOS — LOI 3 « l'IA propose, l'humain dispose » : on ne crée JAMAIS
+      // automatiquement une facture depuis la voix (données insuffisantes : pas de
+      // client ID, ni TVA, ni lignes). On redirige vers le créateur (Canvas) pré-rempli.
+      const amount = typeof intent.raw_amount === 'number' ? intent.raw_amount : null;
+      const client = intent.client_name || null;
+      const params = new URLSearchParams();
+      if (amount !== null) params.set('amount', String(amount));
+      if (client) params.set('client', client);
+      const qs = params.toString();
+      return {
+        type: 'create_invoice',
+        amount,
+        client_name: client,
+        redirectUrl: `/documents/create${qs ? `?${qs}` : ''}`,
+        message: amount !== null
+          ? `J'ouvre le créateur de facture${client ? ` pour ${client}` : ''} avec ${amount.toFixed(2)} € pré-rempli. Vérifiez les détails puis validez.`
+          : `J'ouvre le créateur de facture. Décrivez le client et les lignes puis validez.`,
+      };
+    }
+
     default:
-      return { type: 'unknown', message: 'Commande non reconnue. Essayez "Mes impayés", "Mon CA", ou "Relance Dupont".' };
+      return { type: 'unknown', message: 'Commande non reconnue. Essayez "Mes impayés", "Mon CA", "Relance Dupont" ou "Crée une facture".' };
   }
 }

@@ -12,7 +12,7 @@ import { Logo } from '@/components/ui/Logo';
 import dynamic from 'next/dynamic';
 const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 const OnboardingWizard = dynamic(() => import('@/components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })), { ssr: false });
-import { TrialCountdown } from '@/components/ui/trial-countdown';
+const CopilotFAB = dynamic(() => import('@/components/copilot/CopilotFAB'), { ssr: false });
 import { InvoiceCounter } from '@/components/ui/invoice-counter';
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator';
 import { Toaster } from 'sonner';
@@ -51,13 +51,12 @@ function getSidebarWidth(mode: string): number {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, initialized, profile } = useAuthStore();
+  const { user, initialized } = useAuthStore();
   const fetchInvoices = useDataStore(state => state.fetchInvoices);
   const fetchClients = useDataStore(state => state.fetchClients);
-  const { isFree, isTrialActive, invoiceCount, maxInvoices } = useSubscription();
+  const { isFree, invoiceCount, maxInvoices } = useSubscription();
   const pathname = usePathname();
   const sidebarMode = useSidebarState(state => state.mode);
-  const [showTrialBanner, setShowTrialBanner] = useState(true);
   const [showInvoiceCounter, setShowInvoiceCounter] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -120,9 +119,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* ARBITER FIX: OnboardingWizard only in (app) layout — never on auth/onboarding/marketing pages */}
       <OnboardingWizard />
 
-      {isTrialActive && showTrialBanner && !hideBanners && (
-        <TrialCountdown onClose={() => setShowTrialBanner(false)} trialDocumentCount={profile?.trial_document_count || 0} trialDocLimit={3} />
-      )}
+      {/* CIBLE 1 (HEPHAISTOS) — Bannière d'essai supprimée du layout.
+          Le composant TrialCountdown reste sur disque mais n'est plus rendu. */}
 
       {isFree && showInvoiceCounter && !hideBanners && (
         <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={Number.isFinite(maxInvoices) ? maxInvoices : 3} onClose={() => setShowInvoiceCounter(false)} />
@@ -175,6 +173,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Floating pill navigation */}
         <BottomTabBar />
+
+        {/* HEPHAISTOS (CIBLE 4) — Copilot IA flottant (plan Business, auto-gating interne) */}
+        <CopilotFAB />
 
         {/* Mobile drawer */}
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

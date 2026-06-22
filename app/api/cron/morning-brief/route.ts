@@ -42,14 +42,14 @@ export async function GET(req: NextRequest) {
         // 1. Overdue invoices
         const { data: overdueInvoices } = await supabase
           .from('invoices')
-          .select('id, invoice_number, total_ttc, client_name, due_date')
+          .select('id, number, total, due_date')
           .eq('user_id', profile.id)
           .eq('status', 'overdue')
           .order('due_date', { ascending: true })
           .limit(5);
 
         if (overdueInvoices && overdueInvoices.length > 0) {
-          const totalOverdue = overdueInvoices.reduce((s, inv) => s + (inv.total_ttc || 0), 0);
+          const totalOverdue = overdueInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
           briefItems.push(`🔴 ${overdueInvoices.length} facture(s) en retard (${totalOverdue.toFixed(2)}€)`);
         }
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
         const { data: upcomingInvoices } = await supabase
           .from('invoices')
-          .select('id, invoice_number, total_ttc, client_name, due_date')
+          .select('id, number, total, due_date')
           .eq('user_id', profile.id)
           .eq('status', 'sent')
           .lte('due_date', threeDaysFromNow.toISOString())

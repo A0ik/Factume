@@ -50,7 +50,8 @@ export async function GET(req: NextRequest) {
 
     const { data: invoices } = await supabase
       .from('invoices')
-      .select('id, invoice_number, total_ht, total_ttc, vat_amount, vat_rate, status, issue_date, client_name, category')
+      // HEPHAISTOS — colonnes réelles : number, subtotal, total (+ jointure clients pour le nom).
+      .select('id, number, subtotal, total, vat_amount, status, issue_date, client:clients(name)')
       .eq('user_id', clientUserId)
       .gte('issue_date', startDate)
       .lte('issue_date', endDate)
@@ -75,10 +76,13 @@ export async function GET(req: NextRequest) {
     // Invoice entries (sales journal - VT)
     for (const inv of invoices || []) {
       const date = (inv.issue_date || '').slice(0, 10).replace(/-/g, '');
-      const pieceRef = inv.invoice_number || `FAC-${ecritureNum}`;
-      const amount = inv.total_ttc || 0;
+      // supabase-js type la jointure comme tableau ; à l'exécution c'est un objet (belongs_to).
+      const clientRaw: any = (inv as any).client;
+      const clientName = (Array.isArray(clientRaw) ? clientRaw[0]?.name : clientRaw?.name) || '';
+      const pieceRef = inv.number || `FAC-${ecritureNum}`;
+      const amount = inv.total || 0;
       const vatAmount = inv.vat_amount || 0;
-      const htAmount = inv.total_ht || (amount - vatAmount);
+      const htAmount = inv.subtotal || (amount - vatAmount);
 
       // Debit: Client account (411000)
       fecLines.push([
@@ -89,10 +93,10 @@ export async function GET(req: NextRequest) {
         '411000',                                // CompteNum
         'Clients',                               // CompteLib
         '',                                      // CompAuxNum
-        (inv.client_name || '').slice(0, 35),   // CompAuxLib
+        (clientName || '').slice(0, 35),   // CompAuxLib
         pieceRef,                                // PieceRef
         date,                                    // PieceDate
-        `Vente ${(inv.client_name || '')}`,      // EcritureLib
+        `Vente ${(clientName || '')}`,      // EcritureLib
         amount.toFixed(2).replace('.', ','),     // Debit
         '0,00',                                  // Credit
         '',                                      // EcritureLet
@@ -108,7 +112,7 @@ export async function GET(req: NextRequest) {
         'VT', 'Ventes', ecritureNum, date,
         '706000', 'Prestations de services',
         '', '', pieceRef, date,
-        `Vente ${(inv.client_name || '')}`,
+        `Vente ${(clientName || '')}`,
         '0,00', htAmount.toFixed(2).replace('.', ','),
         '', '', date, '', '',
       ].join('|'));
@@ -120,7 +124,7 @@ export async function GET(req: NextRequest) {
           'VT', 'Ventes', ecritureNum, date,
           '445710', 'TVA collectée',
           '', '', pieceRef, date,
-          `TVA vente ${(inv.client_name || '')}`,
+          `TVA vente ${(clientName || '')}`,
           '0,00', vatAmount.toFixed(2).replace('.', ','),
           '', '', date, '', '',
         ].join('|'));

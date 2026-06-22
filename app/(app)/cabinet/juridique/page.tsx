@@ -1,1290 +1,234 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import { useState, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Plus, Loader2, Search, Filter, Scale,
-  CheckCircle2, Clock, FileText, X, RefreshCw,
-  ChevronDown, Calendar, User, MoreHorizontal, Pencil,
-  Trash2, Building2, Crown, FileCheck, FilePlus2,
-  ListChecks, BookOpen, AlertTriangle, Users, Euro,
-  Download, Sparkles, AlertCircle,
+  Scale, Plus, Loader2, Pencil, Building2, AlertCircle, CheckCircle2, Clock, FileCheck,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useCabinetStore } from '@/stores/cabinetStore';
 import { useCabinetData } from '@/hooks/useCabinetData';
 import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, formatCurrency, formatDateShort } from '@/lib/utils';
 import { toast } from 'sonner';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import {
+  SectionCard, DataTable, KpiCard, StatusBadge, Tabs, Modal, EmptyState, TableSkeleton,
+} from '@/components/cabinet/ui';
+import type { Column } from '@/components/cabinet/ui';
 
 interface LegalAct {
   id: string;
-  client_name: string;
-  act_type: ActType;
-  act_date: string;
-  description: string;
-  status: ActStatus;
-  responsible: string;
-  created_at: string;
+  client_id: string | null;
+  act_type: string;
+  description: string | null;
+  act_date: string | null;
+  status: 'pending' | 'in_progress' | 'done' | 'filed';
+  responsible: string | null;
 }
 
-interface CompanyCreation {
+interface Creation {
   id: string;
-  denomination: string;
-  legal_form: LegalForm;
-  capital: number;
-  registered_office: string;
-  corporate_purpose: string;
-  manager: string;
-  naf_code: string;
-  constitution_date: string;
-  associates: string;
-  status: 'draft' | 'in_progress' | 'completed';
-  created_at: string;
+  company_name: string;
+  legal_form: string | null;
+  capital: number | null;
+  status: 'draft' | 'in_progress' | 'registered' | 'abandoned';
 }
 
-type ActType = 'pv_ag' | 'modification_statuts' | 'nomination' | 'radiation' | 'transfert_siege' | 'variation_capital' | 'dissolution' | 'autre';
-type ActStatus = 'en_attente' | 'en_cours' | 'traite' | 'depose';
-type LegalForm = 'SAS' | 'SASU' | 'SARL' | 'EURL' | 'SA' | 'SNC' | 'SCI' | 'SELARL';
-type TabKey = 'actes' | 'statuts' | 'registres' | 'echeances' | 'creation';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const ACT_TYPES: { value: ActType; label: string }[] = [
-  { value: 'pv_ag', label: 'PV AG' },
-  { value: 'modification_statuts', label: 'Modification statuts' },
-  { value: 'nomination', label: 'Nomination' },
-  { value: 'radiation', label: 'Radiation' },
-  { value: 'transfert_siege', label: 'Transfert siège' },
-  { value: 'variation_capital', label: 'Variation capital' },
-  { value: 'dissolution', label: 'Dissolution' },
-  { value: 'autre', label: 'Autre' },
-];
-
-const ACT_STATUSES: { value: ActStatus; label: string; icon: any; color: string; bg: string }[] = [
-  { value: 'en_attente', label: 'En attente', icon: Clock, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  { value: 'en_cours', label: 'En cours', icon: RefreshCw, color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  { value: 'traite', label: 'Traité', icon: CheckCircle2, color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-  { value: 'depose', label: 'Déposé', icon: FileCheck, color: 'text-purple-700 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30' },
-];
-
-const LEGAL_FORMS: { value: LegalForm; label: string }[] = [
-  { value: 'SAS', label: 'SAS' },
-  { value: 'SASU', label: 'SASU' },
-  { value: 'SARL', label: 'SARL' },
-  { value: 'EURL', label: 'EURL' },
-  { value: 'SA', label: 'SA' },
-  { value: 'SNC', label: 'SNC' },
-  { value: 'SCI', label: 'SCI' },
-  { value: 'SELARL', label: 'SELARL' },
-];
-
-const TABS: { key: TabKey; label: string; icon: any }[] = [
-  { key: 'actes', label: 'Actes & AG', icon: Scale },
-  { key: 'statuts', label: 'Statuts & Modifications', icon: FileText },
-  { key: 'registres', label: 'Registres', icon: BookOpen },
-  { key: 'echeances', label: 'Échéances', icon: Calendar },
-  { key: 'creation', label: 'Création société', icon: Building2 },
-];
-
-const CREATION_CHECKLIST = [
-  { id: 'denomination', label: 'Vérification dénomination (INPI)' },
-  { id: 'statuts', label: 'Rédaction des statuts' },
-  { id: 'capital', label: 'Constitution du capital' },
-  { id: 'kbis', label: 'Immatriculation (Kbis)' },
-  { id: 'siret', label: 'Obtention SIRET/SIREN' },
-  { id: 'naf', label: 'Code NAF/APE' },
-  { id: 'vat', label: 'Déclaration TVA' },
-  { id: 'rcs', label: 'Inscription RCS' },
-  { id: 'bank', label: 'Ouverture compte bancaire' },
-  { id: 'cfp', label: 'Déclaration CFP (urssaf)' },
-  { id: 'employeur', label: 'Déclaration d\'employeur (si applicable)' },
-  { id: 'statuts_file', label: 'Dépôt des statuts au greffe' },
-];
-
-const REGISTRES = [
-  {
-    id: 'associates',
-    title: 'Registre des associés',
-    description: 'Liste des associés avec leurs parts sociales, entrées et sorties.',
-    icon: Users,
-    color: 'from-blue-500 to-indigo-600',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    text: 'text-blue-700 dark:text-blue-400',
-  },
-  {
-    id: 'pv_ag',
-    title: 'PV d\'assemblées générales',
-    description: 'Procès-verbaux des assemblées générales ordinaires et extraordinaires.',
-    icon: FileText,
-    color: 'from-emerald-500 to-teal-600',
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    text: 'text-emerald-700 dark:text-emerald-400',
-  },
-  {
-    id: 'motions',
-    title: 'Registre des motions',
-    description: 'Registre des décisions et résolutions prises en assemblée.',
-    icon: BookOpen,
-    color: 'from-purple-500 to-violet-600',
-    bg: 'bg-purple-50 dark:bg-purple-900/20',
-    text: 'text-purple-700 dark:text-purple-400',
-  },
-];
-
-const EMPTY_ACT: Omit<LegalAct, 'id' | 'created_at'> = {
-  client_name: '',
-  act_type: 'pv_ag',
-  act_date: '',
-  description: '',
-  status: 'en_attente',
-  responsible: '',
+const ACT_CFG: Record<string, { label: string; dot: string }> = {
+  pv_ag: { label: 'PV d\'AG', dot: '#3b82f6' },
+  statuts_modification: { label: 'Modification statuts', dot: '#8b5cf6' },
+  nomination: { label: 'Nomination', dot: '#14b8a6' },
+  radiation: { label: 'Radiation', dot: '#ef4444' },
+  transfert_siege: { label: 'Transfert de siège', dot: '#f59e0b' },
+  capital_variation: { label: 'Variation de capital', dot: '#ec4899' },
+  dissolution: { label: 'Dissolution', dot: '#6b7280' },
+  autre: { label: 'Autre', dot: '#9ca3af' },
 };
-
-const EMPTY_COMPANY: Omit<CompanyCreation, 'id' | 'created_at' | 'status'> = {
-  denomination: '',
-  legal_form: 'SAS',
-  capital: 0,
-  registered_office: '',
-  corporate_purpose: '',
-  manager: '',
-  naf_code: '',
-  constitution_date: '',
-  associates: '',
+const ACT_STATUS_TONE: Record<string, 'neutral' | 'info' | 'good' | 'warning'> = {
+  pending: 'neutral', in_progress: 'info', done: 'good', filed: 'warning',
 };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getActTypeLabel(type: ActType): string {
-  return ACT_TYPES.find((t) => t.value === type)?.label ?? type;
-}
-
-function getActStatusConfig(status: ActStatus) {
-  return ACT_STATUSES.find((s) => s.value === status) ?? ACT_STATUSES[0];
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const ACT_STATUS_LABEL: Record<string, string> = {
+  pending: 'À faire', in_progress: 'En cours', done: 'Réalisé', filed: 'Classé',
+};
+const LEGAL_FORMS = ['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SNC', 'SCI', 'SELARL'];
+const CREATION_STATUS_TONE: Record<string, 'neutral' | 'info' | 'good' | 'critical'> = {
+  draft: 'neutral', in_progress: 'info', registered: 'good', abandoned: 'critical',
+};
+const CREATION_STATUS_LABEL: Record<string, string> = {
+  draft: 'Brouillon', in_progress: 'En cours', registered: 'Immatriculée', abandoned: 'Abandonnée',
+};
 
 export default function CabinetJuridiquePage() {
   const sub = useSubscription();
+  const { clients: storeClients, cabinet } = useCabinetStore();
+  const primaryColor = cabinet?.primary_color || '#10b981';
 
-  // Data hooks — fetch acts and creations from the /api/cabinet/legal endpoint
+  const [tab, setTab] = useState<'acts' | 'creations'>('acts');
+
   const { data: acts, loading: actsLoading, error: actsError, refresh: refreshActs } = useCabinetData<LegalAct[]>(
-    '/api/cabinet/legal',
-    { dataKey: 'acts' },
+    tab === 'acts' ? '/api/cabinet/legal' : null,
+  );
+  const { data: creations, loading: crLoading, error: crError, refresh: refreshCr } = useCabinetData<Creation[]>(
+    tab === 'creations' ? '/api/cabinet/legal?tab=creations' : null,
   );
 
-  const { data: companies, loading: companiesLoading, error: companiesError, refresh: refreshCompanies } = useCabinetData<CompanyCreation[]>(
-    '/api/cabinet/legal',
-    { dataKey: 'creations', params: { tab: 'creations' } },
-  );
-
-  const loading = actsLoading || companiesLoading;
-  const fetchError = actsError || companiesError;
-
-  // UI
-  const [activeTab, setActiveTab] = useState<TabKey>('actes');
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<ActType | 'all'>('all');
-  const [showActForm, setShowActForm] = useState(false);
-  const [actForm, setActForm] = useState(EMPTY_ACT);
+  const [showAddAct, setShowAddAct] = useState(false);
+  const [editingAct, setEditingAct] = useState<LegalAct | null>(null);
+  const [actForm, setActForm] = useState({ clientId: '', type: 'pv_ag', date: '', description: '', responsible: '' });
   const [savingAct, setSavingAct] = useState(false);
-  const [editingActId, setEditingActId] = useState<string | null>(null);
-  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
-  // Company creation form
-  const [showCompanyForm, setShowCompanyForm] = useState(false);
-  const [companyForm, setCompanyForm] = useState(EMPTY_COMPANY);
-  const [savingCompany, setSavingCompany] = useState(false);
-  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
-  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
-  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showAddCr, setShowAddCr] = useState(false);
+  const [crForm, setCrForm] = useState({ companyName: '', legalForm: 'SAS', capital: '' });
+  const [savingCr, setSavingCr] = useState(false);
 
-  const refreshAll = async () => {
-    await Promise.all([refreshActs(), refreshCompanies()]);
-  };
+  const clientName = useCallback((id: string | null) => {
+    if (!id) return '— Cabinet —';
+    const c: any = (storeClients as any[]).find((cl) => cl.id === id);
+    if (!c) return '—';
+    return c.client_type === 'manual' ? c.company_name || 'Client' : c.profile?.company_name || c.profile?.first_name || 'Client';
+  }, [storeClients]);
 
-  // Derived
-  const actsList = acts ?? [];
-  const companiesList = companies ?? [];
+  const actsList = acts || [];
+  const crList = creations || [];
 
-  const filteredActs = useMemo(() => {
-    let result = [...actsList];
-    if (filterType !== 'all') result = result.filter((a) => a.act_type === filterType);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.client_name?.toLowerCase().includes(q) ||
-          a.responsible?.toLowerCase().includes(q) ||
-          a.description?.toLowerCase().includes(q) ||
-          getActTypeLabel(a.act_type).toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [actsList, filterType, search]);
-
-  const actStats = useMemo(() => ({
+  const actKpis = useMemo(() => ({
     total: actsList.length,
-    enAttente: actsList.filter((a) => a.status === 'en_attente').length,
-    enCours: actsList.filter((a) => a.status === 'en_cours').length,
-    traite: actsList.filter((a) => a.status === 'traite').length,
-    depose: actsList.filter((a) => a.status === 'depose').length,
+    enCours: actsList.filter((a) => a.status === 'in_progress').length,
+    realises: actsList.filter((a) => a.status === 'done' || a.status === 'filed').length,
+    aFaire: actsList.filter((a) => a.status === 'pending').length,
   }), [actsList]);
 
-  const checklistProgress = useMemo(() => {
-    const total = CREATION_CHECKLIST.length;
-    const done = Object.values(checklist).filter(Boolean).length;
-    return total > 0 ? Math.round((done / total) * 100) : 0;
-  }, [checklist]);
+  const openAct = (a?: LegalAct) => {
+    setActForm(a ? { clientId: a.client_id || '', type: a.act_type, date: a.act_date || '', description: a.description || '', responsible: a.responsible || '' } : { clientId: '', type: 'pv_ag', date: '', description: '', responsible: '' });
+    setEditingAct(a || null);
+    setShowAddAct(true);
+  };
 
-  // Act CRUD
-  const handleSaveAct = async () => {
-    if (!actForm.client_name.trim()) { toast.error('Le nom du client est requis'); return; }
-    if (!actForm.act_date) { toast.error('La date est requise'); return; }
-
+  const saveAct = async () => {
+    if (!actForm.type) { toast.error('Type requis'); return; }
     setSavingAct(true);
     try {
-      const payload = {
-        client_name: actForm.client_name.trim(),
-        act_type: actForm.act_type,
-        act_date: actForm.act_date,
-        description: actForm.description?.trim() || null,
-        status: actForm.status,
-        responsible: actForm.responsible?.trim() || null,
-      };
-
-      if (editingActId) {
-        await cabinetMutation(`/api/cabinet/legal`, 'PATCH', { id: editingActId, ...payload });
-        toast.success('Acte mis à jour');
-      } else {
-        await cabinetMutation(`/api/cabinet/legal`, 'POST', payload);
-        toast.success('Acte créé');
-      }
-
+      const body = { act_type: actForm.type, description: actForm.description || null, act_date: actForm.date || null, responsible: actForm.responsible || null, client_id: actForm.clientId || null };
+      if (editingAct) await cabinetMutation('/api/cabinet/legal', 'PATCH', { id: editingAct.id, ...body });
+      else await cabinetMutation('/api/cabinet/legal', 'POST', body);
       clearCabinetCache('/api/cabinet/legal');
-      setShowActForm(false);
-      setEditingActId(null);
-      setActForm(EMPTY_ACT);
+      toast.success(editingAct ? 'Acte mis à jour' : 'Acte créé');
+      setShowAddAct(false);
       await refreshActs();
-    } catch (err: any) {
-      console.error('[handleSaveAct]', err);
-      toast.error(err.message || 'Erreur lors de la sauvegarde');
-    } finally {
-      setSavingAct(false);
-    }
+    } catch (err: any) { toast.error(err.message || 'Erreur'); } finally { setSavingAct(false); }
   };
 
-  const handleDeleteAct = async (id: string) => {
-    if (!confirm('Supprimer cet acte ?')) return;
+  const saveCreation = async () => {
+    if (!crForm.companyName) { toast.error('Nom de la société requis'); return; }
+    setSavingCr(true);
     try {
-      await cabinetMutation(`/api/cabinet/legal?id=${id}`, 'DELETE');
-      clearCabinetCache('/api/cabinet/legal');
-      toast.success('Acte supprimé');
-      await refreshActs();
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur');
-    }
-    setActionMenuId(null);
-  };
-
-  const handleEditAct = (act: LegalAct) => {
-    setActForm({
-      client_name: act.client_name,
-      act_type: act.act_type,
-      act_date: act.act_date,
-      description: act.description || '',
-      status: act.status,
-      responsible: act.responsible || '',
-    });
-    setEditingActId(act.id);
-    setShowActForm(true);
-    setActionMenuId(null);
-  };
-
-  // Company CRUD
-  const handleSaveCompany = async () => {
-    if (!companyForm.denomination.trim()) { toast.error('La dénomination est requise'); return; }
-
-    setSavingCompany(true);
-    try {
-      const payload = {
-        type: 'creation',
-        company_name: companyForm.denomination.trim(),
-        legal_form: companyForm.legal_form,
-        capital: companyForm.capital,
-        head_office: companyForm.registered_office?.trim() || null,
-        corporate_purpose: companyForm.corporate_purpose?.trim() || null,
-        manager: companyForm.manager?.trim() || null,
-        naf_code: companyForm.naf_code?.trim() || null,
-        constitution_date: companyForm.constitution_date || null,
-        associates: companyForm.associates?.trim() || null,
-      };
-
-      if (editingCompanyId) {
-        await cabinetMutation(`/api/cabinet/legal`, 'PATCH', { id: editingCompanyId, table: 'creation', ...payload });
-        toast.success('Société mise à jour');
-      } else {
-        await cabinetMutation(`/api/cabinet/legal`, 'POST', { ...payload, status: 'draft' });
-        toast.success('Société créée');
-      }
-
+      await cabinetMutation('/api/cabinet/legal', 'POST', { type: 'creation', company_name: crForm.companyName, legal_form: crForm.legalForm, capital: crForm.capital ? parseFloat(crForm.capital) : null });
       clearCabinetCache('/api/cabinet/legal?tab=creations');
-      setShowCompanyForm(false);
-      setEditingCompanyId(null);
-      setCompanyForm(EMPTY_COMPANY);
-      await refreshCompanies();
-    } catch (err: any) {
-      console.error('[handleSaveCompany]', err);
-      toast.error(err.message || 'Erreur lors de la sauvegarde');
-    } finally {
-      setSavingCompany(false);
-    }
+      toast.success('Création ajoutée');
+      setShowAddCr(false);
+      setCrForm({ companyName: '', legalForm: 'SAS', capital: '' });
+      await refreshCr();
+    } catch (err: any) { toast.error(err.message || 'Erreur'); } finally { setSavingCr(false); }
   };
 
-  const handleEditCompany = (company: CompanyCreation) => {
-    setCompanyForm({
-      denomination: company.denomination,
-      legal_form: company.legal_form,
-      capital: company.capital,
-      registered_office: company.registered_office || '',
-      corporate_purpose: company.corporate_purpose || '',
-      manager: company.manager || '',
-      naf_code: company.naf_code || '',
-      constitution_date: company.constitution_date || '',
-      associates: company.associates || '',
-    });
-    setEditingCompanyId(company.id);
-    setShowCompanyForm(true);
-  };
-
-  const handleDeleteCompany = async (id: string) => {
-    if (!confirm('Supprimer cette société ?')) return;
-    try {
-      await cabinetMutation(`/api/cabinet/legal?id=${id}&table=creation`, 'DELETE');
-      clearCabinetCache('/api/cabinet/legal?tab=creations');
-      toast.success('Société supprimée');
-      await refreshCompanies();
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur');
-    }
-  };
-
-  const handleGenerateStatutes = async (company: CompanyCreation) => {
-    setGeneratingPdf(true);
-    try {
-      // Simulate PDF generation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success(`Statuts générés pour ${company.denomination}`);
-    } catch (err: any) {
-      toast.error('Erreur lors de la génération');
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
-
-  const toggleChecklist = (id: string) => {
-    setChecklist((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Paywall guard
   if (!sub.isBusiness && !sub.isTrialActive) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-emerald-500/20">
-            <Scale size={40} className="text-emerald-500" />
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Juridique & Création</h1>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            La gestion des actes juridiques et la création de sociétés sont disponibles avec le plan Business.
-          </p>
-          <Link
-            href="/paywall?plan=business"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/35 transition-all"
-          >
-            <Crown size={18} />
-            Passer au plan Business
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle size={28} className="text-red-500" />
+        <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${primaryColor}1a` }}>
+          <Scale size={40} style={{ color: primaryColor }} />
         </div>
-        <p className="text-gray-900 dark:text-white font-semibold mb-1">Erreur de chargement</p>
-        <p className="text-sm text-gray-400 mb-5">{fetchError}</p>
-        <button
-          onClick={refreshAll}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
-        >
-          <RefreshCw size={15} />
-          Réessayer
-        </button>
+        <h1 className="text-3xl font-black text-gray-900 mb-3">Juridique</h1>
+        <p className="text-gray-500 mb-8">Actes, AG, créations de sociétés et registres de vos clients.</p>
       </div>
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
+  const actColumns: Column<LegalAct>[] = [
+    { key: 'client', header: 'Client', sortValue: (a) => clientName(a.client_id), sortable: true, hideOnMobile: true, render: (a) => <span className="text-sm text-gray-700 truncate">{clientName(a.client_id)}</span> },
+    { key: 'type', header: 'Type', render: (a) => { const cfg = ACT_CFG[a.act_type] || ACT_CFG.autre; return <StatusBadge dot={cfg.dot} size="sm">{cfg.label}</StatusBadge>; } },
+    { key: 'date', header: 'Date', sortValue: (a) => a.act_date || '', sortable: true, hideOnMobile: true, render: (a) => <span className="text-xs text-gray-500">{a.act_date ? formatDateShort(a.act_date) : '—'}</span> },
+    { key: 'desc', header: 'Description', render: (a) => <span className="text-sm text-gray-900 truncate">{a.description || '—'}</span> },
+    { key: 'resp', header: 'Responsable', hideOnMobile: true, render: (a) => <span className="text-xs text-gray-500">{a.responsible || '—'}</span> },
+    { key: 'status', header: 'Statut', render: (a) => <StatusBadge tone={ACT_STATUS_TONE[a.status]}>{ACT_STATUS_LABEL[a.status]}</StatusBadge> },
+    { key: 'actions', header: '', align: 'right', render: (a) => <button onClick={() => openAct(a)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"><Pencil size={14} /></button> },
+  ];
+
+  const crColumns: Column<Creation>[] = [
+    { key: 'name', header: 'Société', sortValue: (c) => c.company_name, sortable: true, render: (c) => <span className="font-semibold text-gray-900 text-sm truncate">{c.company_name}</span> },
+    { key: 'form', header: 'Forme', render: (c) => <StatusBadge tone="info" size="sm">{c.legal_form || '—'}</StatusBadge> },
+    { key: 'capital', header: 'Capital', align: 'right', hideOnMobile: true, sortValue: (c) => c.capital || 0, sortable: true, render: (c) => <span className="text-sm font-semibold text-gray-700">{c.capital ? formatCurrency(c.capital) : '—'}</span> },
+    { key: 'status', header: 'Statut', render: (c) => <StatusBadge tone={CREATION_STATUS_TONE[c.status]}>{CREATION_STATUS_LABEL[c.status]}</StatusBadge> },
+  ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/cabinet" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-            <ArrowLeft size={18} className="text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Juridique & Création</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Actes, statuts, registres et création de sociétés</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={refreshAll}
-            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            title="Actualiser"
-          >
-            <RefreshCw size={16} />
-          </button>
-          {activeTab === 'actes' && (
-            <button
-              onClick={() => { setActForm(EMPTY_ACT); setEditingActId(null); setShowActForm(true); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-            >
-              <Plus size={15} />
-              Nouvel acte
-            </button>
-          )}
-          {activeTab === 'creation' && (
-            <button
-              onClick={() => { setCompanyForm(EMPTY_COMPANY); setEditingCompanyId(null); setShowCompanyForm(true); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-            >
-              <Plus size={15} />
-              Nouvelle société
-            </button>
-          )}
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      <Tabs
+        active={tab} onChange={(t) => setTab(t as any)} accent={primaryColor}
+        tabs={[{ id: 'acts', label: 'Actes & AG', icon: Scale }, { id: 'creations', label: 'Créations', icon: Building2 }]}
+      />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-        {TABS.map(({ key, label, icon: TabIcon }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 border',
-              activeTab === key
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 border-transparent'
-            )}
-          >
-            <TabIcon size={13} />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ================================================================== */}
-      {/* TAB: Actes & AG                                                     */}
-      {/* ================================================================== */}
-      {activeTab === 'actes' && (
+      {tab === 'acts' ? (
         <>
-          {/* KPI Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {[
-              { label: 'Total', value: actStats.total, icon: Scale, color: 'from-gray-500 to-gray-600', bg: 'bg-gray-50 dark:bg-gray-900/20', text: 'text-gray-700 dark:text-gray-300' },
-              { label: 'En attente', value: actStats.enAttente, icon: Clock, color: 'from-amber-500 to-orange-500', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400' },
-              { label: 'En cours', value: actStats.enCours, icon: RefreshCw, color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
-              { label: 'Traités', value: actStats.traite, icon: CheckCircle2, color: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400' },
-              { label: 'Déposés', value: actStats.depose, icon: FileCheck, color: 'from-purple-500 to-violet-600', bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-400' },
-            ].map(({ label, value, icon: Icon, color, bg, text }) => (
-              <div key={label} className={cn('p-4 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
-                <div className={cn('w-8 h-8 rounded-xl bg-gradient-to-br flex items-center justify-center mb-2', color)}>
-                  <Icon size={14} className="text-white" />
-                </div>
-                <p className={cn('text-lg font-black', text)}>{value}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard label="Actes" value={String(actKpis.total)} icon={Scale} accent={primaryColor} />
+            <KpiCard label="À faire" value={String(actKpis.aFaire)} icon={Clock} accent={actKpis.aFaire > 0 ? '#f59e0b' : '#6b7280'} />
+            <KpiCard label="En cours" value={String(actKpis.enCours)} icon={AlertCircle} accent="#3b82f6" />
+            <KpiCard label="Réalisés" value={String(actKpis.realises)} icon={CheckCircle2} accent="#22c55e" />
           </div>
-
-          {/* Search & Filters */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un client, acte, responsable..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-              />
-            </div>
-            <div className="relative">
-              <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as ActType | 'all')}
-                className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none cursor-pointer"
-              >
-                <option value="all">Tous les types</option>
-                {ACT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Acts table */}
-          <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_0.7fr_1.5fr_0.8fr_0.8fr_0.5fr] gap-3 px-5 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
-              {['Client', 'Type d\'acte', 'Date', 'Description', 'Statut', 'Responsable', 'Actions'].map((h) => (
-                <span key={h} className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</span>
-              ))}
-            </div>
-
-            {filteredActs.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Scale size={28} className="text-gray-300 dark:text-gray-600" />
-                </div>
-                <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucun acte juridique</p>
-                <p className="text-sm text-gray-400 mb-5">Créez votre premier acte pour commencer.</p>
-                <button
-                  onClick={() => { setActForm(EMPTY_ACT); setEditingActId(null); setShowActForm(true); }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
-                >
-                  <Plus size={15} />
-                  Nouvel acte
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                <AnimatePresence>
-                  {filteredActs.map((act, i) => {
-                    const statusConf = getActStatusConfig(act.status);
-                    const StatusIcon = statusConf.icon;
-                    return (
-                      <motion.div
-                        key={act.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ delay: i * 0.02 }}
-                        className="group"
-                      >
-                        {/* Desktop */}
-                        <div className="hidden lg:grid grid-cols-[1.5fr_1fr_0.7fr_1.5fr_0.8fr_0.8fr_0.5fr] gap-3 px-5 py-4 items-center hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300 flex-shrink-0">
-                              {act.client_name?.charAt(0).toUpperCase() || 'C'}
-                            </div>
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm truncate">{act.client_name}</span>
-                          </div>
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{getActTypeLabel(act.act_type)}</span>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{formatDateShort(act.act_date)}</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{act.description || '-'}</span>
-                          <div className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold w-fit', statusConf.bg, statusConf.color)}>
-                            <StatusIcon size={11} />
-                            {statusConf.label}
-                          </div>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-500 flex-shrink-0">
-                              {act.responsible?.charAt(0).toUpperCase() || '-'}
-                            </div>
-                            <span className="text-sm text-gray-600 dark:text-gray-400 truncate">{act.responsible || '-'}</span>
-                          </div>
-                          <div className="relative">
-                            <button
-                              onClick={() => setActionMenuId(actionMenuId === act.id ? null : act.id)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-                            >
-                              <MoreHorizontal size={16} />
-                            </button>
-                            <AnimatePresence>
-                              {actionMenuId === act.id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  className="absolute right-0 top-8 z-20 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 w-40"
-                                >
-                                  <button onClick={() => handleEditAct(act)} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 w-full text-left">
-                                    <Pencil size={13} /> Modifier
-                                  </button>
-                                  <button onClick={() => handleDeleteAct(act.id)} className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 w-full text-left">
-                                    <Trash2 size={13} /> Supprimer
-                                  </button>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-
-                        {/* Mobile */}
-                        <div className="lg:hidden px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-bold text-emerald-700 dark:text-emerald-300 flex-shrink-0">
-                                {act.client_name?.charAt(0).toUpperCase() || 'C'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{act.client_name}</p>
-                                <p className="text-xs text-gray-400">{getActTypeLabel(act.act_type)}</p>
-                              </div>
-                            </div>
-                            <div className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0', statusConf.bg, statusConf.color)}>
-                              <StatusIcon size={11} />
-                              {statusConf.label}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="flex items-center gap-1.5 text-gray-500">
-                              <Calendar size={11} />
-                              <span>{formatDateShort(act.act_date)}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-gray-500">
-                              <User size={11} />
-                              <span>{act.responsible || '-'}</span>
-                            </div>
-                          </div>
-                          {act.description && (
-                            <p className="text-xs text-gray-400 mt-2 line-clamp-2">{act.description}</p>
-                          )}
-                          <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
-                            <button onClick={() => handleEditAct(act)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"><Pencil size={14} /></button>
-                            <button onClick={() => handleDeleteAct(act.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
+          <SectionCard title={`Actes & assemblées générales (${actsList.length})`} icon={Scale} accent={primaryColor} noPadding
+            action={<button onClick={() => openAct()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold" style={{ backgroundColor: primaryColor }}><Plus size={14} /><span className="hidden sm:inline">Nouvel acte</span></button>}
+          >
+            {actsLoading ? <TableSkeleton cols={5} /> : actsError ? <EmptyState icon={AlertCircle} title="Erreur" description={actsError} /> : (
+              <DataTable columns={actColumns} data={actsList} getRowId={(a) => a.id} searchable searchPlaceholder="Rechercher…" searchText={(a) => `${clientName(a.client_id)} ${a.description || ''} ${a.responsible || ''}`} emptyIcon={Scale} emptyTitle="Aucun acte" emptyDescription="Ajoutez les actes juridiques de vos clients." initialSort={{ key: 'date', dir: 'desc' }} />
             )}
-          </div>
+          </SectionCard>
         </>
-      )}
-
-      {/* ================================================================== */}
-      {/* TAB: Statuts & Modifications                                        */}
-      {/* ================================================================== */}
-      {activeTab === 'statuts' && (
-        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-            <FileText size={16} className="text-gray-400" />
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Statuts & Modifications</h3>
-          </div>
-          {actsList.filter((a) => a.act_type === 'modification_statuts').length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <FileText size={28} className="text-gray-300 dark:text-gray-600" />
-              </div>
-              <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucune modification de statuts</p>
-              <p className="text-sm text-gray-400 mb-5">Les modifications de statuts apparaîtront ici.</p>
-              <button
-                onClick={() => { setActForm({ ...EMPTY_ACT, act_type: 'modification_statuts' }); setEditingActId(null); setShowActForm(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
-              >
-                <Plus size={15} />
-                Nouvelle modification
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-              {actsList.filter((a) => a.act_type === 'modification_statuts').map((act) => {
-                const statusConf = getActStatusConfig(act.status);
-                const StatusIcon = statusConf.icon;
-                return (
-                  <div key={act.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-bold text-emerald-700 dark:text-emerald-300 flex-shrink-0">
-                      {act.client_name?.charAt(0).toUpperCase() || 'C'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{act.client_name}</p>
-                      <p className="text-xs text-gray-400">{formatDateShort(act.act_date)} · {act.description || 'Aucune description'}</p>
-                    </div>
-                    <div className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0', statusConf.bg, statusConf.color)}>
-                      <StatusIcon size={11} />
-                      {statusConf.label}
-                    </div>
-                    <button onClick={() => handleEditAct(act)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors">
-                      <Pencil size={14} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+      ) : (
+        <SectionCard title={`Créations de sociétés (${crList.length})`} icon={Building2} accent={primaryColor} noPadding
+          action={<button onClick={() => setShowAddCr(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold" style={{ backgroundColor: primaryColor }}><Plus size={14} /><span className="hidden sm:inline">Nouvelle</span></button>}
+        >
+          {crLoading ? <TableSkeleton cols={4} /> : crError ? <EmptyState icon={AlertCircle} title="Erreur" description={crError} /> : (
+            <DataTable columns={crColumns} data={crList} getRowId={(c) => c.id} searchable searchPlaceholder="Rechercher…" searchText={(c) => c.company_name} emptyIcon={Building2} emptyTitle="Aucune création" emptyDescription="Suivez les créations de sociétés de vos clients." />
           )}
-        </div>
+        </SectionCard>
       )}
 
-      {/* ================================================================== */}
-      {/* TAB: Registres                                                      */}
-      {/* ================================================================== */}
-      {activeTab === 'registres' && (
+      {/* Modale acte */}
+      <Modal open={showAddAct} onClose={() => setShowAddAct(false)} title={editingAct ? 'Modifier l\'acte' : 'Nouvel acte'} icon={Scale} accent={primaryColor}
+        footer={<>
+          <button onClick={() => setShowAddAct(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Annuler</button>
+          <button onClick={saveAct} disabled={savingAct} className="px-5 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2" style={{ backgroundColor: primaryColor }}>{savingAct ? <Loader2 size={14} className="animate-spin" /> : null} Enregistrer</button>
+        </>}
+      >
         <div className="space-y-4">
-          {REGISTRES.map(({ id, title, description, icon: RegIcon, color, bg, text }) => (
-            <div key={id} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
-              <div className="flex items-start gap-4">
-                <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0', color)}>
-                  <RegIcon size={20} className="text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className={cn('font-bold text-sm', text)}>{title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
-                      <Plus size={12} />
-                      Ajouter une entrée
-                    </button>
-                    <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
-                      <Download size={12} />
-                      Exporter
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ================================================================== */}
-      {/* TAB: Echeances                                                      */}
-      {/* ================================================================== */}
-      {activeTab === 'echeances' && (
-        <div className="space-y-4">
-          {/* Upcoming deadlines from acts */}
-          {actsList.filter((a) => a.status === 'en_attente' || a.status === 'en_cours').length === 0 ? (
-            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 text-center py-16 px-4">
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Calendar size={28} className="text-gray-300 dark:text-gray-600" />
-              </div>
-              <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucune échéance</p>
-              <p className="text-sm text-gray-400">Les actes en attente ou en cours apparaîtront ici.</p>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-                <Calendar size={16} className="text-gray-400" />
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Échéances à venir</h3>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                {actsList
-                  .filter((a) => a.status === 'en_attente' || a.status === 'en_cours')
-                  .sort((a, b) => new Date(a.act_date).getTime() - new Date(b.act_date).getTime())
-                  .map((act) => {
-                    const isPast = new Date(act.act_date) < new Date();
-                    return (
-                      <div key={act.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                        <div className={cn(
-                          'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
-                          isPast
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        )}>
-                          {formatDateShort(act.act_date).slice(0, 5)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{act.client_name}</p>
-                          <p className="text-xs text-gray-400">{getActTypeLabel(act.act_type)}</p>
-                        </div>
-                        {isPast && (
-                          <div className="flex items-center gap-1 text-xs font-semibold text-red-500">
-                            <AlertTriangle size={12} />
-                            En retard
-                          </div>
-                        )}
-                        <span className="text-xs text-gray-400">{formatDateShort(act.act_date)}</span>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ================================================================== */}
-      {/* TAB: Creation societe                                               */}
-      {/* ================================================================== */}
-      {activeTab === 'creation' && (
-        <div className="space-y-6">
-          {/* Checklist section */}
-          <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-            <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-              <div className="flex items-center gap-3">
-                <ListChecks size={16} className="text-emerald-500" />
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Checklist de création</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500"
-                    style={{ width: `${checklistProgress}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{checklistProgress}%</span>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-              {CREATION_CHECKLIST.map((item) => (
-                <label
-                  key={item.id}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleChecklist(item.id)}
-                    className={cn(
-                      'w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                      checklist[item.id]
-                        ? 'bg-emerald-500 border-emerald-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    )}
-                  >
-                    {checklist[item.id] && <CheckCircle2 size={12} className="text-white" />}
-                  </button>
-                  <span className={cn(
-                    'text-sm transition-colors',
-                    checklist[item.id]
-                      ? 'text-gray-400 line-through'
-                      : 'text-gray-700 dark:text-gray-300'
-                  )}>
-                    {item.label}
-                  </span>
-                </label>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Lbl>Type *</Lbl><select value={actForm.type} onChange={(e) => setActForm({ ...actForm, type: e.target.value })} className={inputCls}>{Object.entries(ACT_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+            <div><Lbl>Date</Lbl><input type="date" value={actForm.date} onChange={(e) => setActForm({ ...actForm, date: e.target.value })} className={inputCls} /></div>
           </div>
+          <div><Lbl>Client</Lbl><select value={actForm.clientId} onChange={(e) => setActForm({ ...actForm, clientId: e.target.value })} className={inputCls}><option value="">— Cabinet —</option>{(storeClients as any[]).map((c: any) => <option key={c.id} value={c.id}>{c.client_type === 'manual' ? c.company_name : c.profile?.company_name || c.profile?.first_name || 'Client'}</option>)}</select></div>
+          <div><Lbl>Description</Lbl><textarea value={actForm.description} onChange={(e) => setActForm({ ...actForm, description: e.target.value })} rows={2} className={cn(inputCls, 'resize-none')} placeholder="AGO annuelle, approbation des comptes…" /></div>
+          <div><Lbl>Responsable</Lbl><input value={actForm.responsible} onChange={(e) => setActForm({ ...actForm, responsible: e.target.value })} className={inputCls} placeholder="M. Dupont" /></div>
+        </div>
+      </Modal>
 
-          {/* Company list */}
-          <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 overflow-hidden shadow-sm">
-            <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/5">
-              <div className="flex items-center gap-3">
-                <Building2 size={16} className="text-gray-400" />
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm">Sociétés en cours de création</h3>
-              </div>
-              <span className="text-xs text-gray-400">{companiesList.length} société{companiesList.length !== 1 ? 's' : ''}</span>
-            </div>
-
-            {companiesList.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Building2 size={28} className="text-gray-300 dark:text-gray-600" />
-                </div>
-                <p className="text-gray-900 dark:text-white font-semibold mb-1">Aucune société en cours</p>
-                <p className="text-sm text-gray-400 mb-5">Créez une société pour démarrer le processus.</p>
-                <button
-                  onClick={() => { setCompanyForm(EMPTY_COMPANY); setEditingCompanyId(null); setShowCompanyForm(true); }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm"
-                >
-                  <Plus size={15} />
-                  Nouvelle société
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
-                {companiesList.map((company) => {
-                  const formLabel = LEGAL_FORMS.find((f) => f.value === company.legal_form)?.label || company.legal_form;
-                  return (
-                    <div key={company.id} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 min-w-0 flex-1">
-                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                            {company.denomination.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{company.denomination}</p>
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">{formLabel}</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-400">
-                              {company.capital > 0 && (
-                                <span className="flex items-center gap-1"><Euro size={10} /> Capital : {formatCurrency(company.capital)}</span>
-                              )}
-                              {company.registered_office && (
-                                <span className="flex items-center gap-1 truncate"><Building2 size={10} /> {company.registered_office}</span>
-                              )}
-                              {company.manager && (
-                                <span className="flex items-center gap-1"><User size={10} /> {company.manager}</span>
-                              )}
-                              {company.naf_code && (
-                                <span>NAF : {company.naf_code}</span>
-                              )}
-                            </div>
-                            {company.corporate_purpose && (
-                              <p className="text-xs text-gray-400 mt-1 line-clamp-1">Objet : {company.corporate_purpose}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => handleGenerateStatutes(company)}
-                            disabled={generatingPdf}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
-                          >
-                            {generatingPdf ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
-                            Statuts PDF
-                          </button>
-                          <button onClick={() => handleEditCompany(company)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"><Pencil size={14} /></button>
-                          <button onClick={() => handleDeleteCompany(company.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                        </div>
-                      </div>
-
-                      {/* Status badge */}
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold',
-                          company.status === 'completed'
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                            : company.status === 'in_progress'
-                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                            : 'bg-gray-100 dark:bg-gray-800/30 text-gray-500'
-                        )}>
-                          {company.status === 'completed' ? <CheckCircle2 size={9} /> : company.status === 'in_progress' ? <RefreshCw size={9} /> : <Clock size={9} />}
-                          {company.status === 'completed' ? 'Terminée' : company.status === 'in_progress' ? 'En cours' : 'Brouillon'}
-                        </span>
-                        {company.constitution_date && (
-                          <span className="text-[10px] text-gray-400">Date prévue : {formatDateShort(company.constitution_date)}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      {/* Modale création */}
+      <Modal open={showAddCr} onClose={() => setShowAddCr(false)} title="Nouvelle création de société" icon={Building2} accent={primaryColor}
+        footer={<>
+          <button onClick={() => setShowAddCr(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Annuler</button>
+          <button onClick={saveCreation} disabled={savingCr} className="px-5 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2" style={{ backgroundColor: primaryColor }}>{savingCr ? <Loader2 size={14} className="animate-spin" /> : null} Créer</button>
+        </>}
+      >
+        <div className="space-y-4">
+          <div><Lbl>Nom de la société *</Lbl><input value={crForm.companyName} onChange={(e) => setCrForm({ ...crForm, companyName: e.target.value })} className={inputCls} placeholder="Dupont Consulting SAS" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Lbl>Forme juridique</Lbl><select value={crForm.legalForm} onChange={(e) => setCrForm({ ...crForm, legalForm: e.target.value })} className={inputCls}>{LEGAL_FORMS.map((f) => <option key={f} value={f}>{f}</option>)}</select></div>
+            <div><Lbl>Capital (€)</Lbl><input type="number" value={crForm.capital} onChange={(e) => setCrForm({ ...crForm, capital: e.target.value })} className={inputCls} placeholder="1000" /></div>
           </div>
         </div>
-      )}
-
-      {/* ================================================================== */}
-      {/* MODAL: Add/Edit Act                                                 */}
-      {/* ================================================================== */}
-      <AnimatePresence>
-        {showActForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-            onClick={() => { setShowActForm(false); setEditingActId(null); }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-white/5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {editingActId ? 'Modifier l\'acte' : 'Nouvel acte juridique'}
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Renseignez les informations de l'acte</p>
-                </div>
-                <button onClick={() => { setShowActForm(false); setEditingActId(null); }} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="px-6 py-5 space-y-5">
-                {/* Client */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Client *</label>
-                  <div className="relative">
-                    <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={actForm.client_name}
-                      onChange={(e) => setActForm({ ...actForm, client_name: e.target.value })}
-                      placeholder="Nom du client"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Act type + Status */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Type d'acte *</label>
-                    <select
-                      value={actForm.act_type}
-                      onChange={(e) => setActForm({ ...actForm, act_type: e.target.value as ActType })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none"
-                    >
-                      {ACT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Statut</label>
-                    <select
-                      value={actForm.status}
-                      onChange={(e) => setActForm({ ...actForm, status: e.target.value as ActStatus })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none"
-                    >
-                      {ACT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Date + Responsible */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Date *</label>
-                    <input
-                      type="date"
-                      value={actForm.act_date}
-                      onChange={(e) => setActForm({ ...actForm, act_date: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Responsable</label>
-                    <div className="relative">
-                      <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        value={actForm.responsible}
-                        onChange={(e) => setActForm({ ...actForm, responsible: e.target.value })}
-                        placeholder="Nom du responsable"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
-                  <textarea
-                    value={actForm.description}
-                    onChange={(e) => setActForm({ ...actForm, description: e.target.value })}
-                    placeholder="Description de l'acte..."
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-gray-100 dark:border-white/5">
-                <button
-                  onClick={() => { setShowActForm(false); setEditingActId(null); }}
-                  className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSaveAct}
-                  disabled={savingAct}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {savingAct ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  {editingActId ? 'Enregistrer' : 'Créer l\'acte'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ================================================================== */}
-      {/* MODAL: Add/Edit Company                                             */}
-      {/* ================================================================== */}
-      <AnimatePresence>
-        {showCompanyForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-            onClick={() => { setShowCompanyForm(false); setEditingCompanyId(null); }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-white/5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {editingCompanyId ? 'Modifier la société' : 'Nouvelle société'}
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Renseignez les informations de la société</p>
-                </div>
-                <button onClick={() => { setShowCompanyForm(false); setEditingCompanyId(null); }} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="px-6 py-5 space-y-5">
-                {/* Denomination + Legal form */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Dénomination *</label>
-                    <input
-                      type="text"
-                      value={companyForm.denomination}
-                      onChange={(e) => setCompanyForm({ ...companyForm, denomination: e.target.value })}
-                      placeholder="Nom de la société"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Forme juridique *</label>
-                    <select
-                      value={companyForm.legal_form}
-                      onChange={(e) => setCompanyForm({ ...companyForm, legal_form: e.target.value as LegalForm })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none"
-                    >
-                      {LEGAL_FORMS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Capital + NAF */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Capital (€)</label>
-                    <div className="relative">
-                      <Euro size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="number"
-                        value={companyForm.capital || ''}
-                        onChange={(e) => setCompanyForm({ ...companyForm, capital: parseFloat(e.target.value) || 0 })}
-                        placeholder="0"
-                        min={0}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Code NAF/APE</label>
-                    <input
-                      type="text"
-                      value={companyForm.naf_code}
-                      onChange={(e) => setCompanyForm({ ...companyForm, naf_code: e.target.value })}
-                      placeholder="Ex: 6920Z"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Siege social */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Siège social</label>
-                  <input
-                    type="text"
-                    value={companyForm.registered_office}
-                    onChange={(e) => setCompanyForm({ ...companyForm, registered_office: e.target.value })}
-                    placeholder="Adresse du siège social"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                  />
-                </div>
-
-                {/* Objet social */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Objet social</label>
-                  <textarea
-                    value={companyForm.corporate_purpose}
-                    onChange={(e) => setCompanyForm({ ...companyForm, corporate_purpose: e.target.value })}
-                    placeholder="Description de l'objet social..."
-                    rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none"
-                  />
-                </div>
-
-                {/* Gerant + Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Gérant / Président</label>
-                    <div className="relative">
-                      <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        value={companyForm.manager}
-                        onChange={(e) => setCompanyForm({ ...companyForm, manager: e.target.value })}
-                        placeholder="Nom du gérant"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Date de constitution</label>
-                    <input
-                      type="date"
-                      value={companyForm.constitution_date}
-                      onChange={(e) => setCompanyForm({ ...companyForm, constitution_date: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Associates */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Associés</label>
-                  <textarea
-                    value={companyForm.associates}
-                    onChange={(e) => setCompanyForm({ ...companyForm, associates: e.target.value })}
-                    placeholder="Liste des associés et leurs parts (un par ligne)&#10;Ex: Jean Dupont - 60%&#10;Marie Martin - 40%"
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-gray-100 dark:border-white/5">
-                <button
-                  onClick={() => { setShowCompanyForm(false); setEditingCompanyId(null); }}
-                  className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSaveCompany}
-                  disabled={savingCompany}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {savingCompany ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  {editingCompanyId ? 'Enregistrer' : 'Créer la société'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </motion.div>
   );
 }
+
+const inputCls = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
+function Lbl({ children }: { children: React.ReactNode }) { return <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">{children}</label>; }

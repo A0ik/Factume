@@ -1,708 +1,603 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Plus, Loader2, Search, FileText, Euro, Clock,
-  AlertTriangle, CheckCircle2, Printer, Mail, Eye, Download,
-  SlidersHorizontal, Send, TrendingUp, Receipt, Filter,
-} from 'lucide-react';
+
+import { useState, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
+import {
+  FileText, TrendingUp, CheckCircle2, Clock, AlertTriangle, Plus, Loader2,
+  Download, Eye, Printer, Mail, Send, Receipt,
+} from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
-import { cn, formatCurrency, formatDateShort, downloadXLSX } from '@/lib/utils';
-import { toast } from 'sonner';
 import { useCabinetData } from '@/hooks/useCabinetData';
 import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { useCabinetStore } from '@/stores/cabinetStore';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { cn, formatCurrency, formatDateShort, downloadXLSX } from '@/lib/utils';
+import { toast } from 'sonner';
+import {
+  SectionCard, DataTable, KpiCard, StatusBadge, Modal, EmptyState, TableSkeleton,
+} from '@/components/cabinet/ui';
+import type { Column } from '@/components/cabinet/ui';
 
 interface CabinetInvoice {
   id: string;
   number: string;
-  client_name: string;
-  client_email?: string;
-  object?: string;
-  subtotal: number;
-  vat_amount: number;
-  total: number;
+  client_id: string;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  amount_ht: number;
+  amount_tva: number;
+  amount_ttc: number;
   issue_date: string;
   due_date: string | null;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
-  document_type?: string;
-  pdf_url?: string;
+  paid_at: string | null;
+  objet: string | null;
+  items: any[];
 }
 
-interface InvoiceData {
-  invoices: CabinetInvoice[];
-  kpis: {
-    total_facture: number;
-    total_payees: number;
-    total_en_attente: number;
-    total_en_retard: number;
-    montant_facture: number;
-    montant_payees: number;
-    montant_en_attente: number;
-    montant_en_retard: number;
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
-  draft:    { label: 'Brouillon',   dot: 'bg-gray-400',   bg: 'bg-gray-100 dark:bg-gray-800',    text: 'text-gray-600 dark:text-gray-400' },
-  sent:     { label: 'Envoyée',     dot: 'bg-blue-500',   bg: 'bg-blue-50 dark:bg-blue-500/10',  text: 'text-blue-700 dark:text-blue-400' },
-  paid:     { label: 'Payée',       dot: 'bg-emerald-500',bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-  overdue:  { label: 'En retard',   dot: 'bg-red-500',    bg: 'bg-red-50 dark:bg-red-500/10',    text: 'text-red-700 dark:text-red-400' },
-  cancelled:{ label: 'Annulée',     dot: 'bg-gray-400',   bg: 'bg-gray-100 dark:bg-gray-800',    text: 'text-gray-500 dark:text-gray-400' },
+const STATUS_DOT: Record<string, { dot: string; label: string }> = {
+  draft: { dot: '#9ca3af', label: 'Brouillon' },
+  sent: { dot: '#3b82f6', label: 'Envoyée' },
+  paid: { dot: '#10b981', label: 'Payée' },
+  overdue: { dot: '#ef4444', label: 'En retard' },
+  cancelled: { dot: '#9ca3af', label: 'Annulée' },
 };
 
-const STATUS_FILTERS: { value: string; label: string }[] = [
-  { value: '',        label: 'Tous' },
-  { value: 'paid',    label: 'Payées' },
-  { value: 'sent',    label: 'Envoyées' },
+const STATUS_FILTERS = [
+  { value: '', label: 'Tous' },
+  { value: 'paid', label: 'Payées' },
+  { value: 'sent', label: 'Envoyées' },
   { value: 'overdue', label: 'En retard' },
-  { value: 'draft',   label: 'Brouillons' },
+  { value: 'draft', label: 'Brouillons' },
 ];
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => {
-  const d = new Date(); d.setMonth(d.getMonth() - i);
+  const d = new Date();
+  d.setMonth(d.getMonth() - i);
   const val = d.toISOString().slice(0, 7);
   const label = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   return { value: val, label: label.charAt(0).toUpperCase() + label.slice(1) };
 });
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const VAT_RATES = [
+  { value: 0, label: '0%' },
+  { value: 5.5, label: '5,5%' },
+  { value: 10, label: '10%' },
+  { value: 20, label: '20%' },
+];
+
+function Paywall({ accent }: { accent: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
+        <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${accent}1a` }}>
+          <Receipt size={40} style={{ color: accent }} />
+        </div>
+        <h1 className="text-3xl font-black text-gray-900 mb-3">Facturation du cabinet</h1>
+        <p className="text-gray-500 mb-8 leading-relaxed">
+          Gérez vos factures d&apos;honoraires, suivez les paiements et relancez vos clients.
+        </p>
+        <Link
+          href="/paywall?plan=business"
+          className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white font-bold shadow-lg"
+          style={{ backgroundColor: accent }}
+        >
+          Passer au plan Business
+        </Link>
+      </motion.div>
+    </div>
+  );
+}
 
 export default function CabinetFacturationPage() {
   const sub = useSubscription();
-  const clients = useCabinetStore(state => state.clients);
+  const { clients, cabinet } = useCabinetStore();
+  const primaryColor = cabinet?.primary_color || '#10b981';
 
-  // Data fetching via useCabinetData hook
-  const { data: invoices, loading, error: fetchError, refresh } = useCabinetData<CabinetInvoice[]>(
+  const { data: invoices, loading, error, refresh } = useCabinetData<CabinetInvoice[]>(
     '/api/cabinet/invoices',
   );
 
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
-  const [showNewInvoiceForm, setShowNewInvoiceForm] = useState(false);
+  const [viewing, setViewing] = useState<CabinetInvoice | null>(null);
+  const [showNew, setShowNew] = useState(false);
+  const [markingId, setMarkingId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
-  // ---------------------------------------------------------------------------
-  // Derived KPIs from invoices
-  // ---------------------------------------------------------------------------
+  // Nouvelle facture
+  const [nClient, setNClient] = useState('');
+  const [nObjet, setNObjet] = useState('');
+  const [nHt, setNHt] = useState('');
+  const [nVat, setNVat] = useState(20);
+  const [nDue, setNDue] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const clientName = useCallback(
+    (id: string) => {
+      const c: any = clients.find((cl: any) => cl.id === id);
+      if (!c) return '—';
+      return c.client_type === 'manual'
+        ? c.company_name || 'Client'
+        : c.profile?.company_name || c.profile?.first_name || 'Client';
+    },
+    [clients],
+  );
+
+  const list = invoices || [];
 
   const kpis = useMemo(() => {
-    const list = invoices || [];
-    const byStatus = (status: string) => list.filter((inv) => inv.status === status);
+    const sum = (st: string) => list.filter((i) => i.status === st).reduce((s, i) => s + (i.amount_ttc || 0), 0);
     return {
-      total_facture: list.length,
-      total_payees: byStatus('paid').length,
-      total_en_attente: byStatus('sent').length,
-      total_en_retard: byStatus('overdue').length,
-      montant_facture: list.reduce((s, i) => s + (i.total || 0), 0),
-      montant_payees: byStatus('paid').reduce((s, i) => s + (i.total || 0), 0),
-      montant_en_attente: byStatus('sent').reduce((s, i) => s + (i.total || 0), 0),
-      montant_en_retard: byStatus('overdue').reduce((s, i) => s + (i.total || 0), 0),
+      total: list.reduce((s, i) => s + (i.amount_ttc || 0), 0),
+      paid: sum('paid'),
+      pending: sum('sent'),
+      overdue: sum('overdue'),
+      nPaid: list.filter((i) => i.status === 'paid').length,
+      nPending: list.filter((i) => i.status === 'sent').length,
+      nOverdue: list.filter((i) => i.status === 'overdue').length,
     };
-  }, [invoices]);
-
-  // ---------------------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------------------
-
-  const handleViewPDF = (invoice: CabinetInvoice) => {
-    if (invoice.pdf_url) {
-      window.open(invoice.pdf_url, '_blank');
-    } else {
-      toast.info('Le PDF sera bientôt disponible');
-    }
-  };
-
-  const handlePrint = (invoice: CabinetInvoice) => {
-    if (invoice.pdf_url) {
-      const w = window.open(invoice.pdf_url, '_blank');
-      w?.addEventListener('load', () => w.print());
-    } else {
-      toast.info('Le PDF sera bientôt disponible');
-    }
-  };
-
-  const handleSendEmail = async (invoice: CabinetInvoice) => {
-    if (!invoice.client_email) {
-      toast.error('Aucune adresse email pour ce client');
-      return;
-    }
-    setSendingEmail(invoice.id);
-    try {
-      await cabinetMutation('/api/cabinet/invoices/send', 'POST', { invoiceId: invoice.id });
-      toast.success(`Facture ${invoice.number} envoyée à ${invoice.client_email}`);
-    } catch (error: any) {
-      toast.error(error.message || "Erreur lors de l'envoi");
-    } finally {
-      setSendingEmail(null);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Filtered list
-  // ---------------------------------------------------------------------------
+  }, [list]);
 
   const filtered = useMemo(() => {
-    if (!invoices) return [];
-    const q = search.toLowerCase();
-    return invoices.filter((inv) => {
-      const matchSearch = !q
-        || inv.number.toLowerCase().includes(q)
-        || inv.client_name.toLowerCase().includes(q)
-        || (inv.object || '').toLowerCase().includes(q);
-      const matchStatus = !statusFilter || inv.status === statusFilter;
-      const matchMonth = !monthFilter || inv.issue_date.startsWith(monthFilter);
-      return matchSearch && matchStatus && matchMonth;
+    return list.filter((inv) => {
+      const okStatus = !statusFilter || inv.status === statusFilter;
+      const okMonth = !monthFilter || (inv.issue_date || '').startsWith(monthFilter);
+      return okStatus && okMonth;
     });
-  }, [invoices, search, statusFilter, monthFilter]);
+  }, [list, statusFilter, monthFilter]);
 
-  // ---------------------------------------------------------------------------
-  // Paywall
-  // ---------------------------------------------------------------------------
+  const handleMarkPaid = async (inv: CabinetInvoice) => {
+    setMarkingId(inv.id);
+    try {
+      await cabinetMutation('/api/cabinet/invoices', 'PATCH', { id: inv.id, status: 'paid' });
+      clearCabinetCache('/api/cabinet/invoices');
+      toast.success(`${inv.number} marquée comme payée`);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur');
+    } finally {
+      setMarkingId(null);
+    }
+  };
 
-  if (!sub.isBusiness && !sub.isTrialActive) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-emerald-500/20">
-            <Receipt size={40} className="text-emerald-500" />
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Facturation du cabinet</h1>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
-            Gérez vos propres factures de cabinet, suivez les paiements et relancez vos clients automatiquement.
-          </p>
-          <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl transition-all">
-            Passer au plan Business
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
+  const handleSendEmail = async (inv: CabinetInvoice) => {
+    setSendingId(inv.id);
+    try {
+      await cabinetMutation('/api/cabinet/invoices/send', 'POST', { invoiceId: inv.id });
+      toast.success(`${inv.number} envoyée`);
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'envoi");
+    } finally {
+      setSendingId(null);
+    }
+  };
 
-  // ---------------------------------------------------------------------------
-  // Loading
-  // ---------------------------------------------------------------------------
+  const handleCreate = async () => {
+    if (!nClient) {
+      toast.error('Sélectionnez un client');
+      return;
+    }
+    const ht = parseFloat(nHt);
+    if (!ht || ht <= 0) {
+      toast.error('Montant HT invalide');
+      return;
+    }
+    setCreating(true);
+    try {
+      await cabinetMutation('/api/cabinet/invoices', 'POST', {
+        client_id: nClient,
+        objet: nObjet || null,
+        issue_date: new Date().toISOString().slice(0, 10),
+        due_date: nDue || null,
+        items: [{ description: nObjet || 'Honoraires', unit_price: ht, quantity: 1, vat_rate: nVat }],
+      });
+      clearCabinetCache('/api/cabinet/invoices');
+      toast.success('Facture créée');
+      setShowNew(false);
+      setNClient('');
+      setNObjet('');
+      setNHt('');
+      setNDue('');
+      setNVat(20);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la création');
+    } finally {
+      setCreating(false);
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
-    );
-  }
+  const handleExport = () => {
+    if (filtered.length === 0) return;
+    downloadXLSX(`cabinet-facturation-${new Date().toISOString().slice(0, 10)}.xlsx`, [
+      {
+        name: 'Factures',
+        headers: ['N°', 'Client', 'Objet', 'HT', 'TVA', 'TTC', 'Date', 'Échéance', 'Statut'],
+        rows: filtered.map((i) => [
+          i.number,
+          clientName(i.client_id),
+          i.objet || '',
+          i.amount_ht,
+          i.amount_tva,
+          i.amount_ttc,
+          i.issue_date,
+          i.due_date || '',
+          STATUS_DOT[i.status]?.label || i.status,
+        ]),
+      },
+    ]);
+    toast.success('Export Excel téléchargé');
+  };
 
-  // ---------------------------------------------------------------------------
-  // Error state
-  // ---------------------------------------------------------------------------
+  if (!sub.isBusiness && !sub.isTrialActive) return <Paywall accent={primaryColor} />;
 
-  if (fetchError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-4">
-          <AlertTriangle size={28} className="text-red-500" />
+  const columns: Column<CabinetInvoice>[] = [
+    {
+      key: 'number',
+      header: 'N°',
+      sortValue: (i) => i.number,
+      sortable: true,
+      render: (i) => <span className="text-sm font-bold" style={{ color: primaryColor }}>{i.number}</span>,
+    },
+    {
+      key: 'client',
+      header: 'Client',
+      sortValue: (i) => clientName(i.client_id),
+      sortable: true,
+      render: (i) => (
+        <span className="text-sm font-semibold text-gray-900 truncate">{clientName(i.client_id)}</span>
+      ),
+    },
+    {
+      key: 'objet',
+      header: 'Objet',
+      hideOnMobile: true,
+      render: (i) => <span className="text-sm text-gray-500 truncate">{i.objet || '—'}</span>,
+    },
+    {
+      key: 'ht',
+      header: 'HT',
+      align: 'right',
+      hideOnMobile: true,
+      render: (i) => <span className="text-sm text-gray-700">{formatCurrency(i.amount_ht)}</span>,
+    },
+    {
+      key: 'tva',
+      header: 'TVA',
+      align: 'right',
+      hideOnMobile: true,
+      render: (i) => <span className="text-sm text-gray-500">{formatCurrency(i.amount_tva)}</span>,
+    },
+    {
+      key: 'ttc',
+      header: 'TTC',
+      align: 'right',
+      sortValue: (i) => i.amount_ttc,
+      sortable: true,
+      render: (i) => (
+        <span className={cn('text-sm font-bold', i.status === 'overdue' ? 'text-red-600' : 'text-gray-900')}>
+          {formatCurrency(i.amount_ttc)}
+        </span>
+      ),
+    },
+    {
+      key: 'issue_date',
+      header: 'Date',
+      hideOnMobile: true,
+      sortValue: (i) => i.issue_date,
+      sortable: true,
+      render: (i) => <span className="text-sm text-gray-500">{formatDateShort(i.issue_date)}</span>,
+    },
+    {
+      key: 'due_date',
+      header: 'Échéance',
+      hideOnMobile: true,
+      render: (i) => (
+        <span className={cn('text-sm', i.status === 'overdue' && 'text-red-600 font-semibold')}>
+          {i.due_date ? formatDateShort(i.due_date) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Statut',
+      render: (i) => {
+        const cfg = STATUS_DOT[i.status] || STATUS_DOT.draft;
+        return <StatusBadge dot={cfg.dot}>{cfg.label}</StatusBadge>;
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (i) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <IconBtn title="Détails" onClick={() => setViewing(i)}>
+            <Eye size={14} />
+          </IconBtn>
+          {i.status !== 'paid' && (
+            <IconBtn
+              title="Marquer payée"
+              onClick={() => handleMarkPaid(i)}
+              disabled={markingId === i.id}
+              hover="green"
+            >
+              {markingId === i.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+            </IconBtn>
+          )}
+          <IconBtn
+            title="Envoyer par email"
+            onClick={() => handleSendEmail(i)}
+            disabled={sendingId === i.id}
+            hover="brand"
+          >
+            {sendingId === i.id ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+          </IconBtn>
         </div>
-        <p className="font-bold text-gray-700 dark:text-gray-300 text-sm mb-1">Erreur de chargement</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 max-w-xs">{fetchError}</p>
-        <button
-          onClick={refresh}
-          className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Empty state
-  // ---------------------------------------------------------------------------
-
-  if (!invoices || invoices.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <FileText size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
-        <p className="text-gray-500 dark:text-gray-400">Aucune facture cabinet</p>
-        <Link href="/cabinet" className="mt-4 text-sm text-blue-500 hover:text-blue-600">
-          Retour au cabinet
-        </Link>
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+      ),
+    },
+  ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/cabinet" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-            <ArrowLeft size={18} className="text-gray-400" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">Facturation</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {invoices.length} facture{invoices.length !== 1 ? 's' : ''} &middot; Facturation propre du cabinet
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (filtered.length === 0) return;
-              downloadXLSX(
-                `cabinet-facturation-${new Date().toISOString().slice(0, 10)}.xlsx`,
-                [{
-                  name: 'Factures',
-                  headers: ['N° Facture', 'Client', 'Objet', 'Montant HT', 'TVA', 'TTC', 'Date', 'Echeance', 'Statut'],
-                  rows: filtered.map((inv) => [
-                    inv.number,
-                    inv.client_name,
-                    inv.object || '',
-                    inv.subtotal,
-                    inv.vat_amount,
-                    inv.total,
-                    inv.issue_date,
-                    inv.due_date || '',
-                    STATUS_CONFIG[inv.status]?.label || inv.status,
-                  ]),
-                }]
-              );
-              toast.success('Export Excel telecharge');
-            }}
-            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
-            title="Exporter Excel"
-          >
-            <Download size={16} />
-          </button>
-          <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setShowNewInvoiceForm(!showNewInvoiceForm)}
-          className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-dark text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all"
-        >
-          <Plus size={16} />
-          Nouvelle facture          </motion.button>
-        </div>
-      </div>
-
-      {/* New invoice form (collapsible) */}
-      <AnimatePresence>
-        {showNewInvoiceForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm">Nouvelle facture cabinet</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Client</label>
-                  <input
-                    type="text"
-                    placeholder="Nom du client"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Objet</label>
-                  <input
-                    type="text"
-                    placeholder="Ex : Honoraires comptables T3 2026"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Montant HT</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Echeance</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 justify-end">
-                <button
-                  onClick={() => setShowNewInvoiceForm(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => {
-                    toast.info('La creation de facture cabinet sera disponible prochainement.');
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-semibold shadow-md"
-                >
-                  Creer la facture
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* KPI Cards */}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Total facture',
-            value: formatCurrency(kpis.montant_facture),
-            sub: `${kpis.total_facture} facture${kpis.total_facture !== 1 ? 's' : ''}`,
-            icon: TrendingUp,
-            gradient: 'from-emerald-500 to-teal-600',
-            bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-            text: 'text-emerald-700 dark:text-emerald-400',
-          },
-          {
-            label: 'Payees',
-            value: formatCurrency(kpis.montant_payees),
-            sub: `${kpis.total_payees} payee${kpis.total_payees !== 1 ? 's' : ''}`,
-            icon: CheckCircle2,
-            gradient: 'from-green-500 to-emerald-600',
-            bg: 'bg-green-50 dark:bg-green-900/20',
-            text: 'text-green-700 dark:text-green-400',
-          },
-          {
-            label: 'En attente',
-            value: formatCurrency(kpis.montant_en_attente),
-            sub: `${kpis.total_en_attente} en attente`,
-            icon: Clock,
-            gradient: 'from-amber-500 to-yellow-500',
-            bg: 'bg-amber-50 dark:bg-amber-900/20',
-            text: 'text-amber-700 dark:text-amber-400',
-          },
-          {
-            label: 'En retard',
-            value: formatCurrency(kpis.montant_en_retard),
-            sub: `${kpis.total_en_retard} en retard`,
-            icon: AlertTriangle,
-            gradient: kpis.total_en_retard > 0 ? 'from-red-500 to-rose-600' : 'from-gray-400 to-gray-500',
-            bg: kpis.total_en_retard > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-900/20',
-            text: kpis.total_en_retard > 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400',
-          },
-        ].map(({ label, value, sub, icon: Icon, gradient, bg, text }) => (
-          <div key={label} className={cn('p-5 rounded-2xl border border-gray-200/70 dark:border-gray-700/40', bg)}>
-            <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3', gradient)}>
-              <Icon size={16} className="text-white" />
-            </div>
-            <p className={cn('text-xl font-black', text)}>{value}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
-            {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-          </div>
-        ))}
+        <KpiCard label="Total facturé" value={formatCurrency(kpis.total)} icon={TrendingUp} accent="#10b981" hint={`${list.length} facture(s)`} />
+        <KpiCard label="Payées" value={formatCurrency(kpis.paid)} icon={CheckCircle2} accent="#22c55e" hint={`${kpis.nPaid} payée(s)`} />
+        <KpiCard label="En attente" value={formatCurrency(kpis.pending)} icon={Clock} accent="#f59e0b" hint={`${kpis.nPending} en attente`} />
+        <KpiCard label="En retard" value={formatCurrency(kpis.overdue)} icon={AlertTriangle} accent={kpis.nOverdue > 0 ? '#ef4444' : '#6b7280'} hint={`${kpis.nOverdue} en retard`} />
       </div>
 
-      {/* Search & Filters */}
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par numero, client, objet..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-            />
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all shadow-sm',
-              showFilters
-                ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-gray-300',
-            )}
-          >
-            <SlidersHorizontal size={15} />
-            <span className="hidden sm:inline">Filtres</span>
-          </motion.button>
-        </div>
-
-        {/* Expanded filters */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+      <SectionCard
+        title={`Factures (${filtered.length})`}
+        icon={FileText}
+        accent={primaryColor}
+        noPadding
+        action={
+          <>
+            <button
+              onClick={handleExport}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+              title="Exporter Excel"
             >
-              <div className="flex flex-wrap gap-3 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-white/10 shadow-sm">
-                {/* Status pills */}
-                <div className="flex flex-wrap gap-1.5">
+              <Download size={16} />
+            </button>
+            <button
+              onClick={() => setShowNew(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Nouvelle</span>
+            </button>
+          </>
+        }
+      >
+        {loading ? (
+          <TableSkeleton cols={6} />
+        ) : error ? (
+          <EmptyState icon={AlertTriangle} title="Erreur de chargement" description={error} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filtered}
+            getRowId={(i) => i.id}
+            searchable
+            searchPlaceholder="Rechercher par n°, client, objet…"
+            searchText={(i) => `${i.number} ${clientName(i.client_id)} ${i.objet || ''}`}
+            emptyIcon={FileText}
+            emptyTitle="Aucune facture"
+            emptyDescription="Créez votre première facture pour suivre vos honoraires."
+            initialSort={{ key: 'issue_date', dir: 'desc' }}
+            toolbar={
+              <>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 border-0 outline-none cursor-pointer"
+                >
                   {STATUS_FILTERS.map((s) => (
-                    <motion.button
-                      key={s.value}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setStatusFilter(s.value)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                        statusFilter === s.value
-                          ? 'bg-primary text-white ring-2 ring-primary/30'
-                          : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700',
-                      )}
-                    >
-                      {s.label}
-                    </motion.button>
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
-                </div>
-
-                {/* Month filter */}
+                </select>
                 <select
                   value={monthFilter}
                   onChange={(e) => setMonthFilter(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 border-0 outline-none cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 border-0 outline-none cursor-pointer"
                 >
                   <option value="">Tous les mois</option>
                   {MONTHS.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Invoice Table */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-white/10 overflow-hidden shadow-sm">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center mx-auto mb-4"
-            >
-              <FileText size={28} className="text-gray-300 dark:text-gray-600" />
-            </motion.div>
-            <p className="font-bold text-gray-700 dark:text-gray-300 text-sm">
-              {search || statusFilter || monthFilter ? 'Aucun resultat trouve' : 'Aucune facture cabinet'}
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">
-              {search || statusFilter || monthFilter
-                ? 'Modifiez vos criteres de recherche'
-                : 'Creez votre premiere facture pour commencer a suivre vos honoraires.'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">N° Facture</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Client</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Objet</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Montant HT</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">TVA</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">TTC</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Echeance</th>
-                    <th className="text-center px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th className="text-center px-4 py-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                  {filtered.map((inv, index) => {
-                    const status = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
-                    const isOverdue = inv.status === 'overdue';
-                    return (
-                      <motion.tr
-                        key={inv.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.02 }}
-                        className={cn(
-                          'hover:bg-gray-50/80 dark:hover:bg-white/5 transition-colors',
-                          isOverdue && 'bg-red-50/30 dark:bg-red-500/5',
-                        )}
-                      >
-                        <td className="px-5 py-3.5">
-                          <span className="text-sm font-bold text-primary">{inv.number}</span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[140px]">
-                            {inv.client_name}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[160px]">
-                            {inv.object || '—'}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3.5 text-right text-sm text-gray-700 dark:text-gray-300">
-                          {formatCurrency(inv.subtotal)}
-                        </td>
-                        <td className="px-4 py-3.5 text-right text-sm text-gray-500 dark:text-gray-400">
-                          {formatCurrency(inv.vat_amount)}
-                        </td>
-                        <td className="px-4 py-3.5 text-right">
-                          <p className={cn('text-sm font-bold', isOverdue ? 'text-red-600' : 'text-gray-900 dark:text-white')}>
-                            {formatCurrency(inv.total)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">
-                          {formatDateShort(inv.issue_date)}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={cn('text-sm', isOverdue && 'text-red-500 font-semibold')}>
-                            {inv.due_date ? formatDateShort(inv.due_date) : '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-center">
-                          <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', status.bg, status.text)}>
-                            <span className={cn('w-1.5 h-1.5 rounded-full', status.dot)} />
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center justify-center gap-1">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleViewPDF(inv)}
-                              className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/20 text-gray-400 hover:text-blue-500 transition-all"
-                              title="Voir le PDF"
-                            >
-                              <Eye size={14} />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handlePrint(inv)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-all"
-                              title="Imprimer"
-                            >
-                              <Printer size={14} />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleSendEmail(inv)}
-                              disabled={sendingEmail === inv.id}
-                              className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-gray-400 hover:text-emerald-500 transition-all disabled:opacity-50"
-                              title="Envoyer par email"
-                            >
-                              {sendingEmail === inv.id
-                                ? <Loader2 size={14} className="animate-spin" />
-                                : <Mail size={14} />}
-                            </motion.button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {/* Table footer */}
-              {filtered.length > 1 && (
-                <div className="border-t border-gray-100 dark:border-white/10 px-5 py-3 flex items-center justify-between bg-gray-50/50 dark:bg-white/5">
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {filtered.length} facture{filtered.length !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    Total TTC : {formatCurrency(filtered.reduce((s, i) => s + i.total, 0))}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile list */}
-            <div className="lg:hidden divide-y divide-gray-50 dark:divide-white/5">
-              {filtered.map((inv, index) => {
-                const status = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
-                const isOverdue = inv.status === 'overdue';
-                return (
-                  <motion.div
-                    key={inv.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.02 }}
-                    className={cn(
-                      'px-4 py-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors',
-                      isOverdue && 'bg-red-50/30 dark:bg-red-500/5',
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-primary">{inv.number}</span>
-                      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', status.bg, status.text)}>
-                        <span className={cn('w-1.5 h-1.5 rounded-full', status.dot)} />
-                        {status.label}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{inv.client_name}</p>
-                    {inv.object && <p className="text-xs text-gray-400 mt-0.5">{inv.object}</p>}
-                    <div className="flex items-center justify-between mt-2">
-                      <p className={cn('text-sm font-bold', isOverdue ? 'text-red-600' : 'text-gray-900 dark:text-white')}>
-                        {formatCurrency(inv.total)} TTC
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {formatDateShort(inv.issue_date)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <button
-                        onClick={() => handleViewPDF(inv)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
-                      >
-                        <Eye size={12} /> PDF
-                      </button>
-                      <button
-                        onClick={() => handlePrint(inv)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
-                      >
-                        <Printer size={12} /> Imprimer
-                      </button>
-                      <button
-                        onClick={() => handleSendEmail(inv)}
-                        disabled={sendingEmail === inv.id}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
-                      >
-                        {sendingEmail === inv.id ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
-                        Envoyer
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </>
+              </>
+            }
+          />
         )}
-      </div>
+      </SectionCard>
+
+      {/* Modale détail */}
+      <Modal
+        open={!!viewing}
+        onClose={() => setViewing(null)}
+        title={viewing?.number}
+        icon={FileText}
+        accent={primaryColor}
+        footer={
+          viewing && viewing.status !== 'paid' ? (
+            <button
+              onClick={() => {
+                handleMarkPaid(viewing);
+                setViewing(null);
+              }}
+              className="px-4 py-2 rounded-xl text-white text-sm font-semibold flex items-center gap-2"
+              style={{ backgroundColor: '#22c55e' }}
+            >
+              <CheckCircle2 size={14} /> Marquer payée
+            </button>
+          ) : undefined
+        }
+      >
+        {viewing && (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <Detail label="Client" value={clientName(viewing.client_id)} />
+              <Detail label="Statut" value={STATUS_DOT[viewing.status]?.label || viewing.status} />
+              <Detail label="Date d'émission" value={formatDateShort(viewing.issue_date)} />
+              <Detail label="Échéance" value={viewing.due_date ? formatDateShort(viewing.due_date) : '—'} />
+            </div>
+            {viewing.objet && <Detail label="Objet" value={viewing.objet} />}
+            <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+              <Row label="Total HT" value={formatCurrency(viewing.amount_ht)} />
+              <Row label="TVA" value={formatCurrency(viewing.amount_tva)} />
+              <Row label="Total TTC" value={formatCurrency(viewing.amount_ttc)} strong />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modale nouvelle facture */}
+      <Modal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        title="Nouvelle facture"
+        icon={Plus}
+        accent={primaryColor}
+        footer={
+          <>
+            <button onClick={() => setShowNew(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+              Annuler
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="px-5 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {creating ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Créer la facture
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Client</label>
+            <select
+              value={nClient}
+              onChange={(e) => setNClient(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            >
+              <option value="">Sélectionner un client…</option>
+              {clients.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.client_type === 'manual' ? c.company_name : c.profile?.company_name || c.profile?.first_name || 'Client'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Objet</label>
+            <input
+              type="text"
+              value={nObjet}
+              onChange={(e) => setNObjet(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              placeholder="Ex : Honoraires comptables T3 2026"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Montant HT (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={nHt}
+                onChange={(e) => setNHt(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">TVA</label>
+              <select
+                value={nVat}
+                onChange={(e) => setNVat(parseFloat(e.target.value))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              >
+                {VAT_RATES.map((v) => (
+                  <option key={v.value} value={v.value}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {nHt && parseFloat(nHt) > 0 && (
+            <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm flex justify-between">
+              <span className="text-gray-500">Total TTC estimé</span>
+              <span className="font-bold text-gray-900">
+                {formatCurrency(parseFloat(nHt) * (1 + nVat / 100))}
+              </span>
+            </div>
+          )}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Échéance</label>
+            <input
+              type="date"
+              value={nDue}
+              onChange={(e) => setNDue(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            />
+          </div>
+        </div>
+      </Modal>
     </motion.div>
+  );
+}
+
+function IconBtn({
+  children,
+  title,
+  onClick,
+  disabled,
+  hover = 'gray',
+}: {
+  children: React.ReactNode;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  hover?: 'gray' | 'green' | 'brand';
+}) {
+  const hoverCls =
+    hover === 'green'
+      ? 'hover:text-green-600 hover:bg-green-50'
+      : hover === 'brand'
+        ? 'hover:text-brand-600 hover:bg-brand-50'
+        : 'hover:text-gray-700 hover:bg-gray-100';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn('p-1.5 rounded-lg text-gray-400 transition-colors disabled:opacity-40', hoverCls)}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5">
+      <span className={cn('text-sm', strong ? 'font-bold text-gray-900' : 'text-gray-500')}>{label}</span>
+      <span className={cn('text-sm', strong ? 'font-black text-gray-900' : 'font-semibold text-gray-700')}>{value}</span>
+    </div>
   );
 }
