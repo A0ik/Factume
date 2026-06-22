@@ -8,6 +8,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useSubscription } from '@/hooks/useSubscription';
 import { formatCurrency, cn } from '@/lib/utils';
 import DocumentTypeSheet from '@/components/invoices/DocumentTypeSheet';
+import TreasuryWidget from '@/components/dashboard/TreasuryWidget';
 import {
   Plus, ArrowUpRight, AlertTriangle,
   Users, Sparkles, Receipt, Zap, TrendingUp, Hourglass,
@@ -348,6 +349,15 @@ export default function DashboardPage() {
               </motion.div>
             )}
           </div>
+
+          {/* ══════════════════════════════════════════════════════════
+              COPILOT FACTU — Prévision Trésorerie (Business uniquement)
+              ══════════════════════════════════════════════════════════ */}
+          {sub.isBusiness && (
+            <motion.div variants={itemVariants}>
+              <TreasuryWidget />
+            </motion.div>
+          )}
 
         </motion.div>
       </main>

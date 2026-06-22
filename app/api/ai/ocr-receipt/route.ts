@@ -52,17 +52,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
     }
 
-    const isBusiness = profile.subscription_tier === 'business';
+    // ZEUS (CIBLE 3) — OCR simple (pré-remplissage d'UNE note de frais) = Pro+.
+    // La barrière Business ne s'applique qu'à l'OCR multi-factures type Dext.
+    const tier = profile.subscription_tier;
+    const isProPlus = tier === 'pro' || tier === 'business' || tier === 'solo'; // 'solo' legacy → pro
     const isTrial = profile.is_trial_active === true;
 
-    if (!isBusiness && !isTrial) {
+    if (!isProPlus && !isTrial) {
       return NextResponse.json(
         {
           error:
-            "L'analyse OCR est disponible uniquement avec le plan Business. Passez à un plan supérieur pour débloquer cette fonctionnalité.",
-          feature: 'ocr',
-          requiredPlan: 'business',
-          upgradeUrl: '/paywall?plan=business',
+            "Le scan de justificatif est disponible avec le plan Pro. Passez à un plan supérieur pour débloquer les notes de frais.",
+          feature: 'ocrSimple',
+          requiredPlan: 'pro',
+          upgradeUrl: '/paywall?plan=pro',
         },
         { status: 402 },
       );

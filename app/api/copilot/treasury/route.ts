@@ -1,16 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { predictTreasury } from '@/lib/treasury-predictor';
 
 /**
  * GET /api/copilot/treasury
  * Returns 30-day and 90-day treasury prediction for the current user.
+ * Guard : nécessite Copilot Factu (réservé au plan Business).
  */
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Guard plan : Copilot Factu réservé au plan Business.
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     // Current balance = total paid - total expenses
     const { data: paidInvoices } = await supabase

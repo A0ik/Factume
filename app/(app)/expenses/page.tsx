@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
+import { ReceiptLink } from '@/components/storage/ReceiptLink';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useRouter } from 'next/navigation';
 
 interface Expense {
   id: string;
@@ -223,10 +226,10 @@ function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate, isDar
       {/* Actions */}
       <div className={cn("flex items-center justify-end gap-1 mt-3 pt-3 border-t", isDark ? "border-white/[0.06]" : "border-gray-200")}>
         {expense.receipt_url && (
-          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+          <ReceiptLink url={expense.receipt_url}
             className={cn("p-2 rounded-lg transition-colors", isDark ? "text-zinc-400 hover:text-white hover:bg-white/[0.06]" : "text-gray-400 hover:text-gray-900 hover:bg-gray-100")}>
             <FileImage size={14} />
-          </a>
+          </ReceiptLink>
         )}
         {expense.status === 'pending' && (
           <button onClick={() => onValidate(expense.id, 'validated')}
@@ -290,10 +293,10 @@ function DesktopTableRow({ expense, onEdit, onDelete, onValidate, isDark }: {
       <td className="px-5 py-4">
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {expense.receipt_url && (
-            <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
+            <ReceiptLink url={expense.receipt_url}
               className={cn("p-1.5 rounded-md transition-colors", isDark ? "text-zinc-500 hover:text-white hover:bg-white/[0.06]" : "text-gray-400 hover:text-gray-900 hover:bg-gray-100")}>
               <FileImage size={13} />
-            </a>
+            </ReceiptLink>
           )}
           {expense.status === 'pending' && (
             <button onClick={() => onValidate(expense.id, 'validated')}
@@ -316,7 +319,9 @@ function DesktopTableRow({ expense, onEdit, onDelete, onValidate, isDark }: {
 }
 
 export default function ExpensesPage() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
+  const sub = useSubscription();
+  const router = useRouter();
   const { clients, fetchClients } = useDataStore();
   const { resolvedTheme } = useThemeStore();
   const isDark = resolvedTheme === 'dark';
@@ -358,6 +363,16 @@ export default function ExpensesPage() {
       if (!clients || clients.length === 0) fetchClients();
     }
   }, [user]);
+
+  // ZEUS (suivi #2) — Notes de frais = Pro+Business. Un compte free qui accède
+  // directement à /expenses est redirigé vers le paywall (défense-en-profondeur,
+  // cohérent avec le verrou sidebar). On attend que le profil soit chargé pour
+  // ne pas rebondir un Pro/Business/trial légitime pendant l'hydratation.
+  useEffect(() => {
+    if (profile && !sub.effectiveIsPro) {
+      router.replace('/paywall');
+    }
+  }, [profile, sub.effectiveIsPro, router]);
 
   useEffect(() => {
     if (form.category === 'mileage' && form.distance_km && form.vehicle_cv) {
@@ -1226,9 +1241,9 @@ export default function ExpensesPage() {
                       <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                         <FileImage size={16} className="text-emerald-400 flex-shrink-0" />
                         <span className="text-sm text-emerald-300 flex-1 truncate">Justificatif ajouté</span>
-                        <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">
+                        <ReceiptLink url={receiptUrl} className="text-emerald-400 hover:text-emerald-300">
                           <ExternalLink size={14} />
-                        </a>
+                        </ReceiptLink>
                         <button type="button" onClick={() => setReceiptUrl(null)}
                           className="text-emerald-400/60 hover:text-red-400 transition-colors">
                           <X size={14} />

@@ -28,6 +28,8 @@ import {
   Tag, ZoomIn, ZoomOut, RotateCw, ChevronRight, Shield,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { ReceiptImg } from '@/components/storage/ReceiptImg';
 
 // ─── Catégories ────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -223,7 +225,8 @@ const inputCls = "w-full rounded-lg border border-gray-200 dark:border-white/[0.
 // ════════════════════════════════════════════════════════════════════════════
 export default function OcrPage() {
   const { profile, user } = useAuthStore();
-  const isBusiness = profile?.subscription_tier === 'business' || profile?.is_trial_active;
+  // ZEUS (suivi #3) — OCR multi-factures = Business strict. L'essai (Pro) n'y a pas accès.
+  const isBusiness = profile?.subscription_tier === 'business';
 
   // File state
   const [files, setFiles] = useState<ScannedFile[]>([]);
@@ -676,6 +679,11 @@ export default function OcrPage() {
     reviewingFile?.file?.type === 'application/pdf'
   );
 
+  // ZEUS (CIBLE 2) — résout le justificatif (bucket privé `receipts`) en URL signée.
+  // Les URLs publiques getPublicUrl renvoyaient 404 « Bucket not found » ; on minte
+  // ici une URL signée courte durée (les blob/data/`assets` passent tels quels).
+  const { url: signedPreviewUrl, loading: previewLoading } = useSignedUrl(previewUrl);
+
   // ══════════════════════════════════════════════════════════════════════════
   if (!isBusiness) return <PaywallSection />;
 
@@ -825,10 +833,14 @@ export default function OcrPage() {
                   {previewUrl ? (
                     <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                       className="shadow-2xl shadow-black/20 rounded-lg overflow-hidden bg-white">
-                      {previewIsPdf ? (
-                        <iframe src={previewUrl} title="Aperçu" className="w-[480px] h-[680px] bg-white" />
+                      {previewLoading ? (
+                        <div className="w-[480px] h-[680px] flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-gray-400 dark:text-zinc-500" />
+                        </div>
+                      ) : previewIsPdf ? (
+                        <iframe src={signedPreviewUrl || ''} title="Aperçu" className="w-[480px] h-[680px] bg-white" />
                       ) : (
-                        <img src={previewUrl} alt="Aperçu" className="w-[480px] max-w-none object-contain" />
+                        <img src={signedPreviewUrl || ''} alt="Aperçu" className="w-[480px] max-w-none object-contain" />
                       )}
                     </div>
                   ) : (
@@ -956,7 +968,7 @@ function DbRow({ exp, active, onClick }: { exp: DbExpense; active: boolean; onCl
       className={cn("rounded-lg p-2.5 cursor-pointer transition flex items-start gap-2.5 hover:bg-gray-50 dark:hover:bg-white/[0.03]",
         active && "bg-emerald-50 dark:bg-emerald-500/10 ring-1 ring-emerald-500/30")}>
       <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center flex-shrink-0">
-        {exp.receipt_url ? <img src={exp.receipt_url} alt="" className="w-full h-full object-cover rounded-md" /> : <FileText className="w-4 h-4 text-gray-400 dark:text-zinc-500" />}
+        {exp.receipt_url ? <ReceiptImg url={exp.receipt_url} className="w-full h-full object-cover rounded-md" loadingClassName="w-3.5 h-3.5 animate-spin text-gray-400 dark:text-zinc-500" /> : <FileText className="w-4 h-4 text-gray-400 dark:text-zinc-500" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold truncate">{exp.vendor || 'Fournisseur inconnu'}</p>

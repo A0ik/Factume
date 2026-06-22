@@ -52,6 +52,11 @@ export interface PlanConfig {
     prioritySupport: boolean;
     crmAccess: boolean;
     contracts: boolean;
+    // ZEUS (CIBLE 3) — Vérité commerciale OCR :
+    //  - ocrSimple : scan d'UN justificatif pour pré-remplir une note de frais (Pro+).
+    //  - ocrMultiInvoice : OCR multi-factures type Dext (lot, segmentation) → Business seul.
+    ocrSimple: boolean;
+    ocrMultiInvoice: boolean;
   };
 }
 
@@ -101,6 +106,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       prioritySupport: false,
       crmAccess: false,
       contracts: false,
+      ocrSimple: false,
+      ocrMultiInvoice: false,
     },
   },
 
@@ -113,9 +120,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     features: [
       'Factures & devis illimités',
       'Contrats de travail (CDI/CDD)',
-      'OCR analyse de reçus',
+      'Notes de frais (manuel + vocal + scan simple)',
       'Signature électronique',
-      'Notes de frais vocales',
       'Gestion IK (indemnités kilométriques)',
       'Tableau de bord analytique',
       'Multi-modèles PDF (6 templates)',
@@ -138,7 +144,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     gates: {
       urssafOneClick: true,
       voiceExpense: true,
-      copilotFactu: true,
+      copilotFactu: false,        // ZEUS (suivi #1) — Copilot Factu IA (avancé) = Business. Le widget est isBusiness ; Pro/essai exclus.
       comptableConnect: false,
       customTemplate: true,
       recurringInvoices: true,
@@ -148,6 +154,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       prioritySupport: true,
       crmAccess: true,
       contracts: true,
+      ocrSimple: true,        // Pro+ : scan simple d'un justificatif (pré-remplissage note de frais)
+      ocrMultiInvoice: false, // L'OCR multi-factures type Dext reste Business
     },
   },
 
@@ -159,6 +167,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     description: 'Pour les PME & experts-comptables. Collaboration & IA avancée.',
     features: [
       'Tout le plan Pro',
+      'OCR multi-factures (lot, type Dext)',
       '5 cabinets',
       'Comptable Connect',
       'Copilot Factu IA (avancé)',
@@ -186,6 +195,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       prioritySupport: true,
       crmAccess: true,
       contracts: true,
+      ocrSimple: true,
+      ocrMultiInvoice: true, // Business : OCR multi-factures type Dext
     },
   },
 };

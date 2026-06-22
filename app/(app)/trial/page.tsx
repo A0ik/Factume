@@ -69,7 +69,7 @@ export default function TrialPage() {
         'Factures & devis illimités',
         'Facture électronique B2B',
         'Contrats de travail (CDI/CDD)',
-        'OCR notes de frais',
+        'Notes de frais + scan simple',
         'URSSAF One-Click',
         'Export comptable (FEC, CSV)',
         'Support prioritaire',
@@ -87,6 +87,7 @@ export default function TrialPage() {
       priceYearlyMonthlyEq: PLANS.business.priceYearly / 12,
       features: [
         'Tout le plan Pro',
+        'OCR multi-factures (type Dext)',
         '5 cabinets',
         'Comptable Connect',
         'Copilot Factu IA avancé',

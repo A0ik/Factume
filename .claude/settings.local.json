@@ -267,7 +267,8 @@
       "mcp__supabase__list_projects",
       "mcp__stripe__get_stripe_account_info",
       "Bash(cat \"~/AppData/Local/rtk/tee/1782061869_lint.log\" 2>/dev/null | tail -60 || cat \"$HOME/AppData/Local/rtk/tee/1782061869_lint.log\" 2>/dev/null | tail -60)",
-      "Read(//c/Users/salma/AppData/Local/rtk/tee/**)"
+      "Read(//c/Users/salma/AppData/Local/rtk/tee/**)",
+      "mcp__stripe__fetch_stripe_resources"
     ],
     "additionalDirectories": [
       "c:\\Users\\salma\\Desktop\\FACTU.ME PACKAGE\\Factu.me",

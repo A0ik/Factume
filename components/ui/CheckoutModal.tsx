@@ -61,11 +61,15 @@ function buildPlanInfo(planId: 'pro' | 'business', billing: 'monthly' | 'yearly'
   const topFeatures = plan.features.slice(0, 4);
 
   if (mode === 'setup') {
+    // ZEUS (CIBLE 1) — L'essai 7j est STRICTEMENT mensuel : on facture le Pro
+    // Mensuel réel (priceMonthly, ex 14,99€) à la fin de l'essai, jamais l'annuel.
+    // On ignore donc `billing` ici pour ne plus promettre un faux « 12,50€/mois »
+    // (équivalent mensuel de l'annuel) qui masquait un débit annuel trompeur.
     return {
       id: planId,
       name: plan.name,
       price: '0€',
-      priceNote: `pendant 7 jours · puis ${formatCurrency(billing === 'yearly' ? plan.priceYearly / 12 : plan.priceMonthly)}/mois`,
+      priceNote: `pendant 7 jours · puis ${formatCurrency(plan.priceMonthly)}/mois`,
       features: topFeatures,
     };
   }
@@ -120,10 +124,13 @@ export default function CheckoutModal({
     setClientSecret(null);
     try {
       const endpoint = mode === 'setup' ? '/api/stripe/trial-subscription' : '/api/stripe/subscription';
+      // ZEUS (CIBLE 1) — essai = mensuel STRICT : on force yearly:false en mode setup
+      // pour que la route trial-subscription attache STRIPE_PRO_MONTHLY_PRICE_ID
+      // (et non l'annuel), peu importe le toggle billing de la page appelante.
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, yearly: billing === 'yearly' }),
+        body: JSON.stringify({ plan: planId, yearly: mode === 'setup' ? false : billing === 'yearly' }),
       });
       const data = await res.json();
       if (!res.ok || !data.clientSecret) {

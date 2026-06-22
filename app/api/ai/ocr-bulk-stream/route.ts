@@ -41,10 +41,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   }
 
-  // Subscription gate: OCR bulk stream requires Pro+ plan
+  // Subscription gate (ZEUS CIBLE 3): OCR multi-factures = plan Business
   const sub = await getUserSubscriptionStatus(user.id);
   try {
-    requireFeature(sub, 'copilotFactu');
+    requireFeature(sub, 'ocrMultiInvoice');
   } catch (err: any) {
     return NextResponse.json({
       error: 'Plan supérieur requis.',

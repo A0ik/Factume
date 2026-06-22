@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 
 // ---------------------------------------------------------------------------
 // POST /api/copilot/command
 // Parse voice commands and execute actions
 // Killer #4: Copilot Factu — Proactive Voice Commands
+// Guard : nécessite Copilot Factu (réservé au plan Business).
 // ---------------------------------------------------------------------------
 
 interface CommandIntent {
@@ -41,6 +43,18 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+
+    // Guard plan : Copilot Factu réservé au plan Business.
+    const sub = await getUserSubscriptionStatus(user.id);
+    try {
+      requireFeature(sub, 'copilotFactu');
+    } catch {
+      return NextResponse.json({
+        error: 'Plan supérieur requis.',
+        code: 'PLAN_REQUIRED',
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
 
     const { text } = await req.json();
     if (!text) return NextResponse.json({ error: 'Texte manquant' }, { status: 400 });

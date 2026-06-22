@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2, Save, Building2, Hash, Trash2, AlertTriangle, Palette, Eye, Globe, Type, Phone, Mail, MapPin, FileText, Landmark, CreditCard, UserPlus, Users, X, Shield } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Building2, Hash, Trash2, AlertTriangle, Palette, Eye, Globe, Type, Phone, Mail, MapPin, FileText, Landmark, CreditCard, UserPlus, Users, X, Shield, Calculator, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCabinetStore } from '@/stores/cabinetStore';
@@ -51,6 +51,9 @@ export default function CabinetSettingsPage() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitingMember, setInvitingMember] = useState(false);
+  // Inviter un comptable (Comptable Connect)
+  const [accountantEmail, setAccountantEmail] = useState('');
+  const [invitingAccountant, setInvitingAccountant] = useState(false);
 
   if (!sub.isBusiness && !sub.isTrialActive) {
     router.push('/cabinet');
@@ -125,6 +128,34 @@ export default function CabinetSettingsPage() {
       toast.error('Erreur lors de l\'invitation');
     } finally {
       setInvitingMember(false);
+    }
+  };
+
+  const handleInviteAccountant = async () => {
+    if (!accountantEmail.trim()) return;
+    setInvitingAccountant(true);
+    try {
+      // Route cookie-based : pas besoin de Bearer token.
+      const res = await fetch('/api/cabinet/invite-accountant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: accountantEmail.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(`Invitation envoyée à ${accountantEmail.trim()}`);
+        setAccountantEmail('');
+      } else if (res.status === 403 && data?.code === 'PLAN_REQUIRED') {
+        toast.error('Le plan Business est requis pour inviter un comptable.');
+      } else if (res.status === 409) {
+        toast.error('Une invitation est déjà en attente pour cet email.');
+      } else {
+        toast.error(data?.error || 'Erreur lors de l\'invitation');
+      }
+    } catch {
+      toast.error('Erreur lors de l\'invitation');
+    } finally {
+      setInvitingAccountant(false);
     }
   };
 
@@ -456,6 +487,46 @@ export default function CabinetSettingsPage() {
           />
         </div>
       </div>
+
+      {/* Inviter un expert-comptable — Comptable Connect (Business) */}
+      {sub.canUseComptableConnect && isOwner && cabinet && (
+        <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+            <Calculator size={15} className="text-emerald-500" />
+            Inviter mon expert-comptable
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Votre comptable recevra un email avec un lien sécurisé valable 7 jours. Une fois accepté, il accédera au cabinet en tant que <span className="font-semibold text-gray-700 dark:text-gray-300">collaborateur</span>.
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="email"
+                value={accountantEmail}
+                onChange={(e) => setAccountantEmail(e.target.value)}
+                placeholder="comptable@cabinet-expert.fr"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleInviteAccountant()}
+              />
+            </div>
+            <button
+              onClick={handleInviteAccountant}
+              disabled={!accountantEmail.trim() || invitingAccountant}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold text-sm shadow-md disabled:opacity-50 transition-all"
+            >
+              {invitingAccountant ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} />}
+              Inviter mon comptable
+            </button>
+          </div>
+          <div className="flex items-start gap-2 pt-1">
+            <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              Accès en lecture aux factures, dépenses et rapports du cabinet. Le comptable doit créer un compte Factu.me avec l&apos;email invité.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Team Management */}
       {cabinet && (

@@ -115,7 +115,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
       label: 'Outils',
       icon: Plug,
       items: [
-        { href: '/ocr', icon: Search, label: 'Scan OCR', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
+        { href: '/ocr', icon: Search, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
         { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/calendar', icon: Calendar, label: 'Agenda' },
         { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },

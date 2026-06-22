@@ -9,6 +9,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatCurrency } from '@/lib/utils';
 import { UpdatedExpenseData } from '@/types';
+import { ReceiptLink } from '@/components/storage/ReceiptLink';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { isReceiptsPrivateUrl } from '@/lib/receipt-storage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,17 +57,35 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
     expense.receipt_url?.toLowerCase().includes('.pdf')
   );
 
+  // ZEUS (CIBLE 2) — Résolution de l'URL justificatif (bucket privé `receipts`).
+  // Une seule résolution partagée par l'iframe et le <img> pour éviter le fan-out.
+  const { url: signedReceiptUrl, loading: receiptLoading } = useSignedUrl(expense.receipt_url);
+
   // Zoom / rotate
   const handleZoomIn = () => setZoom(p => Math.min(p + 0.25, 4));
   const handleZoomOut = () => setZoom(p => Math.max(p - 0.25, 0.25));
   const handleResetZoom = () => setZoom(1);
   const handleRotate = () => setRotation(p => (p + 90) % 360);
 
-  // Download — direct link
-  const handleDownload = () => {
+  // Download — direct link (résout une URL signée si le justificatif est privé)
+  const handleDownload = async () => {
     if (!expense.receipt_url) return;
+    let href = expense.receipt_url;
+    if (isReceiptsPrivateUrl(expense.receipt_url)) {
+      try {
+        const res = await fetch('/api/storage/signed-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: expense.receipt_url }),
+        });
+        const data = await res.json();
+        if (data.signedUrl) href = data.signedUrl;
+      } catch {
+        /* fallback vers l'URL brute */
+      }
+    }
     const a = document.createElement('a');
-    a.href = expense.receipt_url;
+    a.href = href;
     a.download = `facture_${expense.vendor}_${expense.date}${isPdf ? '.pdf' : '.jpg'}`;
     a.target = '_blank';
     document.body.appendChild(a);
@@ -263,6 +284,11 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
             <FileText size={64} />
             <p className="text-sm">Aucune image associée à cette facture</p>
           </div>
+        ) : receiptLoading ? (
+          <div className="flex flex-col items-center gap-3 text-gray-900 dark:text-white/70">
+            <Loader2 className="w-10 h-10 animate-spin" />
+            <p className="text-sm">Chargement du justificatif…</p>
+          </div>
         ) : imgError ? (
           <div className="flex flex-col items-center gap-4 text-center">
             <AlertCircle className="w-16 h-16 text-red-400" />
@@ -270,21 +296,19 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
               <p className="text-gray-900 dark:text-white font-semibold">Impossible de charger la facture</p>
               <p className="text-gray-900 dark:text-white/50 text-sm mt-1">L'image a peut-être été supprimée du stockage</p>
             </div>
-            <a
-              href={expense.receipt_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <ReceiptLink
+              url={expense.receipt_url}
               className="px-4 py-2 bg-gray-100 rounded-lg text-gray-900 dark:text-white hover:bg-gray-200 text-sm"
             >
               Ouvrir dans un nouvel onglet
-            </a>
+            </ReceiptLink>
           </div>
         ) : isPdf ? (
           <motion.iframe
             key="pdf"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            src={expense.receipt_url}
+            src={signedReceiptUrl || ''}
             className="w-full h-full rounded-lg border border-gray-300"
             style={{
               transform: `scale(${zoom}) rotate(${rotation}deg)`,
@@ -306,7 +330,7 @@ export function InvoiceViewer({ expense, onClose, onReanalyzed, className }: Inv
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={expense.receipt_url}
+              src={signedReceiptUrl || ''}
               alt={`Facture ${expense.vendor}`}
               className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
               draggable={false}

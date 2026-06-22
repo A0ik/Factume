@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
     // ------------------------------------------------------------------
     const sub = await getUserSubscriptionStatus(user.id);
     try {
-      requireFeature(sub, 'copilotFactu');
+      requireFeature(sub, 'ocrMultiInvoice');
     } catch (err: any) {
       return NextResponse.json({
         error: 'Plan supérieur requis.',

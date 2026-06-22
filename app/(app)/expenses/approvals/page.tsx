@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
+import { ReceiptLink } from '@/components/storage/ReceiptLink';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -478,15 +479,13 @@ export default function ExpenseApprovalsPage() {
                               {/* Receipt thumbnail */}
                               {expense.receipt_url && (
                                 <div className="mt-3">
-                                  <a
-                                    href={expense.receipt_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <ReceiptLink
+                                    url={expense.receipt_url}
                                     className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-dark transition-colors"
                                   >
                                     <FileImage size={12} />
                                     Voir le justificatif
-                                  </a>
+                                  </ReceiptLink>
                                 </div>
                               )}
                             </div>

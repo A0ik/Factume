@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 const TIER_CONFIG = {
   free: { name: 'Gratuit', nextTier: 'pro', gradient: 'from-gray-600 to-gray-700', icon: Zap, iconColor: 'text-white', message: 'Essai gratuit 7 jours', subtext: 'Accès complet · Sans engagement', cta: '/trial' },
   trial: { name: 'Essai', nextTier: 'pro', gradient: 'from-purple-500 to-violet-600', icon: Sparkles, iconColor: 'text-white', message: 'Essai en cours', subtext: 'Accès Pro · 7 jours gratuits', cta: '/paywall' },
-  pro: { name: 'Pro', nextTier: 'business', gradient: 'from-violet-500 to-violet-600', icon: Crown, iconColor: 'text-white', message: 'Passer à Business', subtext: 'CRM · OCR · API · Multi-comptes', cta: '/paywall' },
+  pro: { name: 'Pro', nextTier: 'business', gradient: 'from-violet-500 to-violet-600', icon: Crown, iconColor: 'text-white', message: 'Passer à Business', subtext: 'CRM · API · Notes de frais', cta: '/paywall' },
   business: { name: 'Business', nextTier: 'business', gradient: 'from-violet-600 to-purple-700', icon: Sparkles, iconColor: 'text-white', message: 'Tout inclus', subtext: 'Fonctionnalités illimitées', cta: '/paywall' },
 } as const;
 
@@ -127,7 +127,7 @@ export default function Sidebar() {
     {
       id: 'tools', href: '/integrations', icon: ScanLine, label: 'Outils',
       children: [
-        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !(sub.isBusiness || sub.isTrialActive), lockTier: 'business' },
+        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
         { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/calendar', icon: Calendar, label: 'Agenda' },
         { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },

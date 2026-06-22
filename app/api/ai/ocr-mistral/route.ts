@@ -46,10 +46,10 @@ export async function POST(req: NextRequest) {
     if (!profile) return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 });
 
     const isBusiness = profile.subscription_tier === 'business';
-    const isTrial = profile.is_trial_active === true;
-    if (!isBusiness && !isTrial) {
+    // ZEUS (suivi #3) — OCR multi-factures = Business strict (l'essai = Pro n'y a pas accès).
+    if (!isBusiness) {
       return NextResponse.json(
-        { error: "L'analyse OCR est disponible uniquement avec le plan Business.", feature: 'ocr', requiredPlan: 'business', upgradeUrl: '/paywall?plan=business' },
+        { error: "L'analyse OCR multi-factures est disponible uniquement avec le plan Business.", feature: 'ocr', requiredPlan: 'business', upgradeUrl: '/paywall?plan=business' },
         { status: 402 },
       );
     }
