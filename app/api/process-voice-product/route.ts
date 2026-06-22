@@ -3,7 +3,7 @@ import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getUserSubscriptionStatus, incrementVoiceUsage } from '@/lib/subscription-guard';
+import { consumeVoiceQuota } from '@/lib/subscription-guard';
 
 export const maxDuration = 60;
 
@@ -23,8 +23,17 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // LOI 3 (Le Hook Libre) : voix illimitée pour tous les plans (sub gardé pour incrementVoiceUsage).
-    const sub = await getUserSubscriptionStatus(user.id);
+    // MERCURE (juin 2026) — voix illimitée Pro+ ; fair-use 50/mois sur le gratuit. Quota atomique partagé entre toutes les routes vocales ; consumeVoiceQuota gère le tier.
+    const voiceQuota = await consumeVoiceQuota(user.id);
+    if (!voiceQuota.allowed) {
+      return NextResponse.json({
+        error: `Vous avez utilisé vos ${voiceQuota.limit} dictées vocales gratuites ce mois-ci. Passez au plan Pro pour une voix illimitée.`,
+        code: voiceQuota.code || 'VOICE_QUOTA_REACHED',
+        limit: voiceQuota.limit,
+        remaining: voiceQuota.remaining,
+        upgradeUrl: '/paywall',
+      }, { status: 402 });
+    }
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
@@ -109,8 +118,7 @@ Exemples de détection de catégorie :
       parsed = {};
     }
 
-    // TOLL: Track voice usage for free tier (1/month limit)
-    if (sub.isFree) await incrementVoiceUsage(user.id);
+    // MERCURE : quota vocal consommé atomiquement en amont (consumeVoiceQuota).
 
     return NextResponse.json({
       transcript,

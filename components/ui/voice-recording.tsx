@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, MicOff, Loader2, Check, AlertCircle, Lightbulb, Edit3, HelpCircle, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface VoiceRecordingProps {
   onResult: (data: VoiceAnalysisResult) => void;
@@ -62,6 +63,9 @@ export function PulseVoiceRecorder({
   const [error, setError] = useState('');
   const [transcript, setTranscript] = useState('');
 
+  // MERCURE (juin 2026) — quota vocal fair-use (50/mois gratuit, illimité Pro+).
+  const { isFree, maxVoice, voiceRemaining, shouldNudgeVoice } = useSubscription();
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -111,7 +115,17 @@ export function PulseVoiceRecorder({
 
   const startRecording = async () => {
     if (!isPro) {
-      toast.error('La reconnaissance vocale est disponible avec les abonnements Pro et Business');
+      // MERCURE : la voix est en fair-use 50/mois sur le gratuit. Si bloqué ici → quota épuisé.
+      const quotaExhausted = isFree && voiceRemaining === 0;
+      const msg = quotaExhausted
+        ? `Vous avez utilisé vos ${maxVoice} dictées vocales gratuites ce mois-ci. Passez au plan Pro pour une voix illimitée.`
+        : 'La reconnaissance vocale est disponible avec les abonnements Pro et Business';
+      toast.error(msg, {
+        duration: 6000,
+        action: quotaExhausted
+          ? { label: 'Voir les offres', onClick: () => { window.location.href = '/paywall'; } }
+          : undefined,
+      });
       return;
     }
 
@@ -204,11 +218,15 @@ export function PulseVoiceRecorder({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 402) {
+          // MERCURE : quota vocal gratuit épuisé (50/mois) — message serveur précis.
+          throw new Error(errorData.error || 'Quota vocal gratuit atteint. Passez au plan Pro pour une voix illimitée.');
+        }
         if (response.status === 401 || response.status === 403) {
           throw new Error('Clé API invalide. Vérifiez GROQ_API_KEY.');
         }
         if (response.status === 429) {
-          throw new Error('Trop de requêtes. Réessayez dans quelques instants.');
+          throw new Error(errorData.error || 'Trop de requêtes. Réessayez dans quelques instants.');
         }
         throw new Error(errorData.error || 'Erreur lors du traitement vocal');
       }
@@ -532,6 +550,19 @@ export function PulseVoiceRecorder({
               <strong>Astuce:</strong> Dites{" "}
               <span className="italic">"Facture pour Startup Tech, site web 3500€ HT, design 1500€ HT"</span>
             </span>
+          </p>
+        </motion.div>
+      )}
+
+      {/* MERCURE (juin 2026) — quota vocal fair-use : badge visible à 80% du quota gratuit */}
+      {isFree && shouldNudgeVoice && maxVoice && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="w-full px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center"
+        >
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Dictées vocales : <strong>{maxVoice - (voiceRemaining ?? 0)}/{maxVoice}</strong> ce mois — illimité avec le plan Pro.
           </p>
         </motion.div>
       )}

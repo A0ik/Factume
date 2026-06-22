@@ -5,6 +5,7 @@ import { generateStoragePath, buildOcrPrompt, ALLOWED_MIME_TYPES } from '@/lib/o
 import { processAndSaveExpense } from '@/lib/ocr-core';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { ocrWithMistral } from '@/lib/mistral-ocr';
+import { consumeOcrQuota } from '@/lib/subscription-guard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SAGE (CIBLE 3) — OCR hybride 2 stages « surpasser Dext.com » au meilleur coût.
@@ -18,7 +19,7 @@ import { ocrWithMistral } from '@/lib/mistral-ocr';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_MAX_REQUESTS = 60; // MERCURE : assoupli (était 10) — le cap mensuel 500 borne le total.
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const STRUCTURE_MODEL = 'google/gemini-2.5-flash';
 
@@ -52,6 +53,20 @@ export async function POST(req: NextRequest) {
         { error: "L'analyse OCR multi-factures est disponible uniquement avec le plan Business.", feature: 'ocr', requiredPlan: 'business', upgradeUrl: '/paywall?plan=business' },
         { status: 402 },
       );
+    }
+
+    // MERCURE (juin 2026) — OCR multi-factures : 500 factures/mois (Business). Quota atomique.
+    const ocrQuota = await consumeOcrQuota(user.id, 1);
+    if (!ocrQuota.allowed) {
+      return NextResponse.json({
+        error: ocrQuota.code === 'PLAN_REQUIRED'
+          ? "L'OCR multi-factures nécessite le plan Business."
+          : `Vous avez atteint votre quota de ${ocrQuota.limit} factures OCR ce mois-ci.`,
+        code: ocrQuota.code || 'OCR_QUOTA_REACHED',
+        limit: ocrQuota.limit,
+        remaining: ocrQuota.remaining,
+        upgradeUrl: '/paywall?plan=business',
+      }, { status: ocrQuota.code === 'PLAN_REQUIRED' ? 402 : 429 });
     }
 
     // 3. Rate limit Supabase (comptage expenses/min)

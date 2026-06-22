@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
+import { getUserSubscriptionStatus, requireFeature, consumeOcrQuota } from '@/lib/subscription-guard';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import {
   sanitizeString,
@@ -43,6 +43,20 @@ export async function POST(req: NextRequest) {
         code: 'PLAN_REQUIRED',
         upgradeUrl: '/paywall',
       }, { status: 403 });
+    }
+
+    // MERCURE (juin 2026) — OCR multi-factures : 500 factures/mois (Business). Quota atomique.
+    const ocrQuota = await consumeOcrQuota(user.id, 1);
+    if (!ocrQuota.allowed) {
+      return NextResponse.json({
+        error: ocrQuota.code === 'PLAN_REQUIRED'
+          ? "L'OCR multi-factures nécessite le plan Business."
+          : `Vous avez atteint votre quota de ${ocrQuota.limit} factures OCR ce mois-ci.`,
+        code: ocrQuota.code || 'OCR_QUOTA_REACHED',
+        limit: ocrQuota.limit,
+        remaining: ocrQuota.remaining,
+        upgradeUrl: '/paywall?plan=business',
+      }, { status: ocrQuota.code === 'PLAN_REQUIRED' ? 402 : 429 });
     }
 
     if (!process.env.OPENROUTER_API_KEY) {

@@ -38,6 +38,8 @@ export interface PlanConfig {
     maxClientsCRM: number | null;
     maxUsers: number;
     voiceCommandsPerMonth: number | null;
+    // MERCURE (juin 2026) — OCR multi-factures (lot type Dext, Business seul). null = non accessible / illimité selon plan.
+    ocrInvoicesPerMonth: number | null;
   };
   gates: {
     urssafOneClick: boolean;
@@ -91,7 +93,10 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       maxCabinets: 1,
       maxClientsCRM: 10,
       maxUsers: 1,
-      voiceCommandsPerMonth: null, // LOI 3 : voix illimitée (cheval de Troie)
+      // MERCURE : fair-use voix 50/mois (gratuit). Marketing reste "voix illimitée"
+      // (l'est pour Pro+). 50/mois couvre largement la découverte ; bloque le bot-farming.
+      voiceCommandsPerMonth: 50,
+      ocrInvoicesPerMonth: 0, // OCR multi-factures = Business
     },
     gates: {
       urssafOneClick: false,
@@ -140,6 +145,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       maxClientsCRM: null,
       maxUsers: 1,
       voiceCommandsPerMonth: null,
+      ocrInvoicesPerMonth: 0, // Pro n'a que le scan simple (illimité) ; multi-factures = Business
     },
     gates: {
       urssafOneClick: true,
@@ -181,6 +187,8 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       maxClientsCRM: null,
       maxUsers: 5,
       voiceCommandsPerMonth: null,
+      // MERCURE : OCR multi-factures Business = 500 factures analysées/mois (couvre 99% des cabinets).
+      ocrInvoicesPerMonth: 500,
     },
     gates: {
       urssafOneClick: true,
@@ -206,6 +214,12 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
 /** Résoudre le plan effectif (trial = pro pendant la période d'essai) */
 export function resolveEffectiveTier(tier: string | null | undefined, isTrialActive?: boolean): PlanTier {
   if (isTrialActive) return 'pro';
+  // HEPHAISTOS (CIBLE 2) — Defense-in-depth : un tier='trial' signifie que l'essai est
+  // toujours actif côté backend (l'API trial-status et le RPC expire_trials le repassent
+  // à 'free' à l'expiration). On le traite donc comme 'pro' même si le flag is_trial_active
+  // est temporairement périmé côté client — évite que la navbar (CRM, dépenses, compta…)
+  // ne s'effondre en 'free' pendant la fenêtre de désynchronisation.
+  if (tier === 'trial') return 'pro';
   if (tier === 'business') return 'business';
   if (tier === 'pro' || tier === 'solo') return 'pro'; // 'solo' legacy → pro
   return 'free';

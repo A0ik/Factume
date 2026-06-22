@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
+import { getUserSubscriptionStatus, requireFeature, consumeOcrQuota } from '@/lib/subscription-guard';
 import { extractWithTesseract, isTesseractResultReliable } from '@/lib/ocr-tesseract';
 import { convertPdfToImages } from '@/lib/pdf-to-image';
 import OpenAI from 'openai';
@@ -20,7 +20,7 @@ import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 const TESSERACT_CONFIDENCE_THRESHOLD = 0.8;
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_MAX_REQUESTS = 60; // MERCURE : assoupli (était 10) — le cap mensuel 500 borne le total.
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -48,6 +48,20 @@ export async function POST(req: NextRequest) {
         code: 'PLAN_REQUIRED',
         upgradeUrl: '/paywall',
       }, { status: 403 });
+    }
+
+    // MERCURE (juin 2026) — OCR multi-factures : 500 factures/mois (Business). Quota atomique.
+    const ocrQuota = await consumeOcrQuota(user.id, 1);
+    if (!ocrQuota.allowed) {
+      return NextResponse.json({
+        error: ocrQuota.code === 'PLAN_REQUIRED'
+          ? "L'OCR multi-factures nécessite le plan Business."
+          : `Vous avez atteint votre quota de ${ocrQuota.limit} factures OCR ce mois-ci.`,
+        code: ocrQuota.code || 'OCR_QUOTA_REACHED',
+        limit: ocrQuota.limit,
+        remaining: ocrQuota.remaining,
+        upgradeUrl: '/paywall?plan=business',
+      }, { status: ocrQuota.code === 'PLAN_REQUIRED' ? 402 : 429 });
     }
 
     // ------------------------------------------------------------------

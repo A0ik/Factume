@@ -6,11 +6,13 @@ import { validateVoiceData, formatValidationError, ValidationError } from '@/lib
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { validateAndCorrectTVA, isB2CClient, getDefaultTVARate, detectTranscriptTaxHints, detectTTCMisinterpretation } from '@/lib/tva-validator';
-import { getUserSubscriptionStatus, incrementVoiceUsage } from '@/lib/subscription-guard';
+import { consumeVoiceQuota, acquireAiSlot, releaseAiSlot } from '@/lib/subscription-guard';
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  let slotAcquired = false;
+  let slotUserId: string | null = null;
   try {
     // LOI 9 : seuil entreprise — la voix est illimitée, on ne bride pas l'usage légitime (était 10/min)
     const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 300, windowMs: 60000 });
@@ -29,9 +31,30 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
-    // LOI 3 (Le Hook Libre) : la dictée vocale est ILLIMITÉE pour tous les plans,
-    // y compris gratuit. La voix est le cheval de Troie de Factu.me — jamais bridée.
-    const sub = await getUserSubscriptionStatus(user.id);
+    // MERCURE (juin 2026) — Le Hook Libre reste : voix illimitée Pro+.
+    // Fair-use 50/mois sur le gratuit (quota atomique) pour stopper le bot-farming,
+    // sans jamais bloquer un usage légitime rapide. consumeVoiceQuota gère le tier en interne.
+    const voiceQuota = await consumeVoiceQuota(user.id);
+    if (!voiceQuota.allowed) {
+      return NextResponse.json({
+        error: `Vous avez utilisé vos ${voiceQuota.limit} dictées vocales gratuites ce mois-ci. Passez au plan Pro pour une voix illimitée.`,
+        code: voiceQuota.code || 'VOICE_QUOTA_REACHED',
+        limit: voiceQuota.limit,
+        remaining: voiceQuota.remaining,
+        upgradeUrl: '/paywall',
+      }, { status: 402 });
+    }
+
+    // Garde concurrentielle : max 2 dictées en vol/compte (best-effort, fail-open).
+    const aiSlot = await acquireAiSlot(user.id);
+    if (!aiSlot.allowed) {
+      return NextResponse.json({
+        error: "Une dictée vocale est déjà en cours. Patientez qu'elle se termine.",
+        code: 'AI_SLOT_BUSY',
+      }, { status: 429 });
+    }
+    slotAcquired = true;
+    slotUserId = user.id;
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (GROQ_API_KEY)' }, { status: 500 });
@@ -587,8 +610,7 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       // Keep the default parsed value, no need to reassign
     }
 
-    // TOLL: Track voice usage for free tier (1/month limit)
-    if (sub.isFree) await incrementVoiceUsage(user.id);
+    // MERCURE : le quota vocal est consommé atomiquement en amont (consumeVoiceQuota).
 
     return NextResponse.json({
       transcript,
@@ -610,5 +632,7 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans quelques instants.' }, { status: 429 });
     }
     return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    if (slotAcquired && slotUserId) await releaseAiSlot(slotUserId).catch(() => {});
   }
 }

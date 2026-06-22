@@ -52,10 +52,24 @@ export function useSubscription() {
   const trialDocumentCount = profile?.trial_document_count || 0;
   const trialDocLimit = 15; // Unifié : essai = 15 documents (vs 3/mois en free). Cf. create_invoice_atomique.
 
-  // Voice usage tracking (free tier)
+  // MERCURE (juin 2026) — Quotas mensuels (caps anti-abus SANS friction).
+  // Voix : fair-use 50/mois (gratuit), illimité Pro+.
   const voiceUsedThisMonth = isFree
     ? (profile?.voice_usage_month === currentMonth ? (profile?.voice_usage_count || 0) : 0)
     : 0;
+  const voiceLimit = useMemo(
+    () => checkLimit(tier, 'voiceCommandsPerMonth', voiceUsedThisMonth, isTrialActive),
+    [tier, voiceUsedThisMonth, isTrialActive],
+  );
+  // OCR multi-factures : 500/mois (Business). Colonnes nouvelles → accès typé souple.
+  const profileAny = profile as Record<string, any> | null;
+  const ocrUsedThisMonth = isBusiness && profileAny?.ocr_usage_month === currentMonth
+    ? (profileAny?.ocr_usage_count || 0)
+    : 0;
+  const ocrLimit = useMemo(
+    () => checkLimit(tier, 'ocrInvoicesPerMonth', ocrUsedThisMonth, isTrialActive),
+    [tier, ocrUsedThisMonth, isTrialActive],
+  );
 
   // ── MONOLITH: Limit checks using central plan config ──
   const invoiceLimit = useMemo(
@@ -91,8 +105,15 @@ export function useSubscription() {
     effectiveIsBusiness:  effectiveTier === 'business',
 
     // Feature gates (from central config)
-    canUseVoice:          true, // LOI 3 : voix illimitée pour tous les plans
+    canUseVoice:          voiceLimit.allowed, // MERCURE : illimité Pro+ ; fair-use 50/mois gratuit
     voiceUsedThisMonth,
+    maxVoice:             voiceLimit.max,
+    voiceRemaining:       voiceLimit.remaining,
+    shouldNudgeVoice:     isFree && voiceUsedThisMonth >= 40, // alerte douce à 80% du quota gratuit
+    ocrUsedThisMonth,
+    canUseOcr:            ocrLimit.allowed,
+    maxOcr:               ocrLimit.max,
+    ocrRemaining:         ocrLimit.remaining,
     canUseCustomTemplate: plan.gates.customTemplate,
     canUseRecurring:      plan.gates.recurringInvoices,
     canEditInvoice:       !isFree || isTrialActive,
