@@ -1,7 +1,5 @@
-import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
 import { ContractType, Contract, AmendmentType, ContractAmendment } from '@/types';
-import { sendContractNotification } from '@/lib/services/contract-notification-service';
 
 const TABLE_MAP: Record<ContractType, string> = {
   cdi: 'contracts_cdi',
@@ -73,15 +71,24 @@ export async function createAmendment(
     .single();
 
   if (contract) {
-    await sendContractNotification({
-      userId: session.user.id,
-      type: 'contract_amendment',
-      contractId,
-      contractType,
-      employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
-      contractNumber: contract.contract_number,
-      metadata: { amendmentId: data.id, amendmentType, effectiveDate },
-    });
+    // ARGOS (build) — notification routée via l'API serveure (le service admin ne peut
+    // pas être appelé depuis le client). Best-effort, non bloquant.
+    try {
+      await fetch('/api/contracts/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'contract_amendment',
+          contractId,
+          contractType,
+          employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
+          contractNumber: contract.contract_number,
+          metadata: { amendmentId: data.id, amendmentType, effectiveDate },
+        }),
+      });
+    } catch (notifErr) {
+      console.error('Failed to send amendment notification:', notifErr);
+    }
   }
 
   return data as ContractAmendment;

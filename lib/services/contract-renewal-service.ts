@@ -1,7 +1,5 @@
-import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
 import { ContractType, ContractRenewal, Contract, ContractFormData } from '@/types';
-import { sendContractNotification } from '@/lib/services/contract-notification-service';
 
 const TABLE_MAP: Record<ContractType, string> = {
   cdi: 'contracts_cdi',
@@ -94,20 +92,23 @@ export async function renewContract(
     console.error('Erreur lors de la création de l\'entrée de renouvellement:', renewalError);
   }
 
-  // 6. Envoyer notification
-  await sendContractNotification({
-    userId: session.user.id,
-    type: 'contract_renewal',
-    contractId: newContract.id,
-    contractType,
-    employeeName: `${originalContract.employee_first_name} ${originalContract.employee_last_name}`,
-    contractNumber: newContract.contract_number,
-    metadata: {
-      originalContractId: contractId,
-      renewalNumber,
-      newEndDate,
-    },
-  });
+  // 6. Envoyer notification (routée via API serveure — ARGOS build)
+  try {
+    await fetch('/api/contracts/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'contract_renewal',
+        contractId: newContract.id,
+        contractType,
+        employeeName: `${originalContract.employee_first_name} ${originalContract.employee_last_name}`,
+        contractNumber: newContract.contract_number,
+        metadata: { originalContractId: contractId, renewalNumber, newEndDate },
+      }),
+    });
+  } catch (notifErr) {
+    console.error('Failed to send renewal notification:', notifErr);
+  }
 
   return { id: newContract.id, contract_number: newContract.contract_number };
 }
@@ -153,6 +154,9 @@ export async function getNextRenewalNumber(contractId: string, contractType: Con
  * Récupère tous les contrats renouvelés liés à un contrat original
  */
 export async function getRenewedChain(originalContractId: string): Promise<any[]> {
+  // ARGOS (build) — import dynamique du client admin : préserve le garde-fou `server-only`
+  // tout en évitant l'import statique qui cassait le bundle client.
+  const { createAdminClient } = await import('@/lib/supabase-admin');
   const admin = createAdminClient();
 
   const { data: renewals } = await admin
