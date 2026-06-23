@@ -105,7 +105,7 @@ export default async function VerifySignaturePage({
               </h2>
               <p className="text-gray-700 dark:text-gray-300">
                 {signature.valid
-                  ? 'Cette signature est conforme aux exigences eIDAS'
+                  ? 'Cette signature a été enregistrée et vérifiée (niveau Simple eIDAS).'
                   : 'Cette signature ne peut pas être vérifiée'}
               </p>
             </div>
@@ -234,15 +234,15 @@ export default async function VerifySignaturePage({
                 valid={compliance.features.identification}
               />
               <FeatureCheck
-                label="Horodatage certifié"
+                label="Horodatage de l'acte"
                 valid={compliance.features.timestamp}
               />
               <FeatureCheck
-                label="Intégrité garantie"
+                label="Relevé de signature (hash)"
                 valid={signature.integrityValid}
               />
               <FeatureCheck
-                label="Journal immuable (10 ans)"
+                label="Journal d'audit"
                 valid={compliance.features.immutableLog}
               />
               <FeatureCheck
@@ -286,7 +286,7 @@ export default async function VerifySignaturePage({
         <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Globe className="w-4 h-4" />
-            <span>Vérification certifiée eIDAS</span>
+            <span>Vérification de signature</span>
           </div>
           <p className="text-xs">
             ID de signature : {signatureId}

@@ -250,7 +250,8 @@ export async function POST(req: NextRequest) {
           duplicate_of_expense_id: topMatch.expense_id,
           duplicate_score: topMatch.score,
         })
-        .eq('id', expense.id);
+        .eq('id', expense.id)
+        .eq('user_id', user.id); // ARGOS (sécurité) — borne l'update au propriétaire
     }
 
     const result: CheckResult = {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { signToken } from '@/lib/signing-token';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
 import React from 'react';
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     if (existingToken) {
       // Une demande est déjà en cours, on renvoie le même token
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me';
-      const signingUrl = `${appUrl}/sign-quote/${existingToken.token}`;
+      const signingUrl = `${appUrl}/sign-quote/${signToken(existingToken.token)}`;
       const expiresAt = new Date(existingToken.expires_at);
 
       return NextResponse.json({
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
 
     // Construire le lien de signature
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me';
-    const signingUrl = `${appUrl}/sign-quote/${tokenData.token}`;
+    const signingUrl = `${appUrl}/sign-quote/${signToken(tokenData.token)}`;
 
     // Envoyer l'email via Resend
     const RESEND_API_KEY = process.env.RESEND_API_KEY;

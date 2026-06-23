@@ -22,12 +22,16 @@ export default function MentionsLegales() {
       icon: Building2,
       title: 'Éditeur du site',
       content: [
-        { label: 'Raison sociale', value: 'Factu.me' },
+        { label: 'Raison sociale', value: 'LIVE & BEST CONSULTING' },
         { label: 'Forme juridique', value: 'Société par actions simplifiée (SAS)' },
-        { label: 'Capital social', value: 'Variable' },
-        { label: 'Siège social', value: 'Paris, France' },
+        { label: 'Capital social', value: '1 000,00 €' },
+        { label: 'Siège social', value: '[Adresse du siège à compléter] — Bobigny (93), France' },
+        { label: 'SIREN', value: '805 360 963' },
+        { label: 'SIRET (siège)', value: '805 360 963 00021' },
+        { label: 'RCS', value: '805 360 963 R.C.S. Bobigny (inscrit le 22/10/2014)' },
+        { label: 'TVA intracommunautaire', value: 'FR 14 805360963' },
         { label: 'Email', value: 'contact@factu.me' },
-        { label: 'Directeur de la publication', value: 'Le Président de la société' }
+        { label: 'Directeur de la publication', value: 'Elhalabi Bacherki, Président' }
       ]
     },
     {
@@ -35,7 +39,9 @@ export default function MentionsLegales() {
       title: 'Hébergement',
       content: [
         { label: 'Hébergeur', value: 'Vercel Inc.' },
-        { label: 'Localisation', value: 'Serveurs situés en France (Paris)' },
+        { label: 'Adresse', value: '340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis' },
+        { label: 'Site web', value: 'vercel.com' },
+        { label: 'Localisation des serveurs', value: 'France (Paris — région eu-west-3)' },
         { label: 'Conformité', value: 'RGPD et législation française' }
       ]
     },
@@ -113,7 +119,7 @@ export default function MentionsLegales() {
 
           <div className="flex items-center gap-2 text-sm text-zinc-500">
             <Zap className="w-4 h-4" />
-            Dernière mise à jour : avril 2026
+            Dernière mise à jour : juin 2026
           </div>
         </motion.div>
 
@@ -134,7 +140,7 @@ export default function MentionsLegales() {
               </h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
                 Conformément aux dispositions des articles L.111-1 et suivants du Code de la consommation,
-                nous vous informons que ce site est édité par la société Factu.me, SAS immatriculée au RCS de Paris.
+                nous vous informons que ce site est édité par la société LIVE & BEST CONSULTING, SAS au capital de 1 000,00 €, immatriculée au RCS de Bobigny sous le numéro 805 360 963.
               </p>
             </div>
           </div>

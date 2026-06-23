@@ -146,7 +146,7 @@ export default function RegisterPage() {
   if (confirmEmail) {
     const codeComplete = otp.every((d) => d !== '');
     return (
-      <main className="relative min-h-screen flex items-center justify-center p-5 bg-slate-50 dark:bg-[#09090B] transition-colors">
+      <main className="relative min-h-[100dvh] flex items-center justify-center p-5 py-10 bg-slate-50 dark:bg-[#09090B] transition-colors">
         {/* Animated background */}
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-[#09090B] dark:via-[#111113] dark:to-[#09090B]" />

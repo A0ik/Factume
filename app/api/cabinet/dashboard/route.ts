@@ -111,7 +111,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ cabinet: null, clients: [], stats: null });
     }
 
-    const clients = await getCabinetClients(cabinet.id);
+    // ARGOS — IDOR : un membre 'viewer' (client invité qui rejoint son cabinet)
+    // ne voit QUE ses propres données agrégées. Les autres clients du cabinet
+    // sont masqués. admin/manager (comptable) voient tout.
+    const { data: membership } = await admin
+      .from('cabinet_members')
+      .select('role')
+      .eq('cabinet_id', cabinet.id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const memberRole = membership?.role;
+    const isOwner = cabinet.owner_id === user.id;
+    const isViewer = !isOwner && memberRole === 'viewer';
+
+    const allClients = await getCabinetClients(cabinet.id);
+    // Pour un viewer, on ne garde que SON propre client.
+    const clients = isViewer
+      ? allClients.filter((c: any) => c.client_user_id === user.id)
+      : allClients;
     const now = new Date();
 
     let totalRevenue = 0;

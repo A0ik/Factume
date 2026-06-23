@@ -42,7 +42,7 @@ function SearchableSelect({
     : options;
 
   return (
-    <div ref={ref} className="flex flex-col gap-1.5">
+    <div ref={ref} className="relative flex flex-col gap-1.5">
       <label className="text-sm font-semibold text-gray-700">{label}</label>
       <button
         type="button"
@@ -57,7 +57,7 @@ function SearchableSelect({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-[4.5rem] w-[calc(100%-2.5rem)] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-64 overflow-y-auto dark:border-white/[0.08] dark:bg-[#111113]">
           <div className="sticky top-0 bg-white p-2 border-b border-gray-100">
             <input
               type="text"

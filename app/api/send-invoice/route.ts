@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { transmitInvoice, isRetryableError } from '@/lib/superPdpClient';
 import { isInvoiceB2B } from '@/lib/tva-validator';
 import { isFacturXEligible } from '@/lib/facturx';
+import { resolvePaymentLink } from '@/lib/payment-link';
 
 export const maxDuration = 60;
 
@@ -40,9 +41,12 @@ function buildEmailHtml(invoice: any, profile: any, senderName: string, isRemind
       <td style="padding:10px 16px;border-bottom:1px solid #f0f0f0;font-size:13px;font-weight:700;color:#111827;text-align:right">${fmt(item.total)}</td>
     </tr>`).join('');
 
-  const payBtn = invoice.stripe_payment_url
+  // ARGOS (CIBLE 5) — bouton Payer via le résolveur unique (SumUp + liens stale gérés).
+  // Avant : invoice.stripe_payment_url en dur → pas de bouton pour SumUp + lien stale affiché.
+  const resolvedPay = resolvePaymentLink(invoice);
+  const payBtn = resolvedPay.url
     ? `<div style="text-align:center;margin:28px 0">
-        <a href="${invoice.stripe_payment_url}" style="display:inline-block;background:${accent};color:#fff;font-weight:700;font-size:15px;padding:14px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.3px">
+        <a href="${resolvedPay.url}" style="display:inline-block;background:${accent};color:#fff;font-weight:700;font-size:15px;padding:14px 40px;border-radius:10px;text-decoration:none;letter-spacing:0.3px">
           Payer ${fmt(invoice.total)} en ligne
         </a>
       </div>` : '';

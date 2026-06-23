@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, RefreshCw, ZoomIn, ZoomOut, Eye, FileWarning } from 'lucide-react';
 import { useDocumentSessionStore } from '../documentSessionStore';
+import { useShallow } from 'zustand/react/shallow';
 import { Invoice, Profile } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -119,7 +120,9 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
   }, []);
 
   // ─── Subscribe to store fields ───────────────────────────
-  const canvasData = useDocumentSessionStore((state) => ({
+  // ARGOS (P0) — useShallow : sans lui, le sélecteur renvoie un nouvel objet à chaque render
+  // → syntheticInvoice instable → useEffect en boucle → POST /api/pdf/preview toutes les 600ms.
+  const canvasData = useDocumentSessionStore(useShallow((state) => ({
     documentType: state.documentType,
     items: state.items,
     clientName: state.clientName,
@@ -139,7 +142,7 @@ export default function LivePdfCanvas({ profile, className }: LivePdfCanvasProps
     vatAmount: state.vatAmount,
     dueDate: state.dueDate,
     templateId: state.templateId,
-  }));
+  })));
 
   // ─── Synthetic Invoice from store ────────────────────────
   const syntheticInvoice = useMemo((): Invoice => {

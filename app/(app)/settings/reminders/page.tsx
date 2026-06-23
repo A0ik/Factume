@@ -37,9 +37,13 @@ export default function RemindersSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // ARGOS (P1) — dépend de la session : si elle est null au mount (hydration asynchrone),
+  // fetchConfig() retournait tôt et n'était jamais relancé → loader infini. On relance à
+  // l'arrivée du token d'accès.
   useEffect(() => {
     fetchConfig();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.access_token]);
 
   const fetchConfig = async () => {
     if (!session) return;

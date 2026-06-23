@@ -22,6 +22,8 @@ export interface Profile {
   invoice_prefix: string;
   currency?: string;
   onboarding_done: boolean;
+  cgu_accepted?: boolean;
+  cgu_accepted_at?: string;
   tutorial_wizard_seen?: boolean;
   custom_template_html?: string;
   stripe_account_id?: string;

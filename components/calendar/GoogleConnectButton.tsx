@@ -95,7 +95,7 @@ export function GoogleConnectButton({ className }: GoogleConnectButtonProps) {
   // "Se connecter avec Google" (scopes openid/email/profile) n'est PAS concernée.
   return (
     <div
-      title="La synchronisation Google Agenda sera bientôt disponible."
+      title="Synchronisation Google Agenda (indisponible pour le moment)."
       className={cn(
         'flex items-center gap-3 px-4 py-2.5 rounded-xl min-h-[44px]',
         'bg-white/30 dark:bg-slate-900/30 backdrop-blur-sm',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { signToken } from '@/lib/signing-token';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 import { Resend } from 'resend';
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     if (existingToken) {
       // Une demande est déjà en cours, on renvoie le même token
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me';
-      const signingUrl = `${appUrl}/sign/${existingToken.token}`;
+      const signingUrl = `${appUrl}/sign/${signToken(existingToken.token)}`;
       const expiresAt = new Date(existingToken.expires_at);
 
       return NextResponse.json({
@@ -157,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     // Construire le lien de signature
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me';
-    const signingUrl = `${appUrl}/sign/${tokenData.token}`;
+    const signingUrl = `${appUrl}/sign/${signToken(tokenData.token)}`;
     const label = CONTRACT_LABELS[contractType] || 'Contrat';
 
     // Envoyer l'email via Resend

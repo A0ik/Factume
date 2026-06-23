@@ -298,6 +298,19 @@ export default function RecurringInvoicesPage() {
   const formatTime = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
+  // ARGOS (P1) — Libère le micro + le timer si la modale se ferme pendant l'enregistrement.
+  // Sans cela, le MediaRecorder et le micro restaient actifs jusqu'à la navigation.
+  useEffect(() => {
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+        }
+      } catch { /* déjà arrêté */ }
+    };
+  }, []);
+
   const startRecording = async () => {
     if (!canUseVoice) { toast.error('La reconnaissance vocale est disponible avec les abonnements Pro et Business'); return; }
     setVoiceError('');

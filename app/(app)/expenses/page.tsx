@@ -475,7 +475,10 @@ export default function ExpensesPage() {
     // SAGE (CIBLE 2) — LOI du justificatif (front) : aucune note de frais sans justificatif.
     // Légalement obligatoire (art. L.123-22 Code de commerce / CGI). Un trigger DB rejette
     // aussi toute insertion sans receipt_url (défense en profondeur).
-    if (!receiptUrl) {
+    // ARGOS (CIBLE 5) — Exception : les notes kilométriques sont calculées (distance × barème),
+    // aucun justificatif tiers requis — sans cela elles devenaient impossibles à sauvegarder.
+    const requiresReceipt = form.category !== 'mileage';
+    if (requiresReceipt && !receiptUrl) {
       toast.error('Un justificatif est obligatoire pour enregistrer une note de frais.');
       return;
     }
@@ -495,8 +498,8 @@ export default function ExpensesPage() {
         date: form.date,
         description: form.description,
         payment_method: form.payment_method,
-        receipt_url: receiptUrl,
-        has_receipt: true,
+        receipt_url: receiptUrl || null,
+        has_receipt: Boolean(receiptUrl),
         status: 'pending' as const,
         user_id: user.id,
         location_city: form.location_city || null,
@@ -571,9 +574,11 @@ export default function ExpensesPage() {
     }
 
     if (format === 'fec') {
+      // ARGOS (CIBLE 5) — montant en euros (e.amount est déjà en €, pas en centimes).
+      // Avant : /100 divisait faussement toutes les sommes (50€ → 0,50€).
       const fecContent = validated.map((e, idx) => {
         const date = e.date.replace(/-/g, '');
-        return `${date.padEnd(8, '0')}000000   ${e.category.padEnd(4, '0')}   625000        DEPENSE         ${(e.amount / 100).toFixed(2).padStart(15, ' ')}          ${(e.vendor || '').padEnd(30, ' ')}       ${e.description?.padEnd(30, ' ')}         ${idx + 1}`;
+        return `${date.padEnd(8, '0')}000000   ${e.category.padEnd(4, '0')}   625000        DEPENSE         ${e.amount.toFixed(2).padStart(15, ' ')}          ${(e.vendor || '').padEnd(30, ' ')}       ${e.description?.padEnd(30, ' ')}         ${idx + 1}`;
       }).join('\n');
       const blob = new Blob([fecContent], { type: 'text/plain;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -582,7 +587,7 @@ export default function ExpensesPage() {
       a.download = `FEC_Depenses_${new Date().toISOString().split('T')[0]}.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export FEC réussi');
+      toast.success('Export comptable généré (format simplifié — à valider par votre comptable avant télédéclaration).');
     }
 
     if (format === 'pdf') { toast.info('Export PDF en cours de développement...'); }

@@ -210,6 +210,9 @@ export async function processAndSaveExpense(
     description: extracted.description,
     receipt_url: fileMeta.receiptUrl,
     receipt_storage_path: fileMeta.storagePath,
+    // ARGOS (CIBLE 5) — tout flux OCR uploade obligatoirement un justificatif avant l'insert.
+    // Sans has_receipt:true, les filtres « sans justificatif » classaient à tort ces dépenses.
+    has_receipt: true,
     payment_method: extracted.payment_method,
     // TITAN — 'needs_review' est refusé par la contrainte expenses_status_check
     // (CHECK limité à pending/reviewed/ready/validated/rejected/exported). Le signal

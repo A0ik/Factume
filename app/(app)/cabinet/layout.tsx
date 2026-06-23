@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, FileText, Briefcase, Calendar,
   ClipboardList, Bell, UserPlus, Settings, Menu, X,
-  Building2, ChevronRight, Shield, HardHat, FileCheck,
+  ChevronRight, Shield, HardHat, FileCheck,
   CalendarClock, ArrowLeftRight, Scale, Wallet, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { useCabinetStore } from '@/stores/cabinetStore';
 import { useAuthStore } from '@/stores/authStore';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
 import CabinetSidebar from '@/components/cabinet/CabinetSidebar';
+import CabinetLogo from '@/components/cabinet/CabinetLogo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Avatar } from '@/components/cabinet/ui';
 import type { LucideIcon } from 'lucide-react';
@@ -171,16 +172,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                 <Menu size={20} strokeWidth={1.8} />
               </button>
               <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {cabinet?.logo_url ? (
-                    <img src={cabinet.logo_url} alt="" className="w-3.5 h-3.5 rounded object-contain" />
-                  ) : (
-                    <Building2 size={12} className="text-white" />
-                  )}
-                </div>
+                <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} size={24} iconSize={12} rounded="rounded-lg" />
                 <span className="text-[15px] font-bold text-gray-900 truncate max-w-[180px]">
                   {brandName}
                 </span>
@@ -248,16 +240,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
               >
                 <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      {cabinet?.logo_url ? (
-                        <img src={cabinet.logo_url} alt="" className="w-5 h-5 rounded object-contain" />
-                      ) : (
-                        <Building2 size={18} className="text-white" />
-                      )}
-                    </div>
+                    <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} />
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-gray-900 truncate">{brandName}</p>
                       <p className="text-[10px] text-gray-500 uppercase tracking-wider">Expert-Comptable</p>

@@ -66,6 +66,24 @@ export async function PUT(req: NextRequest) {
     const { name, siret } = await req.json();
     if (!name) return NextResponse.json({ error: 'Nom du cabinet requis' }, { status: 400 });
 
+    // PROMÉTHÉE — Guard serveur maxCabinets (Business = 5).
+    // Les cabinets existants (éventuellement > limite) sont conservés (grandfathering),
+    // mais on bloque toute NOUVELLE création au-delà du plafond du plan.
+    const maxCabinets = sub.plan?.limits?.maxCabinets ?? 1;
+    const { count: existingCount } = await admin
+      .from('cabinets')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id);
+    if ((existingCount ?? 0) >= maxCabinets) {
+      return NextResponse.json({
+        error: `Limite atteinte : ${maxCabinets} cabinet${maxCabinets > 1 ? 's' : ''} maximum sur votre plan.`,
+        code: 'CABINET_LIMIT',
+        limit: maxCabinets,
+        current: existingCount ?? 0,
+        upgradeUrl: '/paywall',
+      }, { status: 403 });
+    }
+
     const { data: cabinet, error } = await admin
       .from('cabinets')
       .insert({ name, owner_id: user.id, siret })
@@ -109,9 +127,27 @@ export async function PATCH(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const updates = await req.json();
+    // ARGOS — allowlist anti-mass-assignment : ne passer que les champs attendus.
+    const {
+      name, siret, primary_color, logo_url, white_label_name,
+      hide_factu_branding, settings,
+    } = await req.json();
+    const updates: Record<string, unknown> = {};
+    if (name !== undefined) updates.name = name;
+    if (siret !== undefined) updates.siret = siret;
+    if (primary_color !== undefined) updates.primary_color = primary_color;
+    if (logo_url !== undefined) updates.logo_url = logo_url;
+    if (white_label_name !== undefined) updates.white_label_name = white_label_name;
+    if (hide_factu_branding !== undefined) updates.hide_factu_branding = hide_factu_branding;
+    if (settings !== undefined) updates.settings = settings;
+
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
+
+    // ARGOS — seul le propriétaire peut modifier les réglages du cabinet.
+    if (cabinet.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Seul le propriétaire peut modifier le cabinet' }, { status: 403 });
+    }
 
     const { error } = await admin
       .from('cabinets')

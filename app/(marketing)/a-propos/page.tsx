@@ -82,8 +82,8 @@ const infrastructure = [
   {
     icon: Globe,
     title: 'Signature eIDAS',
-    description: 'Signature électronique de niveau Avancé conforme au règlement eIDAS. Preuve légale d\'intention, horodatage qualifié.',
-    detail: 'Niveau Avancé',
+    description: 'Signature électronique de niveau Simple conforme au règlement eIDAS (art. 25). Preuve d\'acceptation horodatée de l\'acte.',
+    detail: 'Niveau Simple',
   },
 ];
 
@@ -257,7 +257,7 @@ export default function AProposPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  <span><strong>Règlement eIDAS</strong> — Signature électronique de niveau Avancé, horodatage qualifié</span>
+                  <span><strong>Règlement eIDAS</strong> — Signature électronique de niveau Simple (art. 25), avec preuve d&apos;acceptation horodatée</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />

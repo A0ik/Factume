@@ -10,27 +10,27 @@ import { CollectionPageSchema } from '@/components/seo/CollectionPageSchema';
 import { ExpertBadge } from '@/components/seo/ExpertBadge';
 
 export const metadata: Metadata = {
-  title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix | Factu.me',
-  description: 'Qu\'est-ce que la facturation vocale ? Dictez vos factures grâce à l\'IA. Reconnaissance vocale française, transcription automatique, conforme facturation électronique 2026. Essai gratuit.',
+  title: "Qu'est-ce que la Facturation Vocale ? Définition & Guide 2026 | Factu.me",
+  description: "Facturation vocale : définition, fonctionnement, avantages et conformité. Comprenez comment créer une facture par la voix grâce à l'IA, et ce que ça change pour les indépendants en 2026.",
   openGraph: {
-    title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix',
-    description: 'Dictez vos factures en français grâce à l\'IA. Conforme réforme facturation électronique 2026. Essai gratuit Factu.me.',
+    title: "Qu'est-ce que la Facturation Vocale ? Définition 2026",
+    description: "Définition, fonctionnement et avantages de la facturation vocale par IA. Le guide pour comprendre la facture à la voix en 2026.",
     url: 'https://factu.me/facturation-vocale',
     siteName: 'Factu.me',
     images: [
       {
-        url: 'https://factu.me/og-facturation-vocale.png',
+        url: '/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%20%26%20guide%202026&theme=purple',
         width: 1200,
         height: 630,
-        alt: 'Facturation Vocale par Factu.me',
+        alt: 'Facturation Vocale — Définition & Guide | Factu.me',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Facturation Vocale 2026 — Créez Vos Factures par la Voix | Factu.me',
-    description: 'Dictez vos factures grâce à l\'IA. Reconnaissance vocale française, conforme facturation électronique 2026.',
-    images: ['https://factu.me/og-facturation-vocale.png'],
+    title: "Qu'est-ce que la Facturation Vocale ? Définition 2026",
+    description: "Définition, fonctionnement et avantages de la facture vocale par IA en 2026.",
+    images: ['/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%202026&theme=purple'],
   },
   alternates: {
     canonical: 'https://factu.me/facturation-vocale',
@@ -180,10 +180,10 @@ export default function FacturationVocalePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Facturation Vocale – Créez Vos Factures par la <span className="text-violet-600">Voix</span>
+              Qu'est-ce que la <span className="text-violet-600">Facturation Vocale</span> ?
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
-              Dictée vocale IA : dites <strong>&ldquo;5 jours de dev à 800€ pour Acme&rdquo;</strong> et votre facture est prête. <strong>80% de temps gagné</strong>.
+              La facturation vocale, c'est la création d'une facture par la voix grâce à l'IA : vous dictez votre prestation, l'intelligence artificielle génère une facture complète et conforme. Définition, fonctionnement et avantages — <strong>le guide 2026</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link

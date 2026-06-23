@@ -152,14 +152,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           'BTP facturation',
         ],
         keywords: 'facture IA, facture voix, facture vocale, facturation électronique, Factur-X, eIDAS, dictée vocale IA, logiciel facturation',
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: '4.8',
-          bestRating: '5',
-          worstRating: '1',
-          ratingCount: '127',
-          reviewCount: '89',
-        },
+        /* APOLLON (SEO-1) — aggregateRating retiré de Organization : Google pénalise
+           les « self-serving reviews » sur Organization. Conservé sur
+           SoftwareApplication + Product, vecteurs légitimes. */
       },
       {
         '@type': 'SoftwareApplication',
@@ -175,7 +170,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         featureList: [
           'Facturation vocale IA (voice-to-invoice)',
           'Factures électroniques Factur-X conformes EN 16931',
-          'Signature électronique eIDAS niveau Avancé gratuite',
+          'Signature électronique eIDAS niveau Simple (art. 25), gratuite, avec preuve d\'acceptation horodatée',
           'Contrats de travail CDI/CDD avec signature électronique',
           'Connexion PDP pour la réforme facturation électronique 2026',
           'Devis professionnels avec conversion en facture en 1 clic',
@@ -275,14 +270,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         description: 'Assistant administratif IA — facturation vocale, devis et contrats pour freelances, artisans et TPE françaises',
         inLanguage: 'fr-FR',
         publisher: { '@id': 'https://factu.me/#organization' },
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: 'https://factu.me/?q={search_term_string}',
-          },
-          'query-input': 'required name=search_term_string',
-        },
+        /* APOLLON (SEO-1) — SearchAction retiré : aucune UI de recherche n'existe.
+           Google valide ce signal et peut retirer/flaguer le résultat enrichi.
+           À ré-ajouter dès qu'une barre de recherche sera en place. */
       },
       {
         '@type': 'Product',
@@ -316,6 +306,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr" suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `(function(){try{var d=localStorage.getItem('theme')||'dark';if(d==='system'){d=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.classList.add(d);document.documentElement.style.colorScheme=d}catch(e){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}})()` }} />
+        {/* ARGOS (CIBLE 2) — Google Consent Mode v2 : default 'denied' POSÉ AVANT gtag/js.
+            Indispensable pour la conformité RGPD (EEA) : analytics_storage reste denied
+            jusqu'à l'acceptation explicite (CookieConsent appelle gtag('consent','update')). */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',functionality_storage:'granted',security_storage:'granted',wait_for_update:500});` }} />
         <script
           type="application/ld+json"
           nonce={nonce}

@@ -55,34 +55,44 @@ export default function CabinetSettingsPage() {
   const [accountantEmail, setAccountantEmail] = useState('');
   const [invitingAccountant, setInvitingAccountant] = useState(false);
 
-  if (!sub.isBusiness && !sub.isTrialActive) {
-    router.push('/cabinet');
-    return null;
-  }
+  // PROMÉTHÉE — la redirection de plan était dans le CORPS du render → boucle de
+  // refresh infinie (chaque render rappelait router.push). Déplacée dans un effect,
+  // avec replace() pour éviter la boucle de retour-arrière.
+  const accessDenied = !sub.isBusiness && !sub.isTrialActive;
+  useEffect(() => {
+    if (accessDenied) router.replace('/cabinet');
+  }, [accessDenied, router]);
 
   useEffect(() => { fetchCabinet(); fetchMembers(); }, []);
 
+  // Hydrate le formulaire quand le cabinet ACTIF change — dépendance sur cabinet?.id
+  // (pas sur l'objet cabinet entier) : le store produit une nouvelle référence à
+  // chaque fetchCabinet, ce qui déclenchait un orage de re-renders en boucle.
   useEffect(() => {
-    if (cabinet) {
-      setName(cabinet.name || '');
-      setSiret(cabinet.siret || '');
-      setPrimaryColor(cabinet.primary_color || '#4f46e5');
-      setLogoUrl(cabinet.logo_url || '');
-      setWhiteLabelName(cabinet.white_label_name || '');
-      setHideFactuBranding(cabinet.hide_factu_branding || false);
-      const s = cabinet.settings || {};
-      setAddress(s.address || '');
-      setZipCode(s.zip_code || '');
-      setCity(s.city || '');
-      setPhone(s.phone || '');
-      setEmail(s.email || '');
-      setVatNumber(s.vat_number || '');
-      setIban(s.iban || '');
-      setBic(s.bic || '');
-      setBankName(s.bank_name || '');
-      setAccountHolder(s.account_holder || '');
-    }
-  }, [cabinet]);
+    if (!cabinet) return;
+    setName(cabinet.name || '');
+    setSiret(cabinet.siret || '');
+    setPrimaryColor(cabinet.primary_color || '#10b981');
+    setLogoUrl(cabinet.logo_url || '');
+    setWhiteLabelName(cabinet.white_label_name || '');
+    setHideFactuBranding(cabinet.hide_factu_branding || false);
+    const s = cabinet.settings || {};
+    setAddress(s.address || '');
+    setZipCode(s.zip_code || '');
+    setCity(s.city || '');
+    setPhone(s.phone || '');
+    setEmail(s.email || '');
+    setVatNumber(s.vat_number || '');
+    setIban(s.iban || '');
+    setBic(s.bic || '');
+    setBankName(s.bank_name || '');
+    setAccountHolder(s.account_holder || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cabinet?.id]);
+
+  // Return APRÈS tous les hooks (Rules of Hooks — avant c'était un return anticipé
+  // conditionnel qui rendait les hooks ci-dessus conditionnels et plantait React).
+  if (accessDenied) return null;
 
   const fetchMembers = async () => {
     setMembersLoading(true);

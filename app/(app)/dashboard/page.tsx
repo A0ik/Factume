@@ -359,6 +359,36 @@ export default function DashboardPage() {
             </motion.div>
           )}
 
+          {/* ══════════════════════════════════════════════════════════
+              PROMÉTHÉE — Carte Assistant IA (Business). Proéminente, visible
+              mobile + PC. Ouvre le Copilot via l'événement 'copilot:open'.
+              ══════════════════════════════════════════════════════════ */}
+          {sub.canUseCopilot && (
+            <motion.button
+              variants={itemVariants}
+              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('copilot:open'))}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.99 }}
+              className="group relative w-full overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 sm:p-5 text-left text-white shadow-lg shadow-emerald-500/20"
+            >
+              <div className="relative flex items-center gap-4">
+                <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/30">
+                  <Sparkles size={22} className="drop-shadow" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-base font-bold">Assistant Factu</p>
+                  <p className="text-xs sm:text-[13px] text-white/85 truncate">
+                    « Combien me doit-on ? » · « Mon CA du mois » · « Relance Nathan »
+                  </p>
+                </div>
+                <span className="hidden shrink-0 items-center gap-1 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/30 sm:inline-flex">
+                  Parler ou écrire
+                </span>
+                <ArrowUpRight size={18} className="shrink-0 text-white/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 sm:hidden" />
+              </div>
+            </motion.button>
+          )}
+
         </motion.div>
       </main>
       </PullToRefresh>

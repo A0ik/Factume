@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // ARGOS (CIBLE 4) — Auth + rate-limit : avant, route anonyme consommant illimitément
+    // le quota OpenRouter mutualisé (DoS financier).
+    const rl = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60_000 });
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans un instant.' }, { status: 429 });
+    }
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante (OPENROUTER_API_KEY)' }, { status: 500 });
     }

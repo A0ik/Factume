@@ -136,7 +136,7 @@ const faqItems = [
   {
     question: 'La facture IA est-elle sécurisée ?',
     answer:
-      'Oui. Factu.me utilise un chiffrement de bout en bout, un hébergement conforme RGPD en Europe, et propose la signature électronique eIDAS niveau Avancé. Vos données financières sont protégées selon les normes les plus strictes.',
+      'Oui. Factu.me utilise un chiffrement de bout en bout, un hébergement conforme RGPD en Europe, et propose la signature électronique eIDAS niveau Simple (art. 25), avec preuve d\'acceptation horodatée. Vos données financières sont protégées selon les normes les plus strictes.',
   },
   {
     question: 'Pourquoi utiliser l\'IA pour la facturation plutôt qu\'un tableur Excel ?',
@@ -170,7 +170,7 @@ const howToSteps = [
   },
   {
     name: 'Signez et envoyez',
-    text: 'Signez électroniquement votre facture avec une signature eIDAS niveau Avancé (gratuite sur Factu.me). Envoyez la facture par email ou partagez un lien sécurisé. Le suivi de paiement est automatique.',
+    text: 'Signez électroniquement votre facture avec une signature eIDAS niveau Simple, art. 25 (gratuite sur Factu.me, preuve d\'acceptation horodatée). Envoyez la facture par email ou partagez un lien sécurisé. Le suivi de paiement est automatique.',
   },
 ];
 
@@ -275,7 +275,7 @@ const features = [
     icon: Shield,
     title: 'Signature eIDAS gratuite',
     description:
-      'Signez vos factures électroniquement avec un certificat eIDAS niveau Avancé inclus dans tous les plans. Valeur légale équivalente à une signature manuscrite.',
+      'Signez vos factures électroniquement avec une signature eIDAS niveau Simple (art. 25), incluse dans tous les plans, avec preuve d\'acceptation horodatée. Valeur juridique renforcée (niveau Qualifié) disponible via un partenaire certifié.',
   },
   {
     icon: FileText,
@@ -737,9 +737,10 @@ export default function FactureIAPage() {
             La sécurité est un enjeu crucial quand il s&apos;agit de données financières. Factu.me
             utilise un <strong>chiffrement de bout en bout</strong> pour toutes vos factures et données
             clients. L&apos;hébergement est situé en Europe, conforme au <strong>RGPD</strong>. La
-            signature électronique utilise un certificat <strong>eIDAS niveau Avancé</strong>, qui
-            garantit l&apos;authenticité et l&apos;intégrité du document signé. Vos données ne sont
-            jamais partagées avec des tiers sans votre consentement explicite.
+            signature électronique utilise une signature <strong>eIDAS niveau Simple (art. 25)</strong>, qui
+            garantit l&apos;authenticité et l&apos;intégrité du document signé, avec preuve d&apos;acceptation
+            horodatée. Une signature à valeur juridique renforcée (niveau Qualifié) est disponible via un
+            partenaire certifié. Vos données ne sont jamais partagées avec des tiers sans votre consentement explicite.
           </p>
         </article>
       </section>

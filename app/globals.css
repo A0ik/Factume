@@ -99,6 +99,34 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   APOLLON — Affinage typographique landing (CIBLE 2)
+   Inter gagne en caractère au display : tracking resserré + alternates
+   stylistiques (cv11, ss01, ss03) + optical sizing. Pas de nouvelle
+   police (choix utilisateur : Inter conservé, serif display rejeté).
+   ══════════════════════════════════════════════════════════════════ */
+#landing h1,
+#landing h2 {
+  letter-spacing: -0.03em;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   APOLLON — Filet de sécurité a11y (CIBLE 4)
+   Outline clavier pour les éléments interactifs SANS style de focus
+   explicite. Cible button/a/[role=button] dépourvus de classe `focus`
+   afin d'éviter la double bague sur les composants déjà stylés.
+   ══════════════════════════════════════════════════════════════════ */
+button:not([class*="focus"]):focus-visible,
+a:not([class*="focus"]):focus-visible,
+[role="button"]:not([class*="focus"]):focus-visible {
+  outline: 2px solid rgb(16 185 129);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    LIGHT MODE CONTRAST FIXES
    Text-gray/slate-300/400/500 are too light on white backgrounds.
    We bump them up to WCAG AA compliant levels in light mode only.

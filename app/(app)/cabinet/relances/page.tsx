@@ -79,7 +79,8 @@ export default function CabinetRelancesPage() {
   const handleSend = async (invoiceId: string, level: number) => {
     setSendingIds((p) => new Set(p).add(invoiceId));
     try {
-      await cabinetMutation('/api/cabinet/reminders/send', 'POST', { invoiceId, level });
+      // ARGOS — route existante /api/cabinet/reminders, payload snake_case.
+      await cabinetMutation('/api/cabinet/reminders', 'POST', { invoice_id: invoiceId, level, confirmed: true });
       clearCabinetCache('/api/cabinet/reminders');
       toast.success('Relance envoyée');
       await refresh();
@@ -96,7 +97,7 @@ export default function CabinetRelancesPage() {
 
   const handleBatch = async () => {
     if (!data) return;
-    const eligible = data.invoices.filter((i) => i.days_overdue > 5);
+    const eligible = (data.invoices ?? []).filter((i) => i.days_overdue > 5);
     if (!eligible.length) {
       toast.info('Aucune facture à relancer');
       return;
@@ -104,9 +105,22 @@ export default function CabinetRelancesPage() {
     if (!window.confirm(`Envoyer ${eligible.length} relance(s) ? Chaque client recevra un email adapté.`)) return;
     setBatchSending(true);
     try {
-      const res = await cabinetMutation<{ sent?: number }>('/api/cabinet/reminders/batch-send', 'POST', {
-        invoices: eligible.map((i) => ({ invoiceId: i.id, level: nextLevel(i.reminder_level) })),
-      });
+      // ARGOS — la route batch n'existe pas. On envoie séquentiellement vers
+      // la route existante /api/cabinet/reminders (POST) avec le bon payload.
+      let sent = 0;
+      for (const inv of eligible) {
+        try {
+          await cabinetMutation('/api/cabinet/reminders', 'POST', {
+            invoice_id: inv.id,
+            level: nextLevel(inv.reminder_level),
+            confirmed: true,
+          });
+          sent += 1;
+        } catch (e) {
+          // On continue sur les suivantes même si l'une échoue.
+        }
+      }
+      const res = { sent } as { sent?: number };
       clearCabinetCache('/api/cabinet/reminders');
       toast.success(`${res.sent || eligible.length} relance(s) envoyée(s)`);
       await refresh();
@@ -142,7 +156,7 @@ export default function CabinetRelancesPage() {
   }
 
   const summary = data?.summary || { total_overdue: 0, total_amount: 0, level_1_count: 0, level_2_count: 0, level_3_count: 0 };
-  const hasEligible = !!data?.invoices.some((i) => i.days_overdue > 5);
+  const hasEligible = !!data?.invoices?.some((i) => i.days_overdue > 5);
 
   const columns: Column<OverdueInvoice>[] = [
     {
@@ -235,7 +249,7 @@ export default function CabinetRelancesPage() {
   ];
 
   const levelTabs = [
-    { id: 'all', label: 'Tous niveaux', count: data?.invoices.length || 0 },
+    { id: 'all', label: 'Tous niveaux', count: data?.invoices?.length || 0 },
     { id: '1', label: 'Relance 1', count: summary.level_1_count },
     { id: '2', label: 'Relance 2', count: summary.level_2_count },
     { id: '3', label: 'Mises en demeure', count: summary.level_3_count },

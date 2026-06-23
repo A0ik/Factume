@@ -515,7 +515,7 @@ export default function LandingPageClient() {
 
             {/* ── AUTO-ENTREPRENEUR — carte héro (2×2, sombre) ── */}
             <R delay={0.04} className="col-span-2 lg:row-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-7 sm:p-8 2xl:p-10 bg-gradient-to-br from-emerald-950 via-neutral-950 to-black border border-white/10">
+              <motion.div whileHover={{ y: -8 }} transition={{ type: 'spring', stiffness: 240, damping: 26 }} className="group relative h-full overflow-hidden rounded-3xl p-7 sm:p-8 2xl:p-10 bg-gradient-to-br from-emerald-950 via-neutral-950 to-black border border-white/10">
                 <div className="absolute -top-20 -right-16 w-72 h-72 bg-emerald-500/30 rounded-full blur-[90px] animate-[bentoGlow_9s_ease-in-out_infinite]" />
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="flex items-center justify-between">
@@ -544,7 +544,7 @@ export default function LandingPageClient() {
 
             {/* ── ARTISAN (large, chaud) ── */}
             <R delay={0.1} className="col-span-1 lg:col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-stone-100 to-amber-50/70 border border-stone-200/80">
+              <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-stone-100 to-amber-50/70 border border-stone-200/80">
                 <svg className="absolute right-3 top-3 w-40 h-40 text-amber-900/[0.05]" viewBox="0 0 100 100" fill="none"><path d="M10 80 L40 30 L60 50 L90 20" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="4 6" /><circle cx="10" cy="80" r="5" fill="currentColor" /><circle cx="90" cy="20" r="5" fill="currentColor" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center shadow-lg"><Hammer className="w-5 h-5 text-amber-300" /></div>
@@ -556,7 +556,7 @@ export default function LandingPageClient() {
 
             {/* ── FREELANCE (1×1) ── */}
             <R delay={0.16} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 340, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <span className="absolute -bottom-6 -right-2 text-[7rem] sm:text-[8rem] leading-none font-mono font-bold text-emerald-500/[0.06] select-none">{'{ }'}</span>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-700 to-emerald-600 flex items-center justify-center"><Code2 className="w-5 h-5 text-white" /></div>
@@ -568,7 +568,7 @@ export default function LandingPageClient() {
 
             {/* ── TPE / PME (1×1, emerald) ── */}
             <R delay={0.22} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
+              <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 340, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
                 <svg className="absolute -bottom-2 -right-3 w-28 h-28 text-emerald-600/10" viewBox="0 0 100 100" fill="currentColor"><path d="M20 40 L20 80 L80 80 L80 40 Z M15 40 L85 40 L82 28 L18 28 Z" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Store className="w-5 h-5 text-white" /></div>
@@ -580,7 +580,7 @@ export default function LandingPageClient() {
 
             {/* ── CONSULTANT (large, clair) ── */}
             <R delay={0.28} className="col-span-1 lg:col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <svg className="absolute right-4 top-6 w-44 h-20 text-emerald-500/10" viewBox="0 0 200 60" fill="none" preserveAspectRatio="none"><path d="M4 44 C30 20 60 52 92 28 C120 8 160 40 196 16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-400 flex items-center justify-center shadow-lg"><Briefcase className="w-5 h-5 text-white" /></div>
@@ -592,7 +592,7 @@ export default function LandingPageClient() {
 
             {/* ── AGENCE (large, sombre BR) ── */}
             <R delay={0.34} className="col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950 border border-white/10">
+              <motion.div whileHover={{ y: -5 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950 border border-white/10">
                 <div className="absolute -bottom-10 -left-10 w-56 h-56 bg-emerald-500/20 rounded-full blur-[80px]" />
                 <div className="relative z-10 flex items-start justify-between gap-4 h-full">
                   <div className="flex flex-col h-full">
@@ -689,7 +689,7 @@ export default function LandingPageClient() {
 
             {/* ── ENCAISSEMENT — hero (2×2, sombre) ── */}
             <R delay={0.05} className="col-span-2 lg:row-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-7 sm:p-8 2xl:p-10 bg-gradient-to-br from-emerald-950 via-neutral-950 to-black border border-white/10">
+              <motion.div whileHover={{ y: -8 }} transition={{ type: 'spring', stiffness: 240, damping: 26 }} className="group relative h-full overflow-hidden rounded-3xl p-7 sm:p-8 2xl:p-10 bg-gradient-to-br from-emerald-950 via-neutral-950 to-black border border-white/10">
                 <div className="absolute -top-16 -right-10 w-64 h-64 bg-emerald-500/25 rounded-full blur-[90px] animate-[bentoGlow_9s_ease-in-out_infinite]" />
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="flex items-center justify-between">
@@ -725,7 +725,7 @@ export default function LandingPageClient() {
 
             {/* ── CRM (large, clair) ── */}
             <R delay={0.1} className="col-span-1 lg:col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Brain className="w-5 h-5 text-white" /></div>
                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mt-4">CRM intelligent</h3>
@@ -746,7 +746,7 @@ export default function LandingPageClient() {
 
             {/* ── CONTRATS (1×1) ── */}
             <R delay={0.16} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 340, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <svg className="absolute -bottom-2 -right-3 w-32 h-20 text-emerald-500/15" viewBox="0 0 200 60" fill="none" preserveAspectRatio="none"><path d="M6 44 C34 8 56 50 86 28 C112 10 150 46 194 18" stroke="currentColor" strokeWidth="4" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center"><FileText className="w-5 h-5 text-emerald-400" /></div>
@@ -758,7 +758,7 @@ export default function LandingPageClient() {
 
             {/* ── NOTES DE FRAIS (1×1, emerald) ── */}
             <R delay={0.22} className="col-span-1">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
+              <motion.div whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 340, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/70 border border-emerald-200/70">
                 <svg className="absolute -bottom-3 -right-4 w-24 h-28 text-emerald-600/15" viewBox="0 0 80 100" fill="none"><path d="M14 6 H54 L66 18 V92 a4 4 0 0 1 -4 4 H14 a4 4 0 0 1 -4 -4 V10 a4 4 0 0 1 4 -4 Z" stroke="currentColor" strokeWidth="3" /><path d="M22 30 H54 M22 42 H54 M22 54 H40" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /><line x1="8" y1="64" x2="68" y2="64" stroke="#10b981" strokeWidth="3" strokeLinecap="round" /></svg>
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/20"><Calculator className="w-5 h-5 text-white" /></div>
@@ -770,7 +770,7 @@ export default function LandingPageClient() {
 
             {/* ── RÉCURRENTES (large, clair) ── */}
             <R delay={0.28} className="col-span-1 lg:col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
+              <motion.div whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-white border border-gray-200 hover:border-emerald-300 transition-colors">
                 <div className="relative z-10 flex items-start justify-between gap-4 h-full">
                   <div className="flex flex-col h-full">
                     <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-600 flex items-center justify-center"><FileClock className="w-5 h-5 text-emerald-400" /></div>
@@ -795,7 +795,7 @@ export default function LandingPageClient() {
 
             {/* ── COMPTABILITÉ (large, sombre BR) ── */}
             <R delay={0.34} className="col-span-2">
-              <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950 border border-white/10">
+              <motion.div whileHover={{ y: -5 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} className="group relative h-full overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-neutral-900 via-neutral-900 to-emerald-950 border border-white/10">
                 <div className="absolute -bottom-10 -right-10 w-56 h-56 bg-emerald-500/20 rounded-full blur-[80px]" />
                 <div className="relative z-10 flex items-start justify-between gap-4 h-full">
                   <div className="flex flex-col h-full">
@@ -1237,7 +1237,7 @@ export default function LandingPageClient() {
               { title: 'Produit', links: [['Facturation', '#features'], ['IA Vocale', '#ai'], ['Tarifs', '#pricing']] },
               { title: 'Ressources', links: [['Démo', '/demo'], ['Facturation électronique 2026', '/facturation-electronique'], ['Modèles', '/modeles-facture'], ['Blog', '/blog']] },
               { title: 'Par statut', links: [['Auto-entrepreneur', '/comment-facturer/auto-entrepreneur'], ['SASU', '/comment-facturer/sasu'], ['EURL', '/comment-facturer/eurl'], ['Tous', '/comment-facturer']] },
-              { title: 'Confiance', links: [['Sécurité', '/securite'], ['Mentions légales', '/legal/mentions-legales'], ['CGU', '/legal/cgu'], ['Confidentialité', '/legal/confidentialite']] },
+              { title: 'Confiance', links: [['Sécurité', '/securite'], ['Mentions légales', '/legal/mentions-legales'], ['CGU', '/legal/cgu'], ['CGV', '/legal/cgv'], ['Confidentialité', '/legal/confidentialite']] },
             ].map((col) => (
               <div key={col.title}>
                 <h4 className="font-semibold text-xs 2xl:text-sm text-neutral-300 mb-3">{col.title}</h4>

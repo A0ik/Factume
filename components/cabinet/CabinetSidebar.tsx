@@ -6,12 +6,13 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Users, FileText, Bell, Wallet, HardHat, Shield,
   FileCheck, ClipboardList, Target, CalendarClock, Scale, ArrowLeftRight,
-  Calendar, BarChart3, UserPlus, Settings, Building2,
-  ChevronLeft, ChevronRight, ArrowLeftRight as ArrowBack,
+  Calendar, BarChart3, UserPlus, Settings,
+  ChevronLeft, ArrowLeftRight as ArrowBack,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import CabinetSwitcher from './CabinetSwitcher';
+import CabinetLogo from './CabinetLogo';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -105,49 +106,37 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className="hidden lg:flex flex-col h-screen sticky top-0 border-r border-gray-200 bg-white overflow-hidden flex-shrink-0 z-40"
     >
-      {/* ─── Header : marque du cabinet ─── */}
-      <div
-        className={cn(
-          'flex items-center gap-3 h-16 flex-shrink-0 border-b border-gray-100',
-          collapsed ? 'px-3 justify-center' : 'px-4',
-        )}
-      >
-        {!collapsed ? (
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {cabinet?.logo_url ? (
-                <img src={cabinet.logo_url} alt="" className="w-5 h-5 rounded object-contain" />
-              ) : (
-                <Building2 size={18} className="text-white" />
-              )}
-            </div>
-            <div className="min-w-0">
+      {/* ─── Header : marque du cabinet ───
+          PROMÉTHÉE — le logo reste ANCRÉ À GAUCHE (px-4 constant) dans les deux
+          états. Avant, le header basculait entre `px-4` (déployé) et `justify-center`
+          (collapsé) → le logo glissait horizontalement pendant l'animation de largeur.
+          En mode collapsé, le logo devient le bouton de dépliage (pas de chevauchement). */}
+      <div className="flex items-center gap-3 h-16 flex-shrink-0 border-b border-gray-100 px-4">
+        {collapsed ? (
+          <button
+            onClick={onToggle}
+            aria-label="Déplier le menu"
+            title="Déplier le menu"
+            className="flex-shrink-0 rounded-xl transition-transform hover:scale-105"
+          >
+            <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} />
+          </button>
+        ) : (
+          <>
+            <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} />
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900 truncate">{brandName}</p>
               <p className="text-[10px] text-gray-500 uppercase tracking-wider">Expert-Comptable</p>
             </div>
-          </div>
-        ) : (
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {cabinet?.logo_url ? (
-              <img src={cabinet.logo_url} alt="" className="w-5 h-5 rounded object-contain" />
-            ) : (
-              <Building2 size={18} className="text-white" />
-            )}
-          </div>
+            <button
+              onClick={onToggle}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="Replier le menu"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </>
         )}
-        <button
-          onClick={onToggle}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
-          aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
       </div>
 
       {/* ─── Switcher multi-cabinets ─── */}

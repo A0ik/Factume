@@ -157,7 +157,7 @@ const howToSteps = [
   },
   {
     name: 'Signez et envoyez',
-    text: "Signez électroniquement (eIDAS niveau Avancé, gratuit) et envoyez par e-mail ou lien sécurisé. Le suivi de paiement est automatique. ≈ 10 secondes.",
+    text: "Signez électroniquement (eIDAS niveau Simple, art. 25, gratuit, preuve d'acceptation horodatée) et envoyez par e-mail ou lien sécurisé. Le suivi de paiement est automatique. ≈ 10 secondes.",
   },
 ];
 

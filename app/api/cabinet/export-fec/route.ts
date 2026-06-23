@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
 import { getCategoryAccountCode } from '@/lib/plan-comptable';
 
 // ---------------------------------------------------------------------------
@@ -43,6 +43,15 @@ export async function GET(req: NextRequest) {
     if (!clientLink) {
       return NextResponse.json({ error: 'Client non trouvé dans ce cabinet' }, { status: 404 });
     }
+
+    // ARGOS (CIBLE 6) — SIREN réel du client pour le nom du fichier FEC. Admin client car le
+    // profil appartient au client (RLS user-scoped bloquerait la lecture) ; la propriété du
+    // cabinet est déjà vérifiée ci-dessus.
+    const { data: clientProfile } = await createAdminClient()
+      .from('profiles')
+      .select('siret')
+      .eq('id', clientUserId)
+      .maybeSingle();
 
     // Fetch invoices for the year
     const startDate = `${year}-01-01`;
@@ -163,7 +172,7 @@ export async function GET(req: NextRequest) {
     }
 
     const fecContent = fecLines.join('\n');
-    const siren = '000000000'; // Default SIREN — should come from client profile
+    const siren = (clientProfile?.siret || '').replace(/\D/g, '').slice(0, 9) || '000000000'; // ARGOS (CIBLE 6) — SIREN réel du client
 
     return new NextResponse(fecContent, {
       status: 200,

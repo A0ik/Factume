@@ -59,6 +59,10 @@ function generateAmendmentHTML(amendment: any, contract: any, profile: any): str
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR');
   const fmtMoney = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
 
+  // ARGOS (sécurité) — Échappement HTML systématique des valeurs utilisateur (anti-XSS).
+  const esc = (v: unknown): string => String(v ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
   const changesList = Object.entries(amendment.changes || {})
     .map(([field, change]: [string, any]) => {
       const oldVal = change.old !== undefined ? change.old : '-';
@@ -74,9 +78,9 @@ function generateAmendmentHTML(amendment: any, contract: any, profile: any): str
 
       return `
         <tr>
-          <td style="padding: 8px; border: 1px solid #e0e0e0;">${change.label}</td>
-          <td style="padding: 8px; border: 1px solid #e0e0e0; color: #dc2626;">${displayOld}</td>
-          <td style="padding: 8px; border: 1px solid #e0e0e0; color: #16a34a;"><strong>${displayNew}</strong></td>
+          <td style="padding: 8px; border: 1px solid #e0e0e0;">${esc(change.label)}</td>
+          <td style="padding: 8px; border: 1px solid #e0e0e0; color: #dc2626;">${esc(displayOld)}</td>
+          <td style="padding: 8px; border: 1px solid #e0e0e0; color: #16a34a;"><strong>${esc(displayNew)}</strong></td>
         </tr>
       `;
     })
@@ -88,7 +92,7 @@ function generateAmendmentHTML(amendment: any, contract: any, profile: any): str
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Avenant ${amendment.amendment_number} - ${profile?.company_name || ''}</title>
+      <title>Avenant ${esc(amendment.amendment_number)} - ${esc(profile?.company_name || '')}</title>
       <style>
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -108,28 +112,28 @@ function generateAmendmentHTML(amendment: any, contract: any, profile: any): str
       <div class="container">
         <div class="header">
           <h1>AVENANT AU CONTRAT DE TRAVAIL</h1>
-          <p style="margin: 5px 0 0 0; font-size: 18px; color: #6b7280;">${amendment.amendment_number}</p>
+          <p style="margin: 5px 0 0 0; font-size: 18px; color: #6b7280;">${esc(amendment.amendment_number)}</p>
         </div>
 
         <div class="info-grid">
           <div class="info-box">
             <h3>Entreprise</h3>
-            <p>${profile?.company_name || ''}</p>
-            <p style="font-size: 14px; color: #6b7280;">${profile?.address || ''}, ${profile?.postal_code || ''} ${profile?.city || ''}</p>
-            <p style="font-size: 14px; color: #6b7280;">SIRET: ${profile?.siret || '-'}</p>
+            <p>${esc(profile?.company_name || '')}</p>
+            <p style="font-size: 14px; color: #6b7280;">${esc(profile?.address || '')}, ${esc(profile?.postal_code || '')} ${esc(profile?.city || '')}</p>
+            <p style="font-size: 14px; color: #6b7280;">SIRET: ${esc(profile?.siret || '-')}</p>
           </div>
           <div class="info-box">
             <h3>Salarié</h3>
-            <p>${contract.employee_first_name} ${contract.employee_last_name}</p>
-            <p style="font-size: 14px; color: #6b7280;">${contract.employee_address || ''}, ${contract.employee_postal_code || ''} ${contract.employee_city || ''}</p>
+            <p>${esc(contract.employee_first_name)} ${esc(contract.employee_last_name)}</p>
+            <p style="font-size: 14px; color: #6b7280;">${esc(contract.employee_address || '')}, ${esc(contract.employee_postal_code || '')} ${esc(contract.employee_city || '')}</p>
           </div>
         </div>
 
         <div class="info-box" style="margin-bottom: 30px;">
           <h3>Détails de l'avenant</h3>
-          <p><strong>Type:</strong> ${amendment.amendment_type}</p>
+          <p><strong>Type:</strong> ${esc(amendment.amendment_type)}</p>
           <p><strong>Date d'effet:</strong> ${fmtDate(amendment.effective_date)}</p>
-          <p><strong>Description:</strong> ${amendment.description}</p>
+          <p><strong>Description:</strong> ${esc(amendment.description)}</p>
         </div>
 
         <h3 style="margin-bottom: 10px;">Modifications apportées</h3>
@@ -147,7 +151,7 @@ function generateAmendmentHTML(amendment: any, contract: any, profile: any): str
         </table>
 
         <div style="margin-top: 40px;">
-          <p><strong>Contrat de référence:</strong> ${contract.contract_number || '-'}</p>
+          <p><strong>Contrat de référence:</strong> ${esc(contract.contract_number || '-')}</p>
           <p style="font-size: 14px; color: #6b7280;">Date de création: ${new Date(amendment.created_at).toLocaleDateString('fr-FR')}</p>
         </div>
 

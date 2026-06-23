@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -13,6 +14,11 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
     const admin = createAdminClient();
 
     // Verifier l'authentification
@@ -30,7 +36,7 @@ export async function POST(
     const { data: tokenRecord } = await admin
       .from('contract_signing_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (!tokenRecord) {
@@ -51,7 +57,7 @@ export async function POST(
     await admin
       .from('contract_signing_tokens')
       .delete()
-      .eq('token', token);
+      .eq('token', tokenId);
 
     // Remettre le statut du contrat à 'draft'
     const tableName = TABLE_MAP[tokenRecord.contract_type];

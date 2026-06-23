@@ -5,19 +5,19 @@ import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { RelatedPages } from '@/components/seo/RelatedPages';
 
 export const metadata: Metadata = {
-  title: 'Facture d\'Acompte – Gerez Vos Paiements Partiels | Factu.me',
-  description: 'Creez des factures d\'acompte professionnelles. Gerez les paiements partiels, les situations, la TVA sur acomptes. Mention "pour acompte" automatique.',
+  title: "Facture d'Acompte – Gérez Vos Paiements Partiels | Factu.me",
+  description: "Créez des factures d'acompte professionnelles. Gérez les paiements partiels, les situations, la TVA sur acomptes. Mention « pour acompte » automatique.",
   openGraph: {
-    title: 'Facture d\'Acompte – Gerez Vos Paiements Partiels',
-    description: 'Factures d\'acompte conformes, TVA geree, suivi des paiements partiels. Securisez vos projets.',
+    title: "Facture d'Acompte – Gérez Vos Paiements Partiels",
+    description: "Factures d'acompte conformes, TVA gérée, suivi des paiements partiels. Sécurisez vos projets.",
     url: 'https://factu.me/facture-acompte',
     siteName: 'Factu.me',
     images: [
       {
-        url: 'https://factu.me/og-facture-acompte.png',
+        url: '/api/og?title=Facture%20d%27Acompte&description=G%C3%A9rez%20vos%20paiements%20partiels&theme=green',
         width: 1200,
         height: 630,
-        alt: 'Facture d\'Acompte – Factu.me',
+        alt: "Facture d'Acompte – Factu.me",
       },
     ],
   },

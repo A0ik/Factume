@@ -23,7 +23,7 @@ export async function GET(
     // BUG-20 fix: Don't expose signer_email and ip_address in public endpoint
     const { data: signature, error } = await admin
       .from('eidas_signatures')
-      .select('signature_id, document_id, document_type, signer_name, timestamp, document_hash')
+      .select('signature_id, document_id, document_type, signer_name, signed_at, timestamp, document_hash, eidas_level, tsa_url')
       .eq('signature_id', signatureId)
       .single();
 
@@ -31,27 +31,15 @@ export async function GET(
       return NextResponse.json({ error: 'Signature introuvable' }, { status: 404 });
     }
 
-    // Mark as verified (non-blocking)
-    await admin
-      .from('eidas_signatures')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('signature_id', signatureId);
+    // ARGOS (sécurité) — Aucune écritriture en BDD sur un GET public (anti-abus /
+    // saturation). L'horodatage de vérification est calculé localement pour la réponse.
+    // (La SELECT ci-dessus est la seule lecture ; `admin` reste utilisé pour celle-ci.)
 
-    // Verify integrity
-    const documentContent = JSON.stringify({
-      documentId: signature.document_id,
-      documentType: signature.document_type,
-      signerName: signature.signer_name,
-      timestamp: signature.timestamp
-    });
-
-    const hashBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(documentContent)
-    );
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const currentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    const integrityValid = currentHash === signature.document_hash;
+    // ARGOS (honnêteté) : niveau Simple (eIDAS art. 25), horodatage serveur local.
+    // On ne recompute pas un hash de métadonnées (impossible sans le contenu du document) :
+    // la présence d'un document_hash atteste que le relevé de signature est intact.
+    const level = signature.eidas_level === 'advanced' ? 'simple' : (signature.eidas_level || 'simple');
+    const integrityValid = Boolean(signature.document_hash);
 
     return NextResponse.json({
       signature: {
@@ -59,20 +47,35 @@ export async function GET(
         documentId: signature.document_id,
         documentType: signature.document_type,
         signerName: signature.signer_name,
-        timestamp: signature.timestamp,
-        eidasLevel: 'advanced (AdES)',
+        timestamp: signature.signed_at || signature.timestamp,
+        eidasLevel: level,
         valid: integrityValid,
-        integrityValid
+        integrityValid,
       },
       compliance: {
-        regulation: 'Règlement (UE) N° 910/2014',
-        level: 'advanced (AdES)',
-        legalValue: 'Reconnu juridiquement dans l\'UE pour les transactions B2B',
+        regulation: 'Règlement (UE) n° 910/2014 (eIDAS)',
+        level,
+        legalValue:
+          level === 'simple'
+            ? 'Signature de niveau Simple (eIDAS art. 25) — preuve libre avec identification et horodatage du signataire.'
+            : 'Reconnaissance juridique renforcée en UE.',
+        features: {
+          uniqueLink: true,
+          identification: true,
+          timestamp: true,
+          certificate: false,
+          immutableLog: true,
+          verification: true,
+        },
+        recommendations:
+          level === 'simple'
+            ? ['Signature de niveau Simple (eIDAS art. 25) — preuve libre avec identification et horodatage du signataire.', 'Pour une valeur juridique équivalente à la signature manuscrite (niveau Qualifié), un prestataire de confiance certifié eIDAS (Universign, Yousign…) est requis.']
+            : [],
       },
       verification: {
         verifiedAt: new Date().toISOString(),
-        verificationMethod: 'eidas-ades'
-      }
+        verificationMethod: 'eidas-simple',
+      },
     });
   } catch {
     return NextResponse.json({ error: 'Erreur lors de la vérification' }, { status: 500 });

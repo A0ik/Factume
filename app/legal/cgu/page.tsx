@@ -293,6 +293,12 @@ export default function CGU() {
                     Factu.me <strong>n'est pas un cabinet d'avocats</strong> et ne fournit pas de conseil juridique. Aucune relation client-avocat n'est créée par l'utilisation de la plateforme. Pour tout conseil juridique, l'utilisateur est invité à consulter un avocat ou un professionnel qualifié.
                   </p>
                 </div>
+                <div className="bg-white/[0.06] rounded-xl p-4 border border-white/[0.06]">
+                  <p className="text-xs font-semibold text-white uppercase mb-1">Contrats de travail (CDI / CDD)</p>
+                  <p className="text-sm text-zinc-300">
+                    Les modèles de contrats de travail (CDI, CDD, autres) proposés par Factu.me constituent des <strong>modèles-types à compléter et adapter</strong>. Ils ne tiennent pas compte des dispositions spécifiques de votre convention collective nationale applicable, des accords d'entreprise, ni de votre situation particulière. L'employeur reste <strong>seul responsable</strong> : (i) du respect des formalités préalables à l'embauche, notamment la Déclaration Préalable à l'Embauche (DPAE) prévue à l'article L.1221-10 du Code du travail ; (ii) de l'adaptation du contrat aux stipulations de la convention collective applicable ; (iii) de la conformité du contrat au droit du travail en vigueur. Pour tout contrat de travail, Factu.me recommande vivement la consultation d'un avocat spécialisé en droit social ou d'un expert-comptable.
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -379,6 +385,14 @@ export default function CGU() {
                   </p>
                   <p className="text-sm text-zinc-300">
                     Factu.me ne peut être tenu responsable en cas de force majeure, panne technique, interruption de service ou perte de données
+                  </p>
+                </div>
+                <div className="bg-white/[0.06] rounded-2xl p-4 border border-white/[0.06]">
+                  <p className="text-xs font-semibold text-white uppercase tracking-wide mb-1">
+                    Facturation électronique et Plateforme de Dématérialisation Partenaire (PDP)
+                  </p>
+                  <p className="text-sm text-zinc-300">
+                    Conformément aux articles 289 et 242 nonies du CGI et à la loi n° 2022-1156 du 16 novembre 2022, Factu.me assure la transmission des factures électroniques B2B par l'intermédiaire de la plateforme agréée SuperPDP (superpdp.tech). Factu.me agit en qualité d'<strong>intermédiaire technique</strong> et ne saurait être tenu responsable : (i) des erreurs, rejets, retards ou interruptions de transmission imputables à la PDP, à l'administration fiscale (DGFiP / Chorus Pro) ou à un cas de force majeure ; (ii) de la non-conformité d'une facture aux exigences réglementaires (norme EN 16931) résultant des données fournies par l'utilisateur ; (iii) de l'indisponibilité temporaire ou définitive du service SuperPDP. L'utilisateur reconnaît que la transmission électronique comporte un risque résiduel d'erreur technique et conserve l'obligation de vérifier le statut de transmission de ses factures dans son espace. En cas d'échec persistant, l'utilisateur doit procéder à la transmission par un canal alternatif conforme. La responsabilité de Factu.me au titre de la transmission électronique est strictement limitée aux montants définis à la clause Responsabilité des CGV.
                   </p>
                 </div>
                 <div className="bg-white/[0.06] rounded-2xl p-4 border border-white/[0.06]">

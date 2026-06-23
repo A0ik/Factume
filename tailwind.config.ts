@@ -89,6 +89,24 @@ const config: Config = {
         'elev-3': '0 4px 8px -2px rgb(0 0 0 / 0.08), 0 10px 20px -4px rgb(0 0 0 / 0.10)',
         'ring-soft': '0 0 0 4px rgb(16 185 129 / 0.12)', // focus ring émeraude (brand)
       },
+      // ─── APOLLON : échelle z-index canonique (CIBLE 3) ───────────────────
+      // Référence unique de superposition. `extend` fusionne avec l'échelle
+      // Tailwind par défaut : z-0…z-50 et z-auto restent disponibles.
+      // Migration incrémentale des ~30 composants qui utilisent z-50 / z-[9999]
+      // en ad-hoc vers ces tokens (z-modal, z-popover, z-toast…).
+      zIndex: {
+        base: '0',
+        dropdown: '30',
+        sticky: '40',
+        fab: '45',
+        sheet: '60',
+        popover: '70',
+        modal: '80',
+        toast: '90',
+        command: '100',
+        consent: '110',
+        max: '9999',
+      },
     },
   },
   plugins: [],

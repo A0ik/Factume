@@ -47,13 +47,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ce collaborateur est déjà membre du cabinet' }, { status: 400 });
     }
 
+    // ARGOS — la contrainte CHECK cabinet_members.role n'accepte que
+    // admin/manager/viewer. Un membre invité devient 'manager'.
+    // (La colonne `invited_at` n'existe pas → omise.)
     const { error } = await admin
       .from('cabinet_members')
       .insert({
         cabinet_id: cabinet.id,
         user_id: targetUser.id,
-        role: 'member',
-        invited_at: new Date().toISOString(),
+        role: 'manager',
       });
 
     if (error) throw error;

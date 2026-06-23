@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
+import { hasAnalyticsConsent } from '@/lib/cookieConsent';
 
 const GA_ID = 'G-WHKB8Y57YS';
 
@@ -11,14 +12,12 @@ interface GoogleAnalyticsProps {
 }
 
 export function GoogleAnalytics({ nonce }: GoogleAnalyticsProps) {
+  // ARGOS (CIBLE 2) — lit le consentement via la source unique (format JSON v2).
+  // Avant : `consent === 'accepted'` ne matchait jamais le format v2 → GA muet.
   const [consented, setConsented] = useState(false);
 
   useEffect(() => {
-    const check = () => {
-      const consent = localStorage.getItem('cookie_consent');
-      setConsented(consent === 'accepted');
-    };
-
+    const check = () => setConsented(hasAnalyticsConsent());
     check();
 
     const handler = () => check();

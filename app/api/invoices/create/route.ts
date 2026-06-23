@@ -275,13 +275,19 @@ export async function POST(req: NextRequest) {
       // PROMETHEUS (CIBLE 3) — type de remise globale (% ou €) non géré par le RPC.
       inlineFields.discount_type = discount_type === 'amount' ? 'amount' : 'percent';
       try {
-        await createAdminClient().from('invoices')
+        const { error: inlineError } = await createAdminClient().from('invoices')
           .update({ ...inlineFields, updated_at: new Date().toISOString() })
           .eq('id', invoice.id);
+        if (inlineError) {
+          // ARGOS (CIBLE 5) — ne PAS muter invoice si la persistance échoue : la réponse doit
+          // refléter la réalité BDD (sinon isFacturXEligible lit un SIRET fantôme plus tard).
+          console.error('[invoices/create] inline client fields persist failed:', inlineError.message);
+        } else {
+          Object.assign(invoice, inlineFields);
+        }
       } catch (e: any) {
-        console.warn('[invoices/create] inline client fields persist failed:', e?.message);
+        console.error('[invoices/create] inline client fields persist threw:', e?.message);
       }
-      Object.assign(invoice, inlineFields);
     }
 
     // Update profile stats in background

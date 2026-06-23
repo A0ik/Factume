@@ -252,7 +252,6 @@ export async function exchangeAndStoreConnection(params: {
     return { created: false, error: 'Échec enregistrement de la connexion' };
   }
 
-  console.log('[SuperPDP] Connexion OAuth stockée pour user', params.userId, '— SIREN', connectedSiren);
   return { created: true };
 }
 
@@ -357,8 +356,6 @@ async function getAccessToken(): Promise<string> {
     return tokenCache.token;
   }
 
-  console.log('[SuperPDP] Demande de token OAuth2...');
-
   const response = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -388,7 +385,6 @@ async function getAccessToken(): Promise<string> {
     expiresAt: Date.now() + (expiresIn - 60) * 1000,
   };
 
-  console.log('[SuperPDP] Token obtenu, expire dans', expiresIn, 'secondes');
   return data.access_token;
 }
 
@@ -449,7 +445,6 @@ async function validateXmlReport(xml: string, token?: string): Promise<any | nul
     const text = await response.text();
     let json: any;
     try { json = JSON.parse(text); } catch { json = { raw: text }; }
-    console.log('[SuperPDP] validation_reports:', response.status, JSON.stringify(json).slice(0, 3000));
     return json;
   } catch (e: any) {
     console.warn('[SuperPDP] validation_reports échoué:', e?.message);
@@ -477,7 +472,6 @@ async function diagnoseTransmissionContext(
     const sellerSiret = (profile.siret || '').trim();
     const sellerSiren = sellerSiret.replace(/\s/g, '').substring(0, 9);
     const buyerSiret = (invoice?.client_siret || invoice?.client?.siret || '').trim();
-    console.log('[SuperPDP] diagnostic — SIRET vendeur (XML):', sellerSiret, '| SIRET acheteur:', buyerSiret);
 
     // 1. Compte authentifié = la plateforme (dont son propre SIREN).
     try {
@@ -485,11 +479,10 @@ async function diagnoseTransmissionContext(
         headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' },
       });
       const meText = await meRes.text();
-      console.log('[SuperPDP] diagnostic companies/me:', meRes.status, meText.slice(0, 1000));
       try {
         const me = JSON.parse(meText);
         if (me?.number) sellerMatchesAccount = String(me.number) === sellerSiren;
-        if (me?.env) { env = me.env; console.log('[SuperPDP] diagnostic env compte:', me.env); }
+        if (me?.env) { env = me.env; }
       } catch {}
     } catch (e: any) {
       console.warn('[SuperPDP] diagnostic companies/me échoué:', e?.message);
@@ -506,7 +499,6 @@ async function diagnoseTransmissionContext(
           { headers: { 'Authorization': `Bearer ${authToken}`, 'Accept': 'application/json' } },
         );
         const dirText = await dirRes.text();
-        console.log('[SuperPDP] diagnostic french_directory (acheteur SIREN', buyerSiren, '):', dirRes.status, dirText.slice(0, 1000));
         try {
           const dir = JSON.parse(dirText);
           const entries = dir?.data || dir?.entries || (Array.isArray(dir) ? dir : []);
@@ -552,7 +544,6 @@ export async function transmitInvoice(
     // /b2c_*), JAMAIS de /invoices. Détection SIRET-based via isInvoiceB2B,
     // cohérente avec le flux voix et isFacturXEligible (source de vérité unique).
     if (!isInvoiceB2B(invoice as any)) {
-      console.log('[SuperPDP] Facture B2C (particulier) — transmission non requise (e-reporting à part)');
       return {
         success: false,
         error: 'Facture B2C — transmission PDP non requise pour les particuliers',
@@ -568,7 +559,6 @@ export async function transmitInvoice(
     const curPdpStatus = (invoice as any)?.pdp_status;
     const curTransmissionId = (invoice as any)?.pdp_transmission_id;
     if (curPdpStatus === 'transmitted' && curTransmissionId) {
-      console.log('[SuperPDP] Facture', invoice.number, 'déjà transmise (id', curTransmissionId, ') — skip idempotent (anti-double transmission)');
       return {
         success: true,
         superPdpId: curTransmissionId,
@@ -634,17 +624,13 @@ export async function transmitInvoice(
     // ── 3. Génération du XML CII ─────────────────────────────────────────
     // SuperPDP exige le customization ID CII pur (urn:cen.eu:en16931:2017),
     // PAS l'ID Factur-X (rejeté en « unknown profile »). On le passe explicitement.
-    console.log('[SuperPDP] Génération XML CII pour facture', invoice.number);
     const ciiXml = generateFacturXXml(invoice, profile, { customizationId: 'urn:cen.eu:en16931:2017' });
-    console.log('[SuperPDP] XML généré, taille:', ciiXml.length, 'caractères');
 
     // ── 4. Envoi à Super PDP (token de l'utilisateur) ────────────────────
     // D'après la documentation officielle + quick_start.js :
     // POST /v1.beta/invoices avec le XML brut en body (pas de FormData).
     // Le token porte le SIREN de l'utilisateur → le vendeur du XML (SellerTradeParty)
     // correspond au compte authentifié → la facture est acceptée.
-    console.log('[SuperPDP] Transmission de la facture', invoice.number, '...');
-
     const response = await fetch(`${BASE_URL}/invoices`, {
       method: 'POST',
       headers: {
@@ -656,7 +642,6 @@ export async function transmitInvoice(
     });
 
     const duration = Date.now() - startTime;
-    console.log('[SuperPDP] Réponse:', response.status, 'en', duration, 'ms');
 
     // ── 5. Traitement de la réponse ──────────────────────────────────────
     if (!response.ok) {
@@ -787,8 +772,6 @@ export async function transmitInvoice(
     if (!superPdpId) {
       console.warn('[SuperPDP] Réponse OK mais pas d\'ID:', JSON.stringify(result));
     }
-
-    console.log('[SuperPDP] Facture', invoice.number, 'transmise avec succès. ID:', superPdpId);
 
     return {
       success: true,

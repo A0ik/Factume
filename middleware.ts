@@ -266,26 +266,35 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(verifyUrl);
   }
 
-  // ── ARBITER: Onboarding Gate ──────────────────────────────────────────
-  // LOI 3 (PERSISTANCE DE L'ÉTAT) : si onboarding_done !== true,
-  // l'utilisateur NE PEUT PAS accéder aux pages protégées autres que /onboarding.
-  // Il est redirigé (307) vers /onboarding/quick.
-  const isOnboardingRoute = pathname.startsWith('/onboarding');
-
-  if (!isOnboardingRoute && !isApiRoute) {
+  // ── ARGOS (CIBLE 1) — CGU/CGV Gate + Onboarding Gate ────────────────────
+  // LOI JURIDIQUE : aucune page protégée n'est accessible tant que l'utilisateur
+  // n'a pas accepté les CGU/CGV (preuve opposable horodatée en BDD). Couvre Google
+  // OAuth ET l'inscription email au même point (le middleware est l'unique source
+  // de vérité, indépendante du chemin d'inscription). Le gate vient AVANT l'onboarding
+  // (on accepte les conditions générales avant de configurer le compte).
+  // /legal/* reste public (non protégé) : la page /legal/accept fait son propre getUser().
+  if (!isApiRoute) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('onboarding_done')
+        .select('onboarding_done, cgu_accepted')
         .eq('id', user.id)
         .single();
 
-      if (!profile || profile.onboarding_done !== true) {
+      if (!pathname.startsWith('/legal/accept') && (!profile || profile.cgu_accepted !== true)) {
+        const acceptUrl = new URL('/legal/accept', req.url);
+        return NextResponse.redirect(acceptUrl);
+      }
+
+      // ARBITER : si onboarding_done !== true, l'utilisateur NE PEUT PAS accéder aux
+      // pages protégées autres que /onboarding. Redirigé vers /onboarding/quick.
+      const isOnboardingRoute = pathname.startsWith('/onboarding');
+      if (!isOnboardingRoute && (!profile || profile.onboarding_done !== true)) {
         return NextResponse.redirect(new URL('/onboarding/quick', req.url));
       }
     } catch (err) {
       // Si le profil n'existe pas encore (race condition signup), laisser passer
-      console.warn('[middleware] onboarding check failed:', err);
+      console.warn('[middleware] cgu/onboarding check failed:', err);
     }
   }
 

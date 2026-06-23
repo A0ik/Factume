@@ -79,6 +79,7 @@ const trustPages = [
 const singularityHubPages = [
   { url: `${baseUrl}/facture-ia`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
   { url: `${baseUrl}/facture-voix`, lastModified: new Date('2026-06-10'), changeFrequency: 'weekly' as const, priority: 1 },
+  { url: `${baseUrl}/facture-avec-la-voix`, lastModified: new Date('2026-06-22'), changeFrequency: 'weekly' as const, priority: 1 },
   { url: `${baseUrl}/facture-rapide`, lastModified: new Date('2026-06-13'), changeFrequency: 'weekly' as const, priority: 1 },
 ];
 
@@ -127,6 +128,26 @@ const factureIAProfessionPages = getAllProfessionSlugs().map((slug) => ({
   priority: 0.9,
 }));
 
+// ── APOLLON (SEO-4) : Pages programmatiques facture-voix/[profession] ──
+// 25 pages long-taille « facture voix plombier / électricien… » → profondeur
+// topique sur le cluster voix (depth supremacy, Loi 1 Usurper).
+const factureVoixProfessionPages = getAllProfessionSlugs().map((slug) => ({
+  url: `${baseUrl}/facture-voix/${slug}`,
+  lastModified: new Date('2026-06-22'),
+  changeFrequency: 'monthly' as const,
+  priority: 0.9,
+}));
+
+// ── APOLLON (SEO-4) : Pages programmatiques facture-rapide/[profession] ──
+// 25 pages long-taille « facture rapide plombier / électricien… » → complète
+// le trio de hubs programmatiques (IA + Voix + Rapide).
+const factureRapideProfessionPages = getAllProfessionSlugs().map((slug) => ({
+  url: `${baseUrl}/facture-rapide/${slug}`,
+  lastModified: new Date('2026-06-22'),
+  changeFrequency: 'monthly' as const,
+  priority: 0.9,
+}));
+
 // Pages programmatiques statuts
 const statutPages = getAllStatutSlugs().map((slug) => ({
   url: `${baseUrl}/comment-facturer/${slug}`,
@@ -146,6 +167,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...hubPages,
     ...professionPages,
     ...factureIAProfessionPages,
+    ...factureVoixProfessionPages,
+    ...factureRapideProfessionPages,
     ...statutPages,
     ...legalPages,
     ...blogPages,

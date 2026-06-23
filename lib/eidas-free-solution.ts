@@ -1,102 +1,30 @@
 /**
- * Solution de Signature Électronique eIDAS 100% GRATUITE
- * Utilise des services open source et gratuits
+ * Signature électronique Factu.me — solution gratuite.
  *
- * NIVEAU ATTEINT : Avancé (AdES) - Conforme eIDAS
- * NIVEAU QES : Nécessite un TQT payant (loi oblige)
+ * ARGOS (honnêteté juridique) : cette solution délivre une signature de niveau
+ * SIMPLE au sens du Règlement eIDAS (UE) n° 910/2014 (art. 25), avec un horodatage
+ * serveur LOCAL. Elle ne repose PAS sur un Tiers de Confiance Qualifié (TQT) ni sur un
+ * service d'horodatage certifié RFC 3161 : les niveaux AVANCÉ (AdES) et QUALIFIÉ (QES)
+ * exigent un prestataire payant certifié eIDAS. Tout le wording de ce module et de
+ * l'interface reflète désormais cette réalité — aucune allégation de conformité supérieure.
+ *
+ * Ce qui EST garanti : identification du signataire (nom, email, IP, user-agent),
+ * preuve horodatée de l'acte (heure serveur), journal d'audit immuable, et un hash
+ * SHA-256 liant l'image de signature au signataire et à l'instant de signature.
  */
 
 import { createClient } from '@supabase/supabase-js';
 
-// ──────────────────────────────────────────────────────────────
-// SERVICES GRATUITS
-// ──────────────────────────────────────────────────────────────
-
 /**
- * Horodatage gratuit via freeTSA.org
- * Service d'horodatage certifié RFC 3161 gratuit
+ * Horodatage serveur local (UTC ISO). Aucun service TSA externe n'est utilisé :
+ * le service gratuit précédemment référencé attendait une requête binaire RFC 3161
+ * et recevait du JSON → il échouait systématiquement et tombait sur ce fallback.
+ * On assume désormais explicitement l'horodatage local (niveau Simple).
  */
-const FREE_TSA_URL = 'https://freetsa.org/tsr';
-
-async function getFreeTimestamp(): Promise<{
-  timestamp: string;
-  token?: string;
-  tsaUrl: string;
-}> {
-  const now = new Date();
-  const timestamp = now.toISOString();
-
-  try {
-    // Utiliser le service TSA gratuit
-    const response = await fetch(FREE_TSA_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/timestamp-query',
-      },
-      body: JSON.stringify({
-        timestamp,
-        algorithm: 'sha256'
-      })
-    });
-
-    if (response.ok) {
-      const token = await response.text();
-      return {
-        timestamp,
-        token,
-        tsaUrl: FREE_TSA_URL
-      };
-    }
-  } catch (error) {
-    console.warn('TSA gratuit indisponible, horodatage local:', error);
-  }
-
-  // Fallback : horodatage local (niveau Avancé)
-  return {
-    timestamp,
-    tsaUrl: 'local'
-  };
+async function getLocalTimestamp(): Promise<{ timestamp: string; tsaUrl: 'local' }> {
+  return { timestamp: new Date().toISOString(), tsaUrl: 'local' };
 }
 
-// ──────────────────────────────────────────────────────────────
-// CERTIFICAT AUTO-GÉNÉRÉ (pour développement)
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Génère un certificat auto-signé (Pour DÉMO uniquement)
- * EN PRODUCTION : Obligatoire d'utiliser un TQT certifié eIDAS
- *
- * La loi européenne OBLIGE à utiliser un TQT certifié pour le QES.
- * Ce certificat auto-signé est pour DÉMONSTRATION uniquement.
- */
-async function generateSelfSignedCertificate(signerEmail: string) {
-  // En production, ceci DOIT être remplacé par un TQT certifié
-  // Les TQT certifiés seuls peuvent délivrer des certificats QES valides
-
-  return {
-    certificateId: `self_signed_${Date.now()}`,
-    issuer: 'Self-Signed (DEMO ONLY - NOT LEGAL)',
-    subjectDN: `CN=${signerEmail}`,
-    serialNumber: Math.random().toString(36).substring(2, 15),
-    validFrom: new Date().toISOString(),
-    validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    publicKey: 'demo_public_key',
-    fingerprint: 'demo_fingerprint',
-    warning: 'CERTIFICAT AUTO-SIGNÉ - NON VALIDE LÉGALEMENT - Utiliser un TQT certifié eIDAS pour la production'
-  };
-}
-
-// ──────────────────────────────────────────────────────────────
-// SOLUTION GRATUITE COMPLÈTE
-// ──────────────────────────────────────────────────────────────
-
-/**
- * Signature électronique 100% GRATUITE
- * Niveau : Avancé (AdES) conforme eIDAS
- *
- * ATTENTION : Le niveau Qualifié (QES) REQUIRE OBLIGATOIREMENT un TQT payant
- * C'est une obligation légale européenne.
- */
 export async function createFreeEidasSignature(
   signatureData: {
     documentId: string;
@@ -113,40 +41,35 @@ export async function createFreeEidasSignature(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // 1. Horodatage gratuit (freeTSA.org)
-  const { timestamp, token, tsaUrl } = await getFreeTimestamp();
+  // 1. Horodatage serveur local (niveau Simple).
+  const { timestamp, tsaUrl } = await getLocalTimestamp();
 
-  // 2. Hash du document
-  const documentContent = JSON.stringify({
+  // 2. Hash SHA-256 du relevé de signature : image de signature + document + signataire + instant.
+  //    Ce hash lie la signature au signataire et au moment de l'acte (intégrité du relevé).
+  //    NOTE : il ne porte pas sur le contenu binaire du PDF signé (non transmis ici) ; il
+  //    n'équivaut donc pas à une « intégrité du document » au sens AdES.
+  const hashPayload = JSON.stringify({
     documentId: signatureData.documentId,
     documentType: signatureData.documentType,
     signerName: signatureData.signerName,
-    timestamp
+    signerEmail: signatureData.signerEmail || null,
+    signatureImage: signatureData.signatureDataUrl,
+    timestamp,
   });
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashPayload));
+  const documentHash = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  const hashBuffer = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(documentContent)
-  );
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const documentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // 3. Upload signature
+  // 3. Upload de l'image de signature.
   const signatureId = `eidas_free_${crypto.randomUUID()}`;
   const base64Data = signatureData.signatureDataUrl.replace(/^data:image\/png;base64,/, '');
   const buffer = Buffer.from(base64Data, 'base64');
   const path = `eidas_signatures/${signatureData.documentId}/${signatureId}.png`;
-
-  await supabase.storage
-    .from('assets')
-    .upload(path, buffer, {
-      contentType: 'image/png',
-      upsert: true
-    });
-
+  await supabase.storage.from('assets').upload(path, buffer, { contentType: 'image/png', upsert: true });
   const { data } = supabase.storage.from('assets').getPublicUrl(path);
 
-  // 4. Enregistrer dans la base
+  // 4. Enregistrement en base — niveau honnête : 'simple'.
   const eidasData = {
     signature_id: signatureId,
     document_id: signatureData.documentId,
@@ -158,20 +81,18 @@ export async function createFreeEidasSignature(
     ip_address: signatureData.ipAddress,
     user_agent: signatureData.userAgent,
     document_hash: documentHash,
-    tsa_url: tsaUrl,
-    tsa_token: token,
-    eidas_level: 'advanced', // AdES (pas QES)
-    eidas_compliant: true,
-    eidas_regulation: 'Règlement (UE) N° 910/2014',
+    tsa_url: tsaUrl, // 'local'
+    tsa_token: null,
+    eidas_level: 'simple',
+    eidas_compliant: false, // Simple ≠ AdES/QES
+    eidas_regulation: 'Règlement (UE) n° 910/2014 (eIDAS) — niveau Simple (art. 25)',
     verification_token: crypto.randomUUID(),
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   };
-
   await supabase.from('eidas_signatures').insert(eidasData);
 
-  // 5. Mettre à jour le document
+  // 5. Mise à jour du document.
   const tableName = signatureData.documentType === 'invoice' ? 'invoices' : 'contracts';
-
   await supabase
     .from(tableName)
     .update({
@@ -180,9 +101,9 @@ export async function createFreeEidasSignature(
       signed_ip: signatureData.ipAddress,
       signed_by: signatureData.signerName,
       eidas_signature_id: signatureId,
-      eidas_compliant: true,
-      eidas_level: 'advanced',
-      status: 'accepted'
+      eidas_compliant: false,
+      eidas_level: 'simple',
+      status: 'accepted',
     })
     .eq('id', signatureData.documentId);
 
@@ -192,124 +113,85 @@ export async function createFreeEidasSignature(
     signatureUrl: data.publicUrl,
     timestamp,
     verificationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/verify/${signatureId}`,
-    compliance: 'advanced',
-    eidasCompliant: true,
-    note: 'Signature de niveau Avancé (AdES) conforme eIDAS - 100% GRATUIT'
+    compliance: 'simple',
+    eidasCompliant: false,
+    note: 'Signature de niveau Simple (eIDAS art. 25) avec horodatage serveur local — gratuite. Pour une valeur juridique renforcée (AdES/QES), un prestataire certifié payant est requis.',
   };
 }
 
-// ──────────────────────────────────────────────────────────────
-// INFORMATIONS LÉGALES
-// ──────────────────────────────────────────────────────────────
-
 /**
- * Retourne les informations légales sur les niveaux de signature
+ * Informations légales honnêtes sur les niveaux de signature eIDAS.
  */
 export function getEidasLegalInfo() {
   return {
-    regulation: 'Règlement (UE) N° 910/2014 du Parlement européen et du Conseil',
+    regulation: 'Règlement (UE) n° 910/2014 du Parlement européen et du Conseil (eIDAS)',
 
     levels: {
       simple: {
         name: 'Simple',
         description: 'Signature électronique simple',
-        legalValue: 'Preuve minimale, reconnaissance contextuelle',
+        legalValue: 'Preuve libre, appréciée par le juge. Niveau fourni gratuitement par Factu.me.',
         canBeFree: true,
-        requirements: []
+        requirements: ['Identification du signataire', 'Horodatage de l\'acte', 'Journal d\'audit'],
+        freeSolution: 'Oui — solution Factu.me (horodatage serveur local)',
       },
-
       advanced: {
         name: 'Avancée (AdES)',
         description: 'Signature électronique avancée',
         legalValue: 'Reconnaissance juridique renforcée en UE',
-        canBeFree: true,
+        canBeFree: false,
         requirements: [
           'Lien unique au signataire',
           'Identification du signataire',
-          'Horodatage certifié',
-          'Intégrité du document (hash)'
+          'Horodatage certifié (TSP)',
+          'Intégrité du document (hash du contenu)',
         ],
-        freeSolution: 'Oui, implémenté gratuitement dans Factu.me'
+        freeSolution: 'Non — requiert un prestataire de confiance payant',
       },
-
       qualified: {
         name: 'Qualifiée (QES)',
         description: 'Signature électronique qualifiée',
-        legalValue: 'Valeur légale = signature manuscrite dans toute l\'UE',
+        legalValue: 'Valeur légale équivalente à la signature manuscrite dans toute l\'UE',
         canBeFree: false,
         requirements: [
           'Toutes les exigences du niveau Avancé +',
           'Certificat numérique qualifié',
           'Dispositif sécurisé de création de signature',
-          'Tiers de Confiance Qualifié (TQT) certifié eIDAS'
+          'Tiers de Confiance Qualifié (TQT) certifié eIDAS',
         ],
-        freeSolution: "NON - La loi EUROPEENNE oblige à utiliser un TQT certifié (payant)",
+        freeSolution: 'Non — la loi européenne impose un TQT certifié (payant)',
         whyNotFree: 'La certification eIDAS coûte plusieurs milliers d\'euros par an au TQT',
-        minimumCost: '1-3€ par signature (Universign) ou abonnements à partir de 10€/mois'
-      }
+        minimumCost: '1-3€ par signature (Universign) ou abonnements à partir de 10€/mois',
+      },
     },
 
-    freeProviders: {
-      tsa: {
-        name: 'freeTSA.org',
-        service: 'Horodatage certifié RFC 3161',
-        cost: 'GRATUIT',
-        url: 'https://freetsa.org'
-      },
-      advanced: {
-        name: 'Factu.me AdES',
-        service: 'Signature avancée (AdES)',
-        cost: 'GRATUIT',
-        note: 'Niveau Avancé déjà conforme eIDAS pour la plupart des usages B2B'
-      }
+    factuSolution: {
+      level: 'simple',
+      cost: 'GRATUIT',
+      what: 'Identification du signataire, horodatage serveur, journal d\'audit immuable, hash de relevé de signature.',
+      whatNot: 'N\'utilise PAS de TSP certifié ni d\'horodatage RFC 3161 : ne constitue PAS un niveau Avancé/Qualifié.',
     },
 
     qualifiedProviders: [
-      {
-        name: 'Universign',
-        level: 'QES',
-        cost: '~1-3€ par signature (sans abonnement)',
-        url: 'https://www.universign.eu'
-      },
-      {
-        name: 'Yousign',
-        level: 'QES',
-        cost: 'Gratuit pour 10 signatures/mois, puis ~0,50€/signature',
-        url: 'https://www.yousign.com'
-      },
-      {
-        name: 'DocuSign',
-        level: 'QES',
-        cost: 'Essai 30 jours gratuit, puis à partir de 10€/mois',
-        url: 'https://www.docusign.fr'
-      },
-      {
-        name: 'Scriplet',
-        level: 'QES',
-        cost: '~0,15€ par signature',
-        url: 'https://www.scriplet.com'
-      }
+      { name: 'Universign', level: 'QES', cost: '~1-3€ par signature (sans abonnement)', url: 'https://www.universign.eu' },
+      { name: 'Yousign', level: 'QES', cost: 'Gratuit pour 10 signatures/mois, puis ~0,50€/signature', url: 'https://yousign.com' },
+      { name: 'DocuSign', level: 'QES', cost: 'Essai 30 jours gratuit, puis à partir de 10€/mois', url: 'https://www.docusign.fr' },
+      { name: 'Scriplet', level: 'QES', cost: '~0,15€ par signature', url: 'https://www.scriplet.com' },
     ],
 
     recommendations: [
       {
-        useCase: 'B2B standard (factures, contrats)',
-        level: 'advanced',
-        reason: 'Le niveau Avancé est SUFFISANT pour la grande majorité des transactions B2B',
-        solution: 'Utiliser la solution gratuite de Factu.me'
+        useCase: 'Accusé de réception / acceptation simple (factures, bons)',
+        level: 'simple',
+        reason: 'Le niveau Simple gratuit suffit pour tracer l\'acceptation avec preuve horodatée.',
+        solution: 'Solution Factu.me (gratuit)',
       },
       {
-        useCase: 'Contrats importants, B2C',
+        useCase: 'Contrats à enjeux, valeur juridique renforcée',
         level: 'qualified',
-        reason: 'Pour une valeur juridique équivalente à la signature manuscrite',
-        solution: 'Choisir un TQT abordable (Universign ou Yousign)'
+        reason: 'Pour une valeur équivalente à la signature manuscrite, un TQT certifié est requis.',
+        solution: 'Universign ou Yousign',
       },
-      {
-        useCase: 'Administration européenne',
-        level: 'qualified',
-        reason: 'Obligatoire pour certaines démarches administratives',
-        solution: 'Vérifier les exigences spécifiques de l\'administration'
-      }
-    ]
+    ],
   };
 }

@@ -88,7 +88,7 @@ JSON uniquement: {isConform:true/false, missingMentions:[], recommendations:[], 
         // Logging des coûts
         if (completion.usage) {
           const cost = estimateCost(model, completion.usage.prompt_tokens, completion.usage.completion_tokens);
-          console.log('[LIA] Coût conformité:', cost.toFixed(4), 'USD');
+          void cost;
         }
 
         const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
@@ -102,7 +102,6 @@ JSON uniquement: {isConform:true/false, missingMentions:[], recommendations:[], 
           summary: response.summary || '',
         };
       } catch (error) {
-        console.log(`[LIA] Échec conformité ${model}`);
         continue;
       }
     }
@@ -133,8 +132,6 @@ JSON uniquement: {modifiedPayslip:{}, explanation:"", warnings:[], legalComplian
 
     for (const model of modelsToTry) {
       try {
-        console.log('[LIA] Tentative modèle:', model);
-
         const completion = await this.client.chat.completions.create({
           model,
           messages: [
@@ -149,7 +146,7 @@ JSON uniquement: {modifiedPayslip:{}, explanation:"", warnings:[], legalComplian
         // Logging des coûts
         if (completion.usage) {
           const cost = estimateCost(model, completion.usage.prompt_tokens, completion.usage.completion_tokens);
-          console.log('[LIA] Coût requête:', cost.toFixed(4), 'USD | Tokens:', completion.usage.total_tokens);
+          void cost;
         }
 
         const response = JSON.parse(completion.choices[0]?.message?.content || '{}');
@@ -161,7 +158,6 @@ JSON uniquement: {modifiedPayslip:{}, explanation:"", warnings:[], legalComplian
           legalCompliance: response.legalCompliance || [],
         };
       } catch (error) {
-        console.log(`[LIA] Échec ${model}:`, error instanceof Error ? error.message : error);
         continue; // Modèle suivant
       }
     }

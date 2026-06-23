@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 
 export async function GET(
   req: NextRequest,
@@ -7,6 +8,11 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token, renvoie l'UUID à chercher en BDD.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
 
     if (!token) {
       return NextResponse.json({ error: 'Token manquant' }, { status: 400 });
@@ -18,7 +24,7 @@ export async function GET(
     const { data: tokenRecord, error: tokenError } = await admin
       .from('quote_signing_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (tokenError || !tokenRecord) {

@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
       .from('appointments')
       .select('*, client:clients(*)')
       .eq('id', appointmentId)
+      .eq('user_id', user.id) // ARGOS (sécurité) — filtre propriétaire explicite (defense-in-depth)
       .single();
 
     if (!appointment) {

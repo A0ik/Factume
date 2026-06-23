@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 import { sendContractNotification } from '@/lib/services/contract-notification-service';
+import { applyIpRateLimit } from '@/lib/rate-limit';
 import { Resend } from 'resend';
 
 export const maxDuration = 60;
+
+// ARGOS (sécurité) — Normalisation de nom (minuscules, sans accents ni ponctuation)
+// pour la vérification d'identité du signataire.
+function normalizeName(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 const TABLE_MAP: Record<string, string> = {
   cdi: 'contracts_cdi',
@@ -25,10 +38,25 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token avant toute chose.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
     const { signatureDataUrl, signerName } = await req.json();
 
     if (!signatureDataUrl || !signerName) {
       return NextResponse.json({ error: 'Signature et nom requis' }, { status: 400 });
+    }
+
+    // ARGOS (sécurité) — Rate-limit anti-brute-force de token (le token reste un UUID v4
+    // imprévisible, mais on borne le coût d'une énumération).
+    const rateLimitError = applyIpRateLimit(req, 20, 60_000);
+    if (rateLimitError) return rateLimitError as NextResponse;
+
+    // ARGOS (sécurité) — Ne stocker que des data-URL d'image valides (anti-payload arbitraire).
+    if (!/^data:image\/[a-z+]+;base64,[A-Za-z0-9+/=]+$/i.test(signatureDataUrl)) {
+      return NextResponse.json({ error: 'Format de signature invalide' }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -37,7 +65,7 @@ export async function POST(
     const { data: tokenRecord } = await admin
       .from('contract_signing_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (!tokenRecord) {
@@ -62,6 +90,28 @@ export async function POST(
       || req.headers.get('x-real-ip')
       || 'unknown';
 
+    // ARGOS (sécurité) — Vérification d'identité du signataire : le nom saisi doit
+    // correspondre au salarié destinataire du contrat (le token n'est envoyé qu'à
+    // employee_email). Avant, n'importe qui détenant le lien signait sous un nom arbitraire.
+    const { data: signContract } = await admin
+      .from(tableName)
+      .select('employee_first_name, employee_last_name')
+      .eq('id', tokenRecord.contract_id)
+      .maybeSingle();
+    if (signContract) {
+      const expectedTokens = new Set(
+        normalizeName(`${signContract.employee_first_name || ''} ${signContract.employee_last_name || ''}`).split(' ').filter(Boolean)
+      );
+      const providedTokens = normalizeName(signerName).split(' ').filter(Boolean);
+      if (expectedTokens.size > 0 && providedTokens.length > 0
+          && !providedTokens.every((t) => expectedTokens.has(t))) {
+        return NextResponse.json(
+          { error: 'Le nom saisi ne correspond pas au salarié destinataire du contrat.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Inserer dans contract_signatures
     await admin.from('contract_signatures').insert({
       contract_id: tokenRecord.contract_id,
@@ -70,6 +120,19 @@ export async function POST(
       signature_data: signatureDataUrl,
       signed_by_name: signerName,
       signer_ip: signerIp,
+    });
+
+    // ARGOS (CIBLE 5) — Journal d'audit immuable : tracer l'acte de signature lui-même
+    // (event_type='contract_signed'). Avant, seul token_created/link_opened/token_cancelled
+    // étaient journalisés — l'événement le plus important manquait (conformité eIDAS).
+    await admin.from('contract_signature_logs').insert({
+      contract_id: tokenRecord.contract_id,
+      contract_type: tokenRecord.contract_type,
+      token_id: tokenRecord.id,
+      event_type: 'contract_signed',
+      ip_address: signerIp,
+      user_agent: req.headers.get('user-agent') || '',
+      metadata: { signerName, signedAt: new Date().toISOString(), party: 'employee' },
     });
 
     // Mettre a jour le contrat

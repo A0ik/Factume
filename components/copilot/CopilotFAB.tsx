@@ -152,7 +152,7 @@ function ResultCard({ result, onNavigate }: { result: CopilotResult; onNavigate?
           <Link
             href={result.redirectUrl || '/documents/create'}
             onClick={onNavigate}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition hover:-translate-y-0.5"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition hover:-translate-y-0.5"
           >
             <FilePlus size={15} /> Ouvrir le créateur
           </Link>
@@ -184,10 +184,18 @@ export default function CopilotFAB() {
     setMessages((m) => [...m, userMsg]);
     setLoading(true);
     try {
+      // PROMÉTHÉE — mémoire conversationnelle : on renvoie les derniers échanges
+      // (texte uniquement, sans les cartes structurées) pour permettre les relances
+      // et questions de suivi (« et pour Nathan ? »).
+      const history = messages
+        .filter((m) => !m.error)
+        .slice(-6)
+        .map((m) => ({ role: m.role, content: m.text }));
+
       const res = await fetch('/api/copilot/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify({ text: trimmed, history }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -197,12 +205,12 @@ export default function CopilotFAB() {
         setMessages((m) => [...m, { id: ++msgId.current, role: 'assistant', text: errMsg, error: true }]);
         return;
       }
-      const intentLabel = data.intent ? `[${data.intent}] ` : '';
-      const fallbackText = data.result?.message || 'Voici ce que j\'ai trouvé.';
+      // La réponse naturelle de l'IA (answer) prime sur le message générique du résultat.
+      const fallbackText = data.answer || data.result?.message || 'Voici ce que j\'ai trouvé.';
       setMessages((m) => [...m, {
         id: ++msgId.current,
         role: 'assistant',
-        text: intentLabel + fallbackText,
+        text: fallbackText,
         result: data.result,
       }]);
     } catch {
@@ -210,7 +218,7 @@ export default function CopilotFAB() {
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, [loading, messages]);
 
   // Ref pour éviter une closure périmée dans le handler vocal (déclaré après sendCommand)
   const sendCommandRef = useRef(sendCommand);
@@ -225,20 +233,31 @@ export default function CopilotFAB() {
     rec.continuous = false;
     rec.interimResults = true;
     rec.onresult = (e: any) => {
+      // PROMÉTHÉE — on affiche le transcript INTERMÉDIAIRE en direct dans le champ.
+      // Avant, seul le résultat final remplissait l'input → le micro semblait cassé
+      // (aucun feedback pendant la parole).
+      let interim = '';
       let finalText = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += transcript;
+        else interim += transcript;
       }
       if (finalText) {
         setInput(finalText);
         rec.stop();
         sendCommandRef.current(finalText); // envoi automatique du transcript final
+      } else if (interim) {
+        setInput(interim);
       }
     };
     rec.onend = () => setListening(false);
     rec.onerror = (e: any) => {
       setListening(false);
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      // PROMÉTHÉE — guidage explicite selon la cause (permission vs indispo).
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        toast.error('Microphone bloqué — autorisez l\'accès au micro dans votre navigateur.');
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
         toast.error('Reconnaissance vocale indisponible');
       }
     };
@@ -251,11 +270,21 @@ export default function CopilotFAB() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
+  // ── PROMÉTHÉE : ouverture externe (carte dashboard "Assistant IA"). ──
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('copilot:open', handler);
+    return () => window.removeEventListener('copilot:open', handler);
+  }, []);
+
   const toggleMic = () => {
     const rec = recognitionRef.current;
     if (!rec) return;
     if (listening) { rec.stop(); setListening(false); }
-    else { try { rec.start(); setListening(true); } catch { /* déjà actif */ } }
+    else {
+      setInput(''); // repartir d'un champ vide pour voir le transcript live
+      try { rec.start(); setListening(true); } catch { /* déjà actif */ }
+    }
   };
 
   const onSubmit = (e: FormEvent) => {
@@ -276,10 +305,10 @@ export default function CopilotFAB() {
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         aria-label="Ouvrir le Copilot Factu"
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-purple-600 text-white shadow-xl shadow-emerald-500/30 ring-1 ring-white/20"
+        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 ring-1 ring-white/20"
       >
         <Sparkles size={24} className="drop-shadow" />
-        <span className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-emerald-500 to-purple-600 opacity-60 blur-md" />
+        <span className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 opacity-60 blur-md" />
         <motion.span
           className="absolute inset-0 rounded-full ring-2 ring-emerald-400/50"
           animate={{ scale: [1, 1.35], opacity: [0.6, 0] }}
@@ -306,9 +335,9 @@ export default function CopilotFAB() {
               className="flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-background shadow-2xl sm:max-w-md sm:rounded-3xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-emerald-500/10 to-purple-600/10 px-4 py-3">
+              <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 px-4 py-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-purple-600 text-white shadow-md">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md">
                     <Sparkles size={18} />
                   </div>
                   <div>
@@ -357,7 +386,7 @@ export default function CopilotFAB() {
                       <div className={cn(
                         'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm',
                         m.role === 'user'
-                          ? 'bg-gradient-to-br from-emerald-500 to-purple-600 text-white'
+                          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
                           : m.error
                           ? 'border border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-300'
                           : 'border border-border bg-muted/50 text-foreground',
@@ -412,7 +441,7 @@ export default function CopilotFAB() {
                   type="submit"
                   disabled={!input.trim() || loading}
                   aria-label="Envoyer"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-purple-600 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-40 disabled:hover:shadow-none"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white transition-all hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-40 disabled:hover:shadow-none"
                 >
                   <Send size={17} />
                 </button>

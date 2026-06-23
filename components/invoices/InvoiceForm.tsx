@@ -1249,7 +1249,7 @@ export default function InvoiceForm({ invoice, docType: docTypeProp, initialClie
 
       {/* Mobile Floating Action Bar */}
       <InvoiceMobileActionBar onSave={handleSave} saving={saving} isEdit={isEdit} actions={[
-        { icon: Eye, label: 'Prévisualiser', onClick: () => isEdit && invoice ? router.push(`/invoices/${invoice.id}`) : toast.info('Aperçu bientôt disponible'), description: 'Voir le document' },
+        { icon: Eye, label: 'Prévisualiser', onClick: () => isEdit && invoice ? router.push(`/invoices/${invoice.id}`) : toast.info("Créez la facture pour la prévisualiser."), description: 'Voir le document' },
         { icon: Send, label: 'Envoyer par email', onClick: () => toast.info('Envoi disponible après enregistrement'), description: 'Envoyer au client' },
       ]} />
 

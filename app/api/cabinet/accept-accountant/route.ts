@@ -11,7 +11,8 @@ import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-se
 // Écritures en admin (service_role) car RLS cabinet exige owner/membre.
 // ---------------------------------------------------------------------------
 
-const ALLOWED_MEMBER_ROLES = new Set(['owner', 'admin', 'collaborateur', 'invited', 'accountant']);
+// ARGOS — la contrainte CHECK cabinet_members.role n'accepte QUE ces valeurs.
+const ALLOWED_MEMBER_ROLES = new Set(['admin', 'manager', 'viewer']);
 
 export async function POST(req: NextRequest) {
   try {
@@ -90,12 +91,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Définir le rôle dans cabinet_members. La table accepte un rôle texte ;
-    //    on normalise vers un rôle valide selon la contrainte CHECK de la migration.
-    const invitedRole = invitation.role || 'accountant';
+    // 6. Définir le rôle dans cabinet_members. La contrainte CHECK Postgres n'accepte
+    //    que admin/manager/viewer. Un comptable invité devient 'manager'.
+    const invitedRole = invitation.role || 'manager';
     const memberRole = ALLOWED_MEMBER_ROLES.has(invitedRole)
       ? invitedRole
-      : 'collaborateur';
+      : 'manager';
 
     // 7. Éviter un doublon : si l'utilisateur est déjà membre, on met juste à jour le rôle.
     const { data: existingMember } = await admin

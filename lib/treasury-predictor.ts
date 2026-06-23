@@ -75,50 +75,50 @@ export function predictTreasury(params: {
   function buildProjection(days: number): TreasuryDataPoint[] {
     const points: TreasuryDataPoint[] = [];
     let balance = currentBalance;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // PROMÉTHÉE — référence temporelle en UTC MINUIT. Avant, `today` était minuit
+    // LOCAL puis converti en UTC via toISOString() → décalage de fuseau → la clé
+    // de date itérée ne correspondait JAMAIS à due_date → le widget « prédisait
+    // rien ». On reste en UTC du début à la fin.
+    const nowUtc = new Date();
+    const today = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()));
+
+    const utcKey = (d: Date) =>
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    // Clé YYYY-MM-DD stable depuis un champ BDD (date pure OU timestamp ISO).
+    const dbKey = (s?: string) => (s ? s.slice(0, 10) : '');
 
     for (let d = 0; d <= days; d++) {
       const date = new Date(today);
-      date.setDate(date.getDate() + d);
-      const dateStr = date.toISOString().slice(0, 10);
+      date.setUTCDate(date.getUTCDate() + d);
+      const dateStr = utcKey(date);
 
       let inflow = 0;
       let outflow = 0;
 
-      // Expected inflows: invoices due on this date (adjusted by average delay)
-      const adjustedDate = new Date(date);
-      adjustedDate.setDate(adjustedDate.getDate() - averagePaymentDelayDays);
-      const adjustedDateStr = adjustedDate.toISOString().slice(0, 10);
+      // Encaissements attendus : factures dues il y a `delay` jours (délai moyen de paiement).
+      const expectedDate = new Date(date);
+      expectedDate.setUTCDate(expectedDate.getUTCDate() - averagePaymentDelayDays);
+      const expectedKey = utcKey(expectedDate);
 
       for (const inv of outstandingInvoices) {
-        if (inv.due_date?.slice(0, 10) === adjustedDateStr) {
+        if (dbKey(inv.due_date) === expectedKey) {
           inflow += inv.total || 0;
         }
       }
 
-      // Overdue invoices: spread evenly over next 7 days
+      // Factures en retard : étalées sur les 7 prochains jours.
       if (d < 7 && totalOverdue > 0) {
         inflow += totalOverdue / 7;
       }
 
-      // Expected outflows: recurring expenses
+      // Décaissements récurrents (comparaisons en UTC).
       for (const exp of recurringExpenses) {
         if (exp.frequency === 'monthly') {
-          // Assume expenses hit on the 1st of each month
-          if (date.getDate() === 1) {
-            outflow += exp.amount;
-          }
+          if (date.getUTCDate() === 1) outflow += exp.amount;
         } else if (exp.frequency === 'weekly') {
-          // Assume Monday
-          if (date.getDay() === 1) {
-            outflow += exp.amount;
-          }
+          if (date.getUTCDay() === 1) outflow += exp.amount; // lundi
         } else if (exp.frequency === 'yearly') {
-          // Assume January 1st
-          if (date.getMonth() === 0 && date.getDate() === 1) {
-            outflow += exp.amount;
-          }
+          if (date.getUTCMonth() === 0 && date.getUTCDate() === 1) outflow += exp.amount;
         }
       }
 

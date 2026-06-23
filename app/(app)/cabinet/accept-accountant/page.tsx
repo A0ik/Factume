@@ -95,8 +95,8 @@ function AcceptAccountantInner() {
         <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
           <Loader2 size={28} className="text-emerald-400 animate-spin" />
         </div>
-        <h1 className="text-2xl font-black text-zinc-100 mb-2">Validation de l&apos;invitation…</h1>
-        <p className="text-zinc-500">Nous vérifions votre invitation.</p>
+        <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Validation de l&apos;invitation…</h1>
+        <p className="text-gray-500 dark:text-gray-400">Nous vérifions votre invitation.</p>
       </Shell>
     );
   }
@@ -107,10 +107,10 @@ function AcceptAccountantInner() {
         <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-emerald-500/20">
           <CheckCircle2 size={40} className="text-emerald-400" />
         </div>
-        <h1 className="text-3xl font-black text-zinc-100 mb-3">Bienvenue dans le cabinet</h1>
-        <p className="text-zinc-400 mb-8 leading-relaxed">
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Bienvenue dans le cabinet</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
           {state.cabinetName
-            ? <>Vous avez rejoint le cabinet <strong className="text-zinc-100">{state.cabinetName}</strong> en tant que comptable.</>
+            ? <>Vous avez rejoint le cabinet <strong className="text-gray-900 dark:text-white">{state.cabinetName}</strong> en tant que comptable.</>
             : 'Vous avez rejoint le cabinet en tant que comptable.'}
         </p>
         <button
@@ -129,13 +129,13 @@ function AcceptAccountantInner() {
       <div className="w-20 h-20 rounded-3xl bg-amber-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-amber-500/20">
         <AlertTriangle size={40} className="text-amber-400" />
       </div>
-      <h1 className="text-2xl font-black text-zinc-100 mb-3">Invitation impossible</h1>
-      <p className="text-zinc-400 mb-8 leading-relaxed max-w-md">
+      <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-3">Invitation impossible</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed max-w-md">
         {state.message || 'Une erreur est survenue.'}
       </p>
       <Link
         href="/dashboard"
-        className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-zinc-200 font-semibold text-sm hover:bg-white/10 transition-colors"
+        className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-semibold text-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
       >
         Retour au tableau de bord
       </Link>
@@ -169,7 +169,7 @@ export default function AcceptAccountantPage() {
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
             <Loader2 size={28} className="text-emerald-400 animate-spin" />
           </div>
-          <h1 className="text-2xl font-black text-zinc-100 mb-2">Chargement…</h1>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Chargement…</h1>
         </Shell>
       }
     >

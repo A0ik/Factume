@@ -72,7 +72,7 @@ const faqItems = [
   },
   {
     question: 'La signature électronique d\'un contrat est-elle légale ?',
-    answer: 'Oui. La signature électronique de niveau Avancé conforme au règlement eIDAS a la même valeur juridique qu\'une signature manuscrite. Factu.me propose cette signature gratuitement pour tous vos contrats de travail.',
+    answer: 'Oui. Factu.me propose une signature électronique de niveau Simple (eIDAS art. 25), gratuite, avec preuve d\'acceptation horodatée de l\'acte. Elle garantit l\'intégrité du document et l\'identification du signataire. Pour une valeur juridique renforcée (niveau Qualifié, équivalent à la signature manuscrite), Factu.me s\'appuie sur un partenaire certifié (Universign, Yousign).',
   },
   {
     question: 'Comment Factu.me aide-t-il à rédiger un contrat ?',
@@ -185,7 +185,7 @@ export default function ModeleContratPage() {
               {
                 icon: Shield,
                 title: 'Signature eIDAS gratuite',
-                desc: 'Signature électronique de niveau Avancé, conforme au règlement eIDAS. Preuve légale d\'intention.',
+                desc: 'Signature électronique de niveau Simple (eIDAS art. 25), avec preuve d\'acceptation horodatée de l\'acte.',
               },
               {
                 icon: Scale,

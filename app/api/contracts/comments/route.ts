@@ -53,6 +53,22 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
+    // ARGOS (sécurité) — Ownership check : createAdminClient() bypass la RLS. Avant, un
+    // user pouvait commenter le contrat d'autrui en énumérant contractId.
+    const TABLE_BY_TYPE: Record<string, string> = { cdi: 'contracts_cdi', cdd: 'contracts_cdd', other: 'contracts_other' };
+    const cTable = TABLE_BY_TYPE[(contractType || '').toLowerCase()];
+    if (cTable) {
+      const { data: ownContract } = await admin
+        .from(cTable)
+        .select('id')
+        .eq('id', contractId)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (!ownContract) {
+        return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
+      }
+    }
+
     const { data: comment, error } = await admin
       .from('contract_comments')
       .insert({

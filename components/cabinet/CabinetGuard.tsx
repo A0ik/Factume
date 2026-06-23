@@ -177,8 +177,8 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
           <AlertCircle size={28} className="text-amber-400" />
         </div>
-        <p className="text-zinc-100 font-semibold mb-1">Chargement trop long</p>
-        <p className="text-sm text-zinc-500 mb-5">
+        <p className="text-gray-900 dark:text-white font-semibold mb-1">Chargement trop long</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
           La récupération du cabinet prend plus de temps que prévu.
         </p>
         <button

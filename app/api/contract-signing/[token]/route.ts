@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 import { dbToContractTemplate } from '@/lib/labor-law/contract-data-utils';
 
 const TABLE_MAP: Record<string, string> = {
@@ -14,13 +15,18 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token, renvoie l'UUID à chercher en BDD.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
     const admin = createAdminClient();
 
     // Chercher le token
     const { data: tokenRecord, error: tokenError } = await admin
       .from('contract_signing_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (tokenError || !tokenRecord) {

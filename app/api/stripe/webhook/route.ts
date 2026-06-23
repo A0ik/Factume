@@ -230,6 +230,16 @@ export async function POST(req: NextRequest) {
               is_trial_active: false,
             })
             .eq('stripe_subscription_id', sub.id);
+        } else if (sub.status === 'trialing') {
+          // ARGOS — synchro profil pendant l'essai (changement de plan opéré depuis le
+          // portal Stripe en cours d'essai). Avant, ce statut n'était traité par aucune branche.
+          await supabase.from('profiles')
+            .update({
+              subscription_tier: 'trial',
+              is_trial_active: true,
+              trial_selected_plan: plan,
+            })
+            .eq('stripe_subscription_id', sub.id);
         }
         break;
       }

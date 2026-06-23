@@ -240,7 +240,7 @@ export function AuthPage({
     "w-full rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.06] py-3 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-emerald-500/50 focus:bg-white dark:focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all";
 
   return (
-    <main className="relative min-h-screen lg:h-screen lg:overflow-hidden lg:grid lg:grid-cols-2 bg-slate-50 dark:bg-[#09090B]">
+    <main className="relative min-h-[100dvh] lg:h-screen lg:overflow-hidden lg:grid lg:grid-cols-2 bg-slate-50 dark:bg-[#09090B]">
 
       <AuthBackground />
 
@@ -304,7 +304,7 @@ export function AuthPage({
       </div>
 
       {/* ——— Right panel / Mobile form ——— CSS-only stagger, no FM initial="hidden" */}
-      <div className="relative z-10 flex min-h-screen flex-col justify-center p-5 sm:p-8">
+      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-center p-5 sm:p-8">
 
         <Link href="/" className="absolute top-6 left-5 z-20 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-white/40 dark:hover:text-white/80 transition-colors">
           <ChevronLeft className="size-4" /> Accueil

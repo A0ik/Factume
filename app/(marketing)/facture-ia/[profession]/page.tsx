@@ -99,7 +99,7 @@ export default async function FactureIAProfessionPage({ params }: Props) {
     },
     {
       name: 'Signez et envoyez',
-      text: 'Signez électroniquement votre facture avec une signature eIDAS niveau Avancé (gratuite sur Factu.me). Envoyez par email ou partagez un lien sécurisé. Le suivi de paiement est automatique.',
+      text: 'Signez électroniquement votre facture avec une signature eIDAS niveau Simple, art. 25 (gratuite sur Factu.me, preuve d\'acceptation horodatée). Envoyez par email ou partagez un lien sécurisé. Le suivi de paiement est automatique.',
     },
   ];
 

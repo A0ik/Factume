@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Loader2, Mail, Send, UserCheck, Clock, X, AlertCircle, Info } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Send, UserCheck, Clock, X, AlertCircle, Info, Link2, Copy, Check, Share2, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCabinetStore } from '@/stores/cabinetStore';
 import { cn } from '@/lib/utils';
@@ -13,8 +13,57 @@ export default function CabinetInvitationsPage() {
   const [email, setEmail] = useState('');
   const [inviting, setInviting] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  // PROMÉTHÉE — invitation par lien tokenisé.
+  const [inviteLink, setInviteLink] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => { fetchCabinet(); }, []);
+
+  const handleGenerateLink = async () => {
+    setLinkLoading(true);
+    try {
+      const supabase = (await import('@/lib/supabase')).getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée');
+        return;
+      }
+      const res = await fetch('/api/cabinet/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          'x-active-cabinet-id': localStorage.getItem('factume_active_cabinet_id') || '',
+        },
+        body: JSON.stringify({ invited_email: email.trim() || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || 'Erreur lors de la génération du lien');
+        return;
+      }
+      setInviteLink(data.link);
+      setCopied(false);
+      toast.success('Lien d\'invitation généré (valable 7 jours)');
+    } catch {
+      toast.error('Erreur lors de la génération du lien');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      toast.success('Lien copié');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Copie impossible');
+    }
+  };
 
   const handleInvite = async () => {
     const trimmed = email.trim();
@@ -48,8 +97,11 @@ export default function CabinetInvitationsPage() {
     }
   };
 
-  const pending = (clients as any[]).filter((c) => c.status === 'pending');
-  const active  = (clients as any[]).filter((c) => c.status === 'active');
+  // ARGOS (P2) — garde null : si le cache hydrate la valeur 'null', (null as any[]).filter
+  // levait un TypeError → écran blanc sur /cabinet/invitations.
+  const clientsArr = Array.isArray(clients) ? (clients as any[]) : [];
+  const pending = clientsArr.filter((c) => c.status === 'pending');
+  const active  = clientsArr.filter((c) => c.status === 'active');
 
   return (
     <CabinetGuard>
@@ -98,6 +150,66 @@ export default function CabinetInvitationsPage() {
             Le client doit déjà avoir un compte FacturMe avec cette adresse email. L&apos;invitation sera visible dans son tableau de bord.
           </p>
         </div>
+      </div>
+
+      {/* PROMÉTHÉE — Invitation par lien tokenisé (le gérant n'a pas besoin de compte préalable) */}
+      <div className="rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-gray-200/60 dark:border-gray-700/40 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Link2 size={15} className="text-emerald-500" />
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm">Inviter par lien</h3>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+          Générez un lien sécurisé valable 7 jours. Le gérant pourra créer son compte puis accéder à son cabinet.
+        </p>
+
+        {!inviteLink ? (
+          <button
+            onClick={handleGenerateLink}
+            disabled={linkLoading}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm disabled:opacity-50 shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all"
+          >
+            {linkLoading ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
+            Générer un lien d&apos;invitation
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+              <code className="flex-1 text-xs text-gray-600 dark:text-gray-300 truncate">{inviteLink}</code>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-white/10 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/20 transition-colors flex-shrink-0"
+                title="Copier le lien"
+              >
+                {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                {copied ? 'Copié' : 'Copier'}
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Rejoignez mon cabinet sur Factu.me : ${inviteLink}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+              >
+                <MessageCircle size={13} /> WhatsApp
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Invitation cabinet Factu.me')}&body=${encodeURIComponent(`Bonjour,\n\nRejoignez mon cabinet sur Factu.me en cliquant sur ce lien :\n${inviteLink}`)}`}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+              >
+                <Mail size={13} /> Email
+              </a>
+              <button
+                onClick={handleGenerateLink}
+                disabled={linkLoading}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                title="Régénérer un nouveau lien"
+              >
+                <Share2 size={13} /> Nouveau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pending invitations */}

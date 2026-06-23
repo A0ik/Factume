@@ -2,44 +2,113 @@ import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
+import { applyIpRateLimit } from '@/lib/rate-limit';
 
 // ---------------------------------------------------------------------------
-// POST /api/copilot/command
-// Parse voice commands and execute actions
-// Killer #4: Copilot Factu — Proactive Voice Commands
-// Guard : nécessite Copilot Factu (réservé au plan Business).
+// POST /api/copilot/command  —  Copilot Factu (plan Business).
+// PROMÉTHÉE (CIBLE 2) — refonte intelligence :
+//   1. Mémoire conversationnelle (historique des derniers échanges envoyé au LLM).
+//   2. RAG contextuel : liste clients + factures récentes + CA du mois injectés
+//      dans le prompt → l'IA résout « relance nathan » → « Nathan » elle-même.
+//   3. Matching fuzzy accent/casse-insensible (normalisation NFD).
+//   4. Intents étendus : treasury_info, client_info (réponses en langage naturel).
+//   5. Prompt expert ; l'IA répond à TOUT, ne redirige QUE pour create_invoice.
 // ---------------------------------------------------------------------------
+
+interface HistMsg {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface CommandIntent {
-  intent: 'show_outstanding' | 'show_urssaf' | 'send_reminder' | 'show_revenue' | 'create_invoice' | 'show_expenses' | 'unknown';
+  intent: 'show_outstanding' | 'show_urssaf' | 'send_reminder' | 'show_revenue'
+    | 'create_invoice' | 'show_expenses' | 'treasury_info' | 'client_info' | 'unknown';
   client_name: string | null;
   period: string | null;
   raw_amount: number | null;
+  answer: string;
   confidence: number;
 }
 
-const COMMAND_SYSTEM_PROMPT = `Tu es un assistant vocal pour Factu.me, une application de facturation française.
-Analyse la commande vocale de l'utilisateur et retourne un JSON avec l'intention détectée.
+/** Normalisation accent + casse + ponctuation (matching fuzzy robuste). */
+const normalize = (s?: string | null): string =>
+  (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // retire les diacritiques (NFD)
+    .replace(/[^a-z0-9\s]/g, ' ')   // retire la ponctuation
+    .replace(/\s+/g, ' ')
+    .trim();
 
-Intents possibles :
-- "show_outstanding" : l'utilisateur veut voir les factures impayées (Combien me doit X? / Factures en retard / Impayés)
-- "show_urssaf" : l'utilisateur veut voir ses cotisations URSSAF (Mes URSSAF / Cotisations / Réserve URSSAF)
-- "send_reminder" : l'utilisateur veut envoyer une relance (Relance X / Relancer Dupont / Envoie un rappel)
-- "show_revenue" : l'utilisateur veut voir son chiffre d'affaires (Mon CA / Combien j'ai gagné / Revenus)
-- "create_invoice" : l'utilisateur veut créer une facture (Crée une facture / Nouvelle facture)
-- "show_expenses" : l'utilisateur veut voir ses dépenses (Mes dépenses / Combien j'ai dépensé)
+/** Vrai match fuzzy : égalité, inclusion dans un sens ou dans l'autre. */
+const fuzzyMatch = (candidate: string | null | undefined, query: string): boolean => {
+  if (!query) return true;
+  const n = normalize(candidate);
+  if (!n) return false;
+  return n === query || n.includes(query) || query.includes(n);
+};
 
-Retourne UNIQUEMENT du JSON :
-{
-  "intent": "string",
-  "client_name": "string ou null",
-  "period": "string ou null — 'month', 'quarter', 'year', ou null",
-  "raw_amount": number ou null,
-  "confidence": number entre 0 et 1
-}`;
+function buildSystemPrompt(rag: string): string {
+  return `Tu es Copilot Factu.me, l'assistant IA expert d'un indépendant ou expert-comptable français.
+Tu es précis, concret et concis. Tu réponds TOUJOURS en français.
+
+${rag}
+
+Tu PEUX répondre à TOUTES les questions : chiffre d'affaires, impayés, un client précis, échéances, trésorerie, dépenses, cotisations URSSAF… Utilise le CONTEXTE ci-dessus. Résous les noms de façon insensible à la casse ET aux accents (ex. « relance nathan » → le client « Nathan » s'il existe dans la liste). Tu ne inventes JAMAIS un montant, un nom ou une date qui ne figurent pas dans le contexte.
+
+RÈGLES :
+1. Si l'utilisateur demande de CRÉER une facture complète, choisis intent="create_invoice" et réponds answer="Je vous redirige vers la création de facture."
+2. Pour une RELANCE, choisis intent="send_reminder" (le système génère un brouillon — jamais d'envoi automatique).
+3. Sinon, choisis l'intent le plus pertinent et rédige "answer" : une phrase naturelle courte qui répond directement à la question, en langage clair.
+
+Intents possibles : show_outstanding | show_revenue | show_urssaf | show_expenses | send_reminder | create_invoice | treasury_info | client_info | unknown
+
+Retourne UNIQUEMENT ce JSON :
+{ "intent": "...", "client_name": null, "period": "month|quarter|year|null", "raw_amount": null, "answer": "phrase courte en français", "confidence": 0.0-1.0 }`;
+}
+
+/** Construit le contexte RAG (clients + factures récentes + CA du mois). */
+async function buildRagContext(userId: string, supabase: any): Promise<string> {
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('id, name')
+    .eq('user_id', userId)
+    .order('name')
+    .limit(50);
+
+  const { data: recent } = await supabase
+    .from('invoices')
+    .select('number, total, status, client:clients(name)')
+    .eq('user_id', userId)
+    .order('issue_date', { ascending: false })
+    .limit(8);
+
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const { data: paid } = await supabase
+    .from('invoices')
+    .select('total')
+    .eq('user_id', userId)
+    .eq('status', 'paid')
+    .gte('paid_at', monthStart);
+  const monthRevenue = (paid || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+
+  const clientList = (clients || []).map((c: any) => c.name).filter(Boolean).slice(0, 30).join(', ') || 'aucun client';
+  const invList = (recent || [])
+    .map((i: any) => `#${i.number} ${i.client?.name || ''} ${i.status} ${(i.total || 0).toFixed(0)}€`)
+    .join(' | ') || 'aucune facture';
+
+  return `CONTEXTE UTILISATEUR (temps réel) :
+- Clients connus : ${clientList}
+- Factures récentes : ${invList}
+- CA payé ce mois-ci : ${monthRevenue.toFixed(2)} €`;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // ARGOS (hardening) — anti-abus IA Copilot (Groq) : 30/min par IP.
+    const rl = applyIpRateLimit(req, 30, 60_000);
+    if (rl) return rl as NextResponse;
+
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -56,19 +125,31 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const { text } = await req.json();
+    const { text, history } = await req.json();
     if (!text) return NextResponse.json({ error: 'Texte manquant' }, { status: 400 });
 
-    // Parse intent with Groq
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'Configuration IA manquante' }, { status: 500 });
     }
+
+    // RAG contextuel + prompt expert.
+    const rag = await buildRagContext(user.id, supabase);
+    const systemPrompt = buildSystemPrompt(rag);
+
+    // Mémoire conversationnelle : on réinjecte les N derniers échanges valides.
+    const safeHistory: HistMsg[] = Array.isArray(history)
+      ? history
+          .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+          .slice(-6)
+          .map((m: any) => ({ role: m.role, content: m.content.slice(0, 500) }))
+      : [];
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
-        { role: 'system', content: COMMAND_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
+        ...safeHistory,
         { role: 'user', content: text },
       ],
       response_format: { type: 'json_object' },
@@ -82,12 +163,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erreur de parsing' }, { status: 500 });
     }
 
-    // Execute the intent
     const result = await executeIntent(intent, user.id, supabase);
 
     return NextResponse.json({
       intent: intent.intent,
       confidence: intent.confidence,
+      answer: intent.answer || '',
       result,
       originalText: text,
     });
@@ -100,8 +181,6 @@ export async function POST(req: NextRequest) {
 async function executeIntent(intent: CommandIntent, userId: string, supabase: any) {
   switch (intent.intent) {
     case 'show_outstanding': {
-      // HEPHAISTOS (CIBLE 4) — colonnes réelles : number (pas invoice_number), total (pas total_ttc),
-      // nom du client via la jointure clients (pas de colonne client_name sur invoices).
       const { data } = await supabase
         .from('invoices')
         .select('number, total, due_date, status, client:clients(name)')
@@ -110,12 +189,10 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
         .order('due_date', { ascending: true })
         .limit(50);
 
-      // Filtrage client robuste côté JS (PostgREST ne filtre pas facilement sur la relation)
-      const wantClient = intent.client_name?.trim().toLowerCase();
-      const filtered = (data || []).filter((inv: any) => {
-        if (!wantClient) return true;
-        return ((inv.client?.name as string) || '').toLowerCase().includes(wantClient);
-      }).slice(0, 10);
+      const want = normalize(intent.client_name);
+      const filtered = (data || [])
+        .filter((inv: any) => fuzzyMatch(inv.client?.name, want))
+        .slice(0, 10);
 
       const total = filtered.reduce((s: number, inv: any) => s + (inv.total || 0), 0);
 
@@ -217,11 +294,43 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
       };
     }
 
-    // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE
-    // Le Copilot génère un brouillon de relance mais N'ENVOIE JAMAIS automatiquement.
-    // L'utilisateur doit voir l'email et approuver manuellement l'envoi.
+    // PROMÉTHÉE — trésorerie : solde réel + en attente, en une phrase.
+    case 'treasury_info': {
+      const { data: paid } = await supabase.from('invoices').select('total').eq('user_id', userId).eq('status', 'paid');
+      const { data: exp } = await supabase.from('expenses').select('amount').eq('user_id', userId);
+      const { data: out } = await supabase.from('invoices').select('total').eq('user_id', userId).in('status', ['sent', 'overdue']);
+      const income = (paid || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+      const spend = (exp || []).reduce((s: number, e: any) => s + (e.amount || 0), 0);
+      const balance = income - spend;
+      const outstanding = (out || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+      return {
+        type: 'text',
+        message: `Solde estimé : ${balance.toFixed(2)} € (encaissé ${income.toFixed(0)} € − dépensé ${spend.toFixed(0)} €). En attente d'encaissement : ${outstanding.toFixed(2)} €. Ouvrez le widget Trésorerie pour les prévisions à 30/90 jours.`,
+      };
+    }
+
+    // PROMÉTHÉE — info client : résout le nom (fuzzy) + résume ses totaux.
+    case 'client_info': {
+      const want = normalize(intent.client_name);
+      if (!want) return { type: 'text', message: 'Quel client souhaitez-vous consulter ?' };
+      const { data: clients } = await supabase.from('clients').select('id, name, email').eq('user_id', userId);
+      const match = (clients || []).find((c: any) => fuzzyMatch(c.name, want));
+      if (!match) return { type: 'text', message: `Aucun client trouvé pour « ${intent.client_name} ».` };
+
+      const { data: invs } = await supabase.from('invoices').select('total, status').eq('client_id', match.id);
+      const total = (invs || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+      const unpaid = (invs || [])
+        .filter((i: any) => ['sent', 'overdue'].includes(i.status))
+        .reduce((s: number, i: any) => s + (i.total || 0), 0);
+      const emailBit = match.email ? ` (${match.email})` : '';
+      return {
+        type: 'text',
+        message: `${match.name}${emailBit} — CA total : ${total.toFixed(2)} €, dont ${unpaid.toFixed(2)} € non réglé.`,
+      };
+    }
+
+    // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE — brouillon, jamais d'envoi auto.
     case 'send_reminder': {
-      // HEPHAISTOS (CIBLE 4) — colonnes réelles (total, pas total_ttc) + jointure clients.
       const { data: overdueInvoices } = await supabase
         .from('invoices')
         .select('id, number, total, due_date, issue_date, status, client:clients(id, name, email)')
@@ -230,31 +339,27 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
         .order('due_date', { ascending: true })
         .limit(50);
 
-      // Filtrage client robuste côté JS (pas de colonne client_name sur invoices)
-      const wantClient = intent.client_name?.trim().toLowerCase();
-      const overdueFiltered = (overdueInvoices || []).filter((inv: any) => {
-        if (!wantClient) return true;
-        return ((inv.client?.name as string) || '').toLowerCase().includes(wantClient);
-      }).slice(0, 5);
+      const want = normalize(intent.client_name);
+      const overdueFiltered = (overdueInvoices || [])
+        .filter((inv: any) => fuzzyMatch(inv.client?.name, want))
+        .slice(0, 5);
 
       if (!overdueFiltered || overdueFiltered.length === 0) {
         return {
           type: 'reminder_draft',
           status: 'no_overdue',
           message: intent.client_name
-            ? `Aucune facture impayée trouvée pour "${intent.client_name}".`
+            ? `Aucune facture impayée trouvée pour « ${intent.client_name} ».`
             : 'Aucune facture impayée en ce moment.',
         };
       }
 
-      // Get profile for company name
       const { data: profile } = await supabase
         .from('profiles')
         .select('company_name')
         .eq('id', userId)
         .single();
 
-      // Generate draft emails for ALL matching invoices (user picks which to send)
       const drafts = overdueFiltered.map((inv: any) => {
         const dueDate = new Date(inv.due_date || inv.issue_date);
         const today = new Date();
@@ -262,7 +367,6 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
 
         const clientName = inv.client?.name || 'Client';
         const subject = `Rappel : Facture ${inv.number} - ${profile?.company_name || 'Mon entreprise'}`;
-
         const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${(inv.total || 0).toFixed(2)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
 
         return {
@@ -274,7 +378,6 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
           daysOverdue,
           subject,
           body,
-          // LOI 3 : needsApproval = true — l'envoi DOIT être validé par l'utilisateur
           needsApproval: true,
           warning: '⚠️ Vérifiez que cette facture n\'a pas déjà été payée avant d\'envoyer la relance.',
         };
@@ -289,9 +392,6 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
     }
 
     case 'create_invoice': {
-      // HEPHAISTOS — LOI 3 « l'IA propose, l'humain dispose » : on ne crée JAMAIS
-      // automatiquement une facture depuis la voix (données insuffisantes : pas de
-      // client ID, ni TVA, ni lignes). On redirige vers le créateur (Canvas) pré-rempli.
       const amount = typeof intent.raw_amount === 'number' ? intent.raw_amount : null;
       const client = intent.client_name || null;
       const params = new URLSearchParams();
@@ -304,12 +404,15 @@ async function executeIntent(intent: CommandIntent, userId: string, supabase: an
         client_name: client,
         redirectUrl: `/documents/create${qs ? `?${qs}` : ''}`,
         message: amount !== null
-          ? `J'ouvre le créateur de facture${client ? ` pour ${client}` : ''} avec ${amount.toFixed(2)} € pré-rempli. Vérifiez les détails puis validez.`
-          : `J'ouvre le créateur de facture. Décrivez le client et les lignes puis validez.`,
+          ? `Je vous redirige vers la création de facture${client ? ` pour ${client}` : ''} avec ${amount.toFixed(2)} € pré-rempli.`
+          : 'Je vous redirige vers la création de facture.',
       };
     }
 
     default:
-      return { type: 'unknown', message: 'Commande non reconnue. Essayez "Mes impayés", "Mon CA", "Relance Dupont" ou "Crée une facture".' };
+      return {
+        type: 'unknown',
+        message: 'Je peux vous renseigner sur vos impayés, votre CA, vos dépenses, vos URSSAF, votre trésorerie ou un client précis. Posez votre question.',
+      };
   }
 }

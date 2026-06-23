@@ -7,14 +7,18 @@ export async function POST(req: NextRequest) {
   const rateLimitError = applyIpRateLimit(req, 100, 60_000);
   if (rateLimitError) return rateLimitError as NextResponse;
 
-  // Shared secret verification
+  // ARGOS (sécurité) — Fail-closed : le secret partagé DOIT être configuré. Avant, son
+  // absence rendait la route ouverte ET l'utilisateur était résolu via payload.user_email
+  // (champ contrôlable par l'appelant) → injection de transactions bancaires chez autrui.
   const syncSecret = process.env.BANK_SYNC_SECRET;
-  if (syncSecret) {
-    const provided = req.headers.get('authorization')?.replace('Bearer ', '')
-      || req.headers.get('x-sync-secret');
-    if (provided !== syncSecret) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
+  if (!syncSecret) {
+    console.error('[bank-sync] BANK_SYNC_SECRET manquant — rejet fail-closed');
+    return NextResponse.json({ error: 'Webhook non configuré' }, { status: 401 });
+  }
+  const provided = req.headers.get('authorization')?.replace('Bearer ', '')
+    || req.headers.get('x-sync-secret');
+  if (provided !== syncSecret) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
   try {

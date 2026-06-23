@@ -436,7 +436,6 @@ export default function CapturePage() {
         const bytes = await newPdf.save();
         parts.push(new File([bytes.buffer as ArrayBuffer], `${base}_p${i + 1}.pdf`, { type: 'application/pdf' }));
       }
-      console.log(`[PDF Split] ${file.name} - Split into ${parts.length} page(s)`);
       return parts;
     } catch {
       return [file]; // fallback: keep original
@@ -471,9 +470,6 @@ export default function CapturePage() {
         try { ab = await f.arrayBuffer(); } catch { finalFiles.push(f); continue; }
 
         const pageCount = detectPDFPageCount(ab);
-
-        // Debug: Log page count to verify correctness
-        console.log(`[PDF] ${f.name} - Detected ${pageCount} page(s), file size: ${f.size} bytes`);
 
         if (pageCount > 1) {
           // Ask user whether to split or keep whole

@@ -41,6 +41,7 @@ export interface ContractComparison {
 /**
  * Crée une nouvelle version d'un contrat
  */
+// NOTE (ARGOS): race condition connue — non bloquant pour le volume actuel.
 // TODO: Race condition risk — three sequential non-atomic operations.
 // For production safety, wrap in a Supabase RPC function:
 // SELECT version_number FROM contract_versions WHERE contract_id = $1 AND is_current = true FOR UPDATE;

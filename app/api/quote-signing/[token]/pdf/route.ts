@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 import { generatePdfBuffer, getDocLabel } from '@/lib/pdf';
 
 /**
@@ -13,6 +14,11 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
     if (!token) {
       return NextResponse.json({ error: 'Token manquant' }, { status: 400 });
     }
@@ -22,7 +28,7 @@ export async function GET(
     const { data: tokenRecord, error: tokenError } = await admin
       .from('quote_signing_tokens')
       .select('id, quote_id, expires_at, signed_at')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (tokenError || !tokenRecord) {

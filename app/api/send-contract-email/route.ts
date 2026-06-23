@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateContractPdfBuffer } from '@/lib/contract-pdf-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // ARGOS (CIBLE 4) — Ferme le relais email ouvert : auth + rate-limit obligatoires
+    // (cohérent avec /api/send-invoice). Avant, un anon pouvait envoyer un email depuis
+    // factu.me vers n'importe quel destinataire avec un body contrôlé (phishing/spoofing).
+    const rl = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60_000 });
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans un instant.' }, { status: 429 });
+    }
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { to, contractType, employeeName, html, subject: customSubject, contractData } = await req.json();
 
     if (!to || !employeeName || !html) {
       return NextResponse.json({ error: 'Données manquantes' }, { status: 400 });
+    }
+
+    // ARGOS (sécurité) — Ferme le relais : le destinataire doit être le salarié du contrat.
+    // Empêche d'utiliser cette route pour envoyer un email vers une adresse arbitraire.
+    const employeeEmail = (contractData as any)?.employee_email;
+    if (employeeEmail && to.toLowerCase().trim() !== String(employeeEmail).toLowerCase().trim()) {
+      return NextResponse.json(
+        { error: "Le destinataire doit correspondre au salarié du contrat." },
+        { status: 400 },
+      );
     }
 
     // SAGE (CIBLE 5) — LOI : aucun envoi de contrat (même un simple email, sans

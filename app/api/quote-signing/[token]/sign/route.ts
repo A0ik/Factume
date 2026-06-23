@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
+import { verifyToken } from '@/lib/signing-token';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { Resend } from 'resend';
 import React from 'react';
@@ -43,6 +44,11 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+    // ARGOS (HMAC) — vérifie la signature du token avant toute chose.
+    const tokenId = verifyToken(token);
+    if (!tokenId) {
+      return NextResponse.json({ error: 'Lien invalide' }, { status: 404 });
+    }
     const { signatureDataUrl, signerName } = await req.json();
     let pdfGenerated = false;
 
@@ -69,7 +75,7 @@ export async function POST(
     const { data: tokenRecord, error: tokenError } = await admin
       .from('quote_signing_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', tokenId)
       .single();
 
     if (tokenError || !tokenRecord) {

@@ -33,10 +33,17 @@ export async function GET(req: NextRequest) {
     // 2. Fetch expense from database
     // ------------------------------------------------------------------
     const supabase = await createServerSupabaseClient();
+    // ARGOS (sécurité) — Auth + filtre propriétaire explicites (defense-in-depth : la RLS
+    // sur expenses filtre déjà par user_id via le client cookie-scoped).
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
     const { data: expense, error } = await supabase
       .from('expenses')
       .select('receipt_url, receipt_storage_path')
       .eq('id', expenseId)
+      .eq('user_id', user.id)
       .single();
 
     if (error || !expense) {

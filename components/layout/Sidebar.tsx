@@ -107,6 +107,12 @@ export default function Sidebar() {
         { href: '/crm', icon: Target, label: 'Pipeline CRM', locked: !sub.canUseCRM, lockTier: 'pro' },
       ],
     },
+    // PROMÉTHÉE — Cabinet d'expertise comptable (Business). Entrée globale manquante
+    // jusqu'ici (Briefcase était importé mais inutilisé). Lock Business pour les autres plans.
+    {
+      id: 'cabinet', href: '/cabinet', icon: Briefcase, label: 'Cabinet', subLabel: 'Expert-comptable',
+      locked: !sub.isBusiness, lockTier: 'business',
+    },
     {
       id: 'finances', href: '/expenses', icon: DollarSign, label: 'Finances',
       children: [

@@ -12,6 +12,7 @@ import {
   Target,
   Sparkles, ArrowUpRight,
   FileSignature, ClipboardList, UsersRound, DollarSign,
+  Briefcase,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -50,6 +51,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     if (pathname.startsWith('/contacts') || pathname.startsWith('/clients') || pathname.startsWith('/products') || pathname.startsWith('/crm')) sections['contacts'] = true;
     if (pathname.startsWith('/expenses') || pathname.startsWith('/accounting') || pathname.startsWith('/banking') || pathname.startsWith('/data-health')) sections['finances'] = true;
     if (pathname.startsWith('/contracts')) sections['contrats'] = true;
+    if (pathname.startsWith('/cabinet')) sections['cabinet'] = true;
     if (pathname.startsWith('/ocr') || pathname.startsWith('/integrations') || pathname.startsWith('/calendar')) sections['outils'] = true;
     return sections;
   }, [pathname]);
@@ -71,7 +73,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Simplified sections — no cabinet, merged routes
+  // PROMÉTHÉE — section Cabinet (expert-comptable, Business) ajoutée à la navbar mobile.
   const sections: NavSection[] = [
     {
       id: 'documents',
@@ -108,6 +110,15 @@ export default function MobileDrawer({ open, onClose }: Props) {
       items: [
         { href: '/contracts', icon: FileSignature, label: 'Tous les contrats' },
         { href: '/contracts/reports', icon: ClipboardList, label: 'Rapports' },
+      ],
+    },
+    {
+      id: 'cabinet',
+      label: 'Cabinet',
+      icon: Briefcase,
+      items: [
+        { href: '/cabinet', icon: Briefcase, label: 'Dashboard cabinet', locked: !sub.isBusiness, lockTier: 'business' },
+        { href: '/cabinet/clients', icon: Users, label: 'Clients du cabinet', locked: !sub.isBusiness, lockTier: 'business' },
       ],
     },
     {

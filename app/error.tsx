@@ -73,23 +73,6 @@ export default function GlobalError({
           </p>
         )}
 
-        {/* SPECTRE DEBUG (temporaire — crash /contracts) — afficher l'erreur réelle
-            pour diagnostic. À retirer une fois la cause racine fixée. */}
-        <details className="mb-6 text-left">
-          <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            Détails techniques (debug)
-          </summary>
-          <pre className="mt-2 p-3 bg-gray-100 dark:bg-slate-800 rounded-lg text-[10px] leading-relaxed text-red-500 dark:text-red-400 overflow-auto whitespace-pre-wrap break-all">
-{JSON.stringify({
-  name: error?.name,
-  message: error?.message,
-  digest: error?.digest,
-  stack: error?.stack,
-  cause: error?.cause ? String(error.cause) : undefined,
-}, null, 2)}
-          </pre>
-        </details>
-
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button

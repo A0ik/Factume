@@ -76,7 +76,7 @@ export function ContractAmendmentList({ contractId }: ContractAmendmentListProps
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href={`/contracts/amendments/${amendment.id}`}
+                href={`/contracts/${(amendment as any).parent_contract_id ?? amendment.contract_id}`}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                 title="Voir les détails"
               >

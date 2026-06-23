@@ -118,18 +118,17 @@ export function OnboardingWizard() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 sm:items-center sm:p-4"
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98, y: 24 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
+          exit={{ opacity: 0, scale: 0.98, y: 24 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-slate-900 sm:rounded-3xl"
         >
-          {/* Header */}
-          <div className="relative">
-            {/* Progress bar */}
+          {/* En-tête fixe : progression + fermeture */}
+          <div className="relative shrink-0">
             <div className="h-1 bg-gray-100 dark:bg-white/10">
               <motion.div
                 className="h-full bg-gradient-to-r from-primary to-primary-dark"
@@ -138,17 +137,17 @@ export function OnboardingWizard() {
                 transition={{ duration: 0.5 }}
               />
             </div>
-
-            {/* Close button */}
             <button
               onClick={handleSkip}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+              aria-label="Passer le tutoriel"
+              className="absolute right-3.5 top-3.5 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
             >
               <X size={20} className="text-gray-500" />
             </button>
+          </div>
 
-            {/* Content */}
-            <div className="p-8 pt-12">
+          {/* Corps défilant */}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-5 pt-8 sm:p-8 sm:pt-12">
               <motion.div
                 key={currentStep}
                 initial={{ opacity: 0, x: 20 }}
@@ -240,51 +239,51 @@ export function OnboardingWizard() {
                 )}
               </motion.div>
 
-              {/* Navigation */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-white/10">
-                <button
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft size={18} />
-                  Précédent
-                </button>
+          </div>
 
-                <div className="flex items-center gap-2">
-                  {ONBOARDING_STEPS.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentStep
-                          ? 'bg-primary'
-                          : index < currentStep
-                          ? 'bg-primary/30'
-                          : 'bg-gray-200 dark:bg-white/10'
-                      }`}
-                    />
-                  ))}
-                </div>
+          {/* Pied fixe — navigation toujours atteignable (safe-area mobile) */}
+          <div className="safe-area-bottom flex shrink-0 items-center justify-between gap-2 border-t border-gray-200 px-5 py-4 dark:border-white/10 sm:px-8">
+            <button
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:bg-white/10"
+            >
+              <ChevronLeft size={18} />
+              <span className="hidden sm:inline">Précédent</span>
+            </button>
 
-                {currentStep < ONBOARDING_STEPS.length - 1 ? (
-                  <button
-                    onClick={handleNext}
-                    className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all"
-                  >
-                    Suivant
-                    <ChevronRight size={18} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleComplete}
-                    className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white font-semibold hover:shadow-lg hover:shadow-primary/30 transition-all"
-                  >
-                    <Check size={18} />
-                    Commencer
-                  </button>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              {ONBOARDING_STEPS.map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-2 w-2 rounded-full transition-colors ${
+                    index === currentStep
+                      ? 'bg-primary'
+                      : index < currentStep
+                      ? 'bg-primary/30'
+                      : 'bg-gray-200 dark:bg-white/10'
+                  }`}
+                />
+              ))}
             </div>
+
+            {currentStep < ONBOARDING_STEPS.length - 1 ? (
+              <button
+                onClick={handleNext}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark px-5 font-semibold text-white transition-all hover:shadow-lg hover:shadow-primary/30"
+              >
+                Suivant
+                <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button
+                onClick={handleComplete}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark px-5 font-semibold text-white transition-all hover:shadow-lg hover:shadow-primary/30"
+              >
+                <Check size={18} />
+                Commencer
+              </button>
+            )}
           </div>
         </motion.div>
       </motion.div>

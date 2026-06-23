@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { Resend } from 'resend';
 
 export async function GET(req: NextRequest) {
   try {
@@ -176,7 +177,7 @@ export async function POST(req: NextRequest) {
     // Verify the invoice belongs to this cabinet
     const { data: invoice, error: invoiceError } = await admin
       .from('cabinet_invoices')
-      .select('id, status')
+      .select('id, status, number, amount_ttc, due_date, issue_date, client_id')
       .eq('id', invoice_id)
       .eq('cabinet_id', cabinet.id)
       .single();
@@ -222,6 +223,79 @@ export async function POST(req: NextRequest) {
       if (updateError) {
         console.error('[reminders POST] Status update error:', updateError);
       }
+    }
+
+    // ARGOS (CIBLE 5) — Envoi réel de la relance par email. cabinet_invoices est un résumé
+    // dénormalisé SANS l'email du débiteur final (client_id → cabinet_clients = le gérant).
+    // La relance notifie donc le CLIENT DU CABINET (le gérant) que sa facture est en retard,
+    // avec la note du comptable. C'est le seul ciblage correct avec ce schéma ; aucun email
+    // ne part vers une mauvaise personne. Non bloquant si l'envoi échoue (l'audit reste créé).
+    try {
+      let clientEmail: string | null = null;
+      let clientName = 'Client';
+      if (invoice.client_id) {
+        const { data: cabClient } = await admin
+          .from('cabinet_clients')
+          .select('profile:profiles!client_user_id(email, company_name, first_name, last_name)')
+          .eq('id', invoice.client_id)
+          .maybeSingle();
+        const p = (cabClient as any)?.profile;
+        clientEmail = p?.email || null;
+        clientName = p?.company_name
+          || [p?.first_name, p?.last_name].filter(Boolean).join(' ')
+          || 'Client';
+      }
+
+      const { data: cabRow } = await admin
+        .from('cabinets')
+        .select('name')
+        .eq('id', cabinet.id)
+        .maybeSingle();
+      const cabinetName = cabRow?.name || 'Votre cabinet comptable';
+
+      const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+
+      const RESEND_API_KEY = process.env.RESEND_API_KEY;
+      if (RESEND_API_KEY && clientEmail) {
+        const daysOverdue = invoice.due_date
+          ? Math.max(0, Math.floor((Date.now() - new Date(invoice.due_date).getTime()) / 86400000))
+          : 0;
+        const amountFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(invoice.amount_ttc) || 0);
+        const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+        const resend = new Resend(RESEND_API_KEY);
+        const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+        await resend.emails.send({
+          from: `${cabinetName} <${senderEmail}>`,
+          to: [clientEmail],
+          subject: `Relance — Facture ${invoice.number || ''} en retard de ${daysOverdue} jour(s)`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
+              <div style="background:#EF4444;padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+                <h2 style="color:#fff;margin:0;font-size:20px;">Relance de paiement</h2>
+                <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Signalée par ${esc(cabinetName)}</p>
+              </div>
+              <div style="background:#fff;padding:32px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
+                <p style="font-size:16px;margin:0 0 16px;">Bonjour ${esc(clientName)},</p>
+                <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">
+                  Votre expert-comptable vous signale que la <strong>facture n° ${esc(invoice.number || '')}</strong>
+                  d'un montant de <strong>${amountFmt}</strong> est en retard de <strong>${daysOverdue} jour(s)</strong>
+                  (échéance : ${fmtDate(invoice.due_date)}).
+                </p>
+                ${notes ? `<div style="background:#FEF2F2;padding:16px;border-radius:8px;margin:16px 0;border-left:4px solid #EF4444;"><p style="font-size:13px;margin:0;"><strong>Note de votre comptable :</strong> ${esc(notes)}</p></div>` : ''}
+                <p style="font-size:14px;color:#6b7280;margin:0;">Pensez à relancer votre client pour le règlement.</p>
+                <p style="font-size:12px;color:#aaa;margin:24px 0 0;">Cet email a été envoyé via Factu.me — ${esc(cabinetName)}</p>
+              </div>
+            </div>
+          `,
+        });
+      } else if (!clientEmail) {
+        console.warn('[reminders POST] Aucun email client trouvé — relance enregistrée sans envoi.');
+      }
+    } catch (emailErr) {
+      console.error('[reminders POST] Email send error:', emailErr);
+      // Non bloquant : l'enregistrement de relance (audit) est déjà créé.
     }
 
     return NextResponse.json({ success: true, reminder }, { status: 201 });

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { BulkActions } from '@/components/invoices/BulkActions';
 import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
 import { InvoicePreviewSheet } from '@/components/invoices/InvoicePreviewSheet';
+import { RemindersModal } from '@/components/invoices/RemindersModal';
 import SwipeableCard from '@/components/layout/SwipeableCard';
 import { useToast } from '@/components/ui/SuccessToast';
 import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
@@ -167,6 +168,7 @@ export default function DocumentsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showReminders, setShowReminders] = useState(false);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
   useEffect(() => { setStatusFilter('all'); }, [activeType]);
@@ -202,7 +204,7 @@ export default function DocumentsPage() {
       const res = await fetch('/api/reminders/send', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId, reminderLevel: 1 }),
+        body: JSON.stringify({ invoiceId, reminderLevel: 1, confirmed: true }),
       });
       if (!res.ok) throw new Error();
       toast.success('Relance envoyée');
@@ -244,10 +246,22 @@ export default function DocumentsPage() {
           <h1 className="text-xl font-bold tracking-tight text-foreground">
             {activeType === 'all' ? 'Documents' : currentConfig.label}
           </h1>
-          <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-semibold rounded-control shadow-elev-1 transition-colors hover:bg-primary/90 active:scale-95">
-            <Plus size={16} />
-            <span className="hidden sm:inline">Nouveau</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {invoices.some((d: any) => d.document_type === 'invoice' && (d.status === 'sent' || d.status === 'overdue')) && (
+              <button
+                onClick={() => setShowReminders(true)}
+                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold rounded-control transition-colors hover:bg-red-500/20 active:scale-95"
+                title="Relancer les factures impayées par email"
+              >
+                <Bell size={16} />
+                <span className="hidden sm:inline">Relancer</span>
+              </button>
+            )}
+            <Link href={currentConfig.createHref} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white text-sm font-semibold rounded-control shadow-elev-1 transition-colors hover:bg-primary/90 active:scale-95">
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nouveau</span>
+            </Link>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground mb-5">{stats.total} documents · {fmtEUR(stats.totalAmount)}</p>
       </motion.div>
@@ -431,6 +445,7 @@ export default function DocumentsPage() {
       )}
 
       <InvoicePreviewSheet open={showPreview} onClose={() => setShowPreview(false)} invoice={previewInvoice} />
+      <RemindersModal open={showReminders} onClose={() => setShowReminders(false)} />
     </div>
   );
 }

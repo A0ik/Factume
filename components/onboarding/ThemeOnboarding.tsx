@@ -28,7 +28,7 @@ export function ThemeOnboarding({ onDone }: { onDone: (theme: Choice) => void })
   };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-5 bg-slate-50 dark:bg-[#09090B] transition-colors duration-500 overflow-hidden">
+    <main className="relative min-h-[100dvh] flex items-center justify-center p-5 py-10 bg-slate-50 dark:bg-[#09090B] transition-colors duration-500">
       {/* Fond animé theme-aware */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div
@@ -41,7 +41,7 @@ export function ThemeOnboarding({ onDone }: { onDone: (theme: Choice) => void })
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-2xl text-center space-y-8">
+      <div className="relative z-10 w-full max-w-2xl text-center space-y-6 sm:space-y-8">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3">
           <Image

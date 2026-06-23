@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { applyIpRateLimit } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { FALLBACK_MODELS } from '@/lib/services/ai-models-config';
 import OpenAI from 'openai';
@@ -167,6 +168,10 @@ async function tryModelWithFallback(
 
 export async function POST(req: NextRequest) {
   try {
+    // ARGOS (hardening) — anti-abus : route ouverte (auth optionnelle), coût IA OpenRouter.
+    const rl = applyIpRateLimit(req, 15, 60_000);
+    if (rl) return rl as NextResponse;
+
     if (!process.env.OPENROUTER_API_KEY) {
       console.error('[Support Chat] OPENROUTER_API_KEY is not configured');
       return new Response(JSON.stringify({ error: 'Configuration IA manquante' }), { status: 500 });

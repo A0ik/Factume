@@ -447,6 +447,12 @@ export default function CGV() {
                     <strong className="text-white">Service d'IA :</strong> Les suggestions et générations fournies par l'intelligence artificielle sont fournies à titre indicatif et ne remplacent pas l'avis d'un professionnel comptable ou juridique
                   </span>
                 </div>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-zinc-400">
+                    <strong className="text-white">Facturation électronique (PDP) :</strong> Factu.me facilite la transmission des factures électroniques B2B via la plateforme agréée SuperPDP (loi n° 2022-1156, standard Factur-X / EN 16931) mais agit comme simple intermédiaire technique. Il décline toute responsabilité en cas d'erreur, de retard, de perte de données ou de non-conformité technique de la transmission imputables à la PDP, à l'administration fiscale (DGFiP / Chorus Pro) ou à un cas de force majeure. L'utilisateur doit vérifier le statut de transmission et utiliser un canal alternatif en cas d'échec persistant.
+                  </span>
+                </div>
               </div>
             </div>
           </div>

@@ -463,6 +463,22 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  // ARGOS (CIBLE 5) — Conversion devis → facture : crée une facture brouillon reprenant
+  // les lignes/montants du devis via duplicateInvoice(id, profile, 'invoice').
+  const handleConvertToInvoice = async () => {
+    if (!profile) {
+      toast.error('Profil introuvable. Veuillez vous reconnecter.');
+      return;
+    }
+    try {
+      const inv = await duplicateInvoice(id, profile, 'invoice');
+      toast.success('Devis converti en facture !');
+      router.push(`/invoices/${inv.id}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors de la conversion en facture.');
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -607,6 +623,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                           <Copy size={16} />
                           Dupliquer
                         </button>
+                        {invoice.document_type === 'quote' && (
+                          <button
+                            onClick={() => { setShowMenu(false); handleConvertToInvoice(); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                          >
+                            <FileText size={16} />
+                            Convertir en facture
+                          </button>
+                        )}
                         <div className="h-px bg-gray-50 mx-4" />
                         {invoice.document_type === 'invoice' && canUseFacturX && (
                           <FacturXButton
@@ -748,7 +773,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             <div className="px-1 mb-2">
               <h3 className="text-sm font-semibold text-slate-300">Prestations</h3>
             </div>
-            {invoice.items.map((item, i) => (
+            {(invoice.items ?? []).map((item, i) => (
               <motion.div
                 key={item.id || i}
                 initial={{ opacity: 0, y: 8 }}
@@ -786,7 +811,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {invoice.items.map((item, i) => (
+                  {(invoice.items ?? []).map((item, i) => (
                     <tr key={item.id || i} className="hover:bg-gray-100 transition-colors">
                       <td className="px-5 py-3.5 text-sm text-gray-900 dark:text-white">{item.description || '—'}</td>
                       <td className="px-3 py-3.5 text-sm text-slate-400 text-center">{item.quantity}</td>

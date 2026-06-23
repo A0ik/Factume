@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: 'Factu.me',
     images: [
       {
-        url: 'https://factu.me/og-generateur-facture.png',
+        url: '/api/og?title=G%C3%A9n%C3%A9rateur%20de%20Facture%20IA&description=Cr%C3%A9ez%20vos%20factures%20instantan%C3%A9ment&theme=green',
         width: 1200,
         height: 630,
         alt: 'Générateur de Facture – Créez Instantanément avec l\'IA',

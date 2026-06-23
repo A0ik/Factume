@@ -284,7 +284,7 @@ function ContractDetailContent({ params }: { params: Promise<{ id: string }> }) 
           </div>
           <div className="flex gap-2">
             {contract.document_status === 'draft' && (
-              <button onClick={() => handleStatusChange('pending_signature')} className="px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl text-sm font-semibold hover:bg-amber-200 transition-colors">Envoyer pour signature</button>
+              <button onClick={() => setShowEmailModal(true)} className="px-4 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl text-sm font-semibold hover:bg-amber-200 transition-colors">Envoyer pour signature</button>
             )}
             {contract.document_status === 'pending_signature' && (
               <button onClick={() => handleStatusChange('signed')} className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-blue-200 transition-colors">Marquer signé</button>

@@ -62,10 +62,14 @@ export default function Confidentialite() {
       icon: Eye,
       title: '3. Finalités du traitement',
       items: [
-        { subtitle: 'Fourniture du service', description: 'Création et gestion de documents commerciaux' },
-        { subtitle: 'Support technique', description: 'Assistance et amélioration du service' },
-        { subtitle: 'Conformité légale', description: 'Obligations fiscales et comptables' },
-        { subtitle: 'Communication', description: 'Avec consentement préalable pour les newsletters' }
+        { subtitle: 'Fourniture du service', description: "Création et gestion de documents commerciaux — Base légale : exécution du contrat (art. 6 §1 b du RGPD)." },
+        { subtitle: 'Création de compte & authentification', description: "Gestion de l'identité et de l'accès au service — Base légale : exécution du contrat (art. 6 §1 b)." },
+        { subtitle: 'Facturation & paiements', description: "Gestion des abonnements et encaissements via Stripe / SumUp — Base légale : exécution du contrat (art. 6 §1 b)." },
+        { subtitle: 'Conformité légale', description: "Émission, conservation et transmission des factures électroniques (Factur-X, PDP) — Base légale : obligation légale (art. 6 §1 c)." },
+        { subtitle: 'Support technique', description: "Assistance utilisateurs et amélioration du service — Base légale : intérêt légitime (art. 6 §1 f)." },
+        { subtitle: 'Sécurité & prévention des abus', description: "Lutte contre la fraude et les usages abusifs — Base légale : intérêt légitime (art. 6 §1 f)." },
+        { subtitle: 'Mesure d’audience', description: "Statistiques de fréquentation (Google Analytics) — Base légale : consentement (art. 6 §1 a), recueilli via la bannière cookies." },
+        { subtitle: 'Communication marketing', description: "Newsletters et offres — Base légale : consentement préalable (art. 6 §1 a), révocable à tout moment." }
       ]
     },
     {
@@ -88,7 +92,7 @@ export default function Confidentialite() {
             </div>
             <div>
               <p class="font-semibold text-white">Localisation</p>
-              <p class="text-sm text-zinc-400">Serveurs hébergés en France (Paris)</p>
+              <p class="text-sm text-zinc-400">Vercel (application web) : Paris, France. Supabase (base de données & fichiers) : Francfort, Allemagne (UE).</p>
             </div>
           </div>
           <div class="flex items-start gap-3">

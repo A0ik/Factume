@@ -77,6 +77,23 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
+    // ARGOS (sécurité) — Ownership check : le contrat doit appartenir à l'utilisateur.
+    // createAdminClient() bypass la RLS ; sans ce contrôle, un user pouvait attacher un
+    // fichier au contrat d'autrui en énumérant contractId.
+    const TABLE_BY_TYPE: Record<string, string> = { cdi: 'contracts_cdi', cdd: 'contracts_cdd', other: 'contracts_other' };
+    const cTable = TABLE_BY_TYPE[(contractType || '').toLowerCase()];
+    if (cTable) {
+      const { data: ownContract } = await admin
+        .from(cTable)
+        .select('id')
+        .eq('id', contractId)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (!ownContract) {
+        return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
+      }
+    }
+
     // Use user ID and contract ID for folder organization
     const folderPath = `${session.user.id}/${contractId}`;
     const fileName = `${Date.now()}-${file.name}`;
