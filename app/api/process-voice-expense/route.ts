@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { getUserHotwords, buildWhisperPrompt } from '@/lib/voice-vocabulary';
+import { applySttCorrection } from '@/lib/stt-correction';
 import { APIError } from '@/types';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
@@ -105,15 +107,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Audio manquant' }, { status: 400 });
     }
 
-    // 1. Transcribe with Groq Whisper
+    // CIBLE 2 — Hotwords utilisateur (lexique métier + corrections + salariés).
+    const { hotwords, corrections } = await getUserHotwords(supabaseAuth, user.id);
+
+    // 1. Transcribe with Groq Whisper (couche 0 : prompt = lexique métier).
     const transcription = await groq.audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3-turbo',
+      prompt: buildWhisperPrompt(hotwords),
     });
     const rawTranscript = transcription.text;
 
     // 2. Translate to French if needed
-    const { transcript, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+    const { transcript: translated, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+
+    // CIBLE 2 — Correction contextuelle STT (paie/paix, contrar/contrat…).
+    const sttFixed = await applySttCorrection(translated, { userCorrections: corrections, groq });
+    let transcript = sttFixed.transcript;
+    if (sttFixed.changes.length) console.log('[process-voice-expense] STT corrections:', sttFixed.changes);
 
     // 3. Parse with LLM
     const completion = await groq.chat.completions.create({
@@ -162,6 +173,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       transcript,
       originalTranscript: rawTranscript,
+      sttCorrections: sttFixed.changes,
       wasTranslated,
       originalLanguage,
       expense: {

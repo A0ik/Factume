@@ -6,7 +6,7 @@
 // Auto-gating : ne s'affiche que si canUseCopilot (plan.gates.copilotFactu).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Mic, MicOff, X, Send, Loader2,
@@ -16,6 +16,9 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
+import { getSupabaseClient } from '@/lib/supabase';
+import { useDataStore } from '@/stores/dataStore';
+import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
 
 interface CopilotResult {
   type: string;
@@ -42,13 +45,18 @@ const fmtEur = (n: number) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n || 0);
 
 const fmtDate = (d?: string | null) => {
-  if (!d) return '—';
+  if (!d) return '-';
   try { return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }); }
   catch { return d; }
 };
 
 // ── Rendu polymorphe des réponses de l'API ──────────────────────────────────
-function ResultCard({ result, onNavigate }: { result: CopilotResult; onNavigate?: () => void }) {
+function ResultCard({ result, onNavigate, onSendReminder, sendingReminderId }: {
+  result: CopilotResult;
+  onNavigate?: () => void;
+  onSendReminder?: (invoiceId: string) => void;
+  sendingReminderId?: string | null;
+}) {
   switch (result.type) {
     case 'outstanding_invoices': {
       const overdueOnly = (result.invoices || []).filter((i: any) => i.status === 'overdue').length;
@@ -129,14 +137,36 @@ function ResultCard({ result, onNavigate }: { result: CopilotResult; onNavigate?
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">{result.message}</p>
           {(result.drafts || []).map((d: any, i: number) => (
-            <div key={i} className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <div key={i} className={cn('rounded-xl border p-3', d.missingEmail ? 'border-amber-500/50 bg-amber-500/10' : 'border-amber-500/30 bg-amber-500/5')}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-foreground">{d.clientName} · {fmtEur(d.amount)}</p>
                 {d.daysOverdue > 0 && <span className="text-[11px] font-bold text-amber-600">+{d.daysOverdue}j</span>}
               </div>
               <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{d.subject}</p>
               <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{d.body}</p>
-              <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-400">⚠️ Brouillon — à vérifier & valider avant envoi.</p>
+              {d.missingEmail ? (
+                <p className="mt-2 text-[10px] font-semibold text-amber-700 dark:text-amber-400">⚠️ Aucun email pour ce client — cliquez pour l&apos;enregistrer comme à relancer, puis ajoutez son email.</p>
+              ) : (
+                <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-400">⚠️ Vérifiez le brouillon avant l&apos;envoi.</p>
+              )}
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSendReminder?.(d.invoiceId)}
+                  disabled={sendingReminderId === d.invoiceId}
+                  className="inline-flex items-center gap-1.5 rounded-control bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {sendingReminderId === d.invoiceId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  {d.missingEmail ? 'Marquer à relancer' : 'Envoyer la relance'}
+                </button>
+                <Link
+                  href={`/invoices/${d.invoiceId}`}
+                  onClick={onNavigate}
+                  className="inline-flex items-center gap-1 rounded-control border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+                >
+                  Voir la facture
+                </Link>
+              </div>
             </div>
           ))}
         </div>
@@ -165,16 +195,131 @@ function ResultCard({ result, onNavigate }: { result: CopilotResult; onNavigate?
 
 export default function CopilotFAB() {
   const { canUseCopilot } = useSubscription();
+  const { invoices } = useDataStore();
+  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
+  // Ref miroir des invoices pour éviter une closure périmée dans handleSendReminder (deps []).
+  const invoicesRef = useRef(invoices);
+  invoicesRef.current = invoices;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [nudges, setNudges] = useState<Array<{ id: string; kind: string; severity: string; title: string; description: string; cta: string }>>([]);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const msgId = useRef(0);
+
+  // ── CIBLE 1 : Drag-and-drop Pointer Events (souris PC + doigt mobile) + persistance ──
+  // La position est sauvegardée (localStorage instantané + Supabase copilot_preferences
+  // cross-device, debounced). Le bouton ne chevauche jamais la navbar (zones sûres).
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null);
+  const dragMovedRef = useRef(false);
+  const fabSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Cache local d'abord (instantané), sinon charge la position serveur (cross-device).
+    try {
+      const saved = localStorage.getItem('copilot-fab-pos');
+      if (saved) { setFabPos(JSON.parse(saved)); return; }
+    } catch {}
+    (async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from('copilot_preferences').select('fab_position').eq('user_id', user.id).maybeSingle();
+        if (data?.fab_position) {
+          setFabPos(data.fab_position);
+          try { localStorage.setItem('copilot-fab-pos', JSON.stringify(data.fab_position)); } catch {}
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const persistFabPos = useCallback((p: { x: number; y: number }) => {
+    try { localStorage.setItem('copilot-fab-pos', JSON.stringify(p)); } catch {}
+    if (fabSaveTimer.current) clearTimeout(fabSaveTimer.current);
+    fabSaveTimer.current = setTimeout(async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        await supabase.from('copilot_preferences').upsert({ user_id: user.id, fab_position: p }, { onConflict: 'user_id' });
+      } catch {}
+    }, 1000);
+  }, []);
+
+  const onFabPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dragStateRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left, origY: rect.top, moved: false };
+    dragMovedRef.current = false;
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+  };
+  const onFabPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const ds = dragStateRef.current;
+    if (!ds) return;
+    const dx = e.clientX - ds.startX;
+    const dy = e.clientY - ds.startY;
+    if (!ds.moved && Math.abs(dx) <= 5 && Math.abs(dy) <= 5) return; // seuil drag vs clic
+    ds.moved = true;
+    dragMovedRef.current = true;
+    const btnW = 56, btnH = 56, margin = 8, topMin = 80; // topMin évite la navbar haute
+    const tabH = window.innerWidth < 1024 ? 64 : 0; // ASTRÉE — réserve la BottomTabBar sur mobile
+    const maxX = window.innerWidth - btnW - margin;
+    const maxY = window.innerHeight - btnH - margin - tabH; // évite la BottomTabBar
+    setFabPos({ x: Math.max(margin, Math.min(maxX, ds.origX + dx)), y: Math.max(topMin, Math.min(maxY, ds.origY + dy)) });
+  };
+  const onFabPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const ds = dragStateRef.current;
+    dragStateRef.current = null;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    if (ds?.moved && fabPos) persistFabPos(fabPos);
+  };
+  const onFabClick = () => {
+    if (dragMovedRef.current) { dragMovedRef.current = false; return; } // suppression du clic après drag
+    setOpen(true);
+  };
+
+  // ── CIBLE 1 : Mémoire de session (survit au refresh, cross-device) ──
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!open || sessionLoadedRef.current) return;
+    sessionLoadedRef.current = true;
+    (async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        let sid = localStorage.getItem('copilot-session-id');
+        if (!sid) {
+          const { data: last } = await supabase.from('copilot_conversations')
+            .select('session_id').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+          sid = last?.session_id || null;
+        }
+        if (!sid) return;
+        sessionIdRef.current = sid;
+        const { data: msgs } = await supabase.from('copilot_conversations')
+          .select('role, content').eq('user_id', user.id).eq('session_id', sid)
+          .order('created_at', { ascending: true }).limit(12);
+        if (msgs && msgs.length) {
+          setMessages(msgs
+            .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+            .map((m: any) => ({ id: ++msgId.current, role: m.role as 'user' | 'assistant', text: String(m.content) })));
+        }
+      } catch {}
+      // CIBLE 1d — Copilot proactif : récupère les nudges (impayés, récurrentes).
+      try {
+        const r = await fetch('/api/copilot/proactive');
+        if (r.ok) { const d = await r.json(); setNudges(d.nudges || []); }
+      } catch {}
+    })();
+  }, [open]);
 
   const sendCommand = useCallback(async (text: string) => {
     const trimmed = text.trim();
@@ -195,9 +340,13 @@ export default function CopilotFAB() {
       const res = await fetch('/api/copilot/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed, history }),
+        body: JSON.stringify({ text: trimmed, history, sessionId: sessionIdRef.current }),
       });
       const data = await res.json();
+      if (data?.sessionId) {
+        sessionIdRef.current = data.sessionId;
+        try { localStorage.setItem('copilot-session-id', data.sessionId); } catch {}
+      }
       if (!res.ok) {
         const errMsg = data?.code === 'PLAN_REQUIRED'
           ? 'Votre plan ne donne pas accès au Copilot Factu.'
@@ -219,6 +368,41 @@ export default function CopilotFAB() {
       setLoading(false);
     }
   }, [loading, messages]);
+
+  // ATHÉNA — envoie VRAIMENT la relance depuis le brouillon du Copilot. Avant, le
+  // brouillon était un dead-end (aucun bouton). Route /api/reminders/send avec
+  // confirmed:true (l'humain dispose). Gère le cas pendingEmail (client sans email).
+  const handleSendReminder = useCallback(async (invoiceId: string) => {
+    // ASTRÉE (CIBLE 1) — si le client n'a pas d'email, on le demande avant l'envoi.
+    const inv: any = invoicesRef.current.find((i: any) => i.id === invoiceId);
+    if (inv?.client?.id && !inv.client?.email) {
+      const email = await promptForEmail(inv.client);
+      if (!email) { toast.info('Relance annulée.'); return; }
+    }
+    setSendingReminderId(invoiceId);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { toast.error('Session expirée. Reconnectez-vous.'); return; }
+      const res = await fetch('/api/reminders/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ invoiceId, reminderLevel: 1, confirmed: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data?.error || "Échec de l'envoi de la relance."); return; }
+      if (data.pendingEmail) {
+        toast.warning('Relance enregistrée — email du client manquant. Ajoutez-le puis relancez.');
+      } else {
+        toast.success(`Relance envoyée${data.emailTo ? ` à ${data.emailTo}` : ''}.`);
+      }
+    } catch {
+      toast.error("Erreur lors de l'envoi de la relance.");
+    } finally {
+      setSendingReminderId(null);
+    }
+  }, [promptForEmail]);
 
   // Ref pour éviter une closure périmée dans le handler vocal (déclaré après sendCommand)
   const sendCommandRef = useRef(sendCommand);
@@ -299,13 +483,21 @@ export default function CopilotFAB() {
     <>
       {/* ── Bouton flottant ── */}
       <motion.button
-        onClick={() => setOpen(true)}
+        onClick={onFabClick}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
-        aria-label="Ouvrir le Copilot Factu"
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 ring-1 ring-white/20"
+        aria-label="Ouvrir le Copilot Factu (glisser pour déplacer)"
+        title="Glisser pour déplacer"
+        style={fabPos ? { left: fabPos.x, top: fabPos.y, right: 'auto', bottom: 'auto' } : undefined}
+        className={cn(
+          'fixed z-40 flex h-14 w-14 touch-none items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/30 ring-1 ring-white/20',
+          !fabPos && 'bottom-24 right-4 lg:bottom-6 lg:right-6',
+        )}
       >
         <Sparkles size={24} className="drop-shadow" />
         <span className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 opacity-60 blur-md" />
@@ -314,7 +506,14 @@ export default function CopilotFAB() {
           animate={{ scale: [1, 1.35], opacity: [0.6, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
         />
+        {nudges.length > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-background">
+            {nudges.length}
+          </span>
+        )}
       </motion.button>
+
+      {ensureEmailModal}
 
       {/* ── Modal ── */}
       <AnimatePresence>
@@ -363,6 +562,19 @@ export default function CopilotFAB() {
                         Posez une question ou parlez. Je peux interroger vos factures, votre CA, vos URSSAF, vos dépenses et préparer des relances.
                       </p>
                     </div>
+                    {nudges.slice(0, 1).map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => sendCommand(n.cta)}
+                        className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 text-left transition hover:bg-emerald-500/15"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                          ⚡ Suggestion proactive
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-foreground">{n.title}</p>
+                        <p className="text-xs text-muted-foreground">{n.description}</p>
+                      </button>
+                    ))}
                     <div className="space-y-2">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Suggestions</p>
                       {SUGGESTIONS.map((s) => (
@@ -391,7 +603,7 @@ export default function CopilotFAB() {
                           ? 'border border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-300'
                           : 'border border-border bg-muted/50 text-foreground',
                       )}>
-                        {m.role === 'assistant' && m.result ? <ResultCard result={m.result} onNavigate={() => setOpen(false)} /> : m.text}
+                        {m.role === 'assistant' && m.result ? <ResultCard result={m.result} onNavigate={() => setOpen(false)} onSendReminder={handleSendReminder} sendingReminderId={sendingReminderId} /> : m.text}
                       </div>
                     </div>
                   ))

@@ -262,6 +262,9 @@ export const useDataStore = create<DataState>((set, get) => ({
             p_linked_invoice_id: formData.linked_invoice_id || null,
             p_idempotency_id: finalIdempotencyId,
             p_client_type: formData.client_type || null,
+            // ATHÉNA (C1#3) — le RPC V2 accepte désormais p_payment_terms (migration
+            // 20260712000001). Avant ce repli le perdait → facture "toujours 30 jours".
+            p_payment_terms: typeof formData.payment_terms === 'string' ? formData.payment_terms : null,
           });
 
         if (rpcError || !invoiceId) {
@@ -276,6 +279,36 @@ export const useDataStore = create<DataState>((set, get) => ({
 
         if (error || !data) {
           throw new Error('Impossible de récupérer la facture créée');
+        }
+
+        // ATHÉNA (C1#3) — le fallback doit persister les champs que le RPC ne gère
+        // pas (champs client inline + discount_type), comme la route serveur
+        // (app/api/invoices/create/route.ts:263-291). Sans ça, le repli client
+        // produit une facture avec client_siret=NULL, payment_terms=NULL → le PDF
+        // replie sur "30 jours" et la e-facturation B2B est rejetée (SIRET absent).
+        {
+          const inlineFields: Record<string, string> = {};
+          if (formData.client_siret) inlineFields.client_siret = formData.client_siret;
+          if (formData.client_vat_number) inlineFields.client_vat_number = formData.client_vat_number;
+          if (formData.client_email) inlineFields.client_email = formData.client_email;
+          if (formData.client_phone) inlineFields.client_phone = formData.client_phone;
+          if (formData.client_address) inlineFields.client_address = formData.client_address;
+          if (formData.client_city) inlineFields.client_city = formData.client_city;
+          if (formData.client_postal_code) inlineFields.client_postal_code = formData.client_postal_code;
+          inlineFields.payment_terms = typeof formData.payment_terms === 'string' ? formData.payment_terms : '';
+          inlineFields.discount_type = discountType === 'amount' ? 'amount' : 'percent';
+          try {
+            const { error: inlineError } = await getSupabaseClient().from('invoices')
+              .update({ ...inlineFields, updated_at: new Date().toISOString() })
+              .eq('id', (data as any).id);
+            if (inlineError) {
+              console.error('[createInvoice] fallback inline fields persist failed:', inlineError.message);
+            } else {
+              Object.assign(data as any, inlineFields);
+            }
+          } catch (e: any) {
+            console.error('[createInvoice] fallback inline fields persist threw:', e?.message);
+          }
         }
 
         (async () => {

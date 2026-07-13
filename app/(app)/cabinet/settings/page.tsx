@@ -543,7 +543,7 @@ export default function CabinetSettingsPage() {
       {cabinet && (
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-            <Shield size={15} className="text-indigo-500" />
+            <Shield size={15} className="text-emerald-600 dark:text-emerald-400" />
             Équipe du cabinet
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -560,14 +560,14 @@ export default function CabinetSettingsPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="collaborateur@email.fr"
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 onKeyDown={(e) => e.key === 'Enter' && handleInviteMember()}
               />
             </div>
             <button
               onClick={handleInviteMember}
               disabled={!inviteEmail.trim() || invitingMember}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold text-sm shadow-md disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold text-sm shadow-md disabled:opacity-50 transition-all"
             >
               {invitingMember ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
               Inviter
@@ -590,8 +590,8 @@ export default function CabinetSettingsPage() {
               {members.map((m) => (
                 <div key={m.id} className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {(m.profile?.first_name || m.profile?.email || '?').charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -627,7 +627,7 @@ export default function CabinetSettingsPage() {
       {sub.isBusiness && (
         <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-            <Palette size={15} className="text-violet-500" />
+            <Palette size={15} className="text-emerald-600 dark:text-emerald-400" />
             Marque blanche
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -652,7 +652,7 @@ export default function CabinetSettingsPage() {
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className={cn(
                     'flex-1 px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all font-mono',
-                    'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
+                    'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
                   )}
                   maxLength={7}
                 />
@@ -670,7 +670,7 @@ export default function CabinetSettingsPage() {
                 placeholder="Remplace &quot;Factu.me&quot; dans l'interface"
                 className={cn(
                   'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
-                  'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
+                  'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
                 )}
               />
             </div>
@@ -687,7 +687,7 @@ export default function CabinetSettingsPage() {
               placeholder="https://example.com/logo.png"
               className={cn(
                 'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
-                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
+                'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
               )}
             />
             <p className="text-xs text-gray-400 mt-1.5">Logo affiché dans la barre de navigation du cabinet</p>
@@ -708,7 +708,7 @@ export default function CabinetSettingsPage() {
               onClick={() => setHideFactuBranding(!hideFactuBranding)}
               className={cn(
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0',
-                hideFactuBranding ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'
+                hideFactuBranding ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
               )}
             >
               <span className={cn(

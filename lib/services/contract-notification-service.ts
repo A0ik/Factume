@@ -1,4 +1,3 @@
-import { createAdminClient } from '@/lib/supabase-admin';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Resend } from 'resend';
 
@@ -69,6 +68,7 @@ export async function sendContractNotification(options: ContractNotificationOpti
   const link = `/contracts/${contractId}?type=${contractType}`;
 
   // 1. Insert notification in database
+  const { createAdminClient } = await import('@/lib/supabase-admin');
   const supabase = createAdminClient();
   try {
     await supabase.from('notifications').insert({
@@ -112,6 +112,7 @@ export async function sendContractExpirationEmail(
 ): Promise<void> {
   if (contracts.length === 0) return;
 
+  const { createAdminClient } = await import('@/lib/supabase-admin');
   const supabase = createAdminClient();
   const { data: profile } = await supabase.from('profiles').select('email, first_name, company_name').eq('id', userId).single();
   if (!profile?.email) return;

@@ -59,7 +59,7 @@ interface Client {
 
 const FREQUENCY_OPTIONS = [
   { value: 'weekly', label: 'Hebdomadaire', icon: Clock, color: 'from-blue-500 to-cyan-500', days: 7 },
-  { value: 'monthly', label: 'Mensuel', icon: Calendar, color: 'from-purple-500 to-pink-500', days: 30 },
+  { value: 'monthly', label: 'Mensuel', icon: Calendar, color: 'from-emerald-500 to-emerald-600', days: 30 },
   { value: 'quarterly', label: 'Trimestriel', icon: Calendar, color: 'from-orange-500 to-red-500', days: 90 },
   { value: 'yearly', label: 'Annuel', icon: Sparkles, color: 'from-emerald-500 to-teal-500', days: 365 },
 ];
@@ -575,14 +575,14 @@ export default function RecurringInvoicesPage() {
     <div className="space-y-6 p-4 min-h-screen">
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
             Factures récurrentes
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -606,7 +606,7 @@ export default function RecurringInvoicesPage() {
             });
             setShowCreateModal(true);
           }}
-          className="flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
         >
           <Plus size={16} />
           Nouvelle récurrente
@@ -632,7 +632,7 @@ export default function RecurringInvoicesPage() {
           icon={TrendingUp}
           label="Revenu mensuel estimé"
           value={formatCurrency(estimatedMonthlyRevenue)}
-          color="from-purple-500 to-pink-600"
+          color="from-emerald-500 to-emerald-600"
         />
       </div>
 
@@ -654,7 +654,7 @@ export default function RecurringInvoicesPage() {
               className={cn(
                 'px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
                 filterStatus === 'all'
-                  ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                   : 'bg-white/50 text-gray-600 hover:bg-white'
               )}
             >
@@ -710,7 +710,7 @@ export default function RecurringInvoicesPage() {
           {!search && filterStatus === 'all' && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-6 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all"
             >
               <Plus size={18} />
               Créer une récurrente
@@ -891,7 +891,7 @@ export default function RecurringInvoicesPage() {
                       className={cn(
                         'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all',
                         mode === 'voice'
-                          ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       )}
                     >
@@ -903,7 +903,7 @@ export default function RecurringInvoicesPage() {
                       className={cn(
                         'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all',
                         mode === 'manual'
-                          ? 'bg-gradient-to-r from-primary to-purple-600 text-white'
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       )}
                     >
@@ -950,7 +950,7 @@ export default function RecurringInvoicesPage() {
 
                 {/* Voice mode */}
                 {canUseVoice && !editingId && mode === 'voice' && (
-                  <div className="bg-gradient-to-br from-primary/10 to-purple-600/10 rounded-2xl p-6 border border-primary/20">
+                  <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 rounded-2xl p-6 border border-primary/20">
                     <div className="flex flex-col items-center gap-4">
                       <div className="relative">
                         {recording && (
@@ -968,7 +968,7 @@ export default function RecurringInvoicesPage() {
                           className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${
                             recording
                               ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                              : 'bg-gradient-to-br from-primary to-purple-600 hover:from-purple-600 hover:to-purple-700'
+                              : 'bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
                           }`}
                         >
                           {recording ? (
@@ -1019,7 +1019,7 @@ export default function RecurringInvoicesPage() {
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="w-full text-left bg-gradient-to-r from-primary/10 to-purple-600/10 dark:from-primary/20 dark:to-purple-600/20 rounded-xl p-4 border border-primary/20"
+                          className="w-full text-left bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 dark:from-emerald-500/20 dark:to-emerald-600/20 rounded-xl p-4 border border-primary/20"
                         >
                           <div className="flex items-center gap-3">
                             <Loader2 size={18} className="text-primary animate-spin" />
@@ -1061,7 +1061,7 @@ export default function RecurringInvoicesPage() {
                           className={cn(
                             'flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
                             form.frequency === freq.value
-                              ? 'border-primary bg-gradient-to-br from-primary/10 to-purple-600/10'
+                              ? 'border-primary bg-gradient-to-br from-emerald-500/10 to-emerald-600/10'
                               : 'border-gray-200 hover:border-gray-300 bg-white/50'
                           )}
                         >
@@ -1097,7 +1097,7 @@ export default function RecurringInvoicesPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                      <FileText size={14} className="text-purple-600" />
+                      <FileText size={14} className="text-emerald-600 dark:text-emerald-400" />
                       Articles
                     </label>
                     <button
@@ -1106,7 +1106,7 @@ export default function RecurringInvoicesPage() {
                         ...form,
                         items: [...form.items, { name: '', description: '', quantity: 1, unit_price: '', vat_rate: 20 }]
                       })}
-                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-semibold shadow hover:shadow-lg transition-all"
+                      className="flex items-center gap-1 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-semibold shadow hover:shadow-lg transition-all"
                     >
                       <Plus size={12} />
                       Ajouter
@@ -1125,7 +1125,7 @@ export default function RecurringInvoicesPage() {
                           {/* Article header */}
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                              <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                              <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
                                 {idx + 1}
                               </span>
                               Article {idx + 1}
@@ -1236,7 +1236,7 @@ export default function RecurringInvoicesPage() {
                           {/* Item total */}
                           <div className="pt-3 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
                             <span className="text-xs text-gray-500 dark:text-gray-400">Total ligne</span>
-                            <span className="text-sm font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                            <span className="text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
                               {formatCurrency(itemTotal)}
                             </span>
                           </div>
@@ -1249,7 +1249,7 @@ export default function RecurringInvoicesPage() {
                 {/* Email config - Enhanced Design */}
                 <div className="relative overflow-hidden rounded-2xl border-2 border-gray-100 dark:border-white/10 bg-white dark:bg-slate-800/50">
                   {/* Header */}
-                  <div className="relative p-5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+                  <div className="relative p-5 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700">
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMTAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-10" />
                     <div className="relative flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1267,7 +1267,7 @@ export default function RecurringInvoicesPage() {
                         className={cn(
                           'relative px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2',
                           form.email_enabled
-                            ? 'bg-white text-purple-600 shadow-lg'
+                            ? 'bg-white text-emerald-600 dark:text-emerald-400 shadow-lg'
                             : 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30'
                         )}
                       >
@@ -1301,15 +1301,15 @@ export default function RecurringInvoicesPage() {
                           placeholder="Votre facture récurrente"
                           value={form.email_subject}
                           onChange={(e) => setForm({ ...form, email_subject: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                         />
                       </div>
 
                       {/* Message with template variables - Simplified */}
                       <div>
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-2 flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center">
-                            <FileText size={12} className="text-purple-600" />
+                          <span className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <FileText size={12} className="text-emerald-600 dark:text-emerald-400" />
                           </span>
                           Message personnalisé
                         </label>
@@ -1318,15 +1318,15 @@ export default function RecurringInvoicesPage() {
                           value={form.email_message}
                           onChange={(e) => setForm({ ...form, email_message: e.target.value })}
                           rows={3}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 resize-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-white/10 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none transition-all"
                         />
                         {/* Quick insert buttons - Beautiful design */}
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           {[
-                            { var: '{{client_name}}', label: 'Client', icon: User, color: 'from-pink-500 to-rose-500', bgLight: 'bg-pink-50' },
+                            { var: '{{client_name}}', label: 'Client', icon: User, color: 'from-emerald-500 to-emerald-600', bgLight: 'bg-emerald-500/10' },
                             { var: '{{amount}}', label: 'Montant', icon: DollarSign, color: 'from-green-500 to-emerald-500', bgLight: 'bg-green-50' },
                             { var: '{{due_date}}', label: 'Échéance', icon: Calendar, color: 'from-blue-500 to-cyan-500', bgLight: 'bg-blue-50' },
-                            { var: '{{invoice_id}}', label: 'N° Facture', icon: FileText, color: 'from-purple-500 to-violet-500', bgLight: 'bg-purple-50' },
+                            { var: '{{invoice_id}}', label: 'N° Facture', icon: FileText, color: 'from-emerald-500 to-emerald-600', bgLight: 'bg-emerald-500/10' },
                           ].map((v) => {
                             const Icon = v.icon;
                             return (
@@ -1407,7 +1407,7 @@ export default function RecurringInvoicesPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-60"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold hover:shadow-lg transition-all disabled:opacity-60"
                 >
                   {saving ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1442,7 +1442,7 @@ export default function RecurringInvoicesPage() {
             >
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
                     <Mail size={22} className="text-white" />
                   </div>
                   <div>
@@ -1493,7 +1493,7 @@ export default function RecurringInvoicesPage() {
                       });
                       setShowCreateModal(true);
                     }}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white text-sm font-semibold hover:shadow-lg transition-all"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold hover:shadow-lg transition-all"
                   >
                     Modifier la configuration
                   </button>

@@ -46,12 +46,16 @@ export async function GET(req: NextRequest) {
     const dueDate = new Date(inv.due_date || todayIso);
     const daysLate = Math.max(0, Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
     const message = `Facture ${inv.number} en retard de ${daysLate} jour${daysLate > 1 ? 's' : ''}`;
+    // ATHÉNA (C3) — on n'utilise QUE les colonnes canoniques de notifications
+    // (title/message/type/read/link/created_at). Un insert avec `data: {...}` échouait
+    // silencieusement car la colonne n'existe pas → la notif « en retard » ne
+    // s'affichait JAMAIS (auto-relances qui semblent ne pas fonctionner).
     const { error: notifError } = await admin.from('notifications').insert({
       user_id: inv.user_id,
       type: 'overdue_invoice',
       title: 'Facture en retard',
       message,
-      data: { invoice_id: inv.id, invoice_number: inv.number, days_late: daysLate },
+      link: `/invoices/${inv.id}`,
       read: false,
       created_at: todayIso,
     });
@@ -70,6 +74,7 @@ export async function GET(req: NextRequest) {
 
   let autoSent = 0;
   let autoSkipped = 0;
+  let autoPendingEmail = 0;
 
   if (enabledUserIds.length > 0) {
     // Toutes les factures impayées (overdue) des utilisateurs ayant activé les relances.
@@ -130,11 +135,15 @@ export async function GET(req: NextRequest) {
           userAgent: 'factu-cron/1.0',
         });
 
-        if (result.ok) autoSent++;
+        // ATHÉNA (C3) — un client sans email n'est plus un échec silencieux : la
+        // relance est enregistrée (pending_email) + notifiée en in-app (idempotent
+        // côté lib). On compte ces cas à part pour le reporting du cron.
+        if (result.pendingEmail) autoPendingEmail++;
+        else if (result.ok) autoSent++;
         else autoSkipped++;
       }
     }
   }
 
-  return NextResponse.json({ markedOverdue, autoSent, autoSkipped, processed: markedOverdue + autoSent });
+  return NextResponse.json({ markedOverdue, autoSent, autoSkipped, autoPendingEmail, processed: markedOverdue + autoSent });
 }

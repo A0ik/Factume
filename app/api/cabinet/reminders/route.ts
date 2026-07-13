@@ -230,8 +230,10 @@ export async function POST(req: NextRequest) {
     // La relance notifie donc le CLIENT DU CABINET (le gérant) que sa facture est en retard,
     // avec la note du comptable. C'est le seul ciblage correct avec ce schéma ; aucun email
     // ne part vers une mauvaise personne. Non bloquant si l'envoi échoue (l'audit reste créé).
+    // ASTRÉE (CIBLE 1) — on expose pendingEmail pour que l'UI soit honnête (le « client »
+    // cabinet est un autre utilisateur Factu.me ; son email n'est pas à saisir par le comptable).
+    let clientEmail: string | null = null;
     try {
-      let clientEmail: string | null = null;
       let clientName = 'Client';
       if (invoice.client_id) {
         const { data: cabClient } = await admin
@@ -298,7 +300,7 @@ export async function POST(req: NextRequest) {
       // Non bloquant : l'enregistrement de relance (audit) est déjà créé.
     }
 
-    return NextResponse.json({ success: true, reminder }, { status: 201 });
+    return NextResponse.json({ success: true, reminder, pendingEmail: !clientEmail }, { status: 201 });
   } catch (err: any) {
     console.error('[reminders POST] Error:', err);
     return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });

@@ -86,8 +86,8 @@ function BankConnectContent() {
               )}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <Landmark size={18} className="text-indigo-600 dark:text-indigo-400" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <Landmark size={18} className="text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">{conn.bank_name || 'Banque'}</p>
@@ -119,8 +119,8 @@ function BankConnectContent() {
         </div>
       ) : (
         <div className="rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-gray-200/60 dark:border-gray-700/30 p-8 text-center">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/30 dark:to-indigo-800/10 flex items-center justify-center mx-auto mb-6">
-            <Landmark size={36} className="text-indigo-500" />
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/10 flex items-center justify-center mx-auto mb-6">
+            <Landmark size={36} className="text-emerald-600 dark:text-emerald-400" />
           </div>
           <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Connexion bancaire sécurisée</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
@@ -134,7 +134,7 @@ function BankConnectContent() {
               'px-8 py-3 rounded-2xl font-bold text-sm text-white transition-all',
               loading
                 ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
-                : 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:shadow-lg hover:shadow-indigo-500/20'
+                : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20'
             )}
           >
             {loading ? (

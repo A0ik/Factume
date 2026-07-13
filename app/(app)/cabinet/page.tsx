@@ -118,7 +118,7 @@ export default function CabinetPage() {
   const sub = useSubscription();
   const { data, loading, error, refresh } = useCabinetData<CabinetData>(
     initialized && profile ? '/api/cabinet/dashboard' : null,
-    { pauseUntilCabinetReady: false },
+    { pauseUntilCabinetReady: false, wholeObject: true },
   );
   const [creating, setCreating] = useState(false);
   const [cabinetName, setCabinetName] = useState('');
@@ -159,7 +159,7 @@ export default function CabinetPage() {
     downloadCSV(
       `cabinet-clients-${new Date().toISOString().slice(0, 10)}.csv`,
       ['Client', 'Email', 'Santé', 'CA', 'Dépenses', 'Factures en retard'],
-      data.clientStats.map((c) => [
+      (data?.clientStats || []).map((c) => [
         c.name,
         c.email || '',
         c.health === 'good' ? 'Bon' : c.health === 'critical' ? 'Critique' : 'Attention',
@@ -604,12 +604,12 @@ export default function CabinetPage() {
 
       {/* ─── Portefeuille clients ─── */}
       <SectionCard
-        title={`Portefeuille clients (${safeData.clientStats.length})`}
+        title={`Portefeuille clients (${safeData.clientStats?.length ?? 0})`}
         icon={Users}
         accent={primaryColor}
         noPadding
       >
-        {safeData.clientStats.length === 0 ? (
+        {(safeData.clientStats?.length ?? 0) === 0 ? (
           <EmptyState
             icon={Users}
             title="Aucun client connecté"
@@ -646,7 +646,7 @@ export default function CabinetPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {safeData.clientStats.map((client) => (
+                {(safeData.clientStats || []).map((client) => (
                   <tr key={client.id} className="group">
                     <td className="px-5 py-3">
                       <Link

@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { applyIpRateLimit } from '@/lib/rate-limit';
+import { embed, embedForInsert, parseVector, cosineSim } from '@/lib/embeddings';
 
 // ---------------------------------------------------------------------------
-// POST /api/copilot/command  —  Copilot Factu (plan Business).
-// PROMÉTHÉE (CIBLE 2) — refonte intelligence :
-//   1. Mémoire conversationnelle (historique des derniers échanges envoyé au LLM).
-//   2. RAG contextuel : liste clients + factures récentes + CA du mois injectés
-//      dans le prompt → l'IA résout « relance nathan » → « Nathan » elle-même.
-//   3. Matching fuzzy accent/casse-insensible (normalisation NFD).
-//   4. Intents étendus : treasury_info, client_info (réponses en langage naturel).
-//   5. Prompt expert ; l'IA répond à TOUT, ne redirige QUE pour create_invoice.
+// POST /api/copilot/command — Copilot Factu (plan Business).
+// ATHÉNA (CIBLE 2) — REBUILD AGENTIC RAG (doctrine 2026 « function calling +
+// RAG sont complémentaires »). L'IA ne devine PLUS rien : elle appelle des OUTILS
+// qui interrogent la base réelle, puis rédige sa réponse APRÈS les résultats.
+//
+// Pourquoi l'ancienne version était « désastreuse » (cause racine prouvée) :
+//   A. l'answer en langage naturel était générée AVANT toute lecture DB, à partir
+//      d'un RAG plafonné à 30 clients → affichée comme réponse principale, elle
+//      contredisait le résultat DB correct (qui n'était qu'une carte secondaire).
+//   B. tout client au-delà du 30e (ordre alpha) était INVISIBLE de l'IA.
+//   C. chaque requête RAG avalait ses erreurs (|| []) → cécité aléatoire.
+//   D. JSON monolithique one-shot, sans function calling ni boucle de validation.
+//
+// Le fix : un outil lookup_client (fuzzy NFD, SANS plafond) + outils d'action.
+// « relance nathan » → l'IA appelle draft_reminder({client_query:"nathan"}) →
+// l'outil résout « Nathan » en base → l'answer est ancrée sur les vraies données.
 // ---------------------------------------------------------------------------
 
 interface HistMsg {
@@ -20,14 +29,9 @@ interface HistMsg {
   content: string;
 }
 
-interface CommandIntent {
-  intent: 'show_outstanding' | 'show_urssaf' | 'send_reminder' | 'show_revenue'
-    | 'create_invoice' | 'show_expenses' | 'treasury_info' | 'client_info' | 'unknown';
-  client_name: string | null;
-  period: string | null;
-  raw_amount: number | null;
-  answer: string;
-  confidence: number;
+interface ToolCtx {
+  userId: string;
+  supabase: any;
 }
 
 /** Normalisation accent + casse + ponctuation (matching fuzzy robuste). */
@@ -36,76 +40,610 @@ const normalize = (s?: string | null): string =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // retire les diacritiques (NFD)
-    .replace(/[^a-z0-9\s]/g, ' ')   // retire la ponctuation
+    .replace(/[^a-z0-9\s]/g, ' ')    // retire la ponctuation
     .replace(/\s+/g, ' ')
     .trim();
 
 /** Vrai match fuzzy : égalité, inclusion dans un sens ou dans l'autre. */
 const fuzzyMatch = (candidate: string | null | undefined, query: string): boolean => {
-  if (!query) return true;
+  if (!query) return true; // requête vide = pas de filtre (on veut TOUT)
   const n = normalize(candidate);
   if (!n) return false;
   return n === query || n.includes(query) || query.includes(n);
 };
 
-function buildSystemPrompt(rag: string): string {
-  return `Tu es Copilot Factu.me, l'assistant IA expert d'un indépendant ou expert-comptable français.
-Tu es précis, concret et concis. Tu réponds TOUJOURS en français.
+const fmtEur = (n: number) => (Number(n) || 0).toFixed(2);
 
-${rag}
+// CIBLE 1 — Recall mémoire long-terme (préférences/habitudes/faits).
+// Récupère les souvenirs de l'utilisateur, privilégie ceux qui matchent la requête
+// (mots-clés), sinon les plus récents. Sert à personnaliser la réponse.
+// (pgvector index existe pour scale futur ; ici recall léger sur batch récent.)
+async function loadMemoryContext(supabase: any, userId: string, query: string): Promise<string> {
+  try {
+    const { data: memories } = await supabase
+      .from('copilot_memory')
+      .select('kind, content, embedding')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(30);
+    if (!memories || !memories.length) return '';
 
-Tu PEUX répondre à TOUTES les questions : chiffre d'affaires, impayés, un client précis, échéances, trésorerie, dépenses, cotisations URSSAF… Utilise le CONTEXTE ci-dessus. Résous les noms de façon insensible à la casse ET aux accents (ex. « relance nathan » → le client « Nathan » s'il existe dans la liste). Tu ne inventes JAMAIS un montant, un nom ou une date qui ne figurent pas dans le contexte.
-
-RÈGLES :
-1. Si l'utilisateur demande de CRÉER une facture complète, choisis intent="create_invoice" et réponds answer="Je vous redirige vers la création de facture."
-2. Pour une RELANCE, choisis intent="send_reminder" (le système génère un brouillon — jamais d'envoi automatique).
-3. Sinon, choisis l'intent le plus pertinent et rédige "answer" : une phrase naturelle courte qui répond directement à la question, en langage clair.
-
-Intents possibles : show_outstanding | show_revenue | show_urssaf | show_expenses | send_reminder | create_invoice | treasury_info | client_info | unknown
-
-Retourne UNIQUEMENT ce JSON :
-{ "intent": "...", "client_name": null, "period": "month|quarter|year|null", "raw_amount": null, "answer": "phrase courte en français", "confidence": 0.0-1.0 }`;
+    let picked: any[];
+    const qEmb = await embed(query); // null si pas de clé OpenAI → fallback mot-clé
+    if (qEmb) {
+      // RAG sémantique : similarité cosinus vs l'embedding de la requête.
+      picked = memories
+        .map((m: any) => ({ m, sim: m.embedding ? cosineSim(qEmb, parseVector(m.embedding) || []) : -1 }))
+        .sort((a: any, b: any) => b.sim - a.sim)
+        .filter((s: any) => s.sim > 0.3)
+        .slice(0, 8)
+        .map((s: any) => s.m);
+      if (!picked.length) picked = memories.slice(0, 5); // rien de pertinent → récents
+    } else {
+      // Fallback (pas d'embeddings dispo) : mot-clé, sinon récents.
+      const keywords = normalize(query).split(' ').filter(w => w.length > 3);
+      const hits = memories.filter((m: any) => keywords.some(k => normalize(m.content).includes(k)));
+      picked = (hits.length ? hits : memories).slice(0, 8);
+    }
+    if (!picked.length) return '';
+    const lines = picked.map((m: any) => `- (${m.kind}) ${m.content}`);
+    return `\n\nMÉMOIRE À LONG TERME DE L'UTILISATEUR (préférences, habitudes, faits déjà établis — personnalise ta réponse avec, sans redemander) :\n${lines.join('\n')}`;
+  } catch {
+    return '';
+  }
 }
 
-/** Construit le contexte RAG (clients + factures récentes + CA du mois). */
-async function buildRagContext(userId: string, supabase: any): Promise<string> {
-  const { data: clients } = await supabase
+// CIBLE 1 — Charge les derniers échanges d'une session (mémoire court-terme cross-device).
+async function loadRecentConversation(supabase: any, userId: string, sessionId: string): Promise<HistMsg[]> {
+  try {
+    const { data } = await supabase
+      .from('copilot_conversations')
+      .select('role, content')
+      .eq('user_id', userId)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .limit(12);
+    if (!data || !data.length) return [];
+    return data
+      .filter((m: any) => (m.role === 'user' || m.role === 'assistant') && m.content)
+      .slice(-6)
+      .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 500) }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── OUTILS (exécutés contre la base, résultats = source de vérité) ───────────
+// Chaque exécuteur renvoie { toolResult (pour le LLM), card (pour l'UI ResultCard) }.
+
+async function toolLookupClient(args: { query?: string }, ctx: ToolCtx) {
+  const want = normalize(args?.query);
+  // PAS de plafond : on charge tous les clients du user, on filtre en fuzzy.
+  const { data, error } = await ctx.supabase
     .from('clients')
-    .select('id, name')
-    .eq('user_id', userId)
-    .order('name')
-    .limit(50);
+    .select('id, name, email')
+    .eq('user_id', ctx.userId);
+  if (error) return { toolResult: { error: 'lookup_failed', message: error.message }, card: null };
+  const matches = (data || []).filter((c: any) => fuzzyMatch(c.name, want)).slice(0, 10);
+  return {
+    toolResult: {
+      query: args?.query || '',
+      count: matches.length,
+      clients: matches.map((c: any) => ({ id: c.id, name: c.name, has_email: !!c.email })),
+    },
+    card: null, // lookup pur : pas de carte, l'IA répond en langage naturel
+  };
+}
 
-  const { data: recent } = await supabase
+async function toolListOutstanding(args: { client_query?: string }, ctx: ToolCtx) {
+  const { data, error } = await ctx.supabase
     .from('invoices')
-    .select('number, total, status, client:clients(name)')
-    .eq('user_id', userId)
-    .order('issue_date', { ascending: false })
-    .limit(8);
+    .select('number, total, due_date, status, client_name_override, client:clients(name)')
+    .eq('user_id', ctx.userId)
+    .eq('document_type', 'invoice') // ATHÉNA : un DEVIS n'est pas une créance à recouvrer
+    .in('status', ['sent', 'overdue'])
+    .order('due_date', { ascending: true })
+    .limit(50);
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+  const want = normalize(args?.client_query);
+  const filtered = (data || [])
+    .filter((inv: any) => fuzzyMatch(inv.client?.name || inv.client_name_override, want))
+    .slice(0, 10);
+  const total = filtered.reduce((s: number, inv: any) => s + (inv.total || 0), 0);
+  return {
+    toolResult: {
+      count: filtered.length,
+      total,
+      invoices: filtered.map((inv: any) => ({
+        number: inv.number,
+        total: inv.total,
+        due_date: inv.due_date,
+        status: inv.status,
+        client: inv.client?.name || inv.client_name_override || null,
+      })),
+    },
+    card: {
+      type: 'outstanding_invoices',
+      invoices: filtered.map((inv: any) => ({
+        number: inv.number,
+        total: inv.total,
+        due_date: inv.due_date,
+        status: inv.status,
+        client_name: inv.client?.name || inv.client_name_override || null,
+      })),
+      total,
+      count: filtered.length,
+    },
+  };
+}
 
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-  const { data: paid } = await supabase
+async function toolGetRevenue(args: { period?: string }, ctx: ToolCtx) {
+  const now = new Date();
+  const period = (args?.period === 'year' || args?.period === 'quarter') ? args.period : 'month';
+  let startDate: string;
+  if (period === 'year') startDate = new Date(now.getFullYear(), 0, 1).toISOString();
+  else if (period === 'quarter') {
+    const qStart = Math.floor(now.getMonth() / 3) * 3;
+    startDate = new Date(now.getFullYear(), qStart, 1).toISOString();
+  } else startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const { data, error } = await ctx.supabase
     .from('invoices')
     .select('total')
-    .eq('user_id', userId)
+    .eq('user_id', ctx.userId)
+    .eq('document_type', 'invoice')
     .eq('status', 'paid')
-    .gte('paid_at', monthStart);
-  const monthRevenue = (paid || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+    .gte('paid_at', startDate);
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+  const total = (data || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
+  return {
+    toolResult: { period, total, invoiceCount: data?.length || 0 },
+    card: { type: 'revenue', total, invoiceCount: data?.length || 0, period },
+  };
+}
 
-  const clientList = (clients || []).map((c: any) => c.name).filter(Boolean).slice(0, 30).join(', ') || 'aucun client';
-  const invList = (recent || [])
-    .map((i: any) => `#${i.number} ${i.client?.name || ''} ${i.status} ${(i.total || 0).toFixed(0)}€`)
-    .join(' | ') || 'aucune facture';
+async function toolComputeUrssaf(_args: any, ctx: ToolCtx) {
+  const { calculateURSSAF, getCurrentQuarter, mapFiscalRegime, REGIME_SHORT_LABELS } = await import('@/lib/urssaf-calculator');
+  const { data: profile, error } = await ctx.supabase
+    .from('profiles')
+    .select('regime_fiscal, legal_status')
+    .eq('id', ctx.userId)
+    .single();
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+  const regime = mapFiscalRegime(profile?.regime_fiscal, profile?.legal_status);
+  if (!regime) {
+    const card = { type: 'urssaf', message: 'Régime fiscal non configuré. Configurez-le dans les paramètres.' };
+    return { toolResult: { configured: false, message: card.message }, card };
+  }
+  const { quarter, year } = getCurrentQuarter();
+  const startIso = new Date(year, (quarter - 1) * 3, 1).toISOString();
+  const { data: paid } = await ctx.supabase
+    .from('invoices')
+    .select('total')
+    .eq('user_id', ctx.userId)
+    .eq('status', 'paid')
+    .gte('paid_at', startIso);
+  const revenue = (paid || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
+  const calc = calculateURSSAF(revenue, regime);
+  const card = {
+    type: 'urssaf',
+    regime: REGIME_SHORT_LABELS[regime],
+    quarterRevenue: revenue,
+    urssafDue: calc.urssafAmount,
+    quarter: `T${quarter} ${year}`,
+  };
+  return { toolResult: { ...card, configured: true }, card };
+}
 
-  return `CONTEXTE UTILISATEUR (temps réel) :
-- Clients connus : ${clientList}
-- Factures récentes : ${invList}
-- CA payé ce mois-ci : ${monthRevenue.toFixed(2)} €`;
+async function toolListExpenses(args: { limit?: number }, ctx: ToolCtx) {
+  const limit = Math.min(Math.max(Number(args?.limit) || 10, 1), 20);
+  const { data, error } = await ctx.supabase
+    .from('expenses')
+    .select('vendor, amount, category, date')
+    .eq('user_id', ctx.userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+  const total = (data || []).reduce((s: number, exp: any) => s + (exp.amount || 0), 0);
+  return {
+    toolResult: { count: data?.length || 0, total, expenses: data || [] },
+    card: { type: 'expenses', expenses: data || [], total, count: data?.length || 0 },
+  };
+}
+
+async function toolGetTreasury(_args: any, ctx: ToolCtx) {
+  const { data: paid } = await ctx.supabase.from('invoices').select('total').eq('user_id', ctx.userId).eq('status', 'paid');
+  const { data: exp } = await ctx.supabase.from('expenses').select('amount').eq('user_id', ctx.userId);
+  const { data: out } = await ctx.supabase.from('invoices').select('total').eq('user_id', ctx.userId).in('status', ['sent', 'overdue']);
+  const income = (paid || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+  const spend = (exp || []).reduce((s: number, e: any) => s + (e.amount || 0), 0);
+  const balance = income - spend;
+  const outstanding = (out || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+  const message = `Solde estimé : ${balance.toFixed(2)} € (encaissé ${income.toFixed(0)} € − dépensé ${spend.toFixed(0)} €). En attente d'encaissement : ${outstanding.toFixed(2)} €.`;
+  return { toolResult: { balance, income, spend, outstanding }, card: { type: 'text', message } };
+}
+
+async function toolGetClientInfo(args: { client_query?: string }, ctx: ToolCtx) {
+  const want = normalize(args?.client_query);
+  if (!want) {
+    const card = { type: 'text', message: 'Quel client souhaitez-vous consulter ?' };
+    return { toolResult: { error: 'missing_client' }, card };
+  }
+  const { data: clients, error } = await ctx.supabase.from('clients').select('id, name, email').eq('user_id', ctx.userId);
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+  const match = (clients || []).find((c: any) => fuzzyMatch(c.name, want));
+  if (!match) {
+    const card = { type: 'text', message: `Aucun client trouvé pour « ${args?.client_query} ».` };
+    return { toolResult: { found: false, query: args?.client_query }, card };
+  }
+  const { data: invs } = await ctx.supabase.from('invoices').select('total, status').eq('client_id', match.id);
+  const total = (invs || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
+  const unpaid = (invs || []).filter((i: any) => ['sent', 'overdue'].includes(i.status)).reduce((s: number, i: any) => s + (i.total || 0), 0);
+  const emailBit = match.email ? ` (${match.email})` : '';
+  const card = { type: 'text', message: `${match.name}${emailBit} — CA total : ${total.toFixed(2)} €, dont ${unpaid.toFixed(2)} € non réglé.` };
+  return { toolResult: { found: true, client: match.name, total, unpaid, has_email: !!match.email }, card };
+}
+
+async function toolDraftReminder(args: { client_query?: string }, ctx: ToolCtx) {
+  // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE — brouillon, jamais d'envoi auto.
+  // ATHÉNA (C3) — conscience du client sans email : on lève un drapeau missingEmail
+  // + un warning guidant l'utilisateur, au lieu d'ignorer silencieusement.
+  const { data: overdueInvoices, error } = await ctx.supabase
+    .from('invoices')
+    .select('id, number, total, due_date, issue_date, status, client_name_override, client_email, client:clients(id, name, email)')
+    .eq('user_id', ctx.userId)
+    .eq('document_type', 'invoice') // ATHÉNA : ne pas relancer un DEVIS (ex: DEVIS-2026-032)
+    .in('status', ['sent', 'overdue'])
+    .order('due_date', { ascending: true })
+    .limit(50);
+  if (error) return { toolResult: { error: 'query_failed', message: error.message }, card: null };
+
+  const want = normalize(args?.client_query);
+  const overdueFiltered = (overdueInvoices || [])
+    .filter((inv: any) => fuzzyMatch(inv.client?.name || inv.client_name_override, want))
+    .slice(0, 5);
+
+  if (!overdueFiltered || overdueFiltered.length === 0) {
+    const message = args?.client_query
+      ? `Aucune facture impayée trouvée pour « ${args.client_query} ».`
+      : 'Aucune facture impayée en ce moment.';
+    return { toolResult: { drafts: 0, message }, card: { type: 'reminder_draft', status: 'no_overdue', message } };
+  }
+
+  const { data: profile } = await ctx.supabase
+    .from('profiles')
+    .select('company_name')
+    .eq('id', ctx.userId)
+    .single();
+
+  const drafts = overdueFiltered.map((inv: any) => {
+    const dueDate = new Date(inv.due_date || inv.issue_date);
+    const today = new Date();
+    const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+    // ATHÉNA — résolution du nom/email robuste : un client libre (non lié) n'a pas de
+    // join client, mais la facture porte client_name_override + client_email en snapshot.
+    // Avant on affichait « Client » et aucun email pour ces factures.
+    const clientName = inv.client?.name || inv.client_name_override || 'Client';
+    const clientEmail = inv.client?.email || inv.client_email || null;
+    const missingEmail = !clientEmail;
+    const subject = `Rappel : Facture ${inv.number} - ${profile?.company_name || 'Mon entreprise'}`;
+    const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${fmtEur(inv.total)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
+    return {
+      invoiceId: inv.id,
+      invoiceNumber: inv.number,
+      clientName,
+      clientEmail,
+      missingEmail,
+      amount: inv.total || 0,
+      daysOverdue,
+      subject,
+      body,
+      needsApproval: true,
+      warning: missingEmail
+        ? '⚠️ Aucun email pour ce client : ajoutez-le sur la fiche client avant d\'envoyer la relance.'
+        : '⚠️ Vérifiez que cette facture n\'a pas déjà été payée avant d\'envoyer la relance.',
+    };
+  });
+
+  const card = {
+    type: 'reminder_draft',
+    status: 'drafts_ready',
+    drafts,
+    message: `${drafts.length} facture(s) impayée(s) trouvée(s). Vérifiez et approuvez chaque relance avant envoi.`,
+  };
+  return { toolResult: { drafts: drafts.length, missing_email_count: drafts.filter((d:any)=>d.missingEmail).length }, card };
+}
+
+async function toolRedirectToCreator(args: { amount?: number; client?: string }, _ctx: ToolCtx) {
+  const amount = typeof args?.amount === 'number' && isFinite(args.amount) ? args.amount : null;
+  const client = args?.client || null;
+  const params = new URLSearchParams();
+  if (amount !== null) params.set('amount', String(amount));
+  if (client) params.set('clientName', client);
+  const qs = params.toString();
+  const card = {
+    type: 'create_invoice',
+    amount,
+    client_name: client,
+    redirectUrl: `/documents/create${qs ? `?${qs}` : ''}`,
+    message: amount !== null
+      ? `Je vous redirige vers la création de facture${client ? ` pour ${client}` : ''} avec ${fmtEur(amount)} € pré-rempli.`
+      : 'Je vous redirige vers la création de facture.',
+  };
+  return { toolResult: { redirect: true, amount, client }, card };
+}
+
+// CIBLE 1 — Mémoire explicite (style ChatGPT memory). Le copilot décide de retenir
+// une préférence/habitude/fait pour personnaliser ses réponses futures.
+async function toolSaveMemory(args: { kind?: string; content?: string }, ctx: ToolCtx) {
+  const validKinds = ['preference', 'fact', 'alias', 'habit', 'summary'] as const;
+  const kind = validKinds.includes(args?.kind as any) ? (args.kind as string) : 'fact';
+  const content = (args?.content || '').trim().slice(0, 500);
+  if (!content) return { toolResult: { saved: false, reason: 'contenu vide' }, card: null };
+  try {
+    // Dédoublonnage : ignore si un souvenir équivalent existe déjà.
+    const { data: existing } = await ctx.supabase
+      .from('copilot_memory')
+      .select('id')
+      .eq('user_id', ctx.userId)
+      .ilike('content', content)
+      .limit(1);
+    if (existing && existing.length) return { toolResult: { saved: true, dedup: true }, card: null };
+    // CIBLE 1 — Embedding pgvector (RAG sémantique). Null si pas de clé OpenAI.
+    const embedding = await embedForInsert(content);
+    const payload: any = { user_id: ctx.userId, kind, content };
+    if (embedding) payload.embedding = embedding;
+    let { error } = await ctx.supabase.from('copilot_memory').insert(payload);
+    // Défense : si l'insert échoue sur le format vector, on retente SANS embedding
+    // (la mémoire est quand même conservée ; le recall retombera sur pg_trgm).
+    if (error && embedding) {
+      ({ error } = await ctx.supabase
+        .from('copilot_memory')
+        .insert({ user_id: ctx.userId, kind, content }));
+    }
+    if (error) return { toolResult: { saved: false, error: error.message }, card: null };
+    return { toolResult: { saved: true, kind, content }, card: null };
+  } catch (e: any) {
+    return { toolResult: { saved: false, error: e?.message || 'erreur' }, card: null };
+  }
+}
+
+const TOOL_EXECUTORS: Record<string, (args: any, ctx: ToolCtx) => Promise<{ toolResult: any; card: any }>> = {
+  lookup_client: toolLookupClient,
+  list_outstanding_invoices: toolListOutstanding,
+  get_revenue: toolGetRevenue,
+  compute_urssaf: toolComputeUrssaf,
+  list_expenses: toolListExpenses,
+  get_treasury: toolGetTreasury,
+  get_client_info: toolGetClientInfo,
+  draft_reminder: toolDraftReminder,
+  redirect_to_invoice_creator: toolRedirectToCreator,
+  save_memory: toolSaveMemory,
+};
+
+// ─── Schémas des outils (format OpenAI, compatible OpenRouter & Groq) ─────────
+
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'lookup_client',
+      description: "Recherche un client par nom (insensible à la casse et aux accents, correspondance partielle). À utiliser DÈS QUE l'utilisateur nomme un client pour ne JAMAIS deviner son identité. Ne retourne que des clients qui existent vraiment.",
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string', description: 'Nom ou fragment du nom du client (ex: "nathan", "Durand SARL").' } },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_outstanding_invoices',
+      description: "Liste les factures impayées (envoyées ou en retard) avec le total dû. Filtrable par client. Utiliser pour « combien me doit-on », « impayés de X ».",
+      parameters: {
+        type: 'object',
+        properties: { client_query: { type: 'string', description: 'Nom/fragment du client pour filtrer (optionnel).' } },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_revenue',
+      description: "Chiffre d'affaires encaissé (factures payées) sur une période.",
+      parameters: {
+        type: 'object',
+        properties: { period: { type: 'string', enum: ['month', 'quarter', 'year'], description: 'Période (défaut: mois).' } },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'compute_urssaf',
+      description: "Calcule les cotisations URSSAF du trimestre courant selon le régime fiscal configuré.",
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_expenses',
+      description: "Liste les dernières dépenses/notes de frais enregistrées.",
+      parameters: {
+        type: 'object',
+        properties: { limit: { type: 'number', description: 'Nombre de dépenses (défaut 10, max 20).' } },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_treasury',
+      description: "Synthèse de trésorerie : solde estimé (encaissé − dépensé) et montant en attente d'encaissement.",
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_client_info',
+      description: "Fiche résumée d'un client : CA total et part non réglée. Résout le nom de façon floue.",
+      parameters: {
+        type: 'object',
+        properties: { client_query: { type: 'string', description: 'Nom/fragment du client.' } },
+        required: ['client_query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'draft_reminder',
+      description: "Prépare un BROUILLON de relance pour les factures impayées (filtrable par client). N'ENVOIE JAMAIS automatiquement : l'utilisateur valide chaque envoi. Si le client n'a pas d'email, le signaler.",
+      parameters: {
+        type: 'object',
+        properties: { client_query: { type: 'string', description: 'Nom/fragment du client à relancer (optionnel ; sinon toutes les impayées).' } },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'redirect_to_invoice_creator',
+      description: "Ouvre le créateur de facture pré-rempli. À utiliser UNIQUEMENT quand l'utilisateur demande explicitement de CRÉER une facture complète (tâche complexe).",
+      parameters: {
+        type: 'object',
+        properties: {
+          amount: { type: 'number', description: 'Montant total à pré-remplir (optionnel).' },
+          client: { type: 'string', description: 'Nom du client à pré-remplir (optionnel).' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'save_memory',
+      description: "Mémorise un fait, une préférence ou une habitude de l'utilisateur pour personnaliser les réponses futures (ex: « Nathan est facturé 500€ tous les mois », « préfère des relances courtes et cordiales »). À utiliser quand l'utilisateur exprime une préférence claire ou un pattern récurrent. N'enregistre jamais de donnée sensible (mot de passe, IBAN, NSS).",
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ['preference', 'fact', 'alias', 'habit', 'summary'], description: 'Type de souvenir.' },
+          content: { type: 'string', description: 'Le fait/préférence formulé en une phrase courte.' },
+        },
+        required: ['kind', 'content'],
+      },
+    },
+  },
+];
+
+const SYSTEM_PROMPT = `Tu es Copilot Factu.me, l'assistant IA expert d'un indépendant ou expert-comptable français. Tu réponds TOUJOURS en français, de façon précise, concrète et concise.
+
+RÈGLES ABSOLUES :
+1. Tu ne connais les clients, montants, factures ou dates QUE via les outils. N'utilise JAMAIS une valeur qui ne provient pas d'un appel d'outil réussi.
+2. Dès que l'utilisateur nomme un client (ex. « nathan », « Durand »), appelle l'outil qui va bien (lookup_client, get_client_info, list_outstanding_invoices, draft_reminder) en passant le nom brut — la résolution insensible à la casse/accents se fait côté base. Ne suppose jamais qu'un client est introuvable sans avoir appelé l'outil.
+3. Tu peux enchaîner plusieurs outils si nécessaire (ex. lookup_client puis list_outstanding_invoices).
+4. Pour une RELANCE, appelle draft_reminder : le système ne fait que préparer un brouillon, l'utilisateur valide chaque envoi (l'IA propose, l'humain dispose). Si l'outil signale un email manquant, dis-le clairement à l'utilisateur.
+5. Pour CRÉER une facture complète, appelle redirect_to_invoice_creator (tu ne crées rien toi-même).
+6. Ta réponse finale est une phrase naturelle courte qui répond directement, ancrée sur les résultats des outils. Ne répète pas la liste brute si une carte structurée l'affiche déjà ; dis l'essentiel.
+7. MÉMOIRE : si l'utilisateur exprime une préférence claire ou un pattern récurrent (ex: « je facture Nathan 500€ par mois », « fais court », « rappelle-moi d'envoyer la DSN le 5 »), appelle save_memory pour le retenir. Exploite la MÉMOIRE À LONG TERME fournie dans le contexte pour personnaliser tes réponses sans redemander.
+
+Tu peux aussi répondre à des questions générales (conseils de facturation, délais légaux français) sans outil.`;
+
+// ─── Boucle de function calling (multi-providers) ─────────────────────────────
+
+interface Provider { name: string; client: OpenAI; model: string; }
+
+function buildProviders(): Provider[] {
+  const providers: Provider[] = [];
+  if (process.env.OPENROUTER_API_KEY) {
+    providers.push({
+      name: 'openrouter',
+      client: new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: process.env.OPENROUTER_API_KEY,
+        defaultHeaders: {
+          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://factu.me',
+          'X-Title': 'Factu.me Copilot',
+        },
+      }),
+      // Modèle fort en tool-use ; overridable via OPENROUTER_MODEL.
+      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+    });
+  }
+  if (process.env.GROQ_API_KEY) {
+    providers.push({
+      name: 'groq',
+      client: new OpenAI({
+        baseURL: 'https://api.groq.com/openai/v1',
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+      model: 'llama-3.3-70b-versatile',
+    });
+  }
+  return providers;
+}
+
+async function runAgentLoop(provider: Provider, messages: any[], ctx: ToolCtx): Promise<{ answer: string; card: any }> {
+  let lastCard: any = null;
+  const MAX_ITERS = 6;
+
+  for (let iter = 0; iter < MAX_ITERS; iter++) {
+    const completion = await provider.client.chat.completions.create({
+      model: provider.model,
+      messages,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      temperature: 0,
+    } as any);
+
+    const msg: any = completion.choices?.[0]?.message;
+    if (!msg) throw new Error('Réponse IA vide');
+
+    // Si l'IA appelle des outils, on les exécute et on renverra le contexte.
+    if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+      messages.push(msg); // contient tool_calls (attendu par l'API pour le tour suivant)
+      for (const call of msg.tool_calls) {
+        const fnName = call?.function?.name;
+        let args: any = {};
+        try { args = JSON.parse(call.function.arguments || '{}'); } catch { args = {}; }
+        const executor = TOOL_EXECUTORS[fnName];
+        let toolResult: any;
+        try {
+          if (!executor) {
+            toolResult = { error: 'unknown_tool', name: fnName };
+          } else {
+            const { toolResult: r, card } = await executor(args, ctx);
+            toolResult = r;
+            if (card) lastCard = card; // la dernière carte d'action gagne
+          }
+        } catch (e: any) {
+          toolResult = { error: 'tool_failed', message: e?.message || 'erreur' };
+        }
+        messages.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          name: fnName,
+          content: JSON.stringify(toolResult),
+        });
+      }
+      continue; // nouveau tour : l'IA exploite les résultats
+    }
+
+    // Pas d'appel d'outil : réponse finale.
+    const answer = (msg.content || '').trim();
+    return { answer, card: lastCard };
+  }
+
+  // Épuisement du budget d'itérations : on renvoie ce qu'on a.
+  return { answer: 'J\'ai besoin de plus de contexte pour répondre précisément. Pouvez-vous préciser votre demande ?', card: lastCard };
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // ARGOS (hardening) — anti-abus IA Copilot (Groq) : 30/min par IP.
+    // Anti-abus IA Copilot : 30/min par IP.
     const rl = applyIpRateLimit(req, 30, 60_000);
     if (rl) return rl as NextResponse;
 
@@ -125,18 +663,15 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const { text, history } = await req.json();
+    const { text, history, sessionId } = await req.json();
     if (!text) return NextResponse.json({ error: 'Texte manquant' }, { status: 400 });
 
-    if (!process.env.GROQ_API_KEY) {
+    const providers = buildProviders();
+    if (providers.length === 0) {
       return NextResponse.json({ error: 'Configuration IA manquante' }, { status: 500 });
     }
 
-    // RAG contextuel + prompt expert.
-    const rag = await buildRagContext(user.id, supabase);
-    const systemPrompt = buildSystemPrompt(rag);
-
-    // Mémoire conversationnelle : on réinjecte les N derniers échanges valides.
+    // Mémoire conversationnelle : N derniers échanges valides (envoyés par le client).
     const safeHistory: HistMsg[] = Array.isArray(history)
       ? history
           .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
@@ -144,275 +679,58 @@ export async function POST(req: NextRequest) {
           .map((m: any) => ({ role: m.role, content: m.content.slice(0, 500) }))
       : [];
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...safeHistory,
-        { role: 'user', content: text },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0,
-    });
+    // CIBLE 1 — Mémoire : recharge la session si pas d'historique client (cross-device,
+    // survit au refresh) + recall long-terme (préférences/habitudes) pour personnaliser.
+    let effectiveHistory = safeHistory;
+    if (effectiveHistory.length === 0 && sessionId) {
+      effectiveHistory = await loadRecentConversation(supabase, user.id, sessionId);
+    }
+    const memoryCtx = await loadMemoryContext(supabase, user.id, text);
 
-    let intent: CommandIntent;
-    try {
-      intent = JSON.parse(completion.choices[0].message.content || '{}');
-    } catch {
-      return NextResponse.json({ error: 'Erreur de parsing' }, { status: 500 });
+    const messages: any[] = [
+      { role: 'system', content: SYSTEM_PROMPT + memoryCtx },
+      ...effectiveHistory,
+      { role: 'user', content: text },
+    ];
+
+    const ctx: ToolCtx = { userId: user.id, supabase };
+
+    // On essaie les providers en ordre (OpenRouter fort d'abord, Groq en repli).
+    let lastError: any = null;
+    for (const provider of providers) {
+      try {
+        const { answer, card } = await runAgentLoop(provider, messages, ctx);
+        const result = card || { type: 'text', message: answer || 'Commande traitée.' };
+        const intentByCard = card?.type || 'text';
+        // CIBLE 1 — Persiste la conversation (court-terme, cross-device, survit au refresh).
+        const sid = sessionId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null);
+        if (sid) {
+          try {
+            await supabase.from('copilot_conversations').insert([
+              { user_id: user.id, session_id: sid, role: 'user', content: text },
+              { user_id: user.id, session_id: sid, role: 'assistant', content: answer || '' },
+            ]);
+          } catch {}
+        }
+        return NextResponse.json({
+          intent: intentByCard,
+          confidence: 1,
+          answer: answer || (card?.message || ''),
+          result,
+          originalText: text,
+          sessionId: sid,
+        });
+      } catch (err) {
+        lastError = err;
+        console.warn(`[copilot/command] provider ${provider.name} failed:`, (err as any)?.message);
+        // on tente le provider suivant
+      }
     }
 
-    const result = await executeIntent(intent, user.id, supabase);
-
-    return NextResponse.json({
-      intent: intent.intent,
-      confidence: intent.confidence,
-      answer: intent.answer || '',
-      result,
-      originalText: text,
-    });
+    console.error('[copilot/command] All providers failed:', lastError);
+    return NextResponse.json({ error: 'Service IA momentanément indisponible' }, { status: 503 });
   } catch (error) {
     console.error('[copilot/command] Error:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
-  }
-}
-
-async function executeIntent(intent: CommandIntent, userId: string, supabase: any) {
-  switch (intent.intent) {
-    case 'show_outstanding': {
-      const { data } = await supabase
-        .from('invoices')
-        .select('number, total, due_date, status, client:clients(name)')
-        .eq('user_id', userId)
-        .in('status', ['sent', 'overdue'])
-        .order('due_date', { ascending: true })
-        .limit(50);
-
-      const want = normalize(intent.client_name);
-      const filtered = (data || [])
-        .filter((inv: any) => fuzzyMatch(inv.client?.name, want))
-        .slice(0, 10);
-
-      const total = filtered.reduce((s: number, inv: any) => s + (inv.total || 0), 0);
-
-      return {
-        type: 'outstanding_invoices',
-        invoices: filtered.map((inv: any) => ({
-          number: inv.number,
-          total: inv.total,
-          due_date: inv.due_date,
-          status: inv.status,
-          client_name: inv.client?.name || null,
-        })),
-        total,
-        count: filtered.length,
-      };
-    }
-
-    case 'show_revenue': {
-      const now = new Date();
-      let startDate: string;
-
-      if (intent.period === 'year') {
-        startDate = new Date(now.getFullYear(), 0, 1).toISOString();
-      } else if (intent.period === 'quarter') {
-        const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-        startDate = new Date(now.getFullYear(), quarterStartMonth, 1).toISOString();
-      } else {
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      }
-
-      const { data } = await supabase
-        .from('invoices')
-        .select('total')
-        .eq('user_id', userId)
-        .eq('status', 'paid')
-        .gte('paid_at', startDate);
-
-      const total = (data || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
-
-      return {
-        type: 'revenue',
-        total,
-        invoiceCount: data?.length || 0,
-        period: intent.period || 'month',
-      };
-    }
-
-    case 'show_urssaf': {
-      const { calculateURSSAF, getCurrentQuarter, mapFiscalRegime, REGIME_SHORT_LABELS } = await import('@/lib/urssaf-calculator');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('regime_fiscal, legal_status')
-        .eq('id', userId)
-        .single();
-
-      const regime = mapFiscalRegime(profile?.regime_fiscal, profile?.legal_status);
-      if (!regime) {
-        return { type: 'urssaf', message: 'Régime fiscal non configuré. Configurez-le dans les paramètres.' };
-      }
-
-      const { quarter, year } = getCurrentQuarter();
-      const quarterStartMonth = (quarter - 1) * 3;
-      const startIso = new Date(year, quarterStartMonth, 1).toISOString();
-
-      const { data: paidInvoices } = await supabase
-        .from('invoices')
-        .select('total')
-        .eq('user_id', userId)
-        .eq('status', 'paid')
-        .gte('paid_at', startIso);
-
-      const revenue = (paidInvoices || []).reduce((s: number, inv: any) => s + (inv.total || 0), 0);
-      const calc = calculateURSSAF(revenue, regime);
-
-      return {
-        type: 'urssaf',
-        regime: REGIME_SHORT_LABELS[regime],
-        quarterRevenue: revenue,
-        urssafDue: calc.urssafAmount,
-        quarter: `T${quarter} ${year}`,
-      };
-    }
-
-    case 'show_expenses': {
-      const { data } = await supabase
-        .from('expenses')
-        .select('vendor, amount, category, date')
-        .eq('user_id', userId)
-        .order('date', { ascending: false })
-        .limit(10);
-
-      const total = (data || []).reduce((s: number, exp: any) => s + (exp.amount || 0), 0);
-
-      return {
-        type: 'expenses',
-        expenses: data || [],
-        total,
-        count: data?.length || 0,
-      };
-    }
-
-    // PROMÉTHÉE — trésorerie : solde réel + en attente, en une phrase.
-    case 'treasury_info': {
-      const { data: paid } = await supabase.from('invoices').select('total').eq('user_id', userId).eq('status', 'paid');
-      const { data: exp } = await supabase.from('expenses').select('amount').eq('user_id', userId);
-      const { data: out } = await supabase.from('invoices').select('total').eq('user_id', userId).in('status', ['sent', 'overdue']);
-      const income = (paid || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
-      const spend = (exp || []).reduce((s: number, e: any) => s + (e.amount || 0), 0);
-      const balance = income - spend;
-      const outstanding = (out || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
-      return {
-        type: 'text',
-        message: `Solde estimé : ${balance.toFixed(2)} € (encaissé ${income.toFixed(0)} € − dépensé ${spend.toFixed(0)} €). En attente d'encaissement : ${outstanding.toFixed(2)} €. Ouvrez le widget Trésorerie pour les prévisions à 30/90 jours.`,
-      };
-    }
-
-    // PROMÉTHÉE — info client : résout le nom (fuzzy) + résume ses totaux.
-    case 'client_info': {
-      const want = normalize(intent.client_name);
-      if (!want) return { type: 'text', message: 'Quel client souhaitez-vous consulter ?' };
-      const { data: clients } = await supabase.from('clients').select('id, name, email').eq('user_id', userId);
-      const match = (clients || []).find((c: any) => fuzzyMatch(c.name, want));
-      if (!match) return { type: 'text', message: `Aucun client trouvé pour « ${intent.client_name} ».` };
-
-      const { data: invs } = await supabase.from('invoices').select('total, status').eq('client_id', match.id);
-      const total = (invs || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
-      const unpaid = (invs || [])
-        .filter((i: any) => ['sent', 'overdue'].includes(i.status))
-        .reduce((s: number, i: any) => s + (i.total || 0), 0);
-      const emailBit = match.email ? ` (${match.email})` : '';
-      return {
-        type: 'text',
-        message: `${match.name}${emailBit} — CA total : ${total.toFixed(2)} €, dont ${unpaid.toFixed(2)} € non réglé.`,
-      };
-    }
-
-    // LOI 3 : L'IA PROPOSE, L'HUMAIN DISPOSE — brouillon, jamais d'envoi auto.
-    case 'send_reminder': {
-      const { data: overdueInvoices } = await supabase
-        .from('invoices')
-        .select('id, number, total, due_date, issue_date, status, client:clients(id, name, email)')
-        .eq('user_id', userId)
-        .in('status', ['sent', 'overdue'])
-        .order('due_date', { ascending: true })
-        .limit(50);
-
-      const want = normalize(intent.client_name);
-      const overdueFiltered = (overdueInvoices || [])
-        .filter((inv: any) => fuzzyMatch(inv.client?.name, want))
-        .slice(0, 5);
-
-      if (!overdueFiltered || overdueFiltered.length === 0) {
-        return {
-          type: 'reminder_draft',
-          status: 'no_overdue',
-          message: intent.client_name
-            ? `Aucune facture impayée trouvée pour « ${intent.client_name} ».`
-            : 'Aucune facture impayée en ce moment.',
-        };
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_name')
-        .eq('id', userId)
-        .single();
-
-      const drafts = overdueFiltered.map((inv: any) => {
-        const dueDate = new Date(inv.due_date || inv.issue_date);
-        const today = new Date();
-        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
-
-        const clientName = inv.client?.name || 'Client';
-        const subject = `Rappel : Facture ${inv.number} - ${profile?.company_name || 'Mon entreprise'}`;
-        const body = `Bonjour ${clientName},\n\nJe me permets de vous contacter concernant la facture n° ${inv.number} d'un montant de ${(inv.total || 0).toFixed(2)}€, dont l'échéance était le ${dueDate.toLocaleDateString('fr-FR')}.\n\nÀ ce jour, cette facture n'a pas été réglée. Je vous remercie de bien vouloir procéder au paiement dans les meilleurs délais.\n\nN'hésitez pas à me contacter si vous avez des questions.\n\nCordialement,\n${profile?.company_name || 'Mon entreprise'}`;
-
-        return {
-          invoiceId: inv.id,
-          invoiceNumber: inv.number,
-          clientName,
-          clientEmail: inv.client?.email,
-          amount: inv.total || 0,
-          daysOverdue,
-          subject,
-          body,
-          needsApproval: true,
-          warning: '⚠️ Vérifiez que cette facture n\'a pas déjà été payée avant d\'envoyer la relance.',
-        };
-      });
-
-      return {
-        type: 'reminder_draft',
-        status: 'drafts_ready',
-        drafts,
-        message: `${drafts.length} facture(s) impayée(s) trouvée(s). Vérifiez et approuvez chaque relance avant envoi.`,
-      };
-    }
-
-    case 'create_invoice': {
-      const amount = typeof intent.raw_amount === 'number' ? intent.raw_amount : null;
-      const client = intent.client_name || null;
-      const params = new URLSearchParams();
-      if (amount !== null) params.set('amount', String(amount));
-      if (client) params.set('client', client);
-      const qs = params.toString();
-      return {
-        type: 'create_invoice',
-        amount,
-        client_name: client,
-        redirectUrl: `/documents/create${qs ? `?${qs}` : ''}`,
-        message: amount !== null
-          ? `Je vous redirige vers la création de facture${client ? ` pour ${client}` : ''} avec ${amount.toFixed(2)} € pré-rempli.`
-          : 'Je vous redirige vers la création de facture.',
-      };
-    }
-
-    default:
-      return {
-        type: 'unknown',
-        message: 'Je peux vous renseigner sur vos impayés, votre CA, vos dépenses, vos URSSAF, votre trésorerie ou un client précis. Posez votre question.',
-      };
   }
 }

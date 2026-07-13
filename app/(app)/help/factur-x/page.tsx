@@ -18,9 +18,9 @@ export default function FacturXHelpPage() {
     <div className="max-w-4xl mx-auto space-y-8 pb-16">
       {/* Header */}
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
-          <Sparkles size={16} className="text-indigo-500" />
-          <span className="text-sm font-bold text-indigo-700">Nouveau</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-500/30">
+          <Sparkles size={16} className="text-emerald-600" />
+          <span className="text-sm font-bold text-emerald-700">Nouveau</span>
         </div>
         <h1 className="text-4xl font-black text-gray-900">
           Guide Factur-X
@@ -33,7 +33,7 @@ export default function FacturXHelpPage() {
       {/* Qu'est-ce que Factur-X */}
       <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
             <FileText size={24} />
           </div>
           <div className="flex-1">
@@ -43,10 +43,10 @@ export default function FacturXHelpPage() {
             <div className="space-y-4 text-gray-600">
               <p>
                 <strong className="text-gray-900">Factur-X</strong> est un format de facture électronique hybride franco-allemand,
-                basé sur la norme européenne <strong className="text-indigo-600">EN 16931</strong>.
+                basé sur la norme européenne <strong className="text-emerald-600">EN 16931</strong>.
                 C'est la version française du standard allemand ZUGFeRD.
               </p>
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-5 border border-indigo-100">
+              <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 border border-emerald-500/30">
                 <h3 className="font-bold text-gray-900 mb-2">Format hybride PDF + XML</h3>
                 <p className="text-sm">
                   Un fichier Factur-X est un <strong>PDF standard</strong> qui contient un <strong>fichier XML embarqué</strong> dans ses métadonnées.
@@ -106,7 +106,7 @@ export default function FacturXHelpPage() {
           </div>
           <div className="space-y-4">
             <div className="flex gap-3">
-              <div className="p-2 rounded-xl bg-purple-100 text-purple-600">
+              <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600">
                 <Shield size={20} />
               </div>
               <div>
@@ -138,7 +138,7 @@ export default function FacturXHelpPage() {
         </h2>
         <div className="space-y-6">
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold">
               1
             </div>
             <div>
@@ -149,7 +149,7 @@ export default function FacturXHelpPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold">
               2
             </div>
             <div>
@@ -160,18 +160,18 @@ export default function FacturXHelpPage() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold">
               3
             </div>
             <div>
               <h3 className="font-bold text-gray-900 mb-1">Cliquez sur "Factur-X"</h3>
               <p className="text-sm text-gray-600">
-                Sur la page de détail de la facture, cliquez sur le bouton <strong className="text-indigo-600">Factur-X</strong> dans la barre d'actions.
+                Sur la page de détail de la facture, cliquez sur le bouton <strong className="text-emerald-600">Factur-X</strong> dans la barre d'actions.
               </p>
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold">
               4
             </div>
             <div>
@@ -183,13 +183,13 @@ export default function FacturXHelpPage() {
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+        <div className="mt-6 p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-500/30">
           <div className="flex items-start gap-3">
-            <AlertCircle size={20} className="text-indigo-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle size={20} className="text-emerald-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="font-bold text-gray-900">Disponibilité</p>
               <p className="text-gray-600">
-                Le format Factur-X est réservé aux abonnements <strong className="text-indigo-600">Pro</strong> et <strong className="text-indigo-600">Business</strong>.
+                Le format Factur-X est réservé aux abonnements <strong className="text-emerald-600">Pro</strong> et <strong className="text-emerald-600">Business</strong>.
                 Cette fonctionnalité n'est pas disponible pour les factures, devis et avoirs.
               </p>
             </div>
@@ -209,7 +209,7 @@ export default function FacturXHelpPage() {
           href="https://fnfe-mpe.org/factur-x/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold hover:opacity-90 transition-opacity"
         >
           <Download size={20} />
           Validateurs Factur-X (FNFE-MPE)
@@ -255,8 +255,8 @@ export default function FacturXHelpPage() {
                   </span>
                 </td>
               </tr>
-              <tr className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                <td className="py-3 px-4 font-bold text-indigo-700">EN 16931</td>
+              <tr className="bg-gradient-to-r from-emerald-50 to-emerald-100">
+                <td className="py-3 px-4 font-bold text-emerald-700">EN 16931</td>
                 <td className="py-3 px-4 text-gray-600">Profil complet standard</td>
                 <td className="py-3 px-4">
                   <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
@@ -279,7 +279,7 @@ export default function FacturXHelpPage() {
           </table>
         </div>
         <p className="mt-4 text-sm text-gray-600">
-          FacturmeWeb utilise le profil <strong className="text-indigo-600">EN 16931</strong>, qui est le minimum recommandé
+          FacturmeWeb utilise le profil <strong className="text-emerald-600">EN 16931</strong>, qui est le minimum recommandé
           pour être conforme à la réforme française de facturation électronique.
         </p>
       </section>
@@ -338,7 +338,7 @@ export default function FacturXHelpPage() {
       </section>
 
       {/* Ressources */}
-      <section className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-8">
+      <section className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-500/30 p-8">
         <h2 className="text-2xl font-black text-gray-900 mb-6">
           Ressources utiles
         </h2>
@@ -349,7 +349,7 @@ export default function FacturXHelpPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-3 p-4 bg-white rounded-xl hover:shadow-md transition-shadow"
           >
-            <FileText size={24} className="text-indigo-600" />
+            <FileText size={24} className="text-emerald-600" />
             <div>
               <p className="font-bold text-gray-900">FNFE-MPE</p>
               <p className="text-sm text-gray-600">Association nationale Factur-X</p>
@@ -362,7 +362,7 @@ export default function FacturXHelpPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-3 p-4 bg-white rounded-xl hover:shadow-md transition-shadow"
           >
-            <FileText size={24} className="text-indigo-600" />
+            <FileText size={24} className="text-emerald-600" />
             <div>
               <p className="font-bold text-gray-900">Guide DGFiP</p>
               <p className="text-sm text-gray-600">Guide pratique facturation électronique</p>

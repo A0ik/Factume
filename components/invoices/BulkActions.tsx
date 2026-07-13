@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Download, Trash2, Mail, CheckCircle, XCircle, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
+import { useDataStore } from '@/stores/dataStore';
+import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
 
 interface BulkActionsProps {
   selectedIds: string[];
@@ -13,6 +15,8 @@ interface BulkActionsProps {
 
 export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActionsProps) {
   const { session } = useAuthStore();
+  const { invoices } = useDataStore();
+  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleBulkDelete = async () => {
@@ -130,21 +134,54 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
   const handleBulkSendReminders = async () => {
     if (!session) return;
 
+    // ASTRÉE (CIBLE 1) — on demande l'email des clients sélectionnés qui n'en ont pas
+    // AVANT d'envoyer, pour éviter l'impasse « 0 relance envoyée ».
+    const missingByEmail = new Map<string, any>();
+    for (const id of selectedIds) {
+      const inv: any = invoices.find((i: any) => i.id === id);
+      if (inv?.client?.id && !inv.client?.email) missingByEmail.set(inv.client.id, inv.client);
+    }
+    for (const [, client] of missingByEmail) {
+      const email = await promptForEmail(client);
+      if (!email) { toast.info('Relance annulée.'); return; }
+    }
+
     setActionLoading('remind');
     try {
-      const promises = selectedIds.map(id =>
+      // ATHÉNA (C3) — on envoie confirmed:true (sinon la route renvoie 400
+      // "Confirmation requise" pour CHAQUE facture) et on inspecte CHAQUE réponse
+      // au lieu de toaster un succès aveugle.
+      const responses = await Promise.all(selectedIds.map(id =>
         fetch('/api/reminders/send', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ invoiceId: id }),
+          body: JSON.stringify({ invoiceId: id, confirmed: true }),
         })
-      );
+      ));
 
-      await Promise.all(promises);
-      toast.success(`${selectedIds.length} relance(s) envoyée(s)`);
+      let sent = 0;
+      let pendingEmail = 0;
+      let failed = 0;
+      for (const r of responses) {
+        let payload: any = null;
+        try { payload = await r.json(); } catch { /* corps vide */ }
+        if (r.ok && payload?.pendingEmail) pendingEmail++;
+        else if (r.ok) sent++;
+        else failed++;
+      }
+
+      if (pendingEmail > 0) {
+        toast.warning(
+          `${sent} envoyée(s) — ${pendingEmail} sans email (client à compléter)${failed ? ` — ${failed} échec(s)` : ''}.`
+        );
+      } else if (failed > 0 && sent === 0) {
+        toast.error(`${failed} relance(s) en échec.`);
+      } else {
+        toast.success(`${sent} relance(s) envoyée(s)${failed ? `, ${failed} échec(s)` : ''}.`);
+      }
       onClear();
       onActionComplete?.();
     } catch (err) {
@@ -157,6 +194,7 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
   if (selectedIds.length === 0) return null;
 
   return (
+    <>
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <div className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl shadow-2xl px-6 py-4 flex items-center gap-4">
         <span className="text-sm font-semibold">
@@ -243,5 +281,7 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
         </div>
       </div>
     </div>
+    {ensureEmailModal}
+    </>
   );
 }

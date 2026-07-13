@@ -138,7 +138,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-4 h-14">
               <button
                 onClick={() => setDrawerOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
+                className="flex items-center justify-center w-11 h-11 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
                 aria-label="Menu navigation"
               >
                 <Menu size={20} strokeWidth={1.8} />

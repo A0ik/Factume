@@ -69,13 +69,15 @@ export interface CabinetFetchOptions {
   noCache?: boolean;
   /** Parse response as JSON key (default: auto-detect first key) */
   dataKey?: string;
+  /** Return the full JSON object as-is (skip auto-detect). Use for composite responses. */
+  wholeObject?: boolean;
 }
 
 export async function cabinetFetch<T>(
   url: string,
   options: CabinetFetchOptions = {},
 ): Promise<T> {
-  const { method = 'GET', body, headers: extraHeaders, signal, noCache, dataKey } = options;
+  const { method = 'GET', body, headers: extraHeaders, signal, noCache, dataKey, wholeObject } = options;
 
   // Check cache for GET requests
   if (method === 'GET' && !noCache) {
@@ -135,7 +137,13 @@ export async function cabinetFetch<T>(
 
       // Extract data from response
       let data: T;
-      if (dataKey) {
+      if (wholeObject) {
+        // Composite response (e.g. /api/cabinet/dashboard): return the full object.
+        // Without this, the auto-detect below destructively returns the first nested
+        // array (e.g. clientStats) instead of the CabinetData object, making
+        // safeData.clientStats undefined → white-screen crash.
+        data = json;
+      } else if (dataKey) {
         data = json[dataKey];
       } else if (typeof json === 'object' && json !== null) {
         // Auto-detect: take the first array value, or the whole object

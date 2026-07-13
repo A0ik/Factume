@@ -42,7 +42,7 @@ function FormSection({ title, icon, children, defaultOpen = true, badge }: Secti
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={springFast}
-      className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+      className="bg-white dark:bg-zinc-950 rounded-card border border-gray-200 dark:border-white/[0.08] overflow-hidden"
     >
       {/* Section header */}
       <button
@@ -50,7 +50,7 @@ function FormSection({ title, icon, children, defaultOpen = true, badge }: Secti
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
       >
-        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+        <div className="w-7 h-7 rounded-control bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
         <span className="flex-1 text-left text-sm font-semibold text-gray-900 dark:text-white">{title}</span>
@@ -129,7 +129,7 @@ function FormInput({ label, value, onChange, placeholder, type = 'text', icon, r
             animate={{ opacity: [0.6, 1, 0.6] }}
             exit={{ opacity: 0 }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="absolute -inset-1.5 rounded-xl border-2 border-amber-400/70 dark:border-amber-500/50 pointer-events-none z-10"
+            className="absolute -inset-1.5 rounded-control border-2 border-amber-400/70 dark:border-amber-500/50 pointer-events-none z-10"
           />
         )}
       </AnimatePresence>
@@ -157,7 +157,7 @@ function FormInput({ label, value, onChange, placeholder, type = 'text', icon, r
             required={required}
             autoFocus={autoFocus}
             className={cn(
-              'w-full px-3 py-2.5 rounded-xl border text-sm transition-all duration-200',
+              'w-full px-3 py-2.5 rounded-control border text-sm transition-all duration-200',
               focused
                 ? 'border-emerald-400 dark:border-emerald-500 bg-white dark:bg-white/[0.06] ring-2 ring-emerald-500/20 shadow-sm'
                 : 'border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04]',
@@ -204,12 +204,12 @@ function LineDiscountControl({ item, onChange }: LineDiscountControlProps) {
       <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
         Remise ligne
       </span>
-      <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-white/[0.08]">
+      <div className="flex rounded-control overflow-hidden border border-gray-200 dark:border-white/[0.08]">
         <button
           type="button"
           onClick={() => switchMode('percent')}
           className={cn(
-            'px-2 py-1 text-[10px] font-bold transition-colors',
+            'px-3 py-1.5 text-xs font-bold min-h-[36px] transition-colors',
             mode === 'percent'
               ? 'bg-emerald-500 text-white'
               : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
@@ -221,7 +221,7 @@ function LineDiscountControl({ item, onChange }: LineDiscountControlProps) {
           type="button"
           onClick={() => switchMode('amount')}
           className={cn(
-            'px-2 py-1 text-[10px] font-bold transition-colors',
+            'px-3 py-1.5 text-xs font-bold min-h-[36px] transition-colors',
             mode === 'amount'
               ? 'bg-emerald-500 text-white'
               : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
@@ -240,7 +240,7 @@ function LineDiscountControl({ item, onChange }: LineDiscountControlProps) {
           onChange(mode === 'amount' ? 'discount_amount' : 'discount_percent', v);
         }}
         placeholder="0"
-        className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+        className="w-20 px-2 py-1 rounded-control border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
       />
     </div>
   );
@@ -420,7 +420,7 @@ export default function DocumentFormPanel({
         'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider',
         clientType === 'b2b'
           ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-          : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+          : 'bg-emerald-50/70 dark:bg-emerald-500/[0.07] text-emerald-600 dark:text-emerald-400',
       )}
     >
       {clientType === 'b2b' ? <Building2 size={10} /> : <User size={10} />}
@@ -439,7 +439,7 @@ export default function DocumentFormPanel({
         {/* ═══════════ CLIENT SECTION ═══════════ */}
         <FormSection
           title="Client"
-          icon={<User size={14} className="text-blue-500" />}
+          icon={<User size={14} className="text-emerald-500" />}
           badge={clientTypeBadge}
           defaultOpen={true}
         >
@@ -449,7 +449,7 @@ export default function DocumentFormPanel({
               whileTap={{ scale: 0.96 }}
               onClick={() => updateField('clientType', 'b2b')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all border',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-control text-xs font-semibold transition-all border',
                 clientType === 'b2b'
                   ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
                   : 'bg-gray-50 dark:bg-white/[0.04] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-gray-300',
@@ -462,9 +462,9 @@ export default function DocumentFormPanel({
               whileTap={{ scale: 0.96 }}
               onClick={() => updateField('clientType', 'b2c')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all border',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-control text-xs font-semibold transition-all border',
                 clientType === 'b2c'
-                  ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
                   : 'bg-gray-50 dark:bg-white/[0.04] border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-gray-400 hover:border-gray-300',
               )}
             >
@@ -599,7 +599,7 @@ export default function DocumentFormPanel({
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
+                className="flex items-center gap-2 px-3 py-2 rounded-control bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
               >
                 <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0" />
                 <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
@@ -619,7 +619,7 @@ export default function DocumentFormPanel({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); openCatalogBulk(); }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-control text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
                 title="Ajouter plusieurs articles depuis le catalogue"
               >
                 <Package size={12} /> Catalogue
@@ -640,7 +640,7 @@ export default function DocumentFormPanel({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20, height: 0 }}
                 transition={springFast}
-                className="relative bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.06] p-3 space-y-2.5"
+                className="relative bg-gray-50 dark:bg-white/[0.03] rounded-control border border-gray-100 dark:border-white/[0.06] p-3 space-y-2.5"
               >
                 {/* Line number + description */}
                 <div className="flex items-start gap-2">
@@ -658,42 +658,42 @@ export default function DocumentFormPanel({
                       hasDoubt={hasDoubtFor(`items[${idx}].description`)}
                     />
                   </div>
-                  <div className="mt-6 flex items-center gap-0.5 flex-shrink-0">
+                  <div className="mt-6 flex items-center gap-1 flex-shrink-0">
                     <motion.button
                       whileTap={{ scale: 0.85 }}
                       onClick={() => openCatalogReplace(item.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                      className="w-10 h-10 rounded-control flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
                       title="Importer depuis le catalogue"
                     >
-                      <Package size={13} />
+                      <Package size={15} />
                     </motion.button>
                     {/* CIBLE 1 — Vider la ligne : présent sur TOUTES les lignes (reset du contenu) */}
                     <motion.button
                       whileTap={{ scale: 0.85 }}
                       onClick={() => clearItem(item.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
+                      className="w-10 h-10 rounded-control flex items-center justify-center text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
                       title="Vider la ligne"
                     >
-                      <Eraser size={13} />
+                      <Eraser size={15} />
                     </motion.button>
                     {/* CIBLE 1 — Dupliquer la ligne : first-class (pattern Cushion 2026), sur TOUTES les lignes */}
                     <motion.button
                       whileTap={{ scale: 0.85 }}
                       onClick={() => duplicateItem(item.id)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                      className="w-10 h-10 rounded-control flex items-center justify-center text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
                       title="Dupliquer la ligne"
                     >
-                      <Copy size={13} />
+                      <Copy size={15} />
                     </motion.button>
                     {/* Supprimer : masqué sur la 1re ligne (invariant ≥ 1 ligne garanti par removeItem) */}
                     {items.length > 1 && (
                       <motion.button
                         whileTap={{ scale: 0.85 }}
                         onClick={() => removeItem(item.id)}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                        className="w-10 h-10 rounded-control flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                         title="Supprimer cette ligne"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={15} />
                       </motion.button>
                     )}
                   </div>
@@ -729,7 +729,7 @@ export default function DocumentFormPanel({
                     <select
                       value={item.vat_rate}
                       onChange={(e) => updateItem(item.id, 'vat_rate', e.target.value)}
-                      className="w-[72px] px-2 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all appearance-none cursor-pointer"
+                      className="w-[72px] px-2 py-2.5 rounded-control border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all appearance-none cursor-pointer"
                     >
                       <option value={0}>0%</option>
                       <option value={5.5}>5.5%</option>
@@ -783,10 +783,10 @@ export default function DocumentFormPanel({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springFast, delay: 0.1 }}
-          className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-white/[0.08] overflow-hidden"
+          className="bg-white dark:bg-zinc-950 rounded-card border border-gray-200 dark:border-white/[0.08] overflow-hidden"
         >
           <div className="px-4 py-3 flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-control bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
               <Receipt size={14} className="text-emerald-500" />
             </div>
             <span className="text-sm font-semibold text-gray-900 dark:text-white">Totaux</span>
@@ -806,8 +806,8 @@ export default function DocumentFormPanel({
                 animate={{ opacity: 1, height: 'auto' }}
                 className="flex justify-between text-sm"
               >
-                <span className="text-orange-500">Remises lignes</span>
-                <span className="font-medium text-orange-500">−{formatPrice(lineDiscountAmount)} €</span>
+                <span className="text-emerald-600 dark:text-emerald-400">Remises lignes</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">−{formatPrice(lineDiscountAmount)} €</span>
               </motion.div>
             )}
 
@@ -815,14 +815,14 @@ export default function DocumentFormPanel({
             <div className="flex items-center justify-between gap-2 py-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Remise globale</span>
-                <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-white/[0.08]">
+                <div className="flex rounded-control overflow-hidden border border-gray-200 dark:border-white/[0.08]">
                   <button
                     type="button"
                     onClick={() => updateField('discountType', 'percent')}
                     className={cn(
-                      'px-2 py-0.5 text-[10px] font-bold transition-colors',
+                      'px-2.5 py-1.5 text-xs font-bold min-h-[32px] transition-colors',
                       discountType === 'percent'
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-emerald-500 text-white'
                         : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
                     )}
                   >%</button>
@@ -830,9 +830,9 @@ export default function DocumentFormPanel({
                     type="button"
                     onClick={() => updateField('discountType', 'amount')}
                     className={cn(
-                      'px-2 py-0.5 text-[10px] font-bold transition-colors',
+                      'px-2.5 py-1.5 text-xs font-bold min-h-[32px] transition-colors',
                       discountType === 'amount'
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-emerald-500 text-white'
                         : 'bg-gray-50 dark:bg-white/[0.04] text-gray-400 hover:text-gray-600',
                     )}
                   >€</button>
@@ -849,10 +849,10 @@ export default function DocumentFormPanel({
                     updateField(discountType === 'amount' ? 'discountAmountInput' : 'discountPercent', v);
                   }}
                   placeholder="0"
-                  className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                  className="w-20 px-2 py-1 rounded-control border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
                 {globalDiscountAmount > 0 && (
-                  <span className="text-xs font-medium text-orange-500 whitespace-nowrap">−{formatPrice(globalDiscountAmount)} €</span>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">−{formatPrice(globalDiscountAmount)} €</span>
                 )}
               </div>
             </div>
@@ -867,7 +867,7 @@ export default function DocumentFormPanel({
             <div className="border-t border-gray-100 dark:border-white/[0.06] my-1" />
 
             {/* Total TTC — FLAW 5 FIX: HERO number with gradient accent (Chrométrie & Hiérarchie) */}
-            <div className="flex justify-between items-center -mx-4 px-4 py-3 bg-gradient-to-r from-emerald-50/80 to-transparent dark:from-emerald-500/[0.08] dark:to-transparent rounded-b-2xl -mb-4">
+            <div className="flex justify-between items-center -mx-4 px-4 py-3 bg-gradient-to-r from-emerald-50/80 to-transparent dark:from-emerald-500/[0.08] dark:to-transparent rounded-b-card -mb-4">
               <span className="text-sm font-bold text-gray-900 dark:text-white">Total TTC</span>
               <motion.span
                 key={total}
@@ -885,7 +885,7 @@ export default function DocumentFormPanel({
         {/* ═══════════ OPTIONS SECTION ═══════════ */}
         <FormSection
           title="Options"
-          icon={<CalendarDays size={14} className="text-purple-500" />}
+          icon={<CalendarDays size={14} className="text-emerald-500" />}
           defaultOpen={false}
         >
           <div className="space-y-3">
@@ -928,7 +928,7 @@ export default function DocumentFormPanel({
                 onChange={(e) => updateField('notes', e.target.value)}
                 placeholder="Conditions, remarques..."
                 rows={2}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 dark:focus:border-emerald-500 transition-all resize-none"
+                className="w-full px-3 py-2.5 rounded-control border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 dark:focus:border-emerald-500 transition-all resize-none"
               />
             </div>
           </div>
@@ -937,7 +937,7 @@ export default function DocumentFormPanel({
         {/* ═══════════ CONFORMITÉ (Factur-X / PDP) ═══════════ */}
         <FormSection
           title="Conformité"
-          icon={<ShieldCheck size={14} className="text-amber-500" />}
+          icon={<ShieldCheck size={14} className="text-emerald-500" />}
           defaultOpen={false}
           badge={clientType === 'b2b' ? (
             <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">B2B</span>

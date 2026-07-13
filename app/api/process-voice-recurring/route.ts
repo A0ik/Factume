@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { getUserHotwords, buildWhisperPrompt } from '@/lib/voice-vocabulary';
+import { applySttCorrection } from '@/lib/stt-correction';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { consumeVoiceQuota } from '@/lib/subscription-guard';
@@ -47,17 +49,24 @@ export async function POST(req: NextRequest) {
     if (!audio) return NextResponse.json({ error: 'No audio file' }, { status: 400 });
 
     // Transcription with Groq Whisper (auto-detect language - supports Arabic and French)
+    // CIBLE 2 — Hotwords utilisateur (lexique métier + corrections + salariés).
+    const { hotwords, corrections } = await getUserHotwords(supabaseAuth, user.id);
+
     const transcription = await groq.audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3-turbo',
-      // language: 'fr', // Removed - auto-detect to support Arabic
+      prompt: buildWhisperPrompt(hotwords),
     });
     const rawTranscript = transcription.text;
 
     // Translate Arabic (any dialect) to French if needed
-    const { transcript, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
-
+    const { transcript: translated, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
     console.log(`[process-voice-recurring] Language detected: ${originalLanguage}${wasTranslated ? ' (translated)' : ''}`);
+
+    // CIBLE 2 — Correction contextuelle STT (paie/paix, contrar/contrat…).
+    const sttFixed = await applySttCorrection(translated, { userCorrections: corrections, groq });
+    let transcript = sttFixed.transcript;
+    if (sttFixed.changes.length) console.log('[process-voice-recurring] STT corrections:', sttFixed.changes);
 
     const systemPrompt = `Tu es un assistant expert en facturation récurrente française.
 L'utilisateur vient de dicter une facture récurrente à voix haute. Extrais les informations et retourne UNIQUEMENT du JSON valide.
@@ -137,6 +146,7 @@ Exemple de réponse attendue si l'utilisateur dit "facture mensuelle pour Action
     return NextResponse.json({
       transcript,
       originalTranscript: rawTranscript,
+      sttCorrections: sttFixed.changes,
       wasTranslated,
       originalLanguage,
       parsed

@@ -2,7 +2,6 @@
 import { create } from 'zustand';
 import { getSupabaseClient } from '@/lib/supabase';
 import { ContractType, ContractStatus, ContractSummary, ContractDashboardStats, ContractFormData, Contract } from '@/types';
-import { sendContractNotification } from '@/lib/services/contract-notification-service';
 import { canTransition } from '@/lib/services/contract-lifecycle-service';
 import { renewContract as renewContractService } from '@/lib/services/contract-renewal-service';
 
@@ -357,14 +356,23 @@ export const useContractStore = create<ContractState>((set, get) => ({
             .single();
 
           if (contract) {
-            await sendContractNotification({
-              userId: session.user.id,
-              type: notifType,
-              contractId: id,
-              contractType,
-              employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
-              contractNumber: contract.contract_number,
-            });
+            // ARGOS (build) — notification routée via l'API serveure (le service admin ne
+            // peut être appelé depuis le client). Best-effort, non bloquant.
+            try {
+              await fetch('/api/contracts/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: notifType,
+                  contractId: id,
+                  contractType,
+                  employeeName: `${contract.employee_first_name} ${contract.employee_last_name}`,
+                  contractNumber: contract.contract_number,
+                }),
+              });
+            } catch (notifErr) {
+              console.error('Failed to send contract notification:', notifErr);
+            }
           }
         } catch (err) {
           console.error('Failed to send contract notification:', err);

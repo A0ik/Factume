@@ -5,6 +5,7 @@ import { X, Send, Loader2, Mail, AlertCircle, Bell, BellOff, CheckCircle } from 
 import { useDataStore } from '@/stores/dataStore';
 import { getSupabaseClient } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
 
 interface RemindersModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
   const [sending, setSending] = useState(false);
   const [autoEnabled, setAutoEnabled] = useState<boolean | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
+  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
 
   // Factures impayées éligibles (factures envoyées ou en retard, hors devis/avoirs/commandes).
   const unpaid = useMemo(
@@ -85,6 +87,17 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
       toast.error('Sélectionnez au moins une facture à relancer.');
       return;
     }
+    // ASTRÉE (CIBLE 1) — avant d'envoyer, on s'assure que chaque client sélectionné
+    // a un email. Sinon : pop-up de saisie qui persiste l'email puis enchaîne.
+    const selectedInvoices = unpaid.filter((i: any) => selected.has(i.id));
+    const missingByEmail = new Map<string, any>();
+    for (const inv of selectedInvoices) {
+      if (inv.client?.id && !inv.client?.email) missingByEmail.set(inv.client.id, inv.client);
+    }
+    for (const [, client] of missingByEmail) {
+      const email = await promptForEmail(client);
+      if (!email) { toast.info('Relance annulée.'); return; }
+    }
     setSending(true);
     const token = await tokenFetcher();
     if (!token) { toast.error('Session expirée. Reconnectez-vous.'); setSending(false); return; }
@@ -96,7 +109,18 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Échec de l\'envoi');
-      toast.success(`${data.sent || 0} relance(s) envoyée(s)${data.failed ? `, ${data.failed} échec(s)` : ''}.`);
+      // ATHÉNA (C3) — on remonte honnêtement les clients sans email au lieu de
+      // les noyer dans un toast "succès" générique.
+      const sentCount = data.sent || 0;
+      const pendingCount = data.pendingEmail || 0;
+      const failedCount = data.failed || 0;
+      if (pendingCount > 0) {
+        toast.warning(
+          `${sentCount} envoyée(s) — ${pendingCount} sans email (client à compléter, relance enregistrée)${failedCount ? ` — ${failedCount} échec(s)` : ''}.`
+        );
+      } else {
+        toast.success(`${sentCount} relance(s) envoyée(s)${failedCount ? `, ${failedCount} échec(s)` : ''}.`);
+      }
       setSelected(new Set());
       await fetchInvoices?.();
       onClose();
@@ -129,6 +153,7 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
         className="w-full sm:max-w-2xl bg-white dark:bg-[#15151a] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-white/[0.08] max-h-[92vh] flex flex-col"
@@ -231,6 +256,8 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
         )}
       </div>
     </div>
+    {ensureEmailModal}
+    </>
   );
 }
 

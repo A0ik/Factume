@@ -132,7 +132,7 @@ function TabItem({ tab, active }: { tab: typeof tabs[number]; active: boolean })
         />
         <span
           className={cn(
-            'text-[10px] font-semibold transition-colors duration-200',
+            'text-[11px] font-semibold transition-colors duration-200',
             active ? 'text-emerald-400' : 'text-slate-400 dark:text-slate-500',
           )}
         >

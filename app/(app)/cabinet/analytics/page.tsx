@@ -52,7 +52,7 @@ export default function CabinetAnalyticsPage() {
   const { cabinet } = useCabinetStore();
   const primaryColor = cabinet?.primary_color || '#10b981';
 
-  const { data: dash, loading, error } = useCabinetData<DashboardAgg>('/api/cabinet/dashboard');
+  const { data: dash, loading, error } = useCabinetData<DashboardAgg>('/api/cabinet/dashboard', { wholeObject: true });
   const { data: missions } = useCabinetData<Mission[]>('/api/cabinet/missions');
   const { data: invoices } = useCabinetData<CabinetInvoice[]>('/api/cabinet/invoices');
 

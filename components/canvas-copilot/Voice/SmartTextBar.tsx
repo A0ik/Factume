@@ -104,7 +104,7 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
       {/* FLAW 4 FIX: Subtle sparkle — SmartTextBar is the ALTERNATIVE, not the primary */}
       <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gray-100 dark:bg-white/[0.06] flex-shrink-0">
         {isStreaming ? (
-          <Loader2 size={12} className="text-blue-500 animate-spin" />
+          <Loader2 size={12} className="text-emerald-500 animate-spin" />
         ) : (
           <Sparkles size={11} className="text-gray-400 dark:text-gray-500" />
         )}
@@ -141,9 +141,9 @@ export default function SmartTextBar({ profile, isPro, onPaywall, className }: S
         onClick={handleSubmit}
         disabled={!text.trim() || isStreaming}
         className={cn(
-          'flex items-center justify-center w-9 h-9 rounded-xl transition-all flex-shrink-0',
+          'flex items-center justify-center w-11 h-11 rounded-control transition-all flex-shrink-0',
           text.trim() && !isStreaming
-            ? 'bg-blue-500 text-white shadow-md shadow-blue-500/15'
+            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/15'
             : 'bg-gray-100 dark:bg-white/[0.04] text-gray-400 cursor-not-allowed',
         )}
       >

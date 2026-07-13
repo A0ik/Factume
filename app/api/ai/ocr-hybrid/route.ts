@@ -257,6 +257,9 @@ export async function POST(req: NextRequest) {
         description: extracted.description,
         receipt_url: receiptPublicUrl,
         receipt_storage_path: storagePath,
+        // ARGOS (CIBLE 5) — tout flux OCR uploade obligatoirement un justificatif avant l'insert.
+        // Sans has_receipt:true, les filtres « sans justificatif » classaient à tort ces dépenses.
+        has_receipt: true,
         status: 'pending',
         ocr_method: 'tesseract',
         ocr_confidence: extracted.confidence,

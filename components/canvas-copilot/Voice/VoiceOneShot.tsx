@@ -291,7 +291,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
           state === 'recording'
             ? 'bg-red-500 text-white shadow-xl shadow-red-500/40'
             : state === 'processing'
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30'
+            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
             : state === 'error'
             ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
             : 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-xl shadow-emerald-500/35 hover:shadow-emerald-500/55',
@@ -359,7 +359,7 @@ export default function VoiceOneShot({ sector, className }: VoiceOneShotProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={SPRING}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-blue-500 text-white text-[10px] font-bold shadow-lg z-30 pointer-events-none"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap px-3 py-1 rounded-xl bg-emerald-500 text-white text-[10px] font-bold shadow-lg z-30 pointer-events-none"
           >
             Analyse IA en cours…
           </motion.div>

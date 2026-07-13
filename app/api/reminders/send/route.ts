@@ -60,11 +60,20 @@ export async function POST(req: NextRequest) {
       userAgent: req.headers.get('user-agent') || undefined,
     });
 
-    if (result.skipped) {
-      return NextResponse.json({ error: result.error || 'Aucun email client associé' }, { status: 400 });
-    }
-    if (!result.ok) {
+    // ATHÉNA (C3) — un client sans email n'est plus un échec : la relance est
+    // enregistrée (pending_email) + notifiée en in-app. On retourne un succès
+    // explicite avec le flag pendingEmail pour que l'UI l'explique.
+    if (!result.ok && !result.pendingEmail) {
       return NextResponse.json({ error: result.error || 'Erreur lors de l\'envoi de l\'email' }, { status: 500 });
+    }
+
+    if (result.pendingEmail) {
+      return NextResponse.json({
+        success: true,
+        pendingEmail: true,
+        message: 'Relance enregistrée — l’email du client est manquant. Ajoutez-le puis relancez.',
+        reminderLevel,
+      });
     }
 
     return NextResponse.json({

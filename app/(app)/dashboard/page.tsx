@@ -22,9 +22,8 @@ import {
  */
 
 const springTransition = { type: 'spring' as const, damping: 25, stiffness: 200 };
-// Palette adoucie (teintes -400) : moins de chroma en mode sombre, reste
-// distinguable — cohérente avec la loi de désaturation OBSIDIAN.
-const COLORS = ['#10b981', '#60a5fa', '#a78bfa', '#fbbf24', '#f472b6'];
+// ASTRÉE (CIBLE 5) — Top clients : palette uniforme émeraude. Le rang est porté par la
+// largeur de la barre, pas par un arc-en-ciel catégoriel. Loi accent unique tenue.
 
 export default function DashboardPage() {
   const { profile } = useAuthStore();
@@ -121,15 +120,15 @@ export default function DashboardPage() {
               <div className="relative">
                 <p className="text-emerald-200/80 text-sm font-medium">{greeting}</p>
                 <div className="mt-2 mb-1">
-                  <p className="text-[10px] font-bold text-emerald-200/60 uppercase tracking-widest mb-0.5">À encaisser</p>
+                  <p className="text-[11px] font-bold text-emerald-50/80 uppercase tracking-widest mb-0.5">À encaisser</p>
                   <motion.p key={toCollect} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={springTransition}
-                    className="text-3xl font-bold text-white tracking-tight">
+                    className="text-3xl font-bold text-white tracking-tight tabular-nums">
                     {formatCurrency(toCollect)}
                   </motion.p>
                 </div>
                 {/* Sub-metrics + CA */}
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  <span className="text-[10px] text-emerald-200/50">
+                  <span className="text-[11px] text-emerald-50/70">
                     CA mois : {formatCurrency(stats?.mrr || 0)}
                     {monthOverMonthGrowth !== 0 && (
                       <span className={monthOverMonthGrowth > 0 ? 'text-emerald-200' : 'text-red-200'}> ({monthOverMonthGrowth > 0 ? '+' : ''}{monthOverMonthGrowth.toFixed(1)}%)</span>
@@ -138,13 +137,13 @@ export default function DashboardPage() {
                   {overdueCount > 0 && (
                     <Link href="/documents?type=invoice" className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-300 animate-pulse" />
-                      <span className="text-[10px] text-emerald-200/70 font-medium">{formatCurrency(toCollectOverdue)} en retard</span>
+                      <span className="text-[11px] text-emerald-50/80 font-medium">{formatCurrency(toCollectOverdue)} en retard</span>
                     </Link>
                   )}
                   {toCollectPending > 0 && (
                     <div className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-200/50" />
-                      <span className="text-[10px] text-emerald-200/70 font-medium">{formatCurrency(toCollectPending)} en attente</span>
+                      <span className="text-[11px] text-emerald-50/80 font-medium">{formatCurrency(toCollectPending)} en attente</span>
                     </div>
                   )}
                 </div>
@@ -193,12 +192,12 @@ export default function DashboardPage() {
               <div className="relative flex flex-col xl:flex-row xl:items-stretch gap-6">
                 {/* Focal — À encaisser */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-emerald-200/60 uppercase tracking-widest mb-1">À encaisser</p>
+                  <p className="text-[11px] font-bold text-emerald-50/80 uppercase tracking-widest mb-1">À encaisser</p>
                   <motion.p key={toCollect} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={springTransition}
-                    className="text-4xl xl:text-5xl font-bold text-white tracking-tight">
+                    className="text-4xl xl:text-5xl font-bold text-white tracking-tight tabular-nums">
                     {formatCurrency(toCollect)}
                   </motion.p>
-                  <p className="text-xs text-emerald-200/70 mt-2">
+                  <p className="text-xs text-emerald-50/80 mt-2">
                     {sentCount > 0 ? `${sentCount} facture${sentCount > 1 ? 's' : ''} en cours` : 'Aucune facture en attente'}
                   </p>
                 </div>
@@ -332,13 +331,13 @@ export default function DashboardPage() {
                     const pct = Math.round((c.paid / maxPaid) * 100);
                     return (
                       <motion.div key={c.id || c.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: COLORS[i] + '20', color: COLORS[i] }}>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                           {initials}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
                           <div className="h-1 bg-gray-100 dark:bg-white/[0.06] rounded-full overflow-hidden mt-1">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, delay: i * 0.05 }} className="h-full rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, delay: i * 0.05 }} className="h-full rounded-full bg-emerald-500" />
                           </div>
                         </div>
                         <span className="text-xs font-bold text-gray-900 dark:text-white flex-shrink-0">{formatCurrency(c.paid)}</span>

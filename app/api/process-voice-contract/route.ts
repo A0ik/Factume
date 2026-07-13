@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { getUserHotwords, buildWhisperPrompt } from '@/lib/voice-vocabulary';
+import { applySttCorrection } from '@/lib/stt-correction';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { consumeVoiceQuota } from '@/lib/subscription-guard';
@@ -49,34 +51,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No audio file' }, { status: 400 });
     }
 
-    // Transcription with Groq Whisper (auto-detect language - supports Arabic and French)
+    // CIBLE 2 — Hotwords utilisateur (lexique métier + corrections passées + noms salariés).
+    const { hotwords, corrections } = await getUserHotwords(supabaseAuth, user.id);
+
+    // Transcription with Groq Whisper.
+    // Couche 0 (pré-erreur) : `prompt` biaise la reconnaissance vers le lexique métier.
     const transcription = await groq.audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3-turbo',
-      // language: 'fr', // Removed - auto-detect to support Arabic
+      prompt: buildWhisperPrompt(hotwords),
     });
     const rawTranscript = transcription.text;
 
     // Translate Arabic (any dialect) to French if needed
-    const { transcript, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+    const { transcript: translated, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
 
     console.log(`[process-voice-contract] Language detected: ${originalLanguage}${wasTranslated ? ' (translated)' : ''}`);
 
-    // Load user's past voice corrections
+    // CIBLE 2 — Correction contextuelle STT (paie/paix, contrar/contrat…).
+    const sttFixed = await applySttCorrection(translated, { userCorrections: corrections, groq });
+    let transcript = sttFixed.transcript;
+    if (sttFixed.changes.length) {
+      console.log('[process-voice-contract] STT corrections:', sttFixed.changes);
+    }
+
+    // Hint LLM construit depuis les mêmes corrections (mémoire vocale, single query).
     let correctionHint = '';
-    try {
-      const { data: corrections } = await supabaseAuth
-        .from('voice_corrections')
-        .select('field, original_value, corrected_value')
-        .eq('user_id', user.id);
-      if (corrections && corrections.length > 0) {
-        const correctionLines = corrections
-          .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
-          .join(', ');
-        correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR:\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
-      }
-    } catch (e) {
-      // Non-critical
+    if (corrections.length > 0) {
+      const correctionLines = corrections
+        .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
+        .join(', ');
+      correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR:\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
     }
 
     // System prompt based on contract type
@@ -255,7 +260,8 @@ Détection automatique de contractCategory :
       originalTranscript: rawTranscript,
       wasTranslated,
       originalLanguage,
-      parsed
+      parsed,
+      sttCorrections: sttFixed.changes,
     });
 
   } catch (error: any) {

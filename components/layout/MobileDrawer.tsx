@@ -238,14 +238,14 @@ export default function MobileDrawer({ open, onClose }: Props) {
               <div className="flex items-center gap-1">
                 <button
                   onClick={toggle}
-                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-primary transition-all active:scale-95"
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-primary transition-all active:scale-95"
                   aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
                 >
                   {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-all active:scale-95"
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-all active:scale-95"
                   aria-label="Fermer le menu"
                 >
                   <X size={18} />

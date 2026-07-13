@@ -160,26 +160,26 @@ function MobileClientCard({ client, stats, idx, onDelete }: {
     <>
       <Link href={`/clients/${client.id}`} className="block">
         <motion.div variants={staggerItem} whileTap={{ scale: 0.98 }}
-          className="bg-gray-100 border border-gray-200 rounded-2xl p-5 cursor-pointer active:bg-gray-100/70 transition-colors">
+          className="bg-muted/40 border border-border rounded-card p-5 cursor-pointer active:bg-muted/60 transition-colors">
           <div className="flex items-start gap-3.5 mb-3">
-            <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0', color)}>
+            <div className={cn('w-11 h-11 rounded-control flex items-center justify-center text-foreground font-bold text-sm flex-shrink-0', color)}>
               {getInitials(client.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-gray-900 dark:text-white font-semibold truncate">{client.name}</p>
+              <p className="text-foreground font-semibold truncate">{client.name}</p>
               {client.city && (
-                <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin size={10} className="flex-shrink-0" />{client.city}
                 </p>
               )}
             </div>
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(e); }}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0">
-              <Trash2 size={14} />
+              className="touch-target p-2 rounded-control hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0 flex items-center justify-center">
+              <Trash2 size={18} />
             </button>
           </div>
           {(client.email || client.phone) && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-slate-400">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs text-muted-foreground">
               {client.email && <span className="flex items-center gap-1"><Mail size={11} className="flex-shrink-0" />{client.email}</span>}
               {client.phone && <span className="flex items-center gap-1"><Phone size={11} className="flex-shrink-0" />{client.phone}</span>}
             </div>
@@ -199,12 +199,12 @@ function MobileClientCard({ client, stats, idx, onDelete }: {
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-3 border-t border-border">
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDocPickerOpen(true); }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 rounded-control bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
               <FileText size={12} /><span>+ Doc</span>
             </button>
-            <ChevronRight size={16} className="text-slate-500" />
+            <ChevronRight size={16} className="text-muted-foreground" />
           </div>
         </motion.div>
       </Link>
@@ -230,52 +230,52 @@ function DesktopClientCardGrid({ client, stats, idx, onDelete }: {
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: idx * 0.04, ease: EASE }}
           whileHover={{ y: -2 }}
-          className="group bg-white border border-gray-200 rounded-2xl p-5 cursor-pointer hover:border-gray-300 transition-colors">
+          className="group bg-card border border-border rounded-card p-5 cursor-pointer hover:border-emerald-500/30 transition-colors">
           <div className="flex items-start gap-3.5 mb-4">
-            <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0', color)}>
+            <div className={cn('w-12 h-12 rounded-control flex items-center justify-center text-foreground font-bold text-sm flex-shrink-0', color)}>
               {getInitials(client.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-gray-900 dark:text-white font-semibold truncate group-hover:text-emerald-400 transition-colors">{client.name}</h3>
+              <h3 className="text-foreground font-semibold truncate group-hover:text-emerald-400 transition-colors">{client.name}</h3>
               {client.email && (
-                <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate"><Mail size={11} className="flex-shrink-0" />{client.email}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1 truncate"><Mail size={11} className="flex-shrink-0" />{client.email}</p>
               )}
               {client.city && (
-                <p className="text-xs text-slate-400 flex items-center gap-1 truncate"><MapPin size={11} className="flex-shrink-0" />{client.city}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 truncate"><MapPin size={11} className="flex-shrink-0" />{client.city}</p>
               )}
             </div>
             <button onClick={(e) => { e.preventDefault(); onDelete(e); }}
-              className="opacity-0 group-hover:opacity-100 p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex-shrink-0">
+              className="opacity-0 group-hover:opacity-100 p-2 rounded-control hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex-shrink-0">
               <Trash2 size={14} />
             </button>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="text-center p-2.5 rounded-xl bg-blue-500/10">
               <p className="text-blue-400 font-bold">{stats.count}</p>
-              <p className="text-[10px] text-blue-400/80">Facture{stats.count !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-blue-400/80">Facture{stats.count !== 1 ? 's' : ''}</p>
             </div>
             <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
               <p className="text-emerald-400 font-bold truncate">{formatCurrency(stats.revenue)}</p>
-              <p className="text-[10px] text-slate-400">Encaissé</p>
+              <p className="text-xs text-muted-foreground">Encaissé</p>
             </div>
             {stats.pending > 0 ? (
               <div className="text-center p-2.5 rounded-xl bg-amber-500/10 min-w-0">
                 <p className="text-amber-400 font-bold truncate">{formatCurrency(stats.pending)}</p>
-                <p className="text-[10px] text-slate-400">En attente</p>
+                <p className="text-xs text-muted-foreground">En attente</p>
               </div>
             ) : (
               <div className="text-center p-2.5 rounded-xl bg-emerald-500/10 min-w-0">
                 <p className="text-emerald-400"><Check size={18} className="mx-auto" /></p>
-                <p className="text-[10px] text-slate-400">A jour</p>
+                <p className="text-xs text-muted-foreground">A jour</p>
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between pt-3 border-t border-border">
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDocPickerOpen(true); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-control bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
               <FileText size={12} /><span>+ Doc</span>
             </button>
-            <ArrowUpRight size={16} className="text-slate-500 group-hover:text-emerald-400 transition-colors" />
+            <ArrowUpRight size={16} className="text-muted-foreground group-hover:text-emerald-400 transition-colors" />
           </div>
         </motion.div>
       </Link>
@@ -300,23 +300,23 @@ function DesktopClientRow({ client, stats, idx, onDelete }: {
       <motion.tr
         initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: idx * 0.03, ease: EASE }}
-        className="hover:bg-gray-100 cursor-pointer transition-colors group border-b border-gray-200 last:border-b-0"
+        className="hover:bg-muted/40 cursor-pointer transition-colors group border-b border-border last:border-b-0"
         onClick={() => router.push(`/clients/${client.id}`)}>
         <td className="px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-gray-900 dark:text-white font-bold text-sm flex-shrink-0', color)}>
+            <div className={cn('w-10 h-10 rounded-control flex items-center justify-center text-foreground font-bold text-sm flex-shrink-0', color)}>
               {getInitials(client.name)}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{client.name}</p>
-              {client.city && <p className="text-xs text-slate-400 flex items-center gap-1"><MapPin size={9} />{client.city}</p>}
+              <p className="text-sm font-semibold text-foreground truncate">{client.name}</p>
+              {client.city && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin size={9} />{client.city}</p>}
             </div>
           </div>
         </td>
         <td className="px-4 py-4 hidden md:table-cell">
           <div className="space-y-1">
-            {client.email && <p className="text-xs text-slate-300 flex items-center gap-1"><Mail size={10} className="text-slate-500" />{client.email}</p>}
-            {client.phone && <p className="text-xs text-slate-300 flex items-center gap-1"><Phone size={10} className="text-slate-500" />{client.phone}</p>}
+            {client.email && <p className="text-xs text-muted-foreground flex items-center gap-1"><Mail size={10} className="text-muted-foreground" />{client.email}</p>}
+            {client.phone && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone size={10} className="text-muted-foreground" />{client.phone}</p>}
           </div>
         </td>
         <td className="px-4 py-4 text-center">
@@ -329,14 +329,14 @@ function DesktopClientRow({ client, stats, idx, onDelete }: {
         <td className="px-4 py-4">
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
             <button onClick={(e) => { e.stopPropagation(); setDocPickerOpen(true); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-control bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-colors">
               <FileText size={12} /><span>+ Doc</span>
             </button>
             <button onClick={(e) => { e.stopPropagation(); onDelete(e); }}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors">
+              className="p-2 rounded-control hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors">
               <Trash2 size={14} />
             </button>
-            <ChevronRight size={16} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
+            <ChevronRight size={16} className="text-muted-foreground group-hover:text-emerald-400 transition-colors" />
           </div>
         </td>
       </motion.tr>
@@ -361,36 +361,36 @@ function ProductCardGrid({ product, idx, onEdit, onDelete, onDuplicate }: {
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: EASE, delay: Math.min(idx * 0.03, 0.3) }}
-      className="bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden group hover:border-gray-300 transition-colors">
+      className="bg-muted/40 border border-border rounded-card overflow-hidden group hover:border-emerald-500/30 transition-colors">
       <div className="relative p-5">
         <div className="absolute top-4 right-4 flex items-center gap-1.5">
           <span className={cn('w-1.5 h-1.5 rounded-full', cat.dot)} />
-          <span className="text-[10px] font-semibold text-slate-400">{cat.label}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{cat.label}</span>
         </div>
-        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-4 mt-2', cat.bg)}>
+        <div className={cn('w-12 h-12 rounded-control flex items-center justify-center mb-4 mt-2', cat.bg)}>
           <Icon size={20} className={cat.color} />
         </div>
         <div className="space-y-2 mb-4">
           <div className="flex items-start gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight flex-1">{product.name}</h3>
+            <h3 className="font-semibold text-foreground text-sm leading-tight flex-1">{product.name}</h3>
             {!product.is_active && (
-              <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">Inactif</span>
+              <span className="text-xs bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">Inactif</span>
             )}
           </div>
           {product.reference && (
-            <p className="text-[11px] text-gray-400 font-mono flex items-center gap-1"><Hash size={10} />{product.reference}</p>
+            <p className="text-xs text-muted-foreground font-mono flex items-center gap-1"><Hash size={10} />{product.reference}</p>
           )}
-          {product.description && <p className="text-xs text-slate-500 line-clamp-2">{product.description}</p>}
+          {product.description && <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>}
         </div>
-        <div className="flex items-end justify-between pt-3 border-t border-gray-200">
+        <div className="flex items-end justify-between pt-3 border-t border-border">
           <div>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">{formatPrice(product.unit_price)}</p>
-            <p className="text-[11px] text-gray-400">HT / {PRODUCT_UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%</p>
+            <p className="text-xl font-bold text-foreground">{formatPrice(product.unit_price)}</p>
+            <p className="text-xs text-muted-foreground">HT / {PRODUCT_UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%</p>
           </div>
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => onEdit(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"><Edit2 size={14} /></button>
-            <button onClick={() => onDuplicate(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"><Copy size={14} /></button>
-            <button onClick={() => onDelete(product.id)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+            <button onClick={() => onEdit(product)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Edit2 size={14} /></button>
+            <button onClick={() => onDuplicate(product)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-emerald-400 transition-colors"><Copy size={14} /></button>
+            <button onClick={() => onDelete(product.id)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
           </div>
         </div>
       </div>
@@ -414,35 +414,35 @@ function ProductCardMobile({ product, idx, onEdit, onDelete, onDuplicate }: {
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: EASE, delay: Math.min(idx * 0.04, 0.4) }}
-      className="bg-gray-100 border border-gray-200 rounded-2xl p-5">
+      className="bg-muted/40 border border-border rounded-card p-5">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', cat.bg)}>
             <Icon size={18} className={cat.color} />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{product.name}</h3>
-            {product.reference && <p className="text-[11px] text-gray-400 font-mono">#{product.reference}</p>}
+            <h3 className="font-semibold text-foreground text-sm">{product.name}</h3>
+            {product.reference && <p className="text-xs text-muted-foreground font-mono">#{product.reference}</p>}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <span className={cn('w-1.5 h-1.5 rounded-full', cat.dot)} />
-          <span className="text-[10px] font-semibold text-slate-500">{cat.label}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{cat.label}</span>
           {!product.is_active && (
-            <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold ml-1">Inactif</span>
+            <span className="text-xs bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold ml-1">Inactif</span>
           )}
         </div>
       </div>
-      {product.description && <p className="text-xs text-slate-500 line-clamp-2 mb-3">{product.description}</p>}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+      {product.description && <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{product.description}</p>}
+      <div className="flex items-center justify-between pt-3 border-t border-border">
         <div>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">{formatPrice(product.unit_price)}</p>
-          <p className="text-[11px] text-gray-400">HT / {PRODUCT_UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%</p>
+          <p className="text-lg font-bold text-foreground">{formatPrice(product.unit_price)}</p>
+          <p className="text-xs text-muted-foreground">HT / {PRODUCT_UNITS.find((u) => u.value === product.unit)?.label} · TVA {product.vat_rate}%</p>
         </div>
         <div className="flex gap-1">
-          <button onClick={() => onEdit(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"><Edit2 size={14} /></button>
-          <button onClick={() => onDuplicate(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"><Copy size={14} /></button>
-          <button onClick={() => onDelete(product.id)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+          <button onClick={() => onEdit(product)} className="touch-target p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"><Edit2 size={16} /></button>
+          <button onClick={() => onDuplicate(product)} className="touch-target p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-emerald-400 transition-colors flex items-center justify-center"><Copy size={16} /></button>
+          <button onClick={() => onDelete(product.id)} className="touch-target p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-red-400 transition-colors flex items-center justify-center"><Trash2 size={16} /></button>
         </div>
       </div>
     </motion.div>
@@ -790,13 +790,13 @@ export default function ContactsPage() {
                     ].map((s, i) => (
                       <motion.div key={s.title} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35, delay: i * 0.06, ease: EASE }}
-                        className="bg-white border border-gray-200 rounded-2xl p-5">
+                        className="bg-card border border-border rounded-card p-5">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2.5 rounded-xl bg-emerald-500/10"><s.icon size={18} className="text-emerald-400" /></div>
-                          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{s.title}</p>
+                          <div className="p-2.5 rounded-control bg-emerald-500/10"><s.icon size={18} className="text-emerald-400" /></div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{s.title}</p>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
-                        <p className="text-xs text-slate-500 mt-1">{s.sub}</p>
+                        <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
                       </motion.div>
                     ))}
                   </div>
@@ -808,10 +808,10 @@ export default function ContactsPage() {
                     <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input placeholder="Rechercher par nom, email ou ville..." value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors" />
+                      className="w-full pl-11 pr-12 py-2.5 rounded-control bg-muted/40 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors" />
                     {clientSearch && (
                       <button onClick={() => setClientSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-200 text-slate-400 hover:text-slate-300 transition-colors"><X size={14} /></button>
+                        className="touch-target absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><X size={16} /></button>
                     )}
                   </div>
                   <div className="hidden md:flex rounded-xl overflow-hidden bg-gray-100 border border-gray-200 p-1">
@@ -833,13 +833,13 @@ export default function ContactsPage() {
                   {filteredClients.length === 0 ? (
                     <motion.div key="empty-clients" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
                       transition={{ duration: 0.3, ease: EASE }} className="text-center py-16 px-4">
-                      <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-5">
-                        <Users size={28} className="text-slate-400" />
+                      <div className="w-16 h-16 rounded-card bg-muted/40 border border-border flex items-center justify-center mx-auto mb-5">
+                        <Users size={28} className="text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
                         {clientSearch ? 'Aucun client trouvé' : 'Votre carnet de clients vous attend'}
                       </h3>
-                      <p className="text-sm text-slate-400 mb-6 max-w-sm mx-auto">
+                      <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
                         {clientSearch ? "Essayez d'autres mots-clés" : 'Commencez par ajouter votre premier client.'}
                       </p>
                       {!clientSearch && (
@@ -855,8 +855,8 @@ export default function ContactsPage() {
                             onDelete={(e) => handleDeleteClient(client.id, e)} />
                         ))}
                         <motion.button variants={staggerItem} whileTap={{ scale: 0.98 }} onClick={() => setShowClientModal(true)}
-                          className="w-full bg-gray-100 border border-gray-200 border-dashed rounded-2xl p-5 flex items-center justify-center gap-3 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Plus size={20} className="text-emerald-400" /></div>
+                          className="touch-target w-full bg-muted/40 border border-border border-dashed rounded-card p-5 flex items-center justify-center gap-3 text-muted-foreground hover:text-emerald-400 hover:border-emerald-500/30 transition-colors">
+                          <div className="w-10 h-10 rounded-control bg-emerald-500/10 flex items-center justify-center"><Plus size={20} className="text-emerald-400" /></div>
                           <span className="text-sm font-medium">Ajouter un client</span>
                         </motion.button>
                       </motion.div>
@@ -872,11 +872,11 @@ export default function ContactsPage() {
                           <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: filteredClients.length * 0.04, ease: EASE }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                             onClick={() => setShowClientModal(true)}
-                            className="group h-full rounded-2xl border border-dashed border-gray-300 hover:border-emerald-500/30 p-6 transition-colors flex flex-col items-center justify-center gap-3 min-h-[220px]">
-                            <div className="w-14 h-14 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Plus size={24} className="text-emerald-400" /></div>
+                            className="group h-full rounded-card border border-dashed border-border hover:border-emerald-500/30 p-6 transition-colors flex flex-col items-center justify-center gap-3 min-h-[220px]">
+                            <div className="w-14 h-14 rounded-control bg-emerald-500/10 flex items-center justify-center"><Plus size={24} className="text-emerald-400" /></div>
                             <div className="text-center">
-                              <p className="text-sm font-medium text-slate-400 group-hover:text-emerald-400 transition-colors">Ajouter un client</p>
-                              <p className="text-xs text-slate-500 mt-1">Créer une fiche client</p>
+                              <p className="text-sm font-medium text-muted-foreground group-hover:text-emerald-400 transition-colors">Ajouter un client</p>
+                              <p className="text-xs text-muted-foreground mt-1">Créer une fiche client</p>
                             </div>
                           </motion.button>
                         </motion.div>
@@ -885,14 +885,14 @@ export default function ContactsPage() {
                       {/* Desktop List */}
                       {clientViewMode === 'list' && (
                         <motion.div key="desktop-list-clients" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          transition={{ duration: 0.3, ease: EASE }} className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                          transition={{ duration: 0.3, ease: EASE }} className="hidden md:block bg-card border border-border rounded-card overflow-hidden">
                           <table className="w-full">
                             <thead>
-                              <tr className="border-b border-gray-200">
-                                <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Client</th>
-                                <th className="text-left px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider hidden lg:table-cell">Contact</th>
-                                <th className="text-center px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Factures</th>
-                                <th className="text-right px-4 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">CA encaissé</th>
+                              <tr className="border-b border-border">
+                                <th className="text-left px-5 py-3.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</th>
+                                <th className="text-left px-4 py-3.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Contact</th>
+                                <th className="text-center px-4 py-3.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">Factures</th>
+                                <th className="text-right px-4 py-3.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">CA encaissé</th>
                                 <th className="px-4 py-3.5" />
                               </tr>
                             </thead>
@@ -979,10 +979,10 @@ export default function ContactsPage() {
                     <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input placeholder="Rechercher par nom, référence ou description..." value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
-                      className="w-full pl-11 pr-10 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-sm text-gray-900 dark:text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors" />
+                      className="w-full pl-11 pr-12 py-2.5 rounded-control bg-muted/40 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 outline-none transition-colors" />
                     {productSearch && (
                       <button onClick={() => setProductSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-gray-200 text-slate-400 hover:text-slate-300 transition-colors"><X size={14} /></button>
+                        className="touch-target absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><X size={16} /></button>
                     )}
                   </div>
                   <div className="hidden md:flex items-center gap-2">
@@ -1009,18 +1009,18 @@ export default function ContactsPage() {
                   </div>
                 ) : filteredProducts.length === 0 ? (
                   <div className="py-20 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto mb-4">
-                      <Package size={28} className="text-gray-400" />
+                    <div className="w-16 h-16 rounded-card bg-muted/40 border border-border flex items-center justify-center mx-auto mb-4">
+                      <Package size={28} className="text-muted-foreground" />
                     </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-2">
+                    <h3 className="font-semibold text-foreground text-lg mb-2">
                       {productSearch ? 'Aucun résultat' : 'Aucun produit'}
                     </h3>
-                    <p className="text-sm text-slate-500 mb-6">
+                    <p className="text-sm text-muted-foreground mb-6">
                       {productSearch ? 'Modifiez votre recherche' : 'Créez votre premier produit ou service'}
                     </p>
                     {!productSearch && (
                       <button onClick={openCreateProduct}
-                        className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-xl text-sm font-semibold transition-all">
+                        className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-3 rounded-control text-sm font-semibold transition-all">
                         <Plus size={18} />Créer un produit
                       </button>
                     )}
@@ -1037,7 +1037,7 @@ export default function ContactsPage() {
                           className={cn(
                             productViewMode === 'grid'
                               ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                              : 'bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-200'
+                              : 'bg-card border border-border rounded-card overflow-hidden divide-y divide-border'
                           )}
                         >
                           {filteredProducts.map((product, idx) => (
@@ -1045,7 +1045,7 @@ export default function ContactsPage() {
                               <ProductCardGrid key={product.id} product={product} idx={idx}
                                 onEdit={openEditProduct} onDelete={handleDeleteProduct} onDuplicate={handleDuplicateProduct} />
                             ) : (
-                              <div key={product.id} className="flex items-center gap-4 p-4 group hover:bg-gray-100 transition-colors">
+                              <div key={product.id} className="flex items-center gap-4 p-4 group hover:bg-muted/40 transition-colors">
                                 {(() => { const cat = getCatStyle(product.category); const Icon = cat.icon; return (
                                   <>
                                     <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0', cat.bg)}>
@@ -1053,19 +1053,19 @@ export default function ContactsPage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{product.name}</h3>
-                                        {!product.is_active && <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold">Inactif</span>}
+                                        <h3 className="font-semibold text-foreground text-sm">{product.name}</h3>
+                                        {!product.is_active && <span className="text-xs bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded-full font-semibold">Inactif</span>}
                                       </div>
-                                      {product.reference && <p className="text-[11px] text-gray-400 font-mono">#{product.reference}</p>}
+                                      {product.reference && <p className="text-xs text-muted-foreground font-mono">#{product.reference}</p>}
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                      <p className="text-lg font-bold text-gray-900 dark:text-white">{formatPrice(product.unit_price)}</p>
-                                      <p className="text-[11px] text-gray-400">HT · TVA {product.vat_rate}%</p>
+                                      <p className="text-lg font-bold text-foreground">{formatPrice(product.unit_price)}</p>
+                                      <p className="text-xs text-muted-foreground">HT · TVA {product.vat_rate}%</p>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button onClick={() => openEditProduct(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"><Edit2 size={14} /></button>
-                                      <button onClick={() => handleDuplicateProduct(product)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-emerald-400 transition-colors"><Copy size={14} /></button>
-                                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                                      <button onClick={() => openEditProduct(product)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Edit2 size={14} /></button>
+                                      <button onClick={() => handleDuplicateProduct(product)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-emerald-400 transition-colors"><Copy size={14} /></button>
+                                      <button onClick={() => handleDeleteProduct(product.id)} className="p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                                     </div>
                                   </>
                                   ); })()}
@@ -1074,11 +1074,11 @@ export default function ContactsPage() {
                           ))}
                           {productViewMode === 'grid' && (
                             <button onClick={openCreateProduct}
-                              className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group min-h-[220px]">
-                              <div className="w-12 h-12 rounded-xl bg-gray-100 group-hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
-                                <Plus size={20} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
+                              className="bg-muted/40 border border-dashed border-border rounded-card p-4 flex flex-col items-center justify-center gap-3 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group min-h-[220px]">
+                              <div className="w-12 h-12 rounded-control bg-muted group-hover:bg-emerald-500/10 flex items-center justify-center transition-colors">
+                                <Plus size={20} className="text-muted-foreground group-hover:text-emerald-400 transition-colors" />
                               </div>
-                              <span className="text-sm font-semibold text-gray-400 group-hover:text-emerald-400 transition-colors">Ajouter un produit</span>
+                              <span className="text-sm font-semibold text-muted-foreground group-hover:text-emerald-400 transition-colors">Ajouter un produit</span>
                             </button>
                           )}
                         </motion.div>
@@ -1092,9 +1092,9 @@ export default function ContactsPage() {
                           onEdit={openEditProduct} onDelete={handleDeleteProduct} onDuplicate={handleDuplicateProduct} />
                       ))}
                       <button onClick={openCreateProduct}
-                        className="w-full bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-4 flex items-center justify-center gap-2 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all">
-                        <Plus size={16} className="text-gray-400" />
-                        <span className="text-sm font-semibold text-gray-400">Ajouter un produit</span>
+                        className="touch-target w-full bg-muted/40 border border-dashed border-border rounded-card p-4 flex items-center justify-center gap-2 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all">
+                        <Plus size={16} className="text-muted-foreground" />
+                        <span className="text-sm font-semibold text-muted-foreground">Ajouter un produit</span>
                       </button>
                     </div>
                   </>
@@ -1105,15 +1105,15 @@ export default function ContactsPage() {
                   {showProductModal && (
                     <motion.div
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
                       onClick={(e) => { if (e.target === e.currentTarget) setShowProductModal(false); }}>
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.2, ease: EASE }}
-                        className="bg-white rounded-2xl w-full max-w-lg overflow-hidden border border-gray-200">
-                        <div className="px-6 pt-6 pb-4 border-b border-gray-200 flex items-center justify-between">
-                          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{editingProductId ? 'Modifier' : 'Nouveau produit'}</h2>
-                          <button onClick={() => setShowProductModal(false)} className="p-2 rounded-lg hover:bg-gray-100 text-slate-500 hover:text-gray-900 transition-colors"><X size={20} /></button>
+                        className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg overflow-hidden border border-border">
+                        <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
+                          <h2 className="text-xl font-bold text-foreground">{editingProductId ? 'Modifier' : 'Nouveau produit'}</h2>
+                          <button onClick={() => setShowProductModal(false)} className="touch-target p-2 rounded-control hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleSaveProduct} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
                           {/* Category */}
@@ -1319,7 +1319,7 @@ export default function ContactsPage() {
                           </div>
                           <div className="text-right flex-shrink-0">
                             <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(opp.value)}</p>
-                            <p className="text-[10px] text-slate-400">{opp.probability}% prob.</p>
+                            <p className="text-xs text-slate-400">{opp.probability}% prob.</p>
                           </div>
                           <ChevronRight size={16} className="text-slate-400 flex-shrink-0" />
                         </motion.div>

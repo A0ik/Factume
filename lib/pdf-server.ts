@@ -2,9 +2,21 @@
  * Server-side PDF generation using pdf-lib.
  * Supports templates 1-6, logo embedding, payment links, and proper French character encoding.
  */
-import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage, RGB, PDFImage } from 'pdf-lib';
+import { PDFDocument, rgb, PDFFont, PDFPage, RGB, PDFImage } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import fs from 'fs';
+import path from 'path';
 import { resolveTermsText } from './payment-terms';
 import { bestTextRGB01, legibleAccentRGB01, type RGB01 } from './color-contrast';
+
+/**
+ * APEX — Charge un fichier police TTF depuis lib/fonts/. Les polices Inter sont
+ * auto-hébergées (OFL), chargées de façon synchrone et déterministe (zéro dépendance
+ * réseau au runtime). Utilisé par embedFont() après registerFontkit(fontkit).
+ */
+function loadFont(name: string): Uint8Array {
+  return fs.readFileSync(path.join(process.cwd(), 'lib', 'fonts', name));
+}
 
 /** Fetch a remote image and embed it. Returns null on any error so callers can skip gracefully. */
 async function fetchAndEmbedImage(pdfDoc: PDFDocument, url: string): Promise<PDFImage | null> {
@@ -352,22 +364,20 @@ function getStyle(templateId: number, accent: RGB): TemplateStyle {
 export async function generateInvoicePdfBuffer(invoice: any, profile: any): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
 
-  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const helvReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const timesReg = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  // APEX (anti-AI-slop) — Police Inter embarquée (TTF via @pdf-lib/fontkit) pour
+  // une cohérence web = PDF. Fini Helvetica/TimesRoman. 3 graisses : Regular, Bold,
+  // Black (Black réservé au TOTAL TTC pour l'impact héroïque).
+  pdfDoc.registerFontkit(fontkit);
+  const reg = await pdfDoc.embedFont(loadFont('Inter-Regular.ttf'));
+  const bold = await pdfDoc.embedFont(loadFont('Inter-Bold.ttf'));
+  const black = await pdfDoc.embedFont(loadFont('Inter-Black.ttf'));
+  const titleFont = bold;     // titres (label doc, société, label total) en Inter Bold
+  const accentHero = black;   // TOTAL TTC en Inter Black (impact)
 
   const templateId: number = Number(profile?.template_id ?? 1);
-  const accentHex: string = profile?.accent_color || '#1D9E75';
+  const accentHex: string = profile?.accent_color || '#10b981';
   const accent = hexToRgb(accentHex);
   const style = getStyle(templateId, accent);
-
-  // PROMETHEUS (CIBLE 2) — « serif (titres) + sans (corps) » : les TITRES héroïques
-  // (label du document, nom de société, TOTAL TTC) en Times (serif prestige), le
-  // corps reste Helvetica (sans, lisible). Choix utilisateur validé.
-  const titleFont = timesBold;
-  const bold = helvBold;
-  const reg = helvReg;
 
   const ink = rgb(0.07, 0.07, 0.07);
   const muted = rgb(0.42, 0.45, 0.50);
@@ -380,7 +390,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   const fmtDate = (s: string) => {
     try {
       const d = new Date(s);
-      const months = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
+      const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
       return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     } catch { return String(s); }
   };
@@ -452,9 +462,9 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     rightText(page, docLabel, W - margin, H - 28, 9, titleFont, headerText);
 
     // Dates — right side, below doc label
-    rightText(page, `Emis le ${fmtDate(invoice.issue_date)}`, W - margin, H - 46, 8.5, reg, headerText);
+    rightText(page, `Émis le ${fmtDate(invoice.issue_date)}`, W - margin, H - 46, 8.5, reg, headerText);
     if (invoice.due_date) {
-      rightText(page, `Echeance : ${fmtDate(invoice.due_date)}`, W - margin, H - 60, 8.5, bold, headerText);
+      rightText(page, `Échéance : ${fmtDate(invoice.due_date)}`, W - margin, H - 60, 8.5, bold, headerText);
     }
 
     // Company name below logo area (inside header, bottom-left)
@@ -493,9 +503,9 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     const accentOnBody = legibleAccentOn(style.bodyBg, accent);
     drawText(page, safe(docLabel), infoX - 150, y + 50, 10, titleFont, accentOnBody);
     const dateStr = fmtDate(invoice.issue_date);
-    drawText(page, `Emis le ${dateStr}`, infoX - 150, y + 34, 8.5, reg, muted);
+    drawText(page, `Émis le ${dateStr}`, infoX - 150, y + 34, 8.5, reg, muted);
     if (invoice.due_date) {
-      drawText(page, `Echeance : ${fmtDate(invoice.due_date)}`, infoX - 150, y + 18, 8.5, bold, accentOnBody);
+      drawText(page, `Échéance : ${fmtDate(invoice.due_date)}`, infoX - 150, y + 18, 8.5, bold, accentOnBody);
     }
 
     // Company name if no logo
@@ -519,7 +529,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // Le nom de l'entreprise n'est répété dans le corps QUE si l'en-tête affiche le
   // logo (et donc pas le nom). Sinon le nom est déjà dans la bande d'en-tête : on
   // évite la duplication qui le faisait apparaître « au milieu » du document.
-  drawText(page, 'EMETTEUR', margin, ly, 7, bold, legibleAccentOn(style.bodyBg, accent));
+  drawText(page, 'ÉMETTEUR', margin, ly, 7, bold, legibleAccentOn(style.bodyBg, accent));
   ly -= 14;
   if (logoImage) {
     drawText(page, senderName, margin, ly, 10, bold, ink, halfX - margin - 16);
@@ -567,7 +577,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
   // Accent bar on left of client card
   page.drawRectangle({ x: clientBoxX - 8, y: ry - clientBoxH + 4, width: 3, height: clientBoxH, color: accent });
 
-  drawText(page, 'FACTURER A', clientBoxX, ry - 4, 7, bold, legibleAccentOn(style.bodyBg, accent));
+  drawText(page, 'FACTURÉ À', clientBoxX, ry - 4, 7, bold, legibleAccentOn(style.bodyBg, accent));
   drawText(page, clientName, clientBoxX, ry - 18, 10, bold, ink, clientBoxW);
   ry -= 28;
   if (client?.address) { drawText(page, safe(client.address), clientBoxX, ry, 8.5, reg, muted, clientBoxW); ry -= 12; }
@@ -612,9 +622,9 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
       : style.thText;
   const thY = y - 10;
   drawText(page, 'PRESTATION / DESCRIPTION', col.desc + 8, thY, 7, bold, thText);
-  drawText(page, 'QTE', col.qty, thY, 7, bold, thText);
-  drawText(page, 'P.U. HT', col.price, thY, 7, bold, thText);
-  drawText(page, 'TVA', col.vat, thY, 7, bold, thText);
+  rightText(page, 'QTÉ', col.price - 8, thY, 7, bold, thText);
+  rightText(page, 'P.U. HT', col.vat - 8, thY, 7, bold, thText);
+  rightText(page, 'TVA', col.total - 8, thY, 7, bold, thText);
   rightText(page, 'TOTAL HT', rightEdge - 8, thY, 7, bold, thText);
   y -= thH;
 
@@ -633,9 +643,9 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     const tdY = y - 12;
     const descW = col.qty - col.desc - 14;
     drawText(page, safe(item.description || ''), col.desc + 8, tdY, 9, reg, ink, descW);
-    drawText(page, String(item.quantity ?? 1), col.qty, tdY, 9, reg, muted);
-    drawText(page, fmt(item.unit_price ?? 0), col.price, tdY, 9, reg, muted);
-    drawText(page, `${item.vat_rate ?? 0}%`, col.vat, tdY, 9, reg, muted);
+    rightText(page, String(item.quantity ?? 1), col.price - 8, tdY, 9, reg, muted);
+    rightText(page, fmt(item.unit_price ?? 0), col.vat - 8, tdY, 9, reg, muted);
+    rightText(page, `${item.vat_rate ?? 0}%`, col.total - 8, tdY, 9, reg, muted);
     rightText(page, fmt(item.total ?? (item.quantity ?? 1) * (item.unit_price ?? 0)), rightEdge - 8, tdY, 9, bold, ink);
 
     y -= rowH;
@@ -662,7 +672,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         // SAGE (CIBLE 1) — valeur en couleur lisible (noir/blanc/accent) selon le fond.
         page.drawLine({ start: { x: totX - 12, y: y + 4 }, end: { x: totRight, y: y + 4 }, thickness: 1.2, color: accent });
         drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
-        rightText(page, value, totRight, y - 14, 20, titleFont, bestTextOn(style.bodyBg, accent));
+        rightText(page, value, totRight, y - 14, 20, accentHero, bestTextOn(style.bodyBg, accent));
         y -= 34;
       } else if (ts === 'boxed') {
         // ATELIER (CIBLE 4) — ÉLÉGANCE : boîte claire bordée accent (CIBLE 2 : arrondi).
@@ -671,7 +681,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         const boxBg = rgb(1, 1, 1);
         drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: boxBg, borderColor: accent, borderWidth: 1 });
         drawText(page, label, totX - 4, y - 8, 9, titleFont, muted);
-        rightText(page, value, totRight, y - 10, 16, titleFont, bestTextOn(boxBg, accent));
+        rightText(page, value, totRight, y - 10, 16, accentHero, bestTextOn(boxBg, accent));
         y -= boxH + 6;
       } else {
         // 'bar' (templates 1-6) ou 'card' (AUDACE) : bande pleine couleur totalBg (CIBLE 2 : arrondi).
@@ -681,7 +691,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
         drawRoundedRect(page, { x: totX - 12, y: y - boxH + 8, width: totW + 12, height: boxH, radius: 8, color: style.totalBg });
         const totalFg = bestTextOn(style.totalBg, accent);
         drawText(page, label, totX - 4, y - 8, 9, titleFont, totalFg);
-        rightText(page, value, totRight, y - 10, 16, titleFont, totalFg);
+        rightText(page, value, totRight, y - 10, 16, accentHero, totalFg);
         y -= boxH + 6;
       }
     } else {
@@ -859,7 +869,7 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     drawRoundedRect(page, { x: margin, y: y - bankBoxH, width: contentW, height: bankBoxH, radius: 8, color: style.sectionBoxBg, borderColor: style.dividerColor, borderWidth: 0.5 });
     page.drawRectangle({ x: margin, y: y - bankBoxH, width: 3, height: bankBoxH, color: accent });
 
-    drawText(page, 'COORDONNEES BANCAIRES', margin + 12, y - 6, 7, bold, accent);
+    drawText(page, 'COORDONNÉES BANCAIRES', margin + 12, y - 6, 7, bold, accent);
     let by = y - 20;
     if (profile.bank_name) { drawText(page, `Banque : ${safe(profile.bank_name)}`, margin + 12, by, 8.5, reg, ink); by -= 12; }
     if (profile.iban) { drawText(page, `IBAN : ${safe(profile.iban)}`, margin + 12, by, 8.5, reg, ink); by -= 12; }

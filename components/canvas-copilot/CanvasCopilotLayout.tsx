@@ -79,7 +79,7 @@ export default function CanvasCopilotLayout({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onBack}
-          className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20 transition-all"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-control border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-white/20 transition-all"
         >
           <ArrowLeft size={15} />
         </motion.button>
@@ -88,7 +88,7 @@ export default function CanvasCopilotLayout({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <div className={cn(
-              'w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br',
+              'w-6 h-6 rounded-control flex items-center justify-center bg-gradient-to-br',
               config.gradient,
             )}>
               <config.icon size={12} className="text-white" />
@@ -105,7 +105,7 @@ export default function CanvasCopilotLayout({
             whileTap={{ scale: 0.9 }}
             onClick={undo}
             disabled={!canUndo}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-all"
+            className="p-2.5 rounded-control min-w-[40px] min-h-[40px] hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-all"
             title="Annuler (Ctrl+Z)"
           >
             <Undo2 size={14} />
@@ -114,7 +114,7 @@ export default function CanvasCopilotLayout({
             whileTap={{ scale: 0.9 }}
             onClick={redo}
             disabled={!canRedo}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-all"
+            className="p-2.5 rounded-control min-w-[40px] min-h-[40px] hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 disabled:opacity-30 transition-all"
             title="Retablir (Ctrl+Y)"
           >
             <Redo2 size={14} />
@@ -126,7 +126,7 @@ export default function CanvasCopilotLayout({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/[0.04]"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-control bg-gray-100 dark:bg-white/[0.04]"
           >
             <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Total</span>
             <span className="text-sm font-bold text-gray-900 dark:text-white">
@@ -147,7 +147,7 @@ export default function CanvasCopilotLayout({
           onClick={onSave}
           disabled={saving}
           className={cn(
-            'flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
+            'flex items-center gap-1.5 px-3 sm:px-4 py-2.5 min-h-[44px] rounded-control text-xs sm:text-sm font-bold transition-all',
             saving
               ? 'bg-gray-200 dark:bg-white/[0.06] text-gray-400 cursor-wait'
               : `bg-gradient-to-r ${config.gradient} text-white shadow-lg hover:shadow-xl`,

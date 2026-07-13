@@ -11,6 +11,10 @@ import { DocumentType } from '@/types';
  * This is the single source of truth that replaces 6 duplicated pages.
  * Aligned with DOC_META in components/pdf-document.tsx
  * and DOC_TYPE_CONFIG in app/api/ai/generate-invoice/route.ts
+ *
+ * APEX (anti-AI-slop) — Un seul accent brand (éméraude #10b981) pour TOUS les
+ * types. On différencie les documents par un ICÔNE (FileText, Clipboard…),
+ * jamais par la couleur. Fini les gradients bleu/violet/rose par doc-type.
  */
 export interface DocTypeConfig {
   type: DocumentType;
@@ -36,18 +40,23 @@ export interface DocTypeConfig {
   voiceMode: 'invoice' | 'quote' | 'credit_note' | 'order' | 'delivery' | 'deposit';
 }
 
+/** Apparence brand unifiée : émeraude partout. Les types se distinguent par l'icône. */
+const BRAND = {
+  color: 'text-emerald-600 dark:text-emerald-400',
+  gradient: 'from-emerald-500 to-emerald-600',
+  bgLight: 'bg-emerald-50',
+  bgDark: 'dark:bg-emerald-500/10',
+  border: 'border-emerald-200 dark:border-emerald-500/30',
+} as const;
+
 export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   invoice: {
     type: 'invoice',
+    ...BRAND,
     label: 'Nouvelle facture',
     shortLabel: 'Facture',
     slug: 'factures',
     icon: FileText,
-    color: 'text-blue-500',
-    gradient: 'from-blue-500 to-indigo-500',
-    bgLight: 'bg-blue-50',
-    bgDark: 'dark:bg-blue-500/10',
-    border: 'border-blue-200 dark:border-blue-500/30',
     defaultPaymentDays: 30,
     showPaymentTerms: true,
     showVat: true,
@@ -66,15 +75,11 @@ export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   },
   quote: {
     type: 'quote',
+    ...BRAND,
     label: 'Nouveau devis',
     shortLabel: 'Devis',
     slug: 'devis',
     icon: Clipboard,
-    color: 'text-purple-500',
-    gradient: 'from-purple-500 to-violet-500',
-    bgLight: 'bg-purple-50',
-    bgDark: 'dark:bg-purple-500/10',
-    border: 'border-purple-200 dark:border-purple-500/30',
     defaultPaymentDays: 30,
     showPaymentTerms: true,
     showVat: true,
@@ -93,15 +98,11 @@ export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   },
   credit_note: {
     type: 'credit_note',
+    ...BRAND,
     label: 'Nouvel avoir',
     shortLabel: 'Avoir',
     slug: 'avoirs',
     icon: RefreshCw,
-    color: 'text-rose-500',
-    gradient: 'from-rose-500 to-pink-500',
-    bgLight: 'bg-rose-50',
-    bgDark: 'dark:bg-rose-500/10',
-    border: 'border-rose-200 dark:border-rose-500/30',
     defaultPaymentDays: 30,
     showPaymentTerms: true,
     showVat: true,
@@ -119,15 +120,11 @@ export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   },
   deposit: {
     type: 'deposit',
+    ...BRAND,
     label: "Nouvelle facture d'acompte",
     shortLabel: 'Acompte',
     slug: 'acomptes',
     icon: Banknote,
-    color: 'text-emerald-500',
-    gradient: 'from-emerald-500 to-teal-500',
-    bgLight: 'bg-emerald-50',
-    bgDark: 'dark:bg-emerald-500/10',
-    border: 'border-emerald-200 dark:border-emerald-500/30',
     defaultPaymentDays: 15,
     showPaymentTerms: true,
     showVat: true,
@@ -145,15 +142,11 @@ export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   },
   purchase_order: {
     type: 'purchase_order',
+    ...BRAND,
     label: 'Nouveau bon de commande',
     shortLabel: 'Commande',
     slug: 'commandes',
     icon: ShoppingCart,
-    color: 'text-amber-500',
-    gradient: 'from-amber-500 to-orange-500',
-    bgLight: 'bg-amber-50',
-    bgDark: 'dark:bg-amber-500/10',
-    border: 'border-amber-200 dark:border-amber-500/30',
     defaultPaymentDays: 30,
     showPaymentTerms: true,
     showVat: true,
@@ -171,15 +164,11 @@ export const DOC_TYPE_CONFIGS: Record<DocumentType, DocTypeConfig> = {
   },
   delivery_note: {
     type: 'delivery_note',
+    ...BRAND,
     label: 'Nouveau bon de livraison',
     shortLabel: 'Livraison',
     slug: 'livraisons',
     icon: Truck,
-    color: 'text-cyan-500',
-    gradient: 'from-cyan-500 to-blue-500',
-    bgLight: 'bg-cyan-50',
-    bgDark: 'dark:bg-cyan-500/10',
-    border: 'border-cyan-200 dark:border-cyan-500/30',
     defaultPaymentDays: 0,
     showPaymentTerms: false,
     showVat: false,

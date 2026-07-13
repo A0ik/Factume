@@ -16,6 +16,7 @@ import { BulkActions } from '@/components/invoices/BulkActions';
 import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
 import { InvoicePreviewSheet } from '@/components/invoices/InvoicePreviewSheet';
 import { RemindersModal } from '@/components/invoices/RemindersModal';
+import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
 import SwipeableCard from '@/components/layout/SwipeableCard';
 import { useToast } from '@/components/ui/SuccessToast';
 import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
@@ -157,6 +158,7 @@ export default function DocumentsPage() {
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
   const { showToast } = useToast();
+  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
 
   const initialType = (searchParams.get('type') as DocType) || 'all';
   const [activeType, setActiveType] = useState<DocType>(initialType);
@@ -199,6 +201,12 @@ export default function DocumentsPage() {
 
   const handleSendReminder = async (invoiceId: string) => {
     if (!session) return;
+    // ASTRÉE (CIBLE 1) — si le client n'a pas d'email, on le demande avant d'envoyer.
+    const inv: any = invoices.find((i: any) => i.id === invoiceId);
+    if (inv?.client?.id && !inv.client?.email) {
+      const email = await promptForEmail(inv.client);
+      if (!email) { toast.info('Relance annulée.'); return; }
+    }
     setSendingReminder(invoiceId);
     try {
       const res = await fetch('/api/reminders/send', {
@@ -206,8 +214,14 @@ export default function DocumentsPage() {
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoiceId, reminderLevel: 1, confirmed: true }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error();
-      toast.success('Relance envoyée');
+      // ASTRÉE — fini le mensonge : on inspecte pendingEmail au lieu de toaster un succès aveugle.
+      if (data.pendingEmail) {
+        toast.warning('Relance enregistrée — email du client manquant.');
+      } else {
+        toast.success('Relance envoyée');
+      }
       fetchInvoices();
     } catch { toast.error('Erreur'); } finally { setSendingReminder(null); }
   };
@@ -239,6 +253,7 @@ export default function DocumentsPage() {
   return (
     <div>
       <BulkActions selectedIds={Array.from(selectedIds)} onClear={() => setSelectedIds(new Set())} onActionComplete={() => fetchInvoices()} />
+      {ensureEmailModal}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
@@ -250,7 +265,7 @@ export default function DocumentsPage() {
             {invoices.some((d: any) => d.document_type === 'invoice' && (d.status === 'sent' || d.status === 'overdue')) && (
               <button
                 onClick={() => setShowReminders(true)}
-                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold rounded-control transition-colors hover:bg-red-500/20 active:scale-95"
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 sm:px-4 py-2.5 bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold rounded-control transition-colors hover:bg-red-500/20 active:scale-95"
                 title="Relancer les factures impayées par email"
               >
                 <Bell size={16} />
@@ -327,7 +342,7 @@ export default function DocumentsPage() {
                 )}
               >
                 {s.label}
-                <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-md', statusFilter === s.key ? 'bg-gray-100 dark:bg-white/10' : 'bg-gray-50 dark:bg-white/5')}>{count}</span>
+                <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-md', statusFilter === s.key ? 'bg-gray-100 dark:bg-white/10' : 'bg-gray-50 dark:bg-white/5')}>{count}</span>
               </button>
             );
           })}
@@ -354,12 +369,12 @@ export default function DocumentsPage() {
           {/* Desktop table */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hidden md:block bg-card border border-border rounded-card shadow-elev-1 overflow-hidden">
             <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-border bg-muted/40">
-              <div className="col-span-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Type</div>
-              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Numéro</div>
-              <div className="col-span-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Client</div>
-              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Date</div>
-              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-right">Total</div>
-              <div className="col-span-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Statut</div>
+              <div className="col-span-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">Type</div>
+              <div className="col-span-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Numéro</div>
+              <div className="col-span-3 text-xs font-bold text-muted-foreground uppercase tracking-wider">Client</div>
+              <div className="col-span-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</div>
+              <div className="col-span-2 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Total</div>
+              <div className="col-span-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Statut</div>
             </div>
             <div className="divide-y divide-border">
               {filteredDocs.map((doc) => {
@@ -413,7 +428,7 @@ export default function DocumentsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <TypeIcon size={12} className="text-slate-400" />
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{getDocTypeLabel(doc.document_type || 'invoice')}</span>
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{getDocTypeLabel(doc.document_type || 'invoice')}</span>
                           </div>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{clientName}</p>
                           <p className="text-xs text-slate-500 mt-0.5 font-mono">{doc.number || '—'}</p>
@@ -428,7 +443,7 @@ export default function DocumentsPage() {
                           {date && <span className="text-xs text-slate-500">{date}</span>}
                           {(doc.status === 'sent' || doc.status === 'overdue') && doc.document_type === 'invoice' && (
                             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendReminder(doc.id); }} disabled={sendingReminder === doc.id}
-                              className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40"
+                              className="min-h-[44px] min-w-[44px] p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40"
                             >
                               {sendingReminder === doc.id ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
                             </button>

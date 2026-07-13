@@ -71,7 +71,7 @@ export default function CabinetRelancesPage() {
   const { cabinet } = useCabinetStore();
   const primaryColor = cabinet?.primary_color || '#10b981';
 
-  const { data, loading, error, refresh } = useCabinetData<ReminderData>('/api/cabinet/reminders');
+  const { data, loading, error, refresh } = useCabinetData<ReminderData>('/api/cabinet/reminders', { wholeObject: true });
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [batchSending, setBatchSending] = useState(false);
   const [filterLevel, setFilterLevel] = useState<number | null>(null);
@@ -80,9 +80,14 @@ export default function CabinetRelancesPage() {
     setSendingIds((p) => new Set(p).add(invoiceId));
     try {
       // ARGOS — route existante /api/cabinet/reminders, payload snake_case.
-      await cabinetMutation('/api/cabinet/reminders', 'POST', { invoice_id: invoiceId, level, confirmed: true });
+      const result: any = await cabinetMutation('/api/cabinet/reminders', 'POST', { invoice_id: invoiceId, level, confirmed: true });
       clearCabinetCache('/api/cabinet/reminders');
-      toast.success('Relance envoyée');
+      // ASTRÉE (CIBLE 1) — honnête : si le client cabinet n'a pas d'email, on le dit.
+      if (result?.pendingEmail) {
+        toast.warning('Relance enregistrée — email du client cabinet manquant.');
+      } else {
+        toast.success('Relance envoyée');
+      }
       await refresh();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'envoi");
@@ -108,21 +113,26 @@ export default function CabinetRelancesPage() {
       // ARGOS — la route batch n'existe pas. On envoie séquentiellement vers
       // la route existante /api/cabinet/reminders (POST) avec le bon payload.
       let sent = 0;
+      let pendingEmail = 0;
       for (const inv of eligible) {
         try {
-          await cabinetMutation('/api/cabinet/reminders', 'POST', {
+          const r: any = await cabinetMutation('/api/cabinet/reminders', 'POST', {
             invoice_id: inv.id,
             level: nextLevel(inv.reminder_level),
             confirmed: true,
           });
-          sent += 1;
+          if (r?.pendingEmail) pendingEmail++; else sent += 1;
         } catch (e) {
           // On continue sur les suivantes même si l'une échoue.
         }
       }
-      const res = { sent } as { sent?: number };
       clearCabinetCache('/api/cabinet/reminders');
-      toast.success(`${res.sent || eligible.length} relance(s) envoyée(s)`);
+      // ASTRÉE — honnête : on distingue les envoyées des sans-email.
+      if (pendingEmail > 0) {
+        toast.warning(`${sent} envoyée(s) — ${pendingEmail} sans email client.`);
+      } else {
+        toast.success(`${sent || eligible.length} relance(s) envoyée(s)`);
+      }
       await refresh();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'envoi groupé");

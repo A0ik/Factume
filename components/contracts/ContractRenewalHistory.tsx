@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, Calendar, Clock, FileText, ExternalLink } from 'lucide-react';
-import { getRenewalHistory, getRenewedChain } from '@/lib/services/contract-renewal-service';
+import { getRenewalHistory } from '@/lib/services/contract-renewal-service';
 import { ContractRenewal } from '@/types';
 import Link from 'next/link';
 
@@ -26,10 +26,13 @@ export function ContractRenewalHistory({ contractId, onClose }: ContractRenewalH
     try {
       const [historyData, chainData] = await Promise.all([
         getRenewalHistory(contractId),
-        getRenewedChain(contractId),
+        // ARGOS (build) — getRenewedChain (admin) routé via l'API serveure.
+        fetch(`/api/contracts/renewed-chain?contractId=${encodeURIComponent(contractId)}`)
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => []),
       ]);
       setRenewals(historyData);
-      setChain(chainData);
+      setChain(Array.isArray(chainData) ? chainData : []);
     } catch (err) {
       console.error('Erreur lors du chargement de l\'historique:', err);
     } finally {

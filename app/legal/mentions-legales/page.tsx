@@ -23,15 +23,16 @@ export default function MentionsLegales() {
       title: 'Éditeur du site',
       content: [
         { label: 'Raison sociale', value: 'LIVE & BEST CONSULTING' },
-        { label: 'Forme juridique', value: 'Société par actions simplifiée (SAS)' },
+        { label: 'Forme juridique', value: 'Société par actions simplifiée unipersonnelle (SASU)' },
         { label: 'Capital social', value: '1 000,00 €' },
-        { label: 'Siège social', value: '[Adresse du siège à compléter] — Bobigny (93), France' },
+        { label: 'Siège social', value: '19 Avenue Jean Moulin, 93100 Montreuil, France' },
         { label: 'SIREN', value: '805 360 963' },
         { label: 'SIRET (siège)', value: '805 360 963 00021' },
         { label: 'RCS', value: '805 360 963 R.C.S. Bobigny (inscrit le 22/10/2014)' },
         { label: 'TVA intracommunautaire', value: 'FR 14 805360963' },
         { label: 'Email', value: 'contact@factu.me' },
-        { label: 'Directeur de la publication', value: 'Elhalabi Bacherki, Président' }
+        { label: 'Directeur de la publication', value: 'Elhalabi Bacherki, Président' },
+        { label: 'Code APE / NAF', value: '7022Z — Conseil pour les affaires et autres conseils de gestion' }
       ]
     },
     {
@@ -140,7 +141,7 @@ export default function MentionsLegales() {
               </h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
                 Conformément aux dispositions des articles L.111-1 et suivants du Code de la consommation,
-                nous vous informons que ce site est édité par la société LIVE & BEST CONSULTING, SAS au capital de 1 000,00 €, immatriculée au RCS de Bobigny sous le numéro 805 360 963.
+                nous vous informons que ce site est édité par la société LIVE & BEST CONSULTING, SASU au capital de 1 000,00 €, dont le siège social est situé 19 Avenue Jean Moulin, 93100 Montreuil, immatriculée au Registre du Commerce et des Sociétés de Bobigny sous le numéro 805 360 963.
               </p>
             </div>
           </div>

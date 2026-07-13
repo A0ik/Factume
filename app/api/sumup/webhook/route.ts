@@ -22,17 +22,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  // ARGOS (sécurité) — Fail-closed : le secret webhook DOIT être configuré. Avant, son
-  // absence (var d'env manquante) laissait n'importe qui poster un faux événement et
-  // marquer une facture « payée » sans paiement réel.
+  // ARGOS (sécurité) — SumUp NE SIGNE PAS ses webhooks (aucun header secret natif ;
+  // voir https://developer.sumup.com/online-payments/webhooks/). La vérification réelle se
+  // fait plus bas : on rappelle l'API Sumup pour confirmer le statut PAID du checkout.
+  // Un faux POST ne peut donc JAMAIS marquer une facture payée tant que le paiement n'est
+  // pas réellement acquitté chez SumUp. Le secret partagé ci-dessous reste OPTIONNEL : il
+  // n'est utile que si tu places un proxy qui l'injecte (SumUp ne l'enverra pas lui-même).
   const webhookSecret = process.env.SUMUP_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    console.error('[sumup-webhook] SUMUP_WEBHOOK_SECRET manquant — rejet fail-closed');
-    return NextResponse.json({ error: 'Webhook non configuré' }, { status: 401 });
-  }
-  const provided = req.headers.get('x-sumup-webhook-secret');
-  if (provided !== webhookSecret) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  if (webhookSecret) {
+    const provided = req.headers.get('x-sumup-webhook-secret');
+    if (provided !== webhookSecret) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
   }
 
   const eventType = event.event_type || event.type;

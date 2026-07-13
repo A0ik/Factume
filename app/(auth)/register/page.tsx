@@ -82,7 +82,7 @@ export default function RegisterPage() {
     next[index] = digit;
     setOtp(next);
     setOtpError('');
-    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
+    if (digit && index < otp.length - 1) inputRefs.current[index + 1]?.focus();
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -91,22 +91,26 @@ export default function RegisterPage() {
     }
   };
 
+  // ASTRÉE (CIBLE 2) — Front résilient : on colle le code tel que Supabase l'envoie.
+  // 6 chiffres est le standard, mais si la config Auth renvoie 8 (réglage dashboard),
+  // on étend dynamiquement à 8 cases pour ne jamais bloquer l'utilisateur.
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
-    if (!pasted.length) return;
-    const next = ['', '', '', '', '', ''];
-    pasted.forEach((d, i) => (next[i] = d));
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 8);
+    if (!digits.length) return;
+    const size = digits.length > 6 ? 8 : 6;
+    const next = Array.from({ length: size }, (_, i) => digits[i] ?? '');
     setOtp(next);
     setOtpError('');
-    inputRefs.current[Math.min(pasted.length, 5)]?.focus();
+    inputRefs.current[Math.min(digits.length, size - 1)]?.focus();
   };
 
   const handleVerifyOtp = async () => {
     setOtpError('');
     const code = otp.join('');
-    if (code.length !== 6) {
-      setOtpError('Veuillez saisir les 6 chiffres du code');
+    // Résilient : accepte 6 (standard) ou 8 (fallback si la config Supabase renvoie 8).
+    if (code.length !== 6 && code.length !== 8) {
+      setOtpError('Veuillez saisir le code à 6 ou 8 chiffres reçu par email');
       return;
     }
     setOtpLoading(true);
@@ -170,11 +174,11 @@ export default function RegisterPage() {
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Vérifiez votre email</h2>
             <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
-              Saisissez le code à 6 chiffres envoyé à <strong className="text-slate-900 dark:text-white break-all">{pendingEmail}</strong>.
+              Saisissez le code de vérification envoyé à <strong className="text-slate-900 dark:text-white break-all">{pendingEmail}</strong>.
             </p>
           </div>
 
-          {/* 6 cases OTP */}
+          {/* Cases OTP (6 standard, 8 si un code plus long est collé) */}
           <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
             {otp.map((digit, i) => (
               <input

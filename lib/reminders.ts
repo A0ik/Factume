@@ -52,6 +52,8 @@ export interface SendReminderResult {
   messageId?: string;
   emailTo?: string;
   skipped?: boolean;
+  /** ATHÉNA (C3) — client sans email : relance enregistrée, envoi en attente d'email. */
+  pendingEmail?: boolean;
 }
 
 /**
@@ -72,8 +74,67 @@ export async function sendReminderEmail(params: {
 
   // Supabase `client:clients(*)` renvoie un TABLEAU ; on normalise en objet unique.
   const client = Array.isArray(invoice.client) ? invoice.client[0] : invoice.client;
+
+  // ATHÉNA (CIBLE 3) — Dégradation gracieuse B2C / client sans email.
+  // Avant : `return { ok:false, skipped:true }` → blocage des relances (cron, manuel,
+  // batch) dès qu'un client n'avait pas d'email, ce qui est LÉGITIME en B2C
+  // (particulier) et fréquent en B2B. Désormais on enregistre la relance en
+  // 'pending_email' + on notifie le propriétaire en in-app (table notifications)
+  // pour qu'il complète l'email. Idempotent : on ne recrée pas de log/notif si une
+  // relance 'pending_email' existe déjà pour cette facture (anti-spam quotidien du
+  // cron). Dès que l'utilisateur ajoute l'email, la prochaine relance s'envoie.
   if (!client?.email) {
-    return { ok: false, skipped: true, error: 'Aucun email client' };
+    const clientName = client?.name || '';
+    const { data: existingPending } = await admin.from('reminders_log')
+      .select('id')
+      .eq('invoice_id', invoice.id)
+      .eq('status', 'pending_email')
+      .limit(1);
+
+    if (!existingPending || existingPending.length === 0) {
+      await admin.from('reminders_log').insert({
+        invoice_id: invoice.id,
+        user_id: userId,
+        reminder_level: level,
+        email_to: null,
+        email_subject: null,
+        status: 'pending_email',
+        metadata: {
+          reason: 'no_client_email',
+          client_name: clientName,
+          invoice_number: invoice.number || null,
+        },
+      });
+
+      // Notif in-app au propriétaire (collecte d'email). On n'utilise QUE les
+      // colonnes canoniques de public.notifications (title/message/type/read/
+      // link/created_at) — la table n'a PAS de colonne `data` (un insert avec
+      // `data` échouerait silencieusement). Le `link` pointe vers la facture.
+      const { error: notifError } = await admin.from('notifications').insert({
+        user_id: userId,
+        type: 'reminder_pending_email',
+        title: 'Relance en attente d’email',
+        message: `Email manquant pour ${clientName || 'ce client'} — facture ${invoice.number || 'N/A'}. Ajoutez l’email du client sur sa fiche pour envoyer la relance.`,
+        link: `/invoices/${invoice.id}`,
+        read: false,
+        created_at: new Date().toISOString(),
+      });
+      if (notifError) console.warn('[reminders] notif insert error:', notifError.message);
+    }
+
+    // Transition overdue best-effort (la facture est bien en retard, email ou pas).
+    const { error: transitionError } = await admin.rpc('transition_invoice_status', {
+      p_invoice_id: invoice.id,
+      p_user_id: userId,
+      p_new_status: 'overdue',
+      p_ip_address: ip || 'unknown',
+      p_user_agent: userAgent || '',
+    });
+    if (transitionError) {
+      console.warn('[reminders] transition error (pending_email):', transitionError.message);
+    }
+
+    return { ok: true, pendingEmail: true };
   }
 
   const daysOverdue = Math.max(0, daysOverdueFor(invoice));

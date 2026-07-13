@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { getUserHotwords, buildWhisperPrompt } from '@/lib/voice-vocabulary';
+import { applySttCorrection } from '@/lib/stt-correction';
 import { VoiceExistingItem, VoiceParsedResponse, APIError } from '@/types';
 import { validateVoiceData, formatValidationError, ValidationError } from '@/lib/validation';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -77,34 +79,41 @@ export async function POST(req: NextRequest) {
     const { audio, sector, isEdit, existingItems } = validatedData;
     const mode = (formData.get('mode') as string) || 'invoice';
 
-    // Transcription with Groq Whisper (auto-detect language - supports Arabic and French)
+    // CIBLE 2 — Hotwords utilisateur (lexique métier + corrections passées + noms salariés).
+    const { hotwords, corrections } = await getUserHotwords(supabaseAuth, user.id);
+
+    // Transcription with Groq Whisper.
+    // Couche 0 (pré-erreur) : `prompt` injecte le lexique métier pour biaiser la reconnaissance
+    // vers "fiche de paie", "DSN", noms de salariés… avant qu'un homophone ne se produise.
     const transcription = await groq.audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3-turbo',
-      // language: 'fr', // Removed - auto-detect to support Arabic
+      prompt: buildWhisperPrompt(hotwords),
+      // language: 'fr', // Auto-detect gardé pour le support arabe — la correction contextuelle compense.
     });
     const rawTranscript = transcription.text;
 
     // Translate Arabic (any dialect) to French if needed
-    const { transcript, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+    const { transcript: translated, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
 
     console.log(`[process-voice] Language detected: ${originalLanguage}${wasTranslated ? ' (translated)' : ''}`);
 
-    // Load user's past voice corrections to help the AI learn
+    // CIBLE 2 — Correction contextuelle STT (paie/paix, contrar/contrat…).
+    // Couche 1 déterministe (lexique + corrections utilisateur réappliquées globalement)
+    // + couche 2 LLM rescoring si un token suspect subsiste.
+    const sttFixed = await applySttCorrection(translated, { userCorrections: corrections, groq });
+    let transcript = sttFixed.transcript;
+    if (sttFixed.changes.length) {
+      console.log('[process-voice] STT corrections:', sttFixed.changes);
+    }
+
+    // Hint LLM construit depuis les mêmes corrections (mémoire vocale, single query).
     let correctionHint = '';
-    try {
-      const { data: corrections } = await supabaseAuth
-        .from('voice_corrections')
-        .select('field, original_value, corrected_value')
-        .eq('user_id', user.id);
-      if (corrections && corrections.length > 0) {
-        const correctionLines = corrections
-          .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
-          .join(', ');
-        correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR (utilise ces corrections pour mieux interpréter):\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
-      }
-    } catch (e) {
-      // Non-critical, continue without corrections
+    if (corrections.length > 0) {
+      const correctionLines = corrections
+        .map(c => `"${c.original_value}" → "${c.corrected_value}" (champ: ${c.field})`)
+        .join(', ');
+      correctionHint = `\n\nCORRECTIONS PASSÉES DE L'UTILISATEUR (utilise ces corrections pour mieux interpréter):\n${correctionLines}\nSi tu entends un de ces noms/valeurs, utilise directement la version corrigée.`;
     }
 
     const sectorHint = sector ? `L'utilisateur travaille dans le secteur : ${sector}.` : '';
@@ -619,7 +628,8 @@ RÈGLE FINALE : Tous les nombres DOIVENT être des valeurs finales, jamais d'exp
       originalLanguage,
       parsed,
       action: parsed.action,
-      summary: parsed.summary
+      summary: parsed.summary,
+      sttCorrections: sttFixed.changes,
     });
   } catch (error: unknown) {
     console.error('[Process Voice] Error:', error);

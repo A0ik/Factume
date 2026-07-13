@@ -51,6 +51,18 @@ export default function CreateDocumentContent() {
   const initClient = paramClientId ? clients.find((c) => c.id === paramClientId) : undefined;
 
   useEffect(() => {
+    // ATHÉNA (C1#5) — anti-amnésie : si l'arrivée sur la création est « neutre »
+    // (aucun paramètre de préfill : ni client, ni fiche, ni avoir lié, ni montant
+    // issu du Copilot), on RESTAURE d'abord un brouillon non enregistré (perte en
+    // cas de refresh/navigation après dictée ou saisie) avant d'initialiser à vide.
+    const hasPrefill = !!(
+      paramClientId || paramClientName || paramLinkedInvoiceId
+      || searchParams.get('amount') || searchParams.get('client')
+    );
+    if (!hasPrefill && session.tryResumeDraft(effectiveType)) {
+      return () => { /* brouillon restauré — rien à nettoyer */ };
+    }
+
     session.init(effectiveType, {
       clientId: paramClientId || undefined,
       clientName: paramClientName || initClient?.name,
@@ -70,6 +82,20 @@ export default function CreateDocumentContent() {
       // Clean up on unmount
     };
   }, [effectiveType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pont FAB↔Canvas — montant pré-rempli par le Copilot (redirect_to_invoice_creator).
+  // Le tool passe ?amount=…&clientName=… ; le client est appliqué par init() via
+  // paramClientName, et le montant est posé ici sur la 1re ligne.
+  const paramAmount = searchParams.get('amount');
+  useEffect(() => {
+    if (!paramAmount) return;
+    const amt = parseFloat(paramAmount);
+    if (!isFinite(amt) || amt <= 0) return;
+    const first = session.items[0];
+    if (first && first.unit_price !== amt) {
+      session.updateItem(first.id, 'unit_price', amt);
+    }
+  }, [paramAmount, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Auto-fill client details when clientId is selected ──
   // PHOENIX FIX (CRISE 0+1C / React #310) : garde d'égalité obligatoire.
@@ -184,6 +210,8 @@ export default function CreateDocumentContent() {
       toast.success(`${config.shortLabel} créé${effectiveType === 'invoice' ? 'e' : ''} avec succès !`, {
         description: session.clientName ? `Pour ${session.clientName}` : undefined,
       });
+      // ATHÉNA (C1#5) — création réussie : on efface le brouillon persisté.
+      session.clearDraft();
 
       setTimeout(() => {
         router.push(`/invoices/${newInvoice.id}`);

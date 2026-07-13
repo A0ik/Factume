@@ -137,7 +137,7 @@ export default function CabinetInvitationsPage() {
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             onClick={handleInvite}
             disabled={!email.trim() || inviting}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm disabled:opacity-50 shadow-md shadow-blue-500/20 hover:shadow-lg transition-all"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm disabled:opacity-50 shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all"
           >
             {inviting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
             Inviter

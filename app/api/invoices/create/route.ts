@@ -290,15 +290,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update profile stats in background
-    supabase.from('profiles').select('*').eq('id', user.id).single()
-      .then(({ data: freshProfile }) => {
-        if (freshProfile) {
-          // We can't update the client-side store from the server, but the profile data is fresh
-          console.log('[API /invoices/create] Profile updated, count:', freshProfile.monthly_invoice_count);
-        }
-      });
-
     console.log('[API /invoices/create] SUCCESS:', invoice.id);
 
     // ── Transmission automatique PDP pour les factures B2B ────────────────

@@ -21,6 +21,8 @@ interface UseCabinetDataOptions {
   disabled?: boolean;
   /** Don't use cache for this request */
   noCache?: boolean;
+  /** Return the full JSON object as-is (skip auto-detect). Use for composite responses. */
+  wholeObject?: boolean;
 }
 
 export function useCabinetData<T>(
@@ -33,6 +35,7 @@ export function useCabinetData<T>(
     params,
     disabled = false,
     noCache = false,
+    wholeObject = false,
   } = options;
 
   const [data, setData] = useState<T | null>(null);
@@ -65,6 +68,7 @@ export function useCabinetData<T>(
       const result = await cabinetFetch<T>(fullUrl, {
         signal: controller.signal,
         dataKey,
+        wholeObject,
         noCache: noCache || bustCache,
       });
 
@@ -82,7 +86,7 @@ export function useCabinetData<T>(
         setLoading(false);
       }
     }
-  }, [fullUrl, dataKey, disabled, noCache]);
+  }, [fullUrl, dataKey, disabled, noCache, wholeObject]);
 
   const refresh = useCallback(async () => {
     clearCabinetCache(fullUrl || undefined);

@@ -293,7 +293,7 @@ function ContractDetailContent({ params }: { params: Promise<{ id: string }> }) 
               <button onClick={() => handleStatusChange('active')} className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl text-sm font-semibold hover:bg-green-200 transition-colors">Activer</button>
             )}
             {contract.contract_type === 'cdd' && contract.document_status === 'active' && (
-              <button onClick={() => setShowRenewalModal(true)} className="px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl text-sm font-semibold hover:bg-purple-200 transition-colors flex items-center gap-1.5">
+              <button onClick={() => setShowRenewalModal(true)} className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl text-sm font-semibold hover:bg-emerald-200 transition-colors flex items-center gap-1.5">
                 <RefreshCw className="w-4 h-4" /> Renouveler
               </button>
             )}
@@ -376,7 +376,7 @@ function ContractDetailContent({ params }: { params: Promise<{ id: string }> }) 
               {contract.has_transport && <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">Transport</span>}
               {contract.has_meal && <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-medium">Repas</span>}
               {contract.has_health && <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full text-xs font-medium">Mutuelle</span>}
-              {contract.has_other && contract.other_benefits && <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full text-xs font-medium">{contract.other_benefits}</span>}
+              {contract.has_other && contract.other_benefits && <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-medium">{contract.other_benefits}</span>}
             </div>
             {'non_compete_clause' in contract && (contract as any).non_compete_clause && (
               <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
@@ -431,7 +431,7 @@ function ContractDetailContent({ params }: { params: Promise<{ id: string }> }) 
           <Calculator className="w-4 h-4" />Bulletin de paie
         </button>
         */}
-        <button onClick={() => setShowAISuggestions(true)} className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2 text-sm">
+        <button onClick={() => setShowAISuggestions(true)} className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center gap-2 text-sm">
           <Sparkles className="w-4 h-4" />IA
         </button>
         <button onClick={() => setShowVersionHistory(true)} className="px-5 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">

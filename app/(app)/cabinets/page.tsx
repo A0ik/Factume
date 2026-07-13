@@ -93,8 +93,8 @@ export default function CabinetsPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md"
         >
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-violet-500/20">
-            <Crown size={40} className="text-violet-500" />
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-emerald-500/20">
+            <Crown size={40} className="text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">
             Multi-cabinets
@@ -105,7 +105,7 @@ export default function CabinetsPage() {
           </p>
           <Link
             href="/paywall?plan=business"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/35 transition-all"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/35 transition-all"
           >
             <Crown size={18} />
             Passer au plan Business
@@ -140,7 +140,7 @@ export default function CabinetsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
           {cabinets.map((cabinet, i) => {
-            const color = cabinet.primary_color || '#4f46e5';
+            const color = cabinet.primary_color || '#10b981';
             return (
               <motion.div
                 key={cabinet.id}

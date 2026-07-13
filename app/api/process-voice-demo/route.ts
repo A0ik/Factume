@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { processVoiceTranscript } from '@/lib/groq-translator';
+import { buildWhisperPrompt, DOMAIN_HOTWORDS } from '@/lib/voice-vocabulary';
+import { applySttCorrection } from '@/lib/stt-correction';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
@@ -31,14 +33,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Audio manquant' }, { status: 400 });
     }
 
-    // Transcription with Groq Whisper
+    // CIBLE 2 — Démo : correction STT sur le lexique métier seul (pas d'utilisateur authentifié).
+    // Transcription with Groq Whisper (couche 0 : prompt = lexique métier).
     const transcription = await groq.audio.transcriptions.create({
       file: audio,
       model: 'whisper-large-v3-turbo',
+      prompt: buildWhisperPrompt(DOMAIN_HOTWORDS),
     });
     const rawTranscript = transcription.text;
 
-    const { transcript, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+    const { transcript: translated, wasTranslated, originalLanguage } = await processVoiceTranscript(rawTranscript);
+
+    // Correction contextuelle STT (paie/paix, contrar/contrat…).
+    const sttFixed = await applySttCorrection(translated, { groq });
+    let transcript = sttFixed.transcript;
+    if (sttFixed.changes.length) console.log('[process-voice-demo] STT corrections:', sttFixed.changes);
 
     const systemPrompt = `Tu es un assistant expert en facturation française.
 
@@ -100,6 +109,7 @@ RÈGLES :
     return NextResponse.json({
       transcript,
       originalTranscript: rawTranscript,
+      sttCorrections: sttFixed.changes,
       wasTranslated,
       originalLanguage,
       parsed,

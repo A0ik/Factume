@@ -99,6 +99,12 @@ export interface DocumentSessionState {
   // ─── Lifecycle ───────────────────────────────────────
   reset: () => void;
 
+  // ─── Draft recovery (ATHÉNA C1#5 — anti-amnésie) ────
+  /** Restaure un brouillon non enregistré pour ce type de document (true si restauré). */
+  tryResumeDraft: (docType: DocumentType) => boolean;
+  /** Efface le brouillon persisté (à appeler après création réussie). */
+  clearDraft: () => void;
+
   // ─── Edition ─────────────────────────────────────────
   /** Hydrate la session depuis une facture existante (mode édition). */
   hydrate: (invoice: Invoice) => void;
@@ -187,6 +193,55 @@ function computeDueDate(issueDate: string, paymentDays: number): string {
   if (isNaN(d.getTime())) return '';
   d.setDate(d.getDate() + paymentDays);
   return d.toISOString().split('T')[0];
+}
+
+// ─── Draft persistence (ATHÉNA C1#5 — anti-amnésie) ────
+// Sauvegarde le CONTENU du formulaire (pas l'état transitoire) dans localStorage,
+// debounced via la subscription en bas de module. Au montage « neutre » de la page
+// de création (sans paramètres de préfill), tryResumeDraft() restaure le brouillon
+// non enregistré — évite la perte en cas de refresh/navigation après dictée ou saisie.
+const DRAFT_KEY = 'factu-document-session-draft-v1';
+const DRAFT_FIELDS = [
+  'documentType', 'clientId', 'clientName', 'clientEmail', 'clientPhone',
+  'clientAddress', 'clientCity', 'clientPostalCode', 'clientSiret', 'clientVatNumber',
+  'clientType', 'items', 'notes', 'discountPercent', 'discountType', 'discountAmountInput',
+  'issueDate', 'paymentDays', 'paymentTermId', 'templateId',
+  'linkedInvoiceId', 'depositPercent',
+] as const;
+
+function draftHasContent(snap: any): boolean {
+  return !!(snap && Array.isArray(snap.items)
+    && snap.items.some((it: any) =>
+      (it.description && String(it.description).trim()) || Number(it.unit_price) > 0));
+}
+
+function loadDraftSnapshot(): any | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return draftHasContent(parsed) ? parsed : null;
+  } catch { return null; }
+}
+
+function persistDraftSnapshot(state: DocumentSessionState) {
+  if (typeof window === 'undefined') return;
+  if (!draftHasContent(state)) return; // ne pas écraser un brouillon avec un form vide
+  try {
+    const snap: any = {};
+    for (const k of DRAFT_FIELDS) {
+      (snap as any)[k] = k === 'items'
+        ? JSON.parse(JSON.stringify(state.items))
+        : (state as any)[k];
+    }
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(snap));
+  } catch { /* quota / mode privé */ }
+}
+
+function clearDraftSnapshot() {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
 }
 
 // ─── History (Undo/Redo) ───────────────────────────────
@@ -597,9 +652,34 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
   },
 
   resolveDoubts: (corrections) => {
-    const { doubtResolutionCallback } = get();
+    const { doubtResolutionCallback, pendingDoubts, documentType } = get() as any;
     if (doubtResolutionCallback) {
       doubtResolutionCallback(corrections);
+    }
+    // CIBLE 2 — Persiste les corrections de l'utilisateur (gap : le chemin canvas
+    // VoiceOneShot n'écrivait jamais en base, seul PulseVoiceRecorder le faisait).
+    // Ces corrections seront réappliquées GLOBALEMENT par la couche STT déterministe
+    // (applyDeterministicCorrection) lors des prochaines dictées.
+    try {
+      for (const [fieldPath, newValue] of Object.entries(corrections)) {
+        const doubt = (pendingDoubts || []).find((d: any) => d.field === fieldPath);
+        const original = doubt?.current_value ?? '';
+        const corrected = String(newValue ?? '').trim();
+        if (original && corrected && String(original) !== corrected) {
+          fetch('/api/voice-corrections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              field: fieldPath,
+              original_value: String(original),
+              corrected_value: corrected,
+              context: documentType || 'invoice',
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // Non-critical, silently fail
     }
     set({ pendingDoubts: [], doubtResolutionCallback: null });
   },
@@ -663,6 +743,7 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
   // ─── Lifecycle ───────────────────────────────────────
 
   reset: () => {
+    clearDraftSnapshot();
     history.past = [];
     history.future = [];
     set({
@@ -673,6 +754,63 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
       sessionId: generateId(),
       issueDate: new Date().toISOString().split('T')[0],
     });
+  },
+
+  // ─── Draft recovery (ATHÉNA C1#5 — anti-amnésie) ────────────────────
+  tryResumeDraft: (docType) => {
+    const draft = loadDraftSnapshot();
+    if (!draft) return false;
+    // Ne reprend que pour le MÊME type de document (sinon init vierge).
+    if (draft.documentType && draft.documentType !== docType) return false;
+    const items = (Array.isArray(draft.items) && draft.items.length > 0
+      ? JSON.parse(JSON.stringify(draft.items))
+      : [{ id: generateId(), description: '', quantity: 1, unit_price: 0, vat_rate: 20 }]
+    ) as Omit<InvoiceItem, 'total'>[];
+    const discountType = (draft.discountType === 'amount' ? 'amount' : 'percent') as 'percent' | 'amount';
+    const discountPercent = Number(draft.discountPercent) || 0;
+    const discountAmountInput = Number(draft.discountAmountInput) || 0;
+    const issueDate = (typeof draft.issueDate === 'string' && draft.issueDate && draft.issueDate !== SAFE_DATE)
+      ? draft.issueDate
+      : new Date().toISOString().split('T')[0];
+    const paymentDays = Number(draft.paymentDays) || 30;
+    const computed = computeFromItems(items, discountType, discountPercent, discountAmountInput);
+    set({
+      ...initialState,
+      documentType: docType,
+      sessionId: generateId(),
+      clientId: draft.clientId ?? null,
+      clientName: draft.clientName ?? '',
+      clientEmail: draft.clientEmail ?? '',
+      clientPhone: draft.clientPhone ?? '',
+      clientAddress: draft.clientAddress ?? '',
+      clientCity: draft.clientCity ?? '',
+      clientPostalCode: draft.clientPostalCode ?? '',
+      clientSiret: draft.clientSiret ?? '',
+      clientVatNumber: draft.clientVatNumber ?? '',
+      clientType: draft.clientType ?? null,
+      items,
+      notes: draft.notes ?? '',
+      discountPercent,
+      discountType,
+      discountAmountInput,
+      issueDate,
+      paymentDays,
+      paymentTermId: draft.paymentTermId ?? 'days30',
+      templateId: Number(draft.templateId) || 1,
+      linkedInvoiceId: draft.linkedInvoiceId ?? null,
+      depositPercent: Number(draft.depositPercent) || 0,
+      ...computed,
+      dueDate: computeDueDate(issueDate, paymentDays),
+      canUndo: false,
+      canRedo: false,
+    } as any);
+    history.past = [];
+    history.future = [];
+    return true;
+  },
+
+  clearDraft: () => {
+    clearDraftSnapshot();
   },
 
   // ─── Edition — hydratation depuis une facture existante ───
@@ -753,3 +891,11 @@ export const useDocumentSessionStore = create<DocumentSessionState>((set, get) =
     history.future = [];
   },
 }));
+
+// ATHÉNA (C1#5) — auto-save debounced du brouillon (anti-amnésie). Se déclenche
+// sur tout changement d'état côté client ; persistDraftSnapshot ignore les forms vides.
+let __draftSaveTimer: ReturnType<typeof setTimeout> | null = null;
+useDocumentSessionStore.subscribe((state) => {
+  if (__draftSaveTimer) clearTimeout(__draftSaveTimer);
+  __draftSaveTimer = setTimeout(() => persistDraftSnapshot(state as DocumentSessionState), 600);
+});

@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
     const sent: string[] = [];
     const failed: { id: string; error: string }[] = [];
     const skipped: string[] = [];
+    // ATHÉNA (C3) — clients sans email : relance enregistrée, à remonter à l'UI.
+    const pendingEmail: string[] = [];
 
     for (const invoice of invoices || []) {
       const result = await sendReminderEmail({
@@ -62,7 +64,8 @@ export async function POST(req: NextRequest) {
         ip: req.headers.get('x-forwarded-for') || undefined,
         userAgent: req.headers.get('user-agent') || undefined,
       });
-      if (result.ok) sent.push(invoice.id);
+      if (result.pendingEmail) pendingEmail.push(invoice.id);
+      else if (result.ok) sent.push(invoice.id);
       else if (result.skipped) skipped.push(invoice.id);
       else failed.push({ id: invoice.id, error: result.error || 'Erreur' });
     }
@@ -72,7 +75,8 @@ export async function POST(req: NextRequest) {
       sent: sent.length,
       failed: failed.length,
       skipped: skipped.length,
-      details: { sent, failed, skipped },
+      pendingEmail: pendingEmail.length,
+      details: { sent, failed, skipped, pendingEmail },
     });
   } catch (error: unknown) {
     const err = error as Error;

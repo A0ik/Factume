@@ -187,14 +187,14 @@ export default function CabinetReconciliationPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-violet-500/20">
-            <Landmark size={40} className="text-violet-500" />
+          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center mx-auto mb-6 ring-1 ring-emerald-500/20">
+            <Landmark size={40} className="text-emerald-600 dark:text-emerald-400" />
           </div>
           <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-3">Rapprochement bancaire</h1>
           <p className="text-gray-500 dark:text-gray-400 mb-8">
             Le rapprochement bancaire centralise est disponible avec le plan Business.
           </p>
-          <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold shadow-lg shadow-violet-500/25">
+          <Link href="/paywall?plan=business" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25">
             Passer au plan Business
           </Link>
         </motion.div>

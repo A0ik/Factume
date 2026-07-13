@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase-server';
 
+// Normalisation défensive : les créateurs de checkout/payment-intent utilisent
+// indifféremment invoiceId (camel), invoice_id (snake) ou invoiceID. On résout
+// l'ID facture quel que soit le camelCase pour qu'aucun paiement abouti ne
+// laisse une facture impayée (bug silencieux de statut/recette).
+const resolveInvoiceIdFromMetadata = (
+  m: { [key: string]: string } | null | undefined,
+): string | undefined =>
+  m?.invoiceId || m?.invoice_id || m?.invoiceID || undefined;
+
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -35,42 +44,16 @@ export async function POST(req: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // Handle regular invoice payment (metadata.invoiceId)
-        if (session.mode === 'payment' && session.metadata?.invoiceId) {
-          // Vérifier si la facture est déjà payée (idempotence)
-          const { data: existingInvoice } = await supabase
-            .from('invoices')
-            .select('id, status')
-            .eq('id', session.metadata.invoiceId)
-            .single();
+        // Règlement facture — résout l'ID quel que soit le camelCase utilisé par le
+        // créateur du checkout (invoiceId / invoice_id / invoiceID). Avant, deux
+        // handlers parallèles lisaient des clés différentes : un checkout ne portant
+        // qu'une orthographe laissait la facture impayée (bug silencieux de statut).
+        // LOI 10 : idempotence préservée (claim event_id en amont + check statut 'paid').
+        const invoiceId = resolveInvoiceIdFromMetadata(session.metadata);
+        if (session.mode === 'payment' && invoiceId) {
+          const userId = session.metadata?.userId || session.metadata?.user_id;
 
-          if (existingInvoice && existingInvoice.status !== 'paid') {
-            const { data: invoice } = await supabase
-              .from('invoices')
-              .update({ status: 'paid', paid_at: new Date().toISOString() })
-              .eq('id', session.metadata.invoiceId)
-              .select('*, client:client_id(name)')
-              .single();
-
-            // Créer une notification pour l'utilisateur
-            if (invoice && session.metadata?.userId) {
-              await supabase.from('notifications').insert({
-                user_id: session.metadata.userId,
-                type: 'invoice_paid',
-                title: `Facture payée — ${invoice.number}`,
-                body: `La facture de ${invoice.total?.toFixed(2) || '0'}€ de ${invoice.client?.name || 'un client'} a été payée avec succès.`,
-                link: `/invoices/${invoice.id}`,
-              });
-            }
-          }
-        }
-
-        // Handle Stripe Connect payment link completion (metadata.invoice_id)
-        else if (session.mode === 'payment' && session.metadata?.invoice_id) {
-          const invoiceId = session.metadata.invoice_id;
-          const userId = session.metadata.user_id;
-
-          // Idempotency: skip if already paid
+          // Idempotence : skip si déjà payée
           const { data: existingInvoice } = await supabase
             .from('invoices')
             .select('id, status')
@@ -78,7 +61,6 @@ export async function POST(req: NextRequest) {
             .single();
 
           if (existingInvoice && existingInvoice.status !== 'paid') {
-            // Update invoice status
             await supabase
               .from('invoices')
               .update({
@@ -88,7 +70,6 @@ export async function POST(req: NextRequest) {
               })
               .eq('id', invoiceId);
 
-            // Get invoice details for notification
             const { data: invoice } = await supabase
               .from('invoices')
               .select('*, client:clients(name)')
@@ -403,12 +384,13 @@ export async function POST(req: NextRequest) {
 
       case 'payment_intent.succeeded': {
         const pi = event.data.object as Stripe.PaymentIntent;
+        const piInvoiceId = resolveInvoiceIdFromMetadata(pi.metadata);
         // Marquer les factures SEPA en pending_payment comme payées quand le paiement aboutit
-        if (pi.metadata?.invoice_id) {
+        if (piInvoiceId) {
           const { data: invoice } = await supabase
             .from('invoices')
             .select('id, status, number, total, client:clients(name)')
-            .eq('id', pi.metadata.invoice_id)
+            .eq('id', piInvoiceId)
             .single();
 
           if (invoice && invoice.status === 'pending_payment') {
@@ -418,11 +400,11 @@ export async function POST(req: NextRequest) {
                 paid_at: new Date().toISOString(),
                 stripe_payment_intent_id: pi.id,
               })
-              .eq('id', pi.metadata.invoice_id);
+              .eq('id', piInvoiceId);
           }
         }
         // Fallback: rechercher par payment_intent_id
-        if (!pi.metadata?.invoice_id) {
+        if (!piInvoiceId) {
           const { data: invoice } = await supabase
             .from('invoices')
             .select('id, status, number, user_id, total, client:clients(name)')

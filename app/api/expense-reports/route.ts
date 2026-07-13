@@ -183,10 +183,16 @@ export async function POST(req: NextRequest) {
 
       if (itemsError) {
         console.error('[Expense Reports] Failed to add expenses:', itemsError);
-        // Don't fail the whole operation, just log it
+        // Roll back the created report so we don't leave a phantom/empty report,
+        // and do NOT link expenses to it. Report the failure honestly.
+        await supabase.from('expense_reports').delete().eq('id', report.id);
+        return NextResponse.json(
+          { error: "Impossible d'ajouter les dépenses à la note de frais." },
+          { status: 500 }
+        );
       }
 
-      // Update expenses with report reference
+      // Update expenses with report reference (only when items were linked)
       await supabase
         .from('expenses')
         .update({ expense_report_id: report.id })
