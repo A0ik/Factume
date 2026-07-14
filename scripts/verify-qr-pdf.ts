@@ -8,7 +8,7 @@
  * Usage : npx tsx scripts/verify-qr-pdf.ts
  */
 import zlib from 'zlib';
-import { generatePdfBuffer } from '../lib/pdf';
+import { generatePdfBuffer } from '../lib/pdf-server';
 
 const sumupInvoice = {
   id: 'verify-1',

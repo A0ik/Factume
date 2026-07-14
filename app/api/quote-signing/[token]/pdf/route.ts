@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { verifyToken } from '@/lib/signing-token';
-import { generatePdfBuffer, getDocLabel } from '@/lib/pdf';
+import { getDocLabel } from '@/lib/pdf';
+import { generatePdfBuffer } from '@/lib/pdf-server';
 
 /**
  * Route PUBLIQUE de génération PDF d'un devis (coté client signataire).

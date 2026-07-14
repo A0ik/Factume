@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import zlib from 'zlib';
-import { generatePdfBuffer } from '../pdf';
+import { generatePdfBuffer } from '../pdf-server';
 import type { Invoice } from '@/types';
 
 // PROMETHEUS (CIBLE 1/6/7) — tests de non-régression du rendu PDF par type de

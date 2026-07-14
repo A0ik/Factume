@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
-import { generatePdfBuffer } from '@/lib/pdf';
+import { generatePdfBuffer } from '@/lib/pdf-server';
 import { createFacturXPdf } from '@/lib/facturx';
 
 /**

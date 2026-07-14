@@ -1,9 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { FileText, Building2, Calendar, User, Euro, Trash2, Eye, FileEdit, Copy, Send, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 import { ContractSummary, ContractType } from '@/types';
 import { ContractStatusBadge, ContractTypeBadge } from './ContractStatusBadge';
+import QuickActionsSheet from '@/components/layout/QuickActionsSheet';
+import { useLongPress } from '@/lib/use-long-press';
 import Link from 'next/link';
 
 interface Props {
@@ -30,8 +33,25 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
   const isEndingSoon = endDaysLeft !== null && endDaysLeft >= 0 && endDaysLeft <= 30 && liveStatuses.includes(contract.status);
   const isExpired = endDaysLeft !== null && endDaysLeft < 0 && (contract.status === 'active' || contract.status === 'signed');
 
+  const router = useRouter();
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  // long-press limité au mobile : la carte est rendue aussi sur desktop, et le
+  // BottomSheet est lg:hidden — sans ce guard, un long-press souris desktop
+  // passerait open=true sans sheet visible (scroll-lock fantôme).
+  const lp = useLongPress(() => setShowQuickActions(true), isMobile);
+
   return (
+    <>
     <motion.div
+      {...lp.bind()}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.01 }}
@@ -134,5 +154,22 @@ export function ContractCard({ contract, onDelete, onDuplicate }: Props) {
         )}
       </div>
     </motion.div>
+
+    <QuickActionsSheet
+      open={showQuickActions}
+      onClose={() => setShowQuickActions(false)}
+      title={contract.employee_name || 'Contrat'}
+      actions={[
+        { label: 'Voir', icon: Eye, onClick: () => router.push(`/contracts/${contract.id}?type=${contract.contract_type}`) },
+        { label: 'Éditer', icon: FileEdit, onClick: () => router.push(`/contracts/${contract.id}/edit?type=${contract.contract_type}`) },
+        ...(onDuplicate
+          ? [{ label: 'Dupliquer', icon: Copy, onClick: () => onDuplicate(contract.id, contract.contract_type) }]
+          : []),
+        ...(onDelete
+          ? [{ label: 'Supprimer', icon: Trash2, onClick: () => onDelete(contract.id, contract.contract_type), danger: true }]
+          : []),
+      ]}
+    />
+    </>
   );
 }

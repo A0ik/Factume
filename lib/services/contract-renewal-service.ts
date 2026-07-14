@@ -150,33 +150,9 @@ export async function getNextRenewalNumber(contractId: string, contractType: Con
   return (count || 0) + 1;
 }
 
-/**
- * Récupère tous les contrats renouvelés liés à un contrat original
- */
-export async function getRenewedChain(originalContractId: string): Promise<any[]> {
-  // ARGOS (build) — import dynamique du client admin : préserve le garde-fou `server-only`
-  // tout en évitant l'import statique qui cassait le bundle client.
-  const { createAdminClient } = await import('@/lib/supabase-admin');
-  const admin = createAdminClient();
-
-  const { data: renewals } = await admin
-    .from('contract_renewals')
-    .select('renewed_contract_id, contract_type, renewal_number, created_at')
-    .eq('original_contract_id', originalContractId)
-    .order('renewal_number', { ascending: true });
-
-  if (!renewals) return [];
-
-  // Récupérer les détails des contrats renouvelés
-  const contracts = await Promise.all(
-    renewals.map(async (r) => {
-      const { data } = await admin.from(TABLE_MAP[r.contract_type as ContractType]).select('id, contract_number, document_status, contract_end_date, end_date').eq('id', r.renewed_contract_id).single();
-      return {
-        ...r,
-        contract: data,
-      };
-    })
-  );
-
-  return contracts;
-}
+// VULCAIN (build fix) — getRenewedChain (client admin / service-role) a été
+// déplacée vers `./contract-renewal-server.ts` (server-only). Ce fichier-ci ne
+// référence plus `supabase-admin` du tout : il redevient 100 % client-safe,
+// ce qui empêche `server-only` d'être tiré dans le bundle navigateur via
+// contractStore. La route /api/contracts/renewed-chain importe désormais la
+// version server-only.

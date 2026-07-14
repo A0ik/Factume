@@ -86,37 +86,11 @@ export async function withQrDataUrl(invoice: Invoice): Promise<Invoice> {
   return invoice;
 }
 
-/**
- * Generate a real PDF buffer for preview and download.
- *
- * Strategy: pdf-lib first (reliable in serverless), @react-pdf/renderer as fallback.
- * pdf-lib works everywhere (Vercel, Node, etc.) without CSP or WASM issues.
- */
-export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
-  // PRIMARY: pdf-lib — rock solid in serverless environments. Génère lui-même le
-  // QR côté Node via QRCode.toBuffer (fiable, indépendant du navigateur). On ne
-  // mute JAMAIS l'invoice en entrée : l'ancien code faisait `invoice.qr_data_url =
-  // ...` ce qui laissait un QR obsolète survivre aux régénérations (CIBLE 2).
-  try {
-    const { generateInvoicePdfBuffer } = await import('./pdf-server');
-    const buffer = await generateInvoicePdfBuffer(invoice, profile);
-    return new Uint8Array(buffer);
-  } catch (pdfLibErr) {
-    console.warn('[pdf] pdf-lib failed, trying @react-pdf/renderer:', (pdfLibErr as Error).message);
-
-    // FALLBACK: @react-pdf/renderer — on injecte le QR de façon IMMUABLE (copie).
-    try {
-      const { renderToBuffer } = await import('@react-pdf/renderer');
-      const { PdfDocument } = await import('@/components/pdf-document');
-      const invoiceWithQr = await withQrDataUrl(invoice);
-      const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
-      return await renderToBuffer(element as any);
-    } catch (reactPdfErr) {
-      console.error('[pdf] Both PDF engines failed. pdf-lib:', (pdfLibErr as Error).message, '| react-pdf:', (reactPdfErr as Error).message);
-      throw pdfLibErr;
-    }
-  }
-}
+// VULCAIN (build fix) — `generatePdfBuffer` (qui importait dynamiquement
+// ./pdf-server → `fs`) a été déplacée vers `./pdf-server.ts`. Ce fichier ne
+// référence plus pdf-server : il reste 100 % client-safe (importé par
+// GenerateurForm pour generateInvoiceHtml, et par downloadInvoicePdf). Les
+// routes API qui veulent le buffer PDF importent désormais `@/lib/pdf-server`.
 
 import React from 'react';
 

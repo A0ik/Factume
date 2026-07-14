@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import zlib from 'zlib';
-import { generatePdfBuffer, withQrDataUrl } from '../pdf';
+import { withQrDataUrl } from '../pdf';
+import { generatePdfBuffer } from '../pdf-server';
 import type { Invoice } from '@/types';
 
 // Extrait le texte dessiné d'un PDF généré. Les flux pdf-lib sont compressés

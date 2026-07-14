@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
       //   • Factur-X EMBARQUÉ (avant, le PDF emailé était SANS XML → non conforme
       //     e-invoicing 2026). Défensif : si l'embarquement échoue, on envoie quand
       //     même le PDF (sans XML) plutôt que de bloquer l'email.
-      const { generatePdfBuffer } = await import('@/lib/pdf');
+      const { generatePdfBuffer } = await import('@/lib/pdf-server');
       const { createFacturXPdf } = await import('@/lib/facturx');
       let pdfBytes = await generatePdfBuffer(invoice, profile);
       const facturxEligible = isFacturXEligible(invoice, profile);

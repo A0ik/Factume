@@ -18,6 +18,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
 import { ReceiptLink } from '@/components/storage/ReceiptLink';
+import QuickActionsSheet from '@/components/layout/QuickActionsSheet';
+import { useLongPress } from '@/lib/use-long-press';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRouter } from 'next/navigation';
 
@@ -171,9 +173,13 @@ function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate, isDar
   const cat = getCat(expense.category);
   const Icon = cat.icon;
   const statusCfg = STATUS_CONFIG[expense.status] || STATUS_CONFIG['pending'];
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const longPress = useLongPress(() => setShowQuickActions(true));
 
   return (
+    <>
     <motion.div
+      {...longPress.bind()}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.05, ease }}
@@ -247,6 +253,23 @@ function MobileExpenseCard({ expense, index, onEdit, onDelete, onValidate, isDar
         </button>
       </div>
     </motion.div>
+
+    <QuickActionsSheet
+      open={showQuickActions}
+      onClose={() => setShowQuickActions(false)}
+      title={expense.vendor || 'Note de frais'}
+      actions={[
+        ...(expense.receipt_url
+          ? [{ label: 'Voir le justificatif', icon: FileImage, onClick: () => window.open(expense.receipt_url!, '_blank') }]
+          : []),
+        ...(expense.status === 'pending'
+          ? [{ label: 'Valider', icon: Check, onClick: () => onValidate(expense.id, 'validated') }]
+          : []),
+        { label: 'Éditer', icon: Edit2, onClick: () => onEdit(expense) },
+        { label: 'Supprimer', icon: Trash2, onClick: () => onDelete(expense.id), danger: true },
+      ]}
+    />
+    </>
   );
 }
 

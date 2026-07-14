@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { getRenewedChain } from '@/lib/services/contract-renewal-service';
+import { getRenewedChain } from '@/lib/services/contract-renewal-server';
 
 // ARGOS (build/sécurité) — getRenewedChain utilise le client admin (service-role) ;
 // route serveur fine pour que les composants client n'importent pas le service.

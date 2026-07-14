@@ -6,7 +6,7 @@
  * Usage : npx tsx scripts/verify-atelier.ts
  */
 import zlib from 'zlib';
-import { generatePdfBuffer } from '../lib/pdf';
+import { generatePdfBuffer } from '../lib/pdf-server';
 import { createFacturXPdf, generateFacturXXml } from '../lib/facturx';
 import { mintShortToken, buildShortPayUrl } from '../lib/pay-token';
 

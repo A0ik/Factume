@@ -14,6 +14,9 @@ import Button from '@/components/ui/Button';
 import { ImportClientsModal } from '@/components/ui/ImportClientsModal';
 import DocPickerModal from '@/components/clients/DocPickerModal';
 import BottomSheet from '@/components/layout/BottomSheet';
+import QuickActionsSheet from '@/components/layout/QuickActionsSheet';
+import KebabMenu from '@/components/ui/KebabMenu';
+import { useLongPress } from '@/lib/use-long-press';
 import {
   getInitials, downloadCSV, validateSiret, validateVatNumber, formatCurrency, cn,
 } from '@/lib/utils';
@@ -153,13 +156,20 @@ function MobileClientCard({ client, stats, idx, onDelete }: {
   client: any; stats: { count: number; revenue: number; pending: number }; idx: number;
   onDelete: (e: React.MouseEvent) => void;
 }) {
+  const router = useRouter();
   const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
   const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+  const lp = useLongPress(() => setShowQuickActions(true));
+  // Le handler parent n'utilise l'événement que pour preventDefault/stopPropagation ;
+  // on lui passe un événement synthétique pour le déclenchement depuis le sheet.
+  const syntheticEvt = { preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent;
 
   return (
     <>
       <Link href={`/clients/${client.id}`} className="block">
         <motion.div variants={staggerItem} whileTap={{ scale: 0.98 }}
+          {...lp.bind()} onClickCapture={lp.onClickGuard}
           className="bg-muted/40 border border-border rounded-card p-5 cursor-pointer active:bg-muted/60 transition-colors">
           <div className="flex items-start gap-3.5 mb-3">
             <div className={cn('w-11 h-11 rounded-control flex items-center justify-center text-foreground font-bold text-sm flex-shrink-0', color)}>
@@ -209,6 +219,22 @@ function MobileClientCard({ client, stats, idx, onDelete }: {
         </motion.div>
       </Link>
       <DocPickerModal open={docPickerOpen} onClose={() => setDocPickerOpen(false)} clientId={client.id} clientName={client.name} />
+      <QuickActionsSheet
+        open={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        title={client.name || 'Client'}
+        actions={[
+          { label: 'Voir la fiche', icon: Eye, onClick: () => router.push(`/clients/${client.id}`) },
+          { label: 'Nouveau document', icon: FileText, onClick: () => setDocPickerOpen(true) },
+          ...(client.phone
+            ? [{ label: 'Appeler', icon: Phone, onClick: () => { window.location.href = `tel:${client.phone}` } }]
+            : []),
+          ...(client.email
+            ? [{ label: 'Envoyer un email', icon: Mail, onClick: () => { window.location.href = `mailto:${client.email}` } }]
+            : []),
+          { label: 'Supprimer', icon: Trash2, onClick: () => onDelete(syntheticEvt), danger: true },
+        ]}
+      />
     </>
   );
 }
@@ -222,6 +248,7 @@ function DesktopClientCardGrid({ client, stats, idx, onDelete }: {
 }) {
   const [docPickerOpen, setDocPickerOpen] = useState(false);
   const color = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+  const syntheticEvt = { preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent;
 
   return (
     <>
@@ -244,10 +271,17 @@ function DesktopClientCardGrid({ client, stats, idx, onDelete }: {
                 <p className="text-xs text-muted-foreground flex items-center gap-1 truncate"><MapPin size={11} className="flex-shrink-0" />{client.city}</p>
               )}
             </div>
-            <button onClick={(e) => { e.preventDefault(); onDelete(e); }}
-              className="opacity-0 group-hover:opacity-100 p-2 rounded-control hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all flex-shrink-0">
-              <Trash2 size={14} />
-            </button>
+            <div className="opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+              <KebabMenu
+                align="right"
+                items={[
+                  ...(client.phone ? [{ label: 'Appeler', icon: Phone, onClick: () => { window.location.href = `tel:${client.phone}` } }] : []),
+                  ...(client.email ? [{ label: 'Email', icon: Mail, onClick: () => { window.location.href = `mailto:${client.email}` } }] : []),
+                  { label: 'Nouveau document', icon: FileText, onClick: () => setDocPickerOpen(true) },
+                  { label: 'Supprimer', icon: Trash2, onClick: () => onDelete(syntheticEvt), danger: true },
+                ]}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="text-center p-2.5 rounded-xl bg-blue-500/10">
@@ -409,9 +443,13 @@ function ProductCardMobile({ product, idx, onEdit, onDelete, onDuplicate }: {
 }) {
   const cat = getCatStyle(product.category);
   const Icon = cat.icon;
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const lp = useLongPress(() => setShowQuickActions(true));
 
   return (
+    <>
     <motion.div
+      {...lp.bind()}
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: EASE, delay: Math.min(idx * 0.04, 0.4) }}
       className="bg-muted/40 border border-border rounded-card p-5">
@@ -446,6 +484,18 @@ function ProductCardMobile({ product, idx, onEdit, onDelete, onDuplicate }: {
         </div>
       </div>
     </motion.div>
+
+    <QuickActionsSheet
+      open={showQuickActions}
+      onClose={() => setShowQuickActions(false)}
+      title={product.name || 'Article'}
+      actions={[
+        { label: 'Éditer', icon: Edit2, onClick: () => onEdit(product) },
+        { label: 'Dupliquer', icon: Copy, onClick: () => onDuplicate(product) },
+        { label: 'Supprimer', icon: Trash2, onClick: () => onDelete(product.id), danger: true },
+      ]}
+    />
+    </>
   );
 }
 

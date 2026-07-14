@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
-import { generatePdfBuffer } from '@/lib/pdf';
+import { generatePdfBuffer } from '@/lib/pdf-server';
 
 export const maxDuration = 60;
 

@@ -8,6 +8,36 @@ import fs from 'fs';
 import path from 'path';
 import { resolveTermsText } from './payment-terms';
 import { bestTextRGB01, legibleAccentRGB01, type RGB01 } from './color-contrast';
+import React from 'react';
+import type { Invoice, Profile } from '@/types';
+import { withQrDataUrl } from './pdf';
+
+/**
+ * Generate a real PDF buffer for preview and download. (VULCAIN build fix —
+ * déplacée depuis lib/pdf.ts : elle y faisait un `await import('./pdf-server')`
+ * qu'webpack bundlait quand même côté client, tirant `fs` via pdf.ts ← GenerateurForm.)
+ *
+ * Strategy: pdf-lib first (reliable in serverless), @react-pdf/renderer as fallback.
+ * On ne mute JAMAIS l'invoice en entrée (sinon un QR obsolète survit aux régénérations).
+ */
+export async function generatePdfBuffer(invoice: Invoice, profile?: Profile | null): Promise<Uint8Array> {
+  try {
+    const buffer = await generateInvoicePdfBuffer(invoice, profile);
+    return new Uint8Array(buffer);
+  } catch (pdfLibErr) {
+    console.warn('[pdf] pdf-lib failed, trying @react-pdf/renderer:', (pdfLibErr as Error).message);
+    try {
+      const { renderToBuffer } = await import('@react-pdf/renderer');
+      const { PdfDocument } = await import('@/components/pdf-document');
+      const invoiceWithQr = await withQrDataUrl(invoice);
+      const element = React.createElement(PdfDocument, { invoice: invoiceWithQr, profile: profile || {} as Profile });
+      return await renderToBuffer(element as any);
+    } catch (reactPdfErr) {
+      console.error('[pdf] Both PDF engines failed. pdf-lib:', (pdfLibErr as Error).message, '| react-pdf:', (reactPdfErr as Error).message);
+      throw pdfLibErr;
+    }
+  }
+}
 
 /**
  * APEX — Charge un fichier police TTF depuis lib/fonts/. Les polices Inter sont

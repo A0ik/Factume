@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePdfBuffer } from '@/lib/pdf';
+import { generatePdfBuffer } from '@/lib/pdf-server';
 import { Invoice, Profile } from '@/types';
 
 export const maxDuration = 15;
