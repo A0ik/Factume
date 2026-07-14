@@ -102,11 +102,13 @@ function sectionTitle(pathname: string): string {
 }
 
 export default function CabinetLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  // ZÉNITH — sidebar DÉPLIÉE par défaut sur desktop (lg+). La sidebar est
+  // `hidden lg:flex`, donc cet état n'affecte que le PC. Avant : collapsed=true →
+  // navigation incompréhensible + switcher/création de cabinet invisibles.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
   const cabinet = useCabinetStore((state) => state.cabinet);
-  const cabinets = useCabinetStore((state) => state.cabinets);
   const profile = useAuthStore((state) => state.profile);
 
   const primaryColor = cabinet?.primary_color || '#10b981';
@@ -133,16 +135,11 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
           {/* ─── Topbar desktop ─── */}
           <header className="hidden lg:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-white/80 backdrop-blur-xl border-b border-gray-200">
             <div className="flex items-center gap-2 min-w-0">
-              {/* ZÉNITH (CIBLE 2d) — Switcher de cabinet dans la topbar (pattern Pennylane).
-                  La sidebar étant repliée par défaut, le switcher y était invisible ;
-                  on l'expose ici dès qu'il y a ≥2 cabinets. Fallback : nom statique. */}
-              {cabinets.length > 1 ? (
-                <CabinetSwitcher />
-              ) : (
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  {brandName}
-                </span>
-              )}
+              {/* ZÉNITH — Switcher de cabinet TOUJOURS visible dans la topbar (pattern
+                  Pennylane). Donne accès au changement de cabinet ET à la création
+                  (dropdown « Créer un cabinet ») même avec un seul cabinet, sans
+                  dépendre de l'état déplié/replié de la sidebar. */}
+              <CabinetSwitcher />
               <ChevronRight size={13} className="text-gray-300" />
               <h1 className="text-sm font-bold text-gray-900 truncate">{sectionTitle(pathname)}</h1>
             </div>

@@ -173,8 +173,8 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
                       'flex items-center gap-3 rounded-xl transition-colors group relative',
                       collapsed ? 'w-11 h-11 mx-auto justify-center' : 'h-10 px-3',
                       active
-                        ? 'bg-gray-100 text-gray-900 font-semibold'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium',
+                        ? 'bg-gray-100 dark:bg-white/[0.07] text-gray-900 dark:text-white font-semibold'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/[0.04] font-medium',
                     )}
                   >
                     {active && (
