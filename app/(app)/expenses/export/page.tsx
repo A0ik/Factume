@@ -53,9 +53,9 @@ const SOFTWARE_CARDS: {
     key: 'pennylane',
     name: 'Pennylane',
     description: 'Leader français SaaS comptabilité',
-    color: 'from-violet-500 to-purple-600',
-    bgGradient: 'from-violet-500/10 to-purple-600/10',
-    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
+    color: 'from-emerald-500 to-emerald-600',
+    bgGradient: 'from-emerald-500/10 to-emerald-600/10',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
     needsConfig: 'api_key',
     configLabel: 'Clé API Pennylane',
   },
@@ -299,10 +299,10 @@ export default function ExportComptaPage() {
         animate={{ opacity: 1, y: 0 }}
         className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 p-6 md:p-8 mb-8 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-purple-500/5 to-primary/5" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-emerald-500/5 to-primary/5" />
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-primary via-purple-500 to-primary-dark bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-primary via-emerald-500 to-primary-dark bg-clip-text text-transparent">
               Export Comptable
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
@@ -410,7 +410,7 @@ export default function ExportComptaPage() {
           >
             <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-3xl border border-white/50 dark:border-white/10 shadow-xl p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
                   <Key size={18} className="text-white" />
                 </div>
                 <div>
@@ -819,7 +819,7 @@ export default function ExportComptaPage() {
               <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl rounded-b-3xl border border-t-0 border-white/50 dark:border-white/10 shadow-xl p-6 pt-0 space-y-6">
                 {/* Pennylane */}
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                     <Building2 size={16} className="text-white" />
                   </div>
                   <div>

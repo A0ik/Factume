@@ -83,15 +83,15 @@ export default function MentionsObligatoiresPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-sm font-bold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold mb-6">
               <Shield className="w-4 h-4" />
               Guide conforme loi 2026
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Mentions <span className="text-amber-600">Obligatoires</span> sur une Facture
+              Mentions <span className="text-emerald-600">Obligatoires</span> sur une Facture
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               La liste complète des mentions légales à faire figurer sur chaque facture en France. Oublier une mention = amende.
@@ -130,11 +130,11 @@ export default function MentionsObligatoiresPage() {
             Votre facture doit identifier votre entreprise avec ces informations obligatoires.
           </p>
           <div className="max-w-3xl mx-auto">
-            <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 sm:p-12 border border-blue-100 shadow-lg">
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 sm:p-12 border border-emerald-100 shadow-lg">
               <div className="grid sm:grid-cols-2 gap-4">
                 {mentionsVendeur.map((mention, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700 font-medium">{mention}</span>
                   </div>
                 ))}
@@ -151,11 +151,11 @@ export default function MentionsObligatoiresPage() {
             Mentions concernant le client
           </h2>
           <div className="max-w-3xl mx-auto">
-            <div className="bg-gradient-to-br from-purple-50 to-white rounded-3xl p-8 sm:p-12 border border-purple-100 shadow-lg">
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 sm:p-12 border border-emerald-100 shadow-lg">
               <div className="space-y-4">
                 {mentionsClient.map((mention, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700 font-medium">{mention}</span>
                   </div>
                 ))}
@@ -199,14 +199,14 @@ export default function MentionsObligatoiresPage() {
             {mentionsSpecifiques.map((item, i) => (
               <div key={i} className="flex items-center justify-between p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center gap-4">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-sm font-bold">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">
                     {item.statut}
                   </span>
                   <span className="text-gray-700 text-sm">{item.mention}</span>
                 </div>
                 <Link
                   href={item.href}
-                  className="text-purple-600 hover:text-purple-700 font-medium text-sm flex-shrink-0 ml-4"
+                  className="text-emerald-600 hover:text-emerald-700 font-medium text-sm flex-shrink-0 ml-4"
                 >
                   Guide →
                 </Link>
@@ -217,22 +217,22 @@ export default function MentionsObligatoiresPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-amber-600 to-amber-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Factu.me ajoute les mentions automatiquement
           </h2>
-          <p className="text-xl text-amber-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Toutes les mentions légales sont pré-remplies selon votre statut. Créez des factures conformes sans y penser.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-amber-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Zap className="w-5 h-5 mr-2" />
             Créer ma facture conforme
           </Link>
-          <p className="mt-6 text-sm text-amber-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Gratuit jusqu'à 10 factures/mois • Conforme loi 2026
           </p>
         </div>

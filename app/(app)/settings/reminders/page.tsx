@@ -124,7 +124,7 @@ export default function RemindersSettingsPage() {
       >
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
               <Bell className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function RemindersSettingsPage() {
 
           <div className="space-y-4">
             {[
-              { key: 'reminder_1_days', label: 'Première relance', icon: Mail, color: 'blue' },
+              { key: 'reminder_1_days', label: 'Première relance', icon: Mail, color: 'emerald' },
               { key: 'reminder_2_days', label: 'Deuxième relance', icon: RefreshCw, color: 'amber' },
               { key: 'reminder_3_days', label: 'Troisième relance', icon: AlertCircle, color: 'red' },
             ].map(({ key, label, icon: Icon, color }) => (

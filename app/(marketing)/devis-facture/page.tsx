@@ -112,11 +112,11 @@ export default function DevisFacturePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-sky-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Devis et Facture – <span className="text-blue-600">Créez, Envoyez, Convertissez</span>
+              Devis et Facture – <span className="text-emerald-600">Créez, Envoyez, Convertissez</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Gérez vos <strong>devis et factures dans un seul outil</strong>. Suivi d\'acceptation, conversion en 1 clic, relances automatiques.
@@ -124,14 +124,14 @@ export default function DevisFacturePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Essayer gratuitement
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-blue-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir la démo
@@ -152,8 +152,8 @@ export default function DevisFacturePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-blue-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 transition-all">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -179,10 +179,10 @@ export default function DevisFacturePage() {
               { step: '3', title: 'Convertissez en facture', desc: '1 clic et votre devis devient une facture. Les données se reportent.', icon: ArrowRight },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 text-center">
-                <div className="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
                   <item.icon className="w-8 h-8" />
                 </div>
-                <div className="text-sm font-bold text-blue-500 mb-2">Étape {item.step}</div>
+                <div className="text-sm font-bold text-emerald-500 mb-2">Étape {item.step}</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
                 <p className="text-gray-600">{item.desc}</p>
               </div>
@@ -204,7 +204,7 @@ export default function DevisFacturePage() {
                 <ul className="space-y-3">
                   {feature.items.map((item, j) => (
                     <li key={j} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-600">{item}</span>
                     </li>
                   ))}
@@ -236,21 +236,21 @@ export default function DevisFacturePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-blue-600 to-blue-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Simplifiez votre cycle devis-facture
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Un seul outil, du premier contact au paiement
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Commencer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-blue-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Devis illimités • Conversion 1 clic • Sans engagement
           </p>
         </div>

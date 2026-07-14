@@ -9,8 +9,20 @@ export const MONTHS = [
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-// Premium color palette for appointments with glassmorphism variants
+// Premium color palette for appointments with glassmorphism variants.
+// ZÉNITH (CIBLE 3) — l'émeraude (brand) est la couleur par défaut (index 0 =
+// fallback de getColorConfig). On garde une palette multi-teintes : c'est un
+// système de CATÉGORIE utilisateur (comme tout agenda), pas du AI-slop.
 export const APPOINTMENT_COLORS = [
+  {
+    value: 'green',
+    label: 'Émeraude',
+    bg: 'bg-emerald-500',
+    light: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/50 backdrop-blur-sm',
+    dot: 'bg-emerald-400',
+    gradient: 'from-emerald-400 to-emerald-600',
+    shadow: 'shadow-emerald-500/20',
+  },
   {
     value: 'blue',
     label: 'Bleu',
@@ -19,15 +31,6 @@ export const APPOINTMENT_COLORS = [
     dot: 'bg-blue-400',
     gradient: 'from-blue-400 to-blue-600',
     shadow: 'shadow-blue-500/20',
-  },
-  {
-    value: 'green',
-    label: 'Vert',
-    bg: 'bg-green-500',
-    light: 'bg-green-50/90 text-green-700 border-green-200/50 backdrop-blur-sm',
-    dot: 'bg-green-400',
-    gradient: 'from-green-400 to-green-600',
-    shadow: 'shadow-green-500/20',
   },
   {
     value: 'purple',
@@ -95,7 +98,8 @@ export function formatDateISO(year: number, month: number, day: number): string 
 
 // Generate ICS file content for appointment export
 export function generateICS(appointment: Appointment, profile: any): string {
-  const dateStr = appointment.appointment_date.replace(/-/g, '');
+  // ZÉNITH (CIBLE 2) — défense anti-crash si la date/heure est absente.
+  const dateStr = (appointment.appointment_date || '').replace(/-/g, '');
   const start = appointment.start_time.replace(':', '') + '00';
   const end = appointment.end_time.replace(':', '') + '00';
   const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';

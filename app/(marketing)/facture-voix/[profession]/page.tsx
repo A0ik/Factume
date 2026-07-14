@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: 'fr_FR',
       images: [
         {
-          url: `/api/og?title=Facture%20Voix%20${encodeURIComponent(data.nom)}&description=${encodeURIComponent(`Dictez vos factures de ${data.nomLower}`)}&theme=blue`,
+          url: `/api/og?title=Facture%20Voix%20${encodeURIComponent(data.nom)}&description=${encodeURIComponent(`Dictez vos factures de ${data.nomLower}`)}&theme=emerald`,
           width: 1200,
           height: 630,
           alt: `Facture vocale pour ${data.nom} — Factu.me`,
@@ -131,23 +131,23 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
       />
 
       {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[120px]" />
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-[120px]" />
         </div>
         <div className="relative z-10 mx-auto max-w-4xl px-6 py-20 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-blue-300 mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 mb-6">
             <Mic className="w-3.5 h-3.5" /> Facture vocale
           </div>
           <h1 className="text-[clamp(2.1rem,6.5vw,3.4rem)] md:text-5xl font-bold tracking-tight leading-[1.08]">
-            Facture voix pour <span className="text-blue-400">{data.nom}</span>
+            Facture voix pour <span className="text-emerald-400">{data.nom}</span>
           </h1>
           <p className="seo-def mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
             Dictez votre facture de {data.nomLower}, l'IA applique la TVA à {data.tva.taux}%, ajoute les mentions légales
             et génère un Factur-X conforme — en 30 secondes, {terrain}.
           </p>
           <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/register" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-400">
+            <Link href="/register" className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400">
               Essayer gratuitement <ArrowRight className="w-4 h-4" />
             </Link>
             <Link href="/facture-voix" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10">
@@ -166,8 +166,8 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
           </h2>
           <div className="grid gap-5 sm:grid-cols-2">
             {benefits.map((b) => (
-              <div key={b.title} className="rounded-2xl border border-gray-200 p-6 transition-colors hover:border-blue-300">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+              <div key={b.title} className="rounded-2xl border border-gray-200 p-6 transition-colors hover:border-emerald-300">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
                   <b.icon className="w-5 h-5" />
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-gray-900">{b.title}</h3>
@@ -187,7 +187,7 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
           <ol className="space-y-5">
             {howToSteps.map((step, i) => (
               <li key={i} className="howto-step flex gap-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500 font-bold text-white">{i + 1}</div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 font-bold text-white">{i + 1}</div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{step.name}</h3>
                   <p className="mt-1.5 text-gray-600 leading-relaxed">{step.text}</p>
@@ -195,9 +195,9 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
               </li>
             ))}
           </ol>
-          <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
-            <p className="text-sm text-blue-900 leading-relaxed">
-              <CheckCircle2 className="inline w-4 h-4 mr-1.5 -mt-0.5 text-blue-600" />
+          <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+            <p className="text-sm text-emerald-900 leading-relaxed">
+              <CheckCircle2 className="inline w-4 h-4 mr-1.5 -mt-0.5 text-emerald-600" />
               <strong>Exemple de dictée pour {data.nomLower} :</strong> {exempleTexte}
             </p>
           </div>
@@ -215,7 +215,7 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
               <details key={f.question} className="group rounded-xl border border-gray-200 bg-white p-5 [&_summary::-webkit-details-marker]:hidden">
                 <summary className="flex cursor-pointer items-center justify-between gap-4 font-semibold text-gray-900 list-none">
                   {f.question}
-                  <span className="text-blue-500 transition-transform group-open:rotate-45">+</span>
+                  <span className="text-emerald-500 transition-transform group-open:rotate-45">+</span>
                 </summary>
                 <p className="mt-3 text-gray-600 leading-relaxed">{f.answer}</p>
               </details>
@@ -229,7 +229,7 @@ export default async function FactureVoixProfessionPage({ params }: Props) {
         <div className="mx-auto max-w-2xl px-6">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Prêt à dicter vos factures de {data.nomLower} ?</h2>
           <p className="mt-3 text-slate-300">30 secondes par facture, conforme Factur-X, signé eIDAS. Sans carte bancaire.</p>
-          <Link href="/register" className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:bg-blue-400">
+          <Link href="/register" className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400">
             Commencer gratuitement <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

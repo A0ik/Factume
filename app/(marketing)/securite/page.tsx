@@ -50,7 +50,7 @@ export default function SecuritePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-bold mb-6">
@@ -89,12 +89,12 @@ export default function SecuritePage() {
       {/* Périmètre */}
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8">
-            <h2 className="text-xl font-bold text-amber-800 mb-4">Notre périmètre</h2>
-            <p className="text-amber-900 mb-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8">
+            <h2 className="text-xl font-bold text-emerald-800 mb-4">Notre périmètre</h2>
+            <p className="text-emerald-900 mb-4">
               Factu.me est un <strong>outil de facturation</strong>. Nous vous aidons à créer, envoyer et suivre vos factures et devis de manière conforme et efficace.
             </p>
-            <p className="text-amber-900">
+            <p className="text-emerald-900">
               Pour toute question d'ordre <strong>fiscal, comptable ou juridique</strong>, nous vous recommandons de consulter un expert-comptable ou un avocat. Factu.me ne remplace pas le conseil professionnel.
             </p>
           </div>

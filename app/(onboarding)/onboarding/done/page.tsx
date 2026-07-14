@@ -22,7 +22,7 @@ export default function OnboardingDonePage() {
 
   if (saving) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-emerald-50 flex items-center justify-center p-4">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-gray-500 text-sm">Finalisation de votre espace...</p>
@@ -33,7 +33,7 @@ export default function OnboardingDonePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-emerald-50 flex items-center justify-center p-4">
         <div className="w-full max-w-sm text-center space-y-6">
           <div className="flex items-center justify-center">
             <div className="w-24 h-24 rounded-full bg-red-50 flex items-center justify-center">
@@ -62,7 +62,7 @@ export default function OnboardingDonePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg text-center space-y-6">
         <OnboardingProgress currentStep={4} steps={['Langue', 'Entreprise', 'Adresse', 'Modèle', 'Terminé']} />
 

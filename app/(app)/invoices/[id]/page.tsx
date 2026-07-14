@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmailPreviewModal from '@/components/ui/EmailPreviewModal';
+import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
 import QuoteActionModal from '@/components/ui/QuoteActionModal';
 import PdfPreviewModal from '@/components/ui/PdfPreviewModal';
 import PaymentProviderModal from '@/components/ui/PaymentProviderModal';
@@ -143,6 +144,19 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [statusLoading, setStatusLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // ZÉNITH (CIBLE 1) — garde relance bloquante (no-client / missing-email).
+  const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
+
+  // ZÉNITH (CIBLE 1) — avant d'ouvrir l'email de relance : on bloque si la facture
+  // n'a pas de client (CTA « Ouvrir ») et on fait saisir+persister l'email si besoin.
+  const handleRelance = async () => {
+    if (!invoice) return;
+    const canSend = await ensureCanSend([invoice]);
+    if (!canSend) return; // bloqué (no-client) ou annulé
+    setIsReminder(true);
+    setShowEmailModal(true);
+  };
   const [showMenu, setShowMenu] = useState(false);
   const [showFacturXDetails, setShowFacturXDetails] = useState(false);
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
@@ -718,7 +732,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
               <button
-                onClick={() => { setIsReminder(true); setShowEmailModal(true); }}
+                onClick={handleRelance}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500 text-gray-900 dark:text-white text-xs font-semibold hover:bg-red-400 transition-colors flex-shrink-0"
               >
                 <Mail size={13} />
@@ -1206,6 +1220,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           isReminder={isReminder}
         />
       )}
+      {relanceGuardModal}
 
       {/* Quote action modal */}
       {invoice && profile && (

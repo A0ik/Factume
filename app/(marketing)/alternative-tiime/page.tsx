@@ -113,7 +113,7 @@ export default function AlternativeTiimePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-50 via-white to-cyan-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 text-teal-700 text-sm font-semibold mb-6">

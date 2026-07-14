@@ -27,7 +27,7 @@ const SECTORS = [
   { value: 'sante', label: 'Santé / Médical', icon: Stethoscope, color: 'text-red-600' },
   { value: 'commerce', label: 'Commerce / Distribution', icon: ShoppingCart, color: 'text-green-600' },
   { value: 'industrie', label: 'Industrie', icon: Factory, color: 'text-gray-600' },
-  { value: 'services', label: 'Services', icon: ClipboardList, color: 'text-purple-600' },
+  { value: 'services', label: 'Services', icon: ClipboardList, color: 'text-emerald-600' },
   { value: 'autre', label: 'Autre', icon: MapPin, color: 'text-slate-600' },
 ];
 
@@ -113,7 +113,7 @@ export function AISuggestionsModal({ isOpen, onClose, onApplyClause, contractTyp
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                       <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -192,7 +192,7 @@ export function AISuggestionsModal({ isOpen, onClose, onApplyClause, contractTyp
                     <button
                       onClick={fetchSuggestions}
                       disabled={loading || !selectedSector}
-                      className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       {loading ? (
                         <>

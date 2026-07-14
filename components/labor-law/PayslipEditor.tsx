@@ -267,7 +267,7 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10 bg-gradient-to-r from-primary/5 to-purple-500/5">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/10 bg-gradient-to-r from-primary/5 to-emerald-500/5">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <FileText className="w-6 h-6 text-primary" />
@@ -284,10 +284,10 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
 
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* AI Modify */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-4 border border-purple-200 dark:border-purple-800">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-semibold text-purple-900 dark:text-purple-100">Modifier avec l'IA</span>
+              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-semibold text-emerald-900 dark:text-emerald-100">Modifier avec l'IA</span>
             </div>
             <div className="flex gap-2">
               <input
@@ -295,12 +295,12 @@ export function PayslipEditor({ initialData, onClose }: PayslipEditorProps) {
                 onChange={(e) => setAiPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAiModify()}
                 placeholder="Ex: Ajoute 200€ de prime exceptionnelle, recalcule les cotisations..."
-                className="flex-1 px-4 py-2.5 text-sm rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 focus:border-purple-400 focus:ring-2 focus:ring-purple-200/30 outline-none transition-all"
+                className="flex-1 px-4 py-2.5 text-sm rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/30 outline-none transition-all"
               />
               <button
                 onClick={handleAiModify}
                 disabled={aiLoading || !aiPrompt.trim()}
-                className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
               >
                 {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {aiLoading ? 'En cours...' : 'Modifier'}

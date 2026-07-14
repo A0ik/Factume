@@ -94,16 +94,16 @@ export default function ModeleFacturePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-6">
               <Download className="w-4 h-4" />
               Modèles gratuits
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Modèles de Facture Gratuits —{' '}
-              <span className="text-blue-600">Conformes & Personnalisables</span>
+              <span className="text-emerald-600">Conformes & Personnalisables</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Templates de facture pour chaque métier. Mentions légales pré-remplies,
@@ -112,14 +112,14 @@ export default function ModeleFacturePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl hover:from-blue-700 hover:to-indigo-800 transition-all shadow-xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Créer ma facture gratuitement
               </Link>
               <Link
                 href="/modeles-facture"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-blue-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir tous les modèles par métier
@@ -140,20 +140,20 @@ export default function ModeleFacturePage() {
               <Link
                 key={i}
                 href={template.href}
-                className="group p-8 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all"
+                className="group p-8 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:shadow-lg transition-all"
               >
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors">
                   {template.title}
                 </h3>
                 <p className="text-gray-600 mb-4">{template.description}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {template.tags.map((tag, j) => (
-                    <span key={j} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                    <span key={j} className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-semibold">
                       {tag}
                     </span>
                   ))}
                 </div>
-                <span className="inline-flex items-center text-sm font-semibold text-blue-600">
+                <span className="inline-flex items-center text-sm font-semibold text-emerald-600">
                   Voir le modèle <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </span>
               </Link>
@@ -183,7 +183,7 @@ export default function ModeleFacturePage() {
             <div className="mt-6 pt-6 border-t border-gray-100 text-center">
               <Link
                 href="/mentions-obligatoires-facture"
-                className="inline-flex items-center text-blue-600 hover:underline font-semibold text-sm"
+                className="inline-flex items-center text-emerald-600 hover:underline font-semibold text-sm"
               >
                 Guide complet des mentions obligatoires <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
@@ -232,7 +232,7 @@ export default function ModeleFacturePage() {
               },
             ].map((item, i) => (
               <div key={i} className="flex gap-4 p-5 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
                   <item.icon className="w-5 h-5" />
                 </div>
                 <div>
@@ -249,7 +249,7 @@ export default function ModeleFacturePage() {
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-3 mb-12">
-            <HelpCircle className="w-8 h-8 text-blue-600" />
+            <HelpCircle className="w-8 h-8 text-emerald-600" />
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900">
               Questions fréquentes
             </h2>
@@ -259,7 +259,7 @@ export default function ModeleFacturePage() {
               <details key={i} className="group bg-white rounded-2xl border border-gray-100">
                 <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
                   <h3 className="text-lg font-bold text-gray-900 pr-4">{faq.question}</h3>
-                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-blue-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
+                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-emerald-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
                 </summary>
                 <div className="px-6 pb-6">
                   <p className="text-gray-600">{faq.answer}</p>
@@ -271,17 +271,17 @@ export default function ModeleFacturePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-blue-600 to-indigo-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Créez votre facture en 30 secondes
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Pas de modèle à télécharger. Pas d&apos;Excel à configurer. Juste votre facture, prête et conforme.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Zap className="w-5 h-5 mr-2" />
             Créer ma première facture

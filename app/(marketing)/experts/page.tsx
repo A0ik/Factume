@@ -61,11 +61,11 @@ export default function ExpertsPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              L&apos;Équipe derrière <span className="text-indigo-600">Factu.me</span>
+              L&apos;Équipe derrière <span className="text-emerald-600">Factu.me</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Des experts en facturation, fiscalité et intelligence artificielle qui garantissent la qualité et la conformité de chaque fonctionnalité.
@@ -81,7 +81,7 @@ export default function ExpertsPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {values.map((value, i) => (
               <div key={i} className="text-center p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white mb-4">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white mb-4">
                   <value.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{value.title}</h3>
@@ -114,7 +114,7 @@ export default function ExpertsPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {specializations.map((spec, i) => (
               <div key={i} className="p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-4">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white mb-4">
                   <spec.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{spec.title}</h3>
@@ -126,17 +126,17 @@ export default function ExpertsPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-indigo-600 to-indigo-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Rejoignez des milliers d&apos;utilisateurs
           </h2>
-          <p className="text-xl text-indigo-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Testez Factu.me gratuitement et jugez par vous-même
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-indigo-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Commencer gratuitement <ArrowRight className="w-5 h-5 ml-2" />
           </Link>

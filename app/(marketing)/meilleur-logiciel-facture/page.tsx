@@ -121,15 +121,15 @@ export default function MeilleurLogicielFacturePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold mb-6">
               <Trophy className="w-4 h-4" />
               Comparatif 2025 mis à jour
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Meilleur Logiciel de Facture 2025 – <span className="text-indigo-600">Comparatif & Avis</span>
+              Meilleur Logiciel de Facture 2025 – <span className="text-emerald-600">Comparatif & Avis</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Nous avons comparé les 10 meilleurs logiciels. <strong>Factu.me arrive en tête</strong> pour les freelances et auto-entrepreneurs.
@@ -137,14 +137,14 @@ export default function MeilleurLogicielFacturePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl hover:from-indigo-700 hover:to-indigo-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Essayer le n°1 gratuitement
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-indigo-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir la démo
@@ -163,9 +163,9 @@ export default function MeilleurLogicielFacturePage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b-2 border-indigo-200">
+                <tr className="border-b-2 border-emerald-200">
                   <th className="text-left py-4 px-6 text-gray-500 font-semibold">Critère</th>
-                  <th className="text-center py-4 px-6 text-indigo-600 font-bold bg-indigo-50 rounded-t-xl">Factu.me</th>
+                  <th className="text-center py-4 px-6 text-emerald-600 font-bold bg-emerald-50 rounded-t-xl">Factu.me</th>
                   <th className="text-center py-4 px-6 text-gray-500 font-semibold">Autres logiciels</th>
                 </tr>
               </thead>
@@ -173,8 +173,8 @@ export default function MeilleurLogicielFacturePage() {
                 {comparisonData.map((row, i) => (
                   <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6 font-medium text-gray-900">{row.feature}</td>
-                    <td className="py-4 px-6 text-center bg-indigo-50/50">
-                      <span className="inline-flex items-center gap-1 text-indigo-700 font-semibold">
+                    <td className="py-4 px-6 text-center bg-emerald-50/50">
+                      <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold">
                         <CheckCircle2 className="w-4 h-4" />
                         {row.factume}
                       </span>
@@ -196,8 +196,8 @@ export default function MeilleurLogicielFacturePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-indigo-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 transition-all">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -223,7 +223,7 @@ export default function MeilleurLogicielFacturePage() {
                 <ul className="space-y-3">
                   {feature.items.map((item, j) => (
                     <li key={j} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-600">{item}</span>
                     </li>
                   ))}
@@ -255,21 +255,21 @@ export default function MeilleurLogicielFacturePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-indigo-600 to-indigo-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Le meilleur, c\'est de l\'essayer
           </h2>
-          <p className="text-xl text-indigo-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Rejoignez les professionnels qui ont fait le bon choix
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-indigo-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Commencer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-indigo-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Plan gratuit • Sans engagement • Résiliez quand vous voulez
           </p>
         </div>

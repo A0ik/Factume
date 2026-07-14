@@ -47,14 +47,14 @@ export default function LogicielCabinetComptablePage() {
     <main className="min-h-screen bg-white dark:bg-slate-950">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-violet-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-emerald-50/30 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-semibold mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm font-semibold mb-6">
             <Building2 size={16} />
             Pour cabinets d&apos;expertise comptable
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white leading-tight mb-6">
-            Gerez <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">tous vos clients</span><br />
+            Gerez <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-600">tous vos clients</span><br />
             depuis un seul dashboard
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -64,7 +64,7 @@ export default function LogicielCabinetComptablePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/35 transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-600 text-white font-bold text-lg shadow-xl shadow-emerald-500/25 hover:shadow-2xl hover:shadow-emerald-500/35 transition-all hover:scale-105"
             >
               Essai gratuit 7 jours
             </Link>
@@ -89,7 +89,7 @@ export default function LogicielCabinetComptablePage() {
             { value: 'CSV', label: 'Export universel' },
           ].map(({ value, label }) => (
             <div key={label}>
-              <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{value}</p>
+              <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{value}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
             </div>
           ))}
@@ -108,8 +108,8 @@ export default function LogicielCabinetComptablePage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {features.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="p-6 rounded-2xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-gray-800 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <div key={title} className="p-6 rounded-2xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-100 dark:border-gray-800 hover:shadow-lg hover:border-emerald-200 dark:hover:border-emerald-800 transition-all group">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Icon size={22} className="text-white" />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white mb-2">{title}</h3>
@@ -129,7 +129,7 @@ export default function LogicielCabinetComptablePage() {
           <div className="space-y-6">
             {steps.map(({ num, title, desc }) => (
               <div key={num} className="flex items-start gap-5 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-black text-lg">{num}</span>
                 </div>
                 <div>
@@ -199,15 +199,15 @@ export default function LogicielCabinetComptablePage() {
       {/* CTA */}
       <section className="py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <div className="p-10 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl">
+          <div className="p-10 rounded-3xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-2xl">
             <Building2 size={40} className="mx-auto mb-6 opacity-80" />
             <h2 className="text-3xl font-black mb-4">Pret a transformer votre cabinet ?</h2>
-            <p className="text-blue-100 mb-8 max-w-lg mx-auto">
+            <p className="text-emerald-100 mb-8 max-w-lg mx-auto">
               Rejoignez les cabinets comptables qui utilisent Factu.me pour gerer leur portefeuille clients. Essai gratuit 7 jours, sans engagement.
             </p>
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-blue-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-emerald-700 font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
               Commencer l&apos;essai gratuit
             </Link>

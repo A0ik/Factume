@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     images: [
       {
-        url: '/api/og?title=Facture%20Voix%20-%20Dict%C3%A9e%20Vocale%20IA&description=Cr%C3%A9ez%20vos%20factures%20en%20parlant&theme=blue',
+        url: '/api/og?title=Facture%20Voix%20-%20Dict%C3%A9e%20Vocale%20IA&description=Cr%C3%A9ez%20vos%20factures%20en%20parlant&theme=emerald',
         width: 1200,
         height: 630,
         alt: 'Facture Voix — Dictée vocale IA | Factu.me',
@@ -294,19 +294,19 @@ export default function FactureVoixPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* ── HERO ── */}
-      <section className="relative bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900 text-white overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(99,102,241,0.15),transparent_60%)]" />
         <div className="relative max-w-6xl mx-auto px-4 py-20 sm:py-28">
           <div className="flex items-center gap-2 mb-6">
-            <Mic className="w-5 h-5 text-indigo-300" />
-            <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-sm font-medium">
+            <Mic className="w-5 h-5 text-emerald-300" />
+            <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300 text-sm font-medium">
               Dictée vocale propulsée par l&apos;IA
             </span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
             Facture Voix : Créez vos factures
             <br />
-            <span className="text-indigo-400">en parlant simplement</span>
+            <span className="text-emerald-400">en parlant simplement</span>
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mb-8 leading-relaxed">
             Dites ce que vous voulez facturer. L&apos;<strong>IA de Factu.me</strong> transforme
@@ -317,7 +317,7 @@ export default function FactureVoixPage() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-lg transition-colors"
             >
               <Mic className="w-5 h-5" />
               Essayer la facture voix gratuitement
@@ -330,16 +330,16 @@ export default function FactureVoixPage() {
             </Link>
           </div>
           <div className="mt-8 flex items-center gap-6 text-sm text-gray-400">
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Précision &gt; 98 %</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Français natif</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> 30 secondes par facture</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Précision &gt; 98 %</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Français natif</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> 30 secondes par facture</span>
           </div>
         </div>
       </section>
 
       {/* ── DÉFINITION AEO (Loi 3 : réponse directe pour AI Overviews) ── */}
       <section id="definition" className="speakable-section max-w-6xl mx-auto px-4 py-16">
-        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-8 sm:p-10">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 sm:p-10">
           <ExpertBadge
             name="Équipe Factu.me"
             title="Experts en facturation vocale IA"
@@ -381,7 +381,7 @@ export default function FactureVoixPage() {
             <div key={ex.title} className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">{ex.title}</h3>
               <div className="bg-white rounded-xl p-4 mb-3 border border-gray-100">
-                <AudioWaveform className="w-5 h-5 text-indigo-500 mb-2" />
+                <AudioWaveform className="w-5 h-5 text-emerald-500 mb-2" />
                 <p className="text-gray-700 text-sm italic">{ex.example}</p>
               </div>
               <p className="text-sm text-emerald-700 font-medium">
@@ -407,10 +407,10 @@ export default function FactureVoixPage() {
             {benefits.map((b) => (
               <div
                 key={b.title}
-                className="p-6 bg-white rounded-2xl border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
+                className="p-6 bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all group"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
-                  <b.icon className="w-6 h-6 text-indigo-600" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                  <b.icon className="w-6 h-6 text-emerald-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{b.title}</h3>
                 <p className="text-gray-600 leading-relaxed">{b.description}</p>
@@ -433,7 +433,7 @@ export default function FactureVoixPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {howToSteps.map((step, i) => (
             <div key={step.name} className="relative bg-gray-50 rounded-2xl p-6 border border-gray-200">
-              <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg">
+              <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-lg">
                 {i + 1}
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{step.name}</h3>
@@ -458,11 +458,11 @@ export default function FactureVoixPage() {
             {useCases.map((uc) => (
               <div
                 key={uc.title}
-                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 transition-all"
+                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-emerald-300 transition-all"
               >
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <uc.icon className="w-5 h-5 text-indigo-600" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <uc.icon className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{uc.title}</h3>
@@ -470,7 +470,7 @@ export default function FactureVoixPage() {
                   </div>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <p className="text-sm text-indigo-700 italic">{uc.phrase}</p>
+                  <p className="text-sm text-emerald-700 italic">{uc.phrase}</p>
                 </div>
               </div>
             ))}
@@ -488,12 +488,12 @@ export default function FactureVoixPage() {
             <div key={t.name} className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center gap-1 mb-3">
                 {Array.from({ length: t.rating }).map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <Star key={i} className="w-4 h-4 fill-emerald-400 text-emerald-400" />
                 ))}
               </div>
               <p className="text-gray-700 mb-4 leading-relaxed italic">&ldquo;{t.quote}&rdquo;</p>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm">
                   {t.name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <div>
@@ -515,7 +515,7 @@ export default function FactureVoixPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {techSpecs.map((spec) => (
               <div key={spec.label} className="bg-white rounded-xl p-4 border border-gray-200">
-                <p className="text-sm font-medium text-indigo-600 mb-1">{spec.label}</p>
+                <p className="text-sm font-medium text-emerald-600 mb-1">{spec.label}</p>
                 <p className="text-gray-900 font-medium">{spec.value}</p>
               </div>
             ))}
@@ -678,20 +678,20 @@ export default function FactureVoixPage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold text-lg transition-colors"
             >
               <Mic className="w-5 h-5" />
               Commencer gratuitement
             </Link>
             <Link
               href="/demo"
-              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-300 hover:border-indigo-500 text-gray-700 rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-300 hover:border-emerald-500 text-gray-700 rounded-xl font-semibold text-lg transition-colors"
             >
               Voir la démo
             </Link>
           </div>
           <div className="mt-6 flex justify-center items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> 4.8/5</span>
+            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-emerald-400 text-emerald-400" /> 4.8/5</span>
             <span>•</span>
             <span>127 avis</span>
             <span>•</span>

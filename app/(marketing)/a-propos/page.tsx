@@ -135,7 +135,7 @@ export default function AProposPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-6">
@@ -238,7 +238,7 @@ export default function AProposPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-3xl p-8 sm:p-12 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
-              <Scale className="w-8 h-8 text-indigo-600" />
+              <Scale className="w-8 h-8 text-emerald-600" />
               <h2 className="text-3xl font-black text-gray-900">Conformité légale</h2>
             </div>
             <div className="space-y-6 text-gray-700">
@@ -272,9 +272,9 @@ export default function AProposPage() {
             <div className="mt-8 pt-6 border-t border-gray-100">
               <p className="text-sm text-gray-500">
                 Consultez nos{' '}
-                <Link href="/legal/cgu" className="text-indigo-600 hover:underline">conditions générales d&apos;utilisation</Link>
+                <Link href="/legal/cgu" className="text-emerald-600 hover:underline">conditions générales d&apos;utilisation</Link>
                 {' '}et notre{' '}
-                <Link href="/legal/confidentialite" className="text-indigo-600 hover:underline">politique de confidentialité</Link>.
+                <Link href="/legal/confidentialite" className="text-emerald-600 hover:underline">politique de confidentialité</Link>.
               </p>
             </div>
           </div>

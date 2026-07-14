@@ -14,8 +14,8 @@ import {
 
 const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string; description: string }> = {
   owner:  { label: 'Propriétaire', icon: Crown,  color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-900/20',  description: 'Accès complet + gestion de l\'équipe' },
-  admin:  { label: 'Admin',        icon: Shield, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', description: 'Gère les membres et les paramètres' },
-  member: { label: 'Membre',       icon: User,   color: 'text-blue-600 dark:text-blue-400',     bg: 'bg-blue-50 dark:bg-blue-900/20',    description: 'Crée et modifie les factures' },
+  admin:  { label: 'Admin',        icon: Shield, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', description: 'Gère les membres et les paramètres' },
+  member: { label: 'Membre',       icon: User,   color: 'text-teal-600 dark:text-teal-400',     bg: 'bg-teal-50 dark:bg-teal-900/20',    description: 'Crée et modifie les factures' },
   viewer: { label: 'Lecteur',      icon: Eye,    color: 'text-gray-600 dark:text-gray-400',     bg: 'bg-gray-50 dark:bg-gray-800/50',    description: 'Consulte les documents en lecture seule' },
 };
 
@@ -36,12 +36,12 @@ export default function TeamSettingsPage() {
           <ArrowLeft size={16} /> Paramètres
         </button>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-4">
-            <Sparkles size={28} className="text-purple-500" />
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-4">
+            <Sparkles size={28} className="text-emerald-500" />
           </div>
           <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Gestion d&apos;équipe</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Invitez des collaborateurs et attribuez-leur des rôles pour travailler ensemble.</p>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-900/20 text-xs font-bold text-purple-600 dark:text-purple-400">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-xs font-bold text-emerald-600 dark:text-emerald-400">
             <Crown size={12} /> Plan Business requis
           </div>
           <button
@@ -99,8 +99,8 @@ export default function TeamSettingsPage() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-            <Users size={20} className="text-purple-600 dark:text-purple-400" />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+            <Users size={20} className="text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">Équipe</h1>
@@ -112,9 +112,9 @@ export default function TeamSettingsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
-        <Users size={14} className="text-blue-500 flex-shrink-0" />
-        <p className="text-xs text-blue-700 dark:text-blue-300">
+      <div className="flex items-center gap-2 p-3 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-100 dark:border-teal-800/30">
+        <Users size={14} className="text-teal-500 flex-shrink-0" />
+        <p className="text-xs text-teal-700 dark:text-teal-300">
           <strong>{members.length} membre{members.length > 1 ? 's' : ''}</strong> dans votre équipe. Plan Business : membres illimités.
         </p>
       </div>

@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     images: [
       {
-        url: '/api/og?title=Facture%20avec%20la%20Voix&description=Comment%20faire%20une%20facture%20en%20parlant&theme=blue',
+        url: '/api/og?title=Facture%20avec%20la%20Voix&description=Comment%20faire%20une%20facture%20en%20parlant&theme=emerald',
         width: 1200,
         height: 630,
         alt: 'Facture avec la Voix — Guide pratique | Factu.me',

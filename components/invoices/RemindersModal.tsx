@@ -5,7 +5,7 @@ import { X, Send, Loader2, Mail, AlertCircle, Bell, BellOff, CheckCircle } from 
 import { useDataStore } from '@/stores/dataStore';
 import { getSupabaseClient } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
+import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
 
 interface RemindersModalProps {
   open: boolean;
@@ -25,7 +25,7 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
   const [sending, setSending] = useState(false);
   const [autoEnabled, setAutoEnabled] = useState<boolean | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
-  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
+  const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
 
   // Factures impayées éligibles (factures envoyées ou en retard, hors devis/avoirs/commandes).
   const unpaid = useMemo(
@@ -87,17 +87,15 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
       toast.error('Sélectionnez au moins une facture à relancer.');
       return;
     }
-    // ASTRÉE (CIBLE 1) — avant d'envoyer, on s'assure que chaque client sélectionné
-    // a un email. Sinon : pop-up de saisie qui persiste l'email puis enchaîne.
+    // ZÉNITH (CIBLE 1) — garde unifiée BLOQUANTE avant envoi.
+    //  - aucune facture sans client  → NoClientRelanceModal (bloquant, CTA « Ouvrir la facture »)
+    //  - client sans email           → EnsureClientEmailModal (saisie + persistance clients.email)
+    //  - sinon                       → on envoie réellement.
+    // Fini l'impasse silencieuse « 0 envoyée — X sans email » : la garde client
+    // reflète désormais exactement le test serveur (lib/reminders.ts:86).
     const selectedInvoices = unpaid.filter((i: any) => selected.has(i.id));
-    const missingByEmail = new Map<string, any>();
-    for (const inv of selectedInvoices) {
-      if (inv.client?.id && !inv.client?.email) missingByEmail.set(inv.client.id, inv.client);
-    }
-    for (const [, client] of missingByEmail) {
-      const email = await promptForEmail(client);
-      if (!email) { toast.info('Relance annulée.'); return; }
-    }
+    const canSend = await ensureCanSend(selectedInvoices);
+    if (!canSend) return; // bloqué (no-client) ou annulé (email)
     setSending(true);
     const token = await tokenFetcher();
     if (!token) { toast.error('Session expirée. Reconnectez-vous.'); setSending(false); return; }
@@ -256,7 +254,7 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
         )}
       </div>
     </div>
-    {ensureEmailModal}
+    {relanceGuardModal}
     </>
   );
 }

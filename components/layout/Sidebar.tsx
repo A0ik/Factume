@@ -29,9 +29,9 @@ import { toast } from 'sonner';
 // ─── Tier config (unchanged from original) ───────────────────────
 const TIER_CONFIG = {
   free: { name: 'Gratuit', nextTier: 'pro', gradient: 'from-gray-600 to-gray-700', icon: Zap, iconColor: 'text-white', message: 'Essai gratuit 7 jours', subtext: 'Accès complet · Sans engagement', cta: '/trial' },
-  trial: { name: 'Essai', nextTier: 'pro', gradient: 'from-purple-500 to-violet-600', icon: Sparkles, iconColor: 'text-white', message: 'Essai en cours', subtext: 'Accès Pro · 7 jours gratuits', cta: '/paywall' },
-  pro: { name: 'Pro', nextTier: 'business', gradient: 'from-violet-500 to-violet-600', icon: Crown, iconColor: 'text-white', message: 'Passer à Business', subtext: 'CRM · API · Notes de frais', cta: '/paywall' },
-  business: { name: 'Business', nextTier: 'business', gradient: 'from-violet-600 to-purple-700', icon: Sparkles, iconColor: 'text-white', message: 'Tout inclus', subtext: 'Fonctionnalités illimitées', cta: '/paywall' },
+  trial: { name: 'Essai', nextTier: 'pro', gradient: 'from-emerald-500 to-emerald-600', icon: Sparkles, iconColor: 'text-white', message: 'Essai en cours', subtext: 'Accès Pro · 7 jours gratuits', cta: '/paywall' },
+  pro: { name: 'Pro', nextTier: 'business', gradient: 'from-emerald-600 to-emerald-700', icon: Crown, iconColor: 'text-white', message: 'Passer à Business', subtext: 'CRM · API · Notes de frais', cta: '/paywall' },
+  business: { name: 'Business', nextTier: 'business', gradient: 'from-emerald-700 to-teal-700', icon: Sparkles, iconColor: 'text-white', message: 'Tout inclus', subtext: 'Fonctionnalités illimitées', cta: '/paywall' },
 } as const;
 
 // ─── Navigation items (flat, icon-based) ─────────────────────────
@@ -467,9 +467,9 @@ export default function Sidebar() {
                   'w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:shadow-sm border cursor-pointer',
                   'bg-gradient-to-br border-gray-200 dark:border-gray-700',
                   sub.tier === 'free' && 'from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900',
-                  sub.tier === 'trial' && 'from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-800/10',
-                  (sub.tier === 'solo' || sub.tier === 'pro') && 'from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-800/10',
-                  sub.tier === 'business' && 'from-violet-50 to-violet-100/50 dark:from-violet-900/20 dark:to-violet-800/10',
+                  sub.tier === 'trial' && 'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-800/10',
+                  (sub.tier === 'solo' || sub.tier === 'pro') && 'from-emerald-50 to-emerald-100/60 dark:from-emerald-900/20 dark:to-emerald-800/10',
+                  sub.tier === 'business' && 'from-emerald-50 to-teal-100/60 dark:from-emerald-900/25 dark:to-teal-800/10',
                 )}
               >
                 <div className={cn(

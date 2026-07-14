@@ -35,7 +35,7 @@ export default function OnboardingLanguagePage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg mb-4">

@@ -107,7 +107,7 @@ export function ContractVersionHistory({ isOpen, onClose, contractId, contractTy
               <div className="p-6 border-b border-gray-200 dark:border-white/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center">
                       <History className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -160,7 +160,7 @@ export function ContractVersionHistory({ isOpen, onClose, contractId, contractTy
                           onClick={() => setExpandedVersion(expandedVersion === version.version_number ? null : version.version_number)}
                           className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-purple-600/20 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-emerald-600/20 flex items-center justify-center flex-shrink-0">
                             <FileText className="w-5 h-5 text-primary" />
                           </div>
                           <div className="flex-1 text-left">

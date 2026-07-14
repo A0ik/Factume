@@ -31,7 +31,7 @@ const rankings = [
     rank: 1,
     name: 'Factu.me',
     badge: 'Choix de la rédaction',
-    badgeColor: 'bg-amber-100 text-amber-700',
+    badgeColor: 'bg-emerald-100 text-emerald-700',
     price: 'Gratuit / 9€',
     score: '4.8/5',
     highlights: ['Dictée vocale IA', 'Factur-X 2026', 'Plan gratuit', '100% français'],
@@ -152,9 +152,9 @@ export default function TopLogicielsFacturationPage() {
           </h2>
           <div className="space-y-6">
             {rankings.map((item) => (
-              <div key={item.rank} className={`rounded-3xl p-8 border ${item.rank === 1 ? 'bg-gradient-to-br from-amber-50 to-white border-amber-200 shadow-lg' : 'bg-white border-gray-100 shadow'}`}>
+              <div key={item.rank} className={`rounded-3xl p-8 border ${item.rank === 1 ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200 shadow-lg' : 'bg-white border-gray-100 shadow'}`}>
                 <div className="flex flex-col md:flex-row md:items-start gap-6">
-                  <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black ${item.rank === 1 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black ${item.rank === 1 ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
                     {item.rank === 1 ? <Crown className="w-7 h-7" /> : item.rank}
                   </div>
                   <div className="flex-1">
@@ -162,7 +162,7 @@ export default function TopLogicielsFacturationPage() {
                       <h3 className="text-2xl font-black text-gray-900">{item.name}</h3>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${item.badgeColor}`}>{item.badge}</span>
                       <span className="text-sm text-gray-500">Prix : {item.price}</span>
-                      <span className="text-sm text-amber-600 font-semibold">{item.score}</span>
+                      <span className="text-sm text-emerald-600 font-semibold">{item.score}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {item.highlights.map((h, j) => (

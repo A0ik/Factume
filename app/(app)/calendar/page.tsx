@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, Suspense } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { toast } from 'sonner';
 import { useDataStore } from '@/stores/dataStore';
@@ -25,7 +25,11 @@ import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 // Get today's date for initialization
 const today = new Date();
 
-export default function CalendarPage() {
+// ZÉNITH (CIBLE 2) — le contenu réel vit sous <Suspense> car useGoogleCalendar()
+// appelle useSearchParams() (callback OAuth Google). Sans Suspense, Next 15 fait
+// un bail-out framework (« useSearchParams() should be wrapped in a suspense
+// boundary ») NON rattrapable par error.tsx → mort totale de la page au refresh.
+function CalendarPageInner() {
   const { invoices, clients, fetchClients } = useDataStore();
   const { profile } = useAuthStore();
 
@@ -55,6 +59,8 @@ export default function CalendarPage() {
   const appointmentsByDay = useMemo(() => {
     const map: Record<number, Appointment[]> = {};
     appointments.forEach((appt) => {
+      // ZÉNITH (CIBLE 2) — défense anti-crash : on ne split que si la date existe.
+      if (!appt.appointment_date) return;
       const [y, m, dd] = appt.appointment_date.split('-').map(Number);
       if (y === currentYear && m - 1 === currentMonth) {
         if (!map[dd]) map[dd] = [];
@@ -278,11 +284,10 @@ export default function CalendarPage() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Animated background blobs */}
+      {/* ZÉNITH (CIBLE 3) — ambiance émeraude unique et retenue (fini l'arc-en-ciel AI-slop). */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/15 via-purple-500/15 to-pink-500/15 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tr from-blue-500/15 via-cyan-500/15 to-teal-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
-        <div className="absolute top-[40%] left-[30%] w-[30%] h-[30%] bg-gradient-to-br from-amber-400/10 to-orange-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1400ms' }} />
+        <div className="absolute top-[-15%] right-[-10%] w-[55%] h-[55%] bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-15%] left-[-10%] w-[45%] h-[45%] bg-emerald-500/[0.07] rounded-full blur-3xl" />
       </div>
 
       {/* Main layout */}
@@ -445,5 +450,24 @@ export default function CalendarPage() {
         profile={profile}
       />
     </div>
+  );
+}
+
+function CalendarLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Chargement de l&apos;agenda…</p>
+      </div>
+    </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={<CalendarLoading />}>
+      <CalendarPageInner />
+    </Suspense>
   );
 }

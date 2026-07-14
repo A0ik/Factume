@@ -16,7 +16,7 @@ import { BulkActions } from '@/components/invoices/BulkActions';
 import { AdvancedFilters, InvoiceFilters } from '@/components/invoices/AdvancedFilters';
 import { InvoicePreviewSheet } from '@/components/invoices/InvoicePreviewSheet';
 import { RemindersModal } from '@/components/invoices/RemindersModal';
-import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
+import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
 import SwipeableCard from '@/components/layout/SwipeableCard';
 import { useToast } from '@/components/ui/SuccessToast';
 import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
@@ -158,7 +158,7 @@ export default function DocumentsPage() {
   const { invoices, fetchInvoices, clients } = useDataStore();
   const { session } = useAuthStore();
   const { showToast } = useToast();
-  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
+  const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
 
   const initialType = (searchParams.get('type') as DocType) || 'all';
   const [activeType, setActiveType] = useState<DocType>(initialType);
@@ -201,12 +201,12 @@ export default function DocumentsPage() {
 
   const handleSendReminder = async (invoiceId: string) => {
     if (!session) return;
-    // ASTRÉE (CIBLE 1) — si le client n'a pas d'email, on le demande avant d'envoyer.
+    // ZÉNITH (CIBLE 1) — garde unifiée BLOQUANTE : no-client → modal bloquant,
+    // missing-email → saisie + persistance clients.email. Fini l'envoi fantôme.
     const inv: any = invoices.find((i: any) => i.id === invoiceId);
-    if (inv?.client?.id && !inv.client?.email) {
-      const email = await promptForEmail(inv.client);
-      if (!email) { toast.info('Relance annulée.'); return; }
-    }
+    if (!inv) return;
+    const canSend = await ensureCanSend([inv]);
+    if (!canSend) return; // bloqué ou annulé
     setSendingReminder(invoiceId);
     try {
       const res = await fetch('/api/reminders/send', {
@@ -253,7 +253,7 @@ export default function DocumentsPage() {
   return (
     <div>
       <BulkActions selectedIds={Array.from(selectedIds)} onClear={() => setSelectedIds(new Set())} onActionComplete={() => fetchInvoices()} />
-      {ensureEmailModal}
+      {relanceGuardModal}
 
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>

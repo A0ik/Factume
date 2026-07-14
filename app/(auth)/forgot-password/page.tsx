@@ -41,10 +41,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center p-5 bg-[#020617]">
+    <main className="relative min-h-screen flex flex-col items-center justify-center p-5 bg-[#09090B]">
       {/* Animated background */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#020617]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#09090B] via-[#111113] to-[#09090B]" />
         <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] blur-[120px]" style={{ background: 'rgba(16,185,129,0.12)', animation: 'blob 8s ease-in-out infinite' }} />
         <div className="absolute -bottom-[20%] -left-[10%] w-[400px] h-[400px] blur-[100px]" style={{ background: 'rgba(20,184,166,0.08)', animation: 'blob 8s ease-in-out infinite 2s' }} />
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />

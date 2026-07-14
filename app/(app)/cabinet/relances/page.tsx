@@ -77,6 +77,17 @@ export default function CabinetRelancesPage() {
   const [filterLevel, setFilterLevel] = useState<number | null>(null);
 
   const handleSend = async (invoiceId: string, level: number) => {
+    // ZÉNITH (CIBLE 1) — garde bloquante : pas d'email cabinet → on bloque l'envoi
+    // (aucune impasse silencieuse). Le client cabinet vit dans `profiles`, pas dans
+    // `clients` : on oriente donc vers la fiche client cabinet plutôt que de saisir
+    // l'email ici (écriture sur une autre table).
+    const inv = data?.invoices?.find((i) => i.id === invoiceId);
+    if (inv && !inv.client_email) {
+      toast.error(
+        `Aucun email pour ${inv.client_name || 'ce client cabinet'}. Ajoutez-le sur sa fiche client puis relancez.`,
+      );
+      return;
+    }
     setSendingIds((p) => new Set(p).add(invoiceId));
     try {
       // ARGOS — route existante /api/cabinet/reminders, payload snake_case.
@@ -102,12 +113,22 @@ export default function CabinetRelancesPage() {
 
   const handleBatch = async () => {
     if (!data) return;
-    const eligible = (data.invoices ?? []).filter((i) => i.days_overdue > 5);
-    if (!eligible.length) {
+    const allEligible = (data.invoices ?? []).filter((i) => i.days_overdue > 5);
+    // ZÉNITH (CIBLE 1) — on n'envoie QUE les factures dont le client cabinet a un
+    // email. Les autres sont bloquées (plus jamais d'envoi fantôme).
+    const eligible = allEligible.filter((i) => !!i.client_email);
+    const blocked = allEligible.length - eligible.length;
+    if (!allEligible.length) {
       toast.info('Aucune facture à relancer');
       return;
     }
-    if (!window.confirm(`Envoyer ${eligible.length} relance(s) ? Chaque client recevra un email adapté.`)) return;
+    if (!eligible.length) {
+      toast.error(
+        `${blocked} facture(s) sans email client cabinet. Ajoutez les emails sur les fiches client puis relancez.`,
+      );
+      return;
+    }
+    if (!window.confirm(`Envoyer ${eligible.length} relance(s) ?${blocked ? ` (${blocked} sans email ignorée(s)).` : ''} Chaque client recevra un email adapté.`)) return;
     setBatchSending(true);
     try {
       // ARGOS — la route batch n'existe pas. On envoie séquentiellement vers
@@ -127,11 +148,12 @@ export default function CabinetRelancesPage() {
         }
       }
       clearCabinetCache('/api/cabinet/reminders');
-      // ASTRÉE — honnête : on distingue les envoyées des sans-email.
+      // ZÉNITH — honnête : on distingue les envoyées des sans-email (l'API peut
+      // encore renvoyer pendingEmail si son check diffère du nôtre).
       if (pendingEmail > 0) {
         toast.warning(`${sent} envoyée(s) — ${pendingEmail} sans email client.`);
       } else {
-        toast.success(`${sent || eligible.length} relance(s) envoyée(s)`);
+        toast.success(`${sent} relance(s) envoyée(s)${blocked ? `, ${blocked} sans email ignorée(s)` : ''}.`);
       }
       await refresh();
     } catch (err: any) {

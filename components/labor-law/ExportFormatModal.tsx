@@ -40,7 +40,7 @@ export function ExportFormatModal({ isOpen, onClose, onExportPDF, onExportDOCX, 
               </button>
 
               <div className="text-center mb-6">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center">
                   <Download className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">

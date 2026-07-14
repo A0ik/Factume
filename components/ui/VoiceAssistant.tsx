@@ -391,7 +391,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode, defaultVatRate 
   if (!isPro) {
     return (
       <div className="p-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4">
           <Sparkles size={32} className="text-white" />
         </div>
         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -415,7 +415,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode, defaultVatRate 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center">
             {isListening ? (
               <Mic size={24} className="text-white animate-pulse" />
             ) : (
@@ -441,7 +441,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode, defaultVatRate 
         <div className={cn(
           'relative min-h-[120px] rounded-2xl border-2 p-4 transition-all duration-300',
           isListening
-            ? 'border-primary bg-gradient-to-br from-primary/10 to-purple-600/10 animate-pulse'
+            ? 'border-primary bg-gradient-to-br from-primary/10 to-emerald-600/10 animate-pulse'
             : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800/50'
         )}>
           {transcript && (
@@ -523,7 +523,7 @@ export function VoiceAssistant({ onResult, onClose, isPro, mode, defaultVatRate 
         {!isListening ? (
           <button
             onClick={startListening}
-            className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-r from-primary to-emerald-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
           >
             <Mic size={20} />
             Commencer

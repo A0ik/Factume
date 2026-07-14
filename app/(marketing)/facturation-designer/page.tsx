@@ -127,7 +127,7 @@ export default function DesignerPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-50 via-white to-rose-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
@@ -139,7 +139,7 @@ export default function DesignerPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-pink-600 to-rose-600 rounded-2xl hover:from-pink-700 hover:to-rose-700 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-pink-600 to-emerald-600 rounded-2xl hover:from-pink-700 hover:to-emerald-700 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
                 Essayer gratuitement
@@ -168,7 +168,7 @@ export default function DesignerPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
               <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-pink-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-emerald-500 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -190,7 +190,7 @@ export default function DesignerPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {useCases.map((useCase, i) => (
               <div key={i} className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-100 to-emerald-100 flex items-center justify-center mb-4">
                   <PenTool className="w-6 h-6 text-pink-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{useCase.title}</h3>
@@ -246,7 +246,7 @@ export default function DesignerPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-pink-600 to-rose-600">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-pink-600 to-emerald-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Créez. Facturez. Recommencez.

@@ -847,7 +847,7 @@ export function AIChatWidget() {
             onClick={() => setIsOpen(true)}
             className={cn(
               'group relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all',
-              'bg-gradient-to-br from-primary to-purple-600',
+              'bg-gradient-to-br from-primary to-emerald-600',
               'hover:shadow-xl hover:shadow-primary/30 active:scale-95'
             )}
             aria-label="Ouvrir le chat"

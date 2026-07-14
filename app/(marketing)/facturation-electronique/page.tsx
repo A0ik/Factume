@@ -79,7 +79,7 @@ const timeline = [
     description: 'Toutes les entreprises assujetties à la TVA doivent pouvoir recevoir des factures électroniques. Les grandes entreprises doivent aussi émettre.',
     affected: 'Toutes les entreprises',
     badge: 'Étape 1',
-    color: 'from-red-500 to-orange-500',
+    color: 'from-red-500 to-emerald-500',
   },
   {
     date: '1er septembre 2027',
@@ -87,7 +87,7 @@ const timeline = [
     description: 'Les PME, TPE et micro-entreprises doivent émettre leurs factures au format électronique. L\'e-reporting entre en vigueur.',
     affected: 'PME, TPE, micro-entreprises',
     badge: 'Étape 2',
-    color: 'from-indigo-500 to-blue-500',
+    color: 'from-emerald-500 to-emerald-500',
   },
 ];
 
@@ -225,7 +225,7 @@ export default function FacturationElectroniquePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-sky-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold mb-6">
@@ -234,7 +234,7 @@ export default function FacturationElectroniquePage() {
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Facturation Électronique Obligatoire 2026 —{' '}
-              <span className="text-indigo-600">Guide Complet & Solution Conforme</span>
+              <span className="text-emerald-600">Guide Complet & Solution Conforme</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Tout comprendre sur la <strong>réforme de la facturation électronique</strong> en France.
@@ -243,14 +243,14 @@ export default function FacturationElectroniquePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-700 rounded-2xl hover:from-indigo-700 hover:to-blue-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Préparer ma migration gratuitement
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-indigo-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir le format Factur-X
@@ -266,7 +266,7 @@ export default function FacturationElectroniquePage() {
       {/* Quick Answer - Passage Ranking Target */}
       <section className="py-12 bg-white border-y border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-indigo-50 rounded-3xl p-8 speakable-section">
+          <div className="bg-emerald-50 rounded-3xl p-8 speakable-section">
             <h2 className="text-2xl font-black text-gray-900 mb-4">
               Réforme facturation électronique 2026 : l&apos;essentiel en 30 secondes
             </h2>
@@ -281,7 +281,7 @@ export default function FacturationElectroniquePage() {
               </p>
               <p>
                 Le format requis est le <strong>Factur-X</strong> (norme EN 16931), transmis via une{' '}
-                <Link href="/facturation-factur-x" className="text-indigo-600 hover:underline font-semibold">
+                <Link href="/facturation-factur-x" className="text-emerald-600 hover:underline font-semibold">
                   plateforme PDP agréée
                 </Link>.
               </p>
@@ -302,7 +302,7 @@ export default function FacturationElectroniquePage() {
               href="https://www.impots.gouv.fr/depliant-la-facturation-electronique-en-4-questions"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-indigo-600 hover:underline"
+              className="text-emerald-600 hover:underline"
             >
               impots.gouv.fr
             </a>
@@ -314,8 +314,8 @@ export default function FacturationElectroniquePage() {
                   {item.badge}
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-5 h-5 text-indigo-600" />
-                  <span className="text-lg font-bold text-indigo-600">{item.date}</span>
+                  <Clock className="w-5 h-5 text-emerald-600" />
+                  <span className="text-lg font-bold text-emerald-600">{item.date}</span>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
                 <p className="text-gray-600 mb-4">{item.description}</p>
@@ -343,16 +343,16 @@ export default function FacturationElectroniquePage() {
               <Link
                 key={i}
                 href={page.href}
-                className="group p-6 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-indigo-200 hover:shadow-lg transition-all"
+                className="group p-6 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:shadow-lg transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white mb-4">
                   <page.icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
                   {page.title}
                 </h3>
                 <p className="text-sm text-gray-600 mb-3">{page.description}</p>
-                <span className="inline-flex items-center text-sm font-semibold text-indigo-600">
+                <span className="inline-flex items-center text-sm font-semibold text-emerald-600">
                   {page.keyword} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </span>
               </Link>
@@ -369,8 +369,8 @@ export default function FacturationElectroniquePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-white border border-gray-100 hover:border-indigo-200 transition-all shadow-sm">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-white border border-gray-100 hover:border-emerald-200 transition-all shadow-sm">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -432,7 +432,7 @@ export default function FacturationElectroniquePage() {
               },
             ].map((item, i) => (
               <div key={i} className="flex gap-6 items-start">
-                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white text-xl font-black">
+                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center text-white text-xl font-black">
                   {item.step}
                 </div>
                 <div>
@@ -445,7 +445,7 @@ export default function FacturationElectroniquePage() {
           <div className="mt-12 text-center">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-700 rounded-2xl hover:from-indigo-700 hover:to-blue-800 transition-all shadow-xl"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl"
             >
               <Zap className="w-5 h-5 mr-2" />
               Commencer la mise en conformité
@@ -465,7 +465,7 @@ export default function FacturationElectroniquePage() {
               <div key={i} className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 border border-gray-100 shadow-sm">
                 <div className="flex gap-1 mb-4">
                   {Array.from({ length: testimonial.rating }).map((_, j) => (
-                    <span key={j} className="text-yellow-400 text-lg">★</span>
+                    <span key={j} className="text-emerald-400 text-lg">★</span>
                   ))}
                 </div>
                 <p className="text-gray-700 mb-6 italic">&ldquo;{testimonial.text}&rdquo;</p>
@@ -503,7 +503,7 @@ export default function FacturationElectroniquePage() {
       <section className="py-16 sm:py-24 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-3 mb-12">
-            <HelpCircle className="w-8 h-8 text-indigo-600" />
+            <HelpCircle className="w-8 h-8 text-emerald-600" />
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900">
               Questions fréquentes sur la facturation électronique 2026
             </h2>
@@ -513,7 +513,7 @@ export default function FacturationElectroniquePage() {
               <details key={i} className="group bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-100">
                 <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
                   <h3 className="text-lg font-bold text-gray-900 pr-4">{faq.question}</h3>
-                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-indigo-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
+                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-emerald-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
                 </summary>
                 <div className="px-6 pb-6 speakable-faq-answer">
                   <p className="text-gray-600">{faq.answer}</p>
@@ -544,13 +544,13 @@ export default function FacturationElectroniquePage() {
               <Link
                 key={i}
                 href={link.href}
-                className="group p-6 rounded-2xl bg-white border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all"
+                className="group p-6 rounded-2xl bg-white border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all"
               >
-                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
                   {link.title}
                 </h3>
                 <p className="text-sm text-gray-600">{link.desc}</p>
-                <span className="inline-flex items-center text-sm text-indigo-600 mt-2 font-medium">
+                <span className="inline-flex items-center text-sm text-emerald-600 mt-2 font-medium">
                   Lire le guide <ArrowRight className="w-3 h-3 ml-1" />
                 </span>
               </Link>
@@ -560,24 +560,24 @@ export default function FacturationElectroniquePage() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-indigo-600 to-blue-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Award className="w-12 h-12 text-indigo-200 mx-auto mb-6" />
+          <Award className="w-12 h-12 text-emerald-200 mx-auto mb-6" />
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             N&apos;attendez pas septembre 2026 pour vous mettre en conformité
           </h2>
-          <p className="text-xl text-indigo-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Commencez à émettre des factures électroniques conformes dès aujourd&apos;hui.
             Migration progressive, sans stress, sans coût caché.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-indigo-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Shield className="w-5 h-5 mr-2" />
             Commencer la migration gratuitement
           </Link>
-          <p className="mt-6 text-sm text-indigo-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Conforme Factur-X &bull; Connexion PDP agréée &bull; Essai gratuit sans engagement &bull; Aucune CB requise
           </p>
         </div>

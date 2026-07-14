@@ -625,7 +625,7 @@ export default async function FactureIAProfessionPage({ params }: Props) {
           </div>
           <div className="mt-6 flex justify-center items-center gap-4 text-sm text-gray-500">
             <span className="flex items-center gap-1">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> 4.8/5
+              <Star className="w-4 h-4 fill-emerald-400 text-emerald-400" /> 4.8/5
             </span>
             <span>&bull;</span>
             <span>127 avis</span>

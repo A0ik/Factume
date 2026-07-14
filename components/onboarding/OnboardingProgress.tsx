@@ -18,7 +18,7 @@ export function OnboardingProgress({ currentStep, steps }: OnboardingProgressPro
           <div key={i} className="flex-1">
             <div className={cn(
               'h-2 rounded-full transition-all duration-500',
-              i <= currentStep ? 'bg-gradient-to-r from-primary to-purple-600' : 'bg-gray-200'
+              i <= currentStep ? 'bg-gradient-to-r from-primary to-emerald-600' : 'bg-gray-200'
             )} />
             <p className={cn(
               'text-xs mt-1.5 truncate',

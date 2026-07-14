@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     siteName: 'Factu.me',
     images: [
       {
-        url: '/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%20%26%20guide%202026&theme=purple',
+        url: '/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%20%26%20guide%202026&theme=emerald',
         width: 1200,
         height: 630,
         alt: 'Facturation Vocale — Définition & Guide | Factu.me',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Qu'est-ce que la Facturation Vocale ? Définition 2026",
     description: "Définition, fonctionnement et avantages de la facture vocale par IA en 2026.",
-    images: ['/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%202026&theme=purple'],
+    images: ['/api/og?title=Qu%27est-ce%20que%20la%20Facturation%20Vocale&description=D%C3%A9finition%202026&theme=emerald'],
   },
   alternates: {
     canonical: 'https://factu.me/facturation-vocale',
@@ -176,11 +176,11 @@ export default function FacturationVocalePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* ═══ LOI 4 : Featured Snippet Killer — Définition H2/H3 ═══ */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Qu'est-ce que la <span className="text-violet-600">Facturation Vocale</span> ?
+              Qu'est-ce que la <span className="text-emerald-600">Facturation Vocale</span> ?
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8 speakable-section">
               La facturation vocale, c'est la création d'une facture par la voix grâce à l'IA : vous dictez votre prestation, l'intelligence artificielle génère une facture complète et conforme. Définition, fonctionnement et avantages — <strong>le guide 2026</strong>.
@@ -188,14 +188,14 @@ export default function FacturationVocalePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-violet-600 to-purple-700 rounded-2xl hover:from-violet-700 hover:to-purple-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Mic className="w-5 h-5 mr-2" />
                 Essayer la dictée vocale
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-violet-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir une démo
@@ -229,19 +229,19 @@ export default function FacturationVocalePage() {
           </h3>
           <ul className="space-y-3 text-gray-700">
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <span><strong>Gain de temps de 80%</strong> — passez de 30 minutes à 10 secondes par facture</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <span><strong>Conforme facturation électronique 2026</strong> — format Factur-X (Chor Facturation) obligatoire</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <span><strong>Utilisable en déplacement</strong> — dictez depuis votre smartphone entre deux rendez-vous</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-violet-500 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <span><strong>Zéro saisie manuelle</strong> — l&apos;IA extrait client, montant, TVA et description automatiquement</span>
             </li>
           </ul>
@@ -249,11 +249,11 @@ export default function FacturationVocalePage() {
       </section>
 
       {/* ═══ LOI 8 : Réforme 2026 ═══ */}
-      <section className="py-12 sm:py-16 bg-gradient-to-r from-violet-50 to-purple-50">
+      <section className="py-12 sm:py-16 bg-gradient-to-r from-emerald-50 to-emerald-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Shield className="w-6 h-6 text-violet-600" />
-            <span className="text-sm font-semibold text-violet-600 uppercase tracking-wider">Conforme réforme 2026</span>
+            <Shield className="w-6 h-6 text-emerald-600" />
+            <span className="text-sm font-semibold text-emerald-600 uppercase tracking-wider">Conforme réforme 2026</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-4">
             Prêt pour la facturation électronique obligatoire
@@ -261,7 +261,7 @@ export default function FacturationVocalePage() {
           <p className="text-gray-700 max-w-2xl mx-auto mb-6">
             À partir de <strong>septembre 2026</strong>, toutes les entreprises françaises doivent émettre des factures électroniques au format Factur-X. Les factures créées par dictée vocale sur Factu.me sont automatiquement conformes à cette réglementation.
           </p>
-          <Link href="/facturation-electronique" className="inline-flex items-center gap-2 text-violet-600 font-semibold hover:text-violet-700 transition-colors">
+          <Link href="/facturation-electronique" className="inline-flex items-center gap-2 text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
             En savoir plus sur la facturation électronique 2026
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -276,8 +276,8 @@ export default function FacturationVocalePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-violet-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 transition-all">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -299,7 +299,7 @@ export default function FacturationVocalePage() {
           <div className="grid md:grid-cols-3 gap-8">
             {steps.map((item, i) => (
               <div key={i} className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black mx-auto mb-6">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-2xl font-black mx-auto mb-6">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
@@ -362,10 +362,10 @@ export default function FacturationVocalePage() {
           </h2>
           <div className="space-y-6">
             {faqItems.map((item, i) => (
-              <details key={i} className="group rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 hover:border-violet-200 transition-colors">
+              <details key={i} className="group rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 hover:border-emerald-200 transition-colors">
                 <summary className="flex items-center justify-between cursor-pointer list-none">
                   <h3 className="text-lg font-bold text-gray-900 pr-4">{item.question}</h3>
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-sm font-bold group-open:rotate-45 transition-transform">+</span>
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold group-open:rotate-45 transition-transform">+</span>
                 </summary>
                 <p className="mt-4 text-gray-600 leading-relaxed">{item.answer}</p>
               </details>
@@ -375,22 +375,22 @@ export default function FacturationVocalePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-violet-600 to-purple-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Votre voix, votre facture
           </h2>
-          <p className="text-xl text-violet-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Rejoignez les indépendants qui dictent leurs factures. Essai 7 jours gratuit.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-violet-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Zap className="w-5 h-5 mr-2" />
             Commencer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-violet-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Reconnaissance vocale illimitée &bull; 3 factures gratuites/mois
           </p>
         </div>

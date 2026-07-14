@@ -5,7 +5,7 @@ import { Download, Trash2, Mail, CheckCircle, XCircle, FileText, Loader2 } from 
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
-import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
+import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
 
 interface BulkActionsProps {
   selectedIds: string[];
@@ -16,7 +16,7 @@ interface BulkActionsProps {
 export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActionsProps) {
   const { session } = useAuthStore();
   const { invoices } = useDataStore();
-  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
+  const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleBulkDelete = async () => {
@@ -134,17 +134,14 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
   const handleBulkSendReminders = async () => {
     if (!session) return;
 
-    // ASTRÉE (CIBLE 1) — on demande l'email des clients sélectionnés qui n'en ont pas
-    // AVANT d'envoyer, pour éviter l'impasse « 0 relance envoyée ».
-    const missingByEmail = new Map<string, any>();
-    for (const id of selectedIds) {
-      const inv: any = invoices.find((i: any) => i.id === id);
-      if (inv?.client?.id && !inv.client?.email) missingByEmail.set(inv.client.id, inv.client);
-    }
-    for (const [, client] of missingByEmail) {
-      const email = await promptForEmail(client);
-      if (!email) { toast.info('Relance annulée.'); return; }
-    }
+    // ZÉNITH (CIBLE 1) — garde unifiée BLOQUANTE avant envoi.
+    // No-client → modal bloquant (CTA « Ouvrir la facture ») ; missing-email →
+    // saisie + persistance clients.email. Fini l'envoi fantôme.
+    const selectedInvoices = selectedIds
+      .map((id) => invoices.find((i: any) => i.id === id))
+      .filter(Boolean);
+    const canSend = await ensureCanSend(selectedInvoices);
+    if (!canSend) return; // bloqué ou annulé
 
     setActionLoading('remind');
     try {
@@ -281,7 +278,7 @@ export function BulkActions({ selectedIds, onClear, onActionComplete }: BulkActi
         </div>
       </div>
     </div>
-    {ensureEmailModal}
+    {relanceGuardModal}
     </>
   );
 }

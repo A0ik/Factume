@@ -97,16 +97,16 @@ export default function ModeleDevisPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-full text-sm font-semibold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold mb-6">
               <FileText className="w-4 h-4" />
               Modèles de devis gratuits
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
               Modèles de Devis Gratuits —{' '}
-              <span className="text-violet-600">Professionnels & Conformes</span>
+              <span className="text-emerald-600">Professionnels & Conformes</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Créez un devis professionnel en 30 secondes. Templates PDF pour artisans, freelances, auto-entrepreneurs.
@@ -115,14 +115,14 @@ export default function ModeleDevisPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-violet-600 to-blue-600 rounded-2xl hover:from-violet-700 hover:to-blue-700 transition-all shadow-xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-600 rounded-2xl hover:from-emerald-700 hover:to-emerald-700 transition-all shadow-xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Créer mon devis gratuitement
               </Link>
               <Link
                 href="/logiciel-devis"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-violet-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 Logiciel de devis complet
               </Link>
@@ -139,12 +139,12 @@ export default function ModeleDevisPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             {devisTypes.map((type, i) => (
-              <div key={i} className="p-8 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-violet-200 hover:shadow-lg transition-all">
+              <div key={i} className="p-8 rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 hover:shadow-lg transition-all">
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{type.title}</h3>
                 <p className="text-gray-600 mb-4">{type.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {type.tags.map((tag, j) => (
-                    <span key={j} className="px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-semibold">
+                    <span key={j} className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-semibold">
                       {tag}
                     </span>
                   ))}
@@ -164,7 +164,7 @@ export default function ModeleDevisPage() {
           <div className="grid md:grid-cols-2 gap-8">
             {advantages.map((adv, i) => (
               <div key={i} className="flex gap-5 p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center text-white">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <adv.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -190,7 +190,7 @@ export default function ModeleDevisPage() {
               { step: 3, title: 'Envoyez et suivez', desc: 'Envoyez par email ou lien. Suivez en temps réel : ouvert, lu, accepté, refusé.' },
             ].map((item, i) => (
               <div key={i} className="flex gap-6 items-start">
-                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-700 flex items-center justify-center text-white text-xl font-black">
+                <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center text-white text-xl font-black">
                   {item.step}
                 </div>
                 <div>
@@ -203,7 +203,7 @@ export default function ModeleDevisPage() {
           <div className="mt-12 text-center">
             <Link
               href="/register"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-violet-600 to-blue-600 rounded-2xl hover:from-violet-700 hover:to-blue-700 transition-all shadow-xl"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-600 rounded-2xl hover:from-emerald-700 hover:to-emerald-700 transition-all shadow-xl"
             >
               <Zap className="w-5 h-5 mr-2" />
               Créer mon devis maintenant
@@ -216,7 +216,7 @@ export default function ModeleDevisPage() {
       <section className="py-16 sm:py-24 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-3 mb-12">
-            <HelpCircle className="w-8 h-8 text-violet-600" />
+            <HelpCircle className="w-8 h-8 text-emerald-600" />
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900">
               Questions fréquentes sur les devis
             </h2>
@@ -226,7 +226,7 @@ export default function ModeleDevisPage() {
               <details key={i} className="group bg-white rounded-2xl border border-gray-100">
                 <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
                   <h3 className="text-lg font-bold text-gray-900 pr-4">{faq.question}</h3>
-                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-violet-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
+                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-emerald-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
                 </summary>
                 <div className="px-6 pb-6">
                   <p className="text-gray-600">{faq.answer}</p>
@@ -249,10 +249,10 @@ export default function ModeleDevisPage() {
               { href: '/devis-facture', title: 'Devis et facture', desc: 'Tout comprendre sur le devis et la facturation en France.' },
               { href: '/creer-devis', title: 'Créer un devis', desc: 'Guide complet pour créer un devis professionnel pas à pas.' },
             ].map((link, i) => (
-              <Link key={i} href={link.href} className="group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-violet-200 transition-all">
-                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">{link.title}</h3>
+              <Link key={i} href={link.href} className="group p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-emerald-200 transition-all">
+                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">{link.title}</h3>
                 <p className="text-sm text-gray-600">{link.desc}</p>
-                <span className="inline-flex items-center text-sm text-violet-600 mt-2 font-medium">
+                <span className="inline-flex items-center text-sm text-emerald-600 mt-2 font-medium">
                   Lire le guide <ArrowRight className="w-3 h-3 ml-1" />
                 </span>
               </Link>
@@ -262,17 +262,17 @@ export default function ModeleDevisPage() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-violet-600 to-blue-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Vos devis professionnels commencent ici
           </h2>
-          <p className="text-xl text-violet-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Création, envoi, suivi — tout est automatisé. Essai gratuit sans engagement.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-violet-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Zap className="w-5 h-5 mr-2" />
             Commencer gratuitement

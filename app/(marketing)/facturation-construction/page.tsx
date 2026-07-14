@@ -112,7 +112,7 @@ export default function ConstructionPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">

@@ -433,8 +433,8 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
             {/* TVA Déductible - standard card */}
             <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-5 border border-gray-100 dark:border-slate-700/50 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-                  <TrendingDown size={12} className="text-blue-500" />
+                <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                  <TrendingDown size={12} className="text-emerald-500" />
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">
                   TVA déductible
@@ -491,19 +491,19 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
 
             {/* Crédit TVA or Taux effectif */}
             {tvaCreditReportable > 0 ? (
-              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-5 border border-purple-100 dark:border-purple-800/30 shadow-sm">
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-800/30 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-lg bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
-                    <TrendingUp size={12} className="text-purple-500" />
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+                    <TrendingUp size={12} className="text-emerald-500" />
                   </div>
-                  <p className="text-xs text-purple-500 dark:text-purple-400 font-semibold uppercase tracking-wide">
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400 font-semibold uppercase tracking-wide">
                     Crédit TVA
                   </p>
                 </div>
-                <p className="text-2xl font-black text-purple-700 dark:text-purple-400">
+                <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400">
                   {formatCurrency(tvaCreditReportable)}
                 </p>
-                <p className="text-xs text-purple-400 dark:text-purple-500 mt-1">
+                <p className="text-xs text-emerald-400 dark:text-emerald-500 mt-1">
                   reportable prochain trimestre
                 </p>
               </div>
@@ -655,7 +655,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                           <td className="px-5 py-3 text-right text-gray-900 dark:text-white">
                             {formatCurrency(e.amount)}
                           </td>
-                          <td className="px-5 py-3 text-right text-blue-600 dark:text-blue-400 font-semibold">
+                          <td className="px-5 py-3 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
                             {formatCurrency(e.vat_amount)}
                           </td>
                         </tr>
@@ -666,7 +666,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                       <td colSpan={4} className="px-5 py-3 text-xs uppercase tracking-wide">
                         Total TVA déductible
                       </td>
-                      <td className="px-5 py-3 text-right text-blue-600 dark:text-blue-400">
+                      <td className="px-5 py-3 text-right text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(tvaDeductible)}
                       </td>
                     </tr>
@@ -684,13 +684,13 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
           {isAE ? (
             <>
               {/* Info banner */}
-              <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-4">
-                <AlertCircle size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-2xl p-4">
+                <AlertCircle size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-400">
+                  <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400">
                     Déclaration trimestrielle de CA
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
                     Taux de cotisation :{' '}
                     <strong>{(cotisationRate * 100).toFixed(0)}%</strong> (activité de services
                     BNC/BIC). Déclarez chaque trimestre sur autoentrepreneur.urssaf.fr
@@ -763,7 +763,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                     key={q.value}
                     className={`rounded-2xl p-5 border transition-all ${
                       q.value === selectedQ
-                        ? 'bg-blue-600 dark:bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20'
+                        ? 'bg-emerald-600 dark:bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-600/20'
                         : 'bg-white dark:bg-slate-800/50 border-gray-100 dark:border-slate-700/50 shadow-sm'
                     }`}
                   >
@@ -771,7 +771,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                       <p
                         className={`text-xs font-bold uppercase tracking-wide ${
                           q.value === selectedQ
-                            ? 'text-blue-100'
+                            ? 'text-emerald-100'
                             : 'text-gray-400 dark:text-gray-500'
                         }`}
                       >
@@ -787,7 +787,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                       <div>
                         <p
                           className={`text-[10px] ${
-                            q.value === selectedQ ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'
+                            q.value === selectedQ ? 'text-emerald-200' : 'text-gray-400 dark:text-gray-500'
                           }`}
                         >
                           CA réalisé
@@ -803,14 +803,14 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                       <div>
                         <p
                           className={`text-[10px] ${
-                            q.value === selectedQ ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'
+                            q.value === selectedQ ? 'text-emerald-200' : 'text-gray-400 dark:text-gray-500'
                           }`}
                         >
                           Cotisations ({(cotisationRate * 100).toFixed(0)}%)
                         </p>
                         <p
                           className={`text-sm font-bold ${
-                            q.value === selectedQ ? 'text-blue-100' : 'text-gray-600 dark:text-gray-400'
+                            q.value === selectedQ ? 'text-emerald-100' : 'text-gray-600 dark:text-gray-400'
                           }`}
                         >
                           {formatCurrency(q.cotisation)}
@@ -826,7 +826,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                 href="https://www.autoentrepreneur.urssaf.fr"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-5 py-3 rounded-xl transition-colors shadow-sm shadow-blue-600/20"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-3 rounded-xl transition-colors shadow-sm shadow-emerald-600/20"
               >
                 <ExternalLink size={14} /> Déclarer sur autoentrepreneur.urssaf.fr
               </a>
@@ -835,8 +835,8 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
             /* Non auto-entrepreneur URSSAF view */
             <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50 shadow-sm p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center">
-                  <FileCheck size={18} className="text-blue-500" />
+                <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+                  <FileCheck size={18} className="text-emerald-500" />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -854,11 +854,11 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                     {formatCurrency(annualCA)}
                   </p>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4">
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">
                     Estimation charges (~{(cotisationRate * 100).toFixed(0)}%)
                   </p>
-                  <p className="text-xl font-black text-blue-700 dark:text-blue-400">
+                  <p className="text-xl font-black text-emerald-700 dark:text-emerald-400">
                     {formatCurrency(annualCA * cotisationRate)}
                   </p>
                 </div>
@@ -867,7 +867,7 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
                 href="https://www.urssaf.fr"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-500 hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-500 hover:underline"
               >
                 Accéder à urssaf.fr <ExternalLink size={11} />
               </a>
@@ -961,8 +961,8 @@ function AccountingContent({ currentYear, currentQ }: { currentYear: number; cur
             {/* Moyenne / mois */}
             <div className="bg-white dark:bg-slate-800/50 rounded-2xl p-5 border border-gray-100 dark:border-slate-700/50 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
-                  <Calendar size={12} className="text-purple-500" />
+                <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                  <Calendar size={12} className="text-emerald-500" />
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide">
                   Moy./mois

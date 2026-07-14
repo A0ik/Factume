@@ -57,9 +57,9 @@ const MENU_ITEMS = {
 
 const TIER_CONFIG = {
   free: { name: 'Gratuit', gradient: 'from-gray-500 to-gray-600', iconBg: 'bg-gray-100' },
-  trial: { name: 'Essai', gradient: 'from-purple-500 to-violet-600', iconBg: 'bg-purple-100' },
-  pro: { name: 'Pro', gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-violet-100' },
-  business: { name: 'Business', gradient: 'from-amber-500 to-orange-600', iconBg: 'bg-amber-100' },
+  trial: { name: 'Essai', gradient: 'from-emerald-500 to-emerald-600', iconBg: 'bg-emerald-100' },
+  pro: { name: 'Pro', gradient: 'from-emerald-600 to-emerald-700', iconBg: 'bg-emerald-100' },
+  business: { name: 'Business', gradient: 'from-emerald-700 to-teal-700', iconBg: 'bg-emerald-100' },
 };
 
 export interface UserDropdownUser {

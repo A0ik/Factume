@@ -1017,7 +1017,7 @@ export function ContractForm({ contractType, mode, initialData, contractId, onSa
           <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => setStep('edit')} className="px-6 py-3 bg-gray-100 dark:bg-slate-700 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">&larr; Modifier</button>
             <button onClick={() => setShowExportModal(true)} className="px-6 py-3 bg-primary/10 text-primary rounded-xl font-semibold hover:bg-primary/20 transition-colors flex items-center gap-2"><Download className="w-5 h-5" />Télécharger</button>
-            <button onClick={() => setShowAISuggestions(true)} className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-2"><Sparkles className="w-5 h-5" />Suggestions IA</button>
+            <button onClick={() => setShowAISuggestions(true)} className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all flex items-center gap-2"><Sparkles className="w-5 h-5" />Suggestions IA</button>
             {/* Bulletin de paie — temporairement désactivé
             <button onClick={handleGeneratePayslip} className="px-6 py-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2"><Calculator className="w-5 h-5" />Bulletin de paie</button>
             */}

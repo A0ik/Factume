@@ -101,15 +101,15 @@ export default async function ProfessionPage({ params }: Props) {
 
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 text-purple-700 text-sm font-bold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold mb-6">
               <FileText className="w-4 h-4" />
               Modèle conforme 2026
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Facture pour <span className="text-purple-600">{data.nom}</span>
+              Facture pour <span className="text-emerald-600">{data.nom}</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               {data.texteIntro}
@@ -117,7 +117,7 @@ export default async function ProfessionPage({ params }: Props) {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Créer ma facture gratuitement
@@ -185,15 +185,15 @@ export default async function ProfessionPage({ params }: Props) {
           </h2>
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+              <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-xl font-bold">FACTURE</h3>
-                    <p className="text-purple-200 text-sm">FA-2026-001 • 30 mai 2026</p>
+                    <p className="text-emerald-200 text-sm">FA-2026-001 • 30 mai 2026</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">Factu.me</p>
-                    <p className="text-purple-200 text-sm">Votre Entreprise</p>
+                    <p className="text-emerald-200 text-sm">Votre Entreprise</p>
                   </div>
                 </div>
               </div>
@@ -235,7 +235,7 @@ export default async function ProfessionPage({ params }: Props) {
                     </div>
                     <div className="flex justify-between py-2 text-lg font-bold border-t border-gray-200">
                       <span>Total TTC</span>
-                      <span className="text-purple-600">{(totalExemple * (1 + data.tva.taux / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
+                      <span className="text-emerald-600">{(totalExemple * (1 + data.tva.taux / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span>
                     </div>
                     {data.tva.franchise && (
                       <p className="text-xs text-gray-500 mt-2 italic">{data.tva.mentionSpecifique}</p>
@@ -247,7 +247,7 @@ export default async function ProfessionPage({ params }: Props) {
             <div className="text-center mt-8">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-6 py-3 text-base font-bold text-white bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg"
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg"
               >
                 Créer cette facture maintenant
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -268,9 +268,9 @@ export default async function ProfessionPage({ params }: Props) {
           </p>
           <div className="space-y-6">
             {data.conseilsFacturation.map((conseil, i) => (
-              <div key={i} className="flex gap-4 p-6 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100">
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-purple-600 font-bold text-sm">{i + 1}</span>
+              <div key={i} className="flex gap-4 p-6 bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-100">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-emerald-600 font-bold text-sm">{i + 1}</span>
                 </div>
                 <p className="text-gray-700 leading-relaxed">{conseil}</p>
               </div>
@@ -286,15 +286,15 @@ export default async function ProfessionPage({ params }: Props) {
             TVA et régime fiscal pour {data.nomLower}
           </h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 border border-blue-100">
-              <Calculator className="w-10 h-10 text-blue-600 mb-4" />
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 border border-emerald-100">
+              <Calculator className="w-10 h-10 text-emerald-600 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Taux de TVA applicable</h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-blue-100">
+                <div className="flex justify-between items-center py-2 border-b border-emerald-100">
                   <span className="text-gray-700">Taux applicable</span>
-                  <span className="font-bold text-blue-600">{data.tva.taux}%</span>
+                  <span className="font-bold text-emerald-600">{data.tva.taux}%</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b border-blue-100">
+                <div className="flex justify-between items-center py-2 border-b border-emerald-100">
                   <span className="text-gray-700">Franchise de TVA</span>
                   <span className={`font-bold ${data.tva.franchise ? 'text-emerald-600' : 'text-gray-500'}`}>
                     {data.tva.franchise ? 'Oui (sous seuil)' : 'Non'}
@@ -305,20 +305,20 @@ export default async function ProfessionPage({ params }: Props) {
                 )}
               </div>
             </div>
-            <div className="bg-gradient-to-br from-purple-50 to-white rounded-3xl p-8 border border-purple-100">
-              <Scale className="w-10 h-10 text-purple-600 mb-4" />
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 border border-emerald-100">
+              <Scale className="w-10 h-10 text-emerald-600 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Régimes compatibles</h3>
               <ul className="space-y-3">
                 {data.regimes.map((regime, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                     <span className="text-gray-700">{regime}</span>
                   </li>
                 ))}
                 {data.statuts.map((statut, i) => (
                   <li key={`s-${i}`} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <Link href={`/comment-facturer/${statut}`} className="text-gray-700 hover:text-purple-600 transition-colors">
+                    <Link href={`/comment-facturer/${statut}`} className="text-gray-700 hover:text-emerald-600 transition-colors">
                       Statut : {statut}
                     </Link>
                   </li>
@@ -359,7 +359,7 @@ export default async function ProfessionPage({ params }: Props) {
             <div className="space-y-4">
               {data.obligations.map((obligation, i) => (
                 <div key={i} className="flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                  <Shield className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <Shield className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <h3 className="font-semibold text-gray-900">{obligation}</h3>
                     <p className="text-sm text-gray-600 mt-1">
@@ -385,13 +385,13 @@ export default async function ProfessionPage({ params }: Props) {
                 <Link
                   key={prof.slug}
                   href={`/modeles-facture/${prof.slug}`}
-                  className="group p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-lg transition-all"
+                  className="group p-6 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-100 hover:border-emerald-200 hover:shadow-lg transition-all"
                 >
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
                     Facture {prof.nom}
                   </h3>
                   <p className="text-sm text-gray-600">TVA {prof.tva.taux}% • {prof.secteur}</p>
-                  <span className="inline-flex items-center gap-1 text-sm text-purple-600 mt-3 font-medium">
+                  <span className="inline-flex items-center gap-1 text-sm text-emerald-600 mt-3 font-medium">
                     Voir le modèle <ArrowRight className="w-4 h-4" />
                   </span>
                 </Link>
@@ -402,21 +402,21 @@ export default async function ProfessionPage({ params }: Props) {
       )}
 
       {/* CTA Final */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-purple-600 to-purple-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Créez votre facture de {data.nomLower} maintenant
           </h2>
-          <p className="text-xl text-purple-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Gratuit, conforme loi 2026, prêt en 30 secondes
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-purple-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Commencer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-purple-200">
+          <p className="mt-6 text-sm text-emerald-200">
             10 factures gratuites par mois • Sans engagement • Sans carte bancaire
           </p>
         </div>

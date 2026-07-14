@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     images: [
       {
-        url: '/api/og?title=Facture%20Rapide%20-%2060%20secondes&description=Cr%C3%A9ez%20votre%20facture%20avec%20l%27IA&theme=amber',
+        url: '/api/og?title=Facture%20Rapide%20-%2060%20secondes&description=Cr%C3%A9ez%20votre%20facture%20avec%20l%27IA&theme=emerald',
         width: 1200,
         height: 630,
         alt: 'Facture Rapide — Factu.me',
@@ -275,11 +275,11 @@ export default function FactureRapidePage() {
   return (
     <main className="min-h-screen bg-white">
       {/* ── HERO ── */}
-      <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-emerald-900 text-white overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(245,158,11,0.18),transparent_60%)]" />
         <div className="relative max-w-6xl mx-auto px-4 py-20 sm:py-28">
           <div className="flex items-center gap-2 mb-6">
-            <span className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-300 text-sm font-medium flex items-center gap-1.5">
+            <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300 text-sm font-medium flex items-center gap-1.5">
               <Timer className="w-3.5 h-3.5" />
               En moins de 60 secondes
             </span>
@@ -287,7 +287,7 @@ export default function FactureRapidePage() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
             Facture rapide : créez une facture
             <br />
-            <span className="text-amber-400">en moins de 60 secondes</span>
+            <span className="text-emerald-400">en moins de 60 secondes</span>
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mb-8 leading-relaxed">
             Le moyen le plus <strong>rapide</strong> de créer une facture en France. Dites simplement ce que
@@ -298,7 +298,7 @@ export default function FactureRapidePage() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-gray-900 rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-gray-900 rounded-xl font-semibold text-lg transition-colors"
             >
               Créer ma facture rapide gratuitement
               <ArrowRight className="w-5 h-5" />
@@ -311,16 +311,16 @@ export default function FactureRapidePage() {
             </Link>
           </div>
           <div className="mt-8 flex items-center gap-6 text-sm text-gray-400 flex-wrap">
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Sans carte bancaire</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Conforme Factur-X 2026</span>
-            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Dictée vocale incluse</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Sans carte bancaire</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Conforme Factur-X 2026</span>
+            <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Dictée vocale incluse</span>
           </div>
         </div>
       </section>
 
       {/* ── DÉFINITION AEO (réponse directe pour AI Overviews) ── */}
       <section id="definition" className="speakable-section max-w-6xl mx-auto px-4 py-16">
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 sm:p-10">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 sm:p-10">
           <ExpertBadge
             name="Équipe Factu.me"
             title="Experts en facturation IA rapide"
@@ -361,10 +361,10 @@ export default function FactureRapidePage() {
           {benefits.map((b) => (
             <div
               key={b.title}
-              className="p-6 rounded-2xl border border-gray-200 hover:border-amber-300 hover:shadow-lg transition-all group"
+              className="p-6 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all group"
             >
-              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4 group-hover:bg-amber-200 transition-colors">
-                <b.icon className="w-6 h-6 text-amber-600" />
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                <b.icon className="w-6 h-6 text-emerald-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">{b.title}</h3>
               <p className="text-gray-600 leading-relaxed">{b.description}</p>
@@ -387,7 +387,7 @@ export default function FactureRapidePage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {howToSteps.map((step, i) => (
               <div key={step.name} className="relative bg-white rounded-2xl p-6 border border-gray-200">
-                <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-lg">
+                <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-lg">
                   {i + 1}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{step.name}</h3>
@@ -426,12 +426,12 @@ export default function FactureRapidePage() {
                   <td className="p-4 text-center">
                     {typeof row.factuMe === 'boolean' ? (
                       row.factuMe ? (
-                        <CheckCircle2 className="w-5 h-5 text-amber-500 mx-auto" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
                       ) : (
                         <span className="text-gray-300">—</span>
                       )
                     ) : (
-                      <span className="text-sm font-semibold text-amber-700">{row.factuMe}</span>
+                      <span className="text-sm font-semibold text-emerald-700">{row.factuMe}</span>
                     )}
                   </td>
                   <td className="p-4 text-center">
@@ -476,8 +476,8 @@ export default function FactureRapidePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Mic className="w-8 h-8 text-amber-600" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Mic className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Dictée vocale IA</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
@@ -485,8 +485,8 @@ export default function FactureRapidePage() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Gauge className="w-8 h-8 text-amber-600" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Gauge className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Génération instantanée</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
@@ -494,8 +494,8 @@ export default function FactureRapidePage() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Brain className="w-8 h-8 text-amber-600" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Brain className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Mémoire intelligente</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
@@ -503,8 +503,8 @@ export default function FactureRapidePage() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-amber-600" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Conformité auto</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
@@ -530,9 +530,9 @@ export default function FactureRapidePage() {
             <Link
               key={p.title}
               href={p.href}
-              className="block p-6 bg-white rounded-2xl border border-gray-200 hover:border-amber-300 hover:shadow-lg transition-all group"
+              className="block p-6 bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all group"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-amber-600 transition-colors">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
                 {p.title} <ArrowRight className="inline w-4 h-4 ml-1" />
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed">{p.description}</p>
@@ -552,12 +552,12 @@ export default function FactureRapidePage() {
               <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center gap-1 mb-3">
                   {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <Star key={i} className="w-4 h-4 fill-emerald-400 text-emerald-400" />
                   ))}
                 </div>
                 <p className="text-gray-700 mb-4 leading-relaxed italic">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-semibold text-sm">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm">
                     {t.name.split(' ').map((n) => n[0]).join('')}
                   </div>
                   <div>
@@ -573,15 +573,15 @@ export default function FactureRapidePage() {
 
       {/* ── CONFORMITÉ 2026 ── */}
       <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="bg-gradient-to-br from-amber-900 to-amber-800 rounded-2xl p-8 sm:p-12 text-white">
+        <div className="bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-2xl p-8 sm:p-12 text-white">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-6 h-6 text-amber-300" />
-            <span className="text-amber-300 font-medium">Rapide ET conforme</span>
+            <TrendingUp className="w-6 h-6 text-emerald-300" />
+            <span className="text-emerald-300 font-medium">Rapide ET conforme</span>
           </div>
           <h2 className="text-3xl font-bold mb-4">
             Une facture rapide, prête pour la facturation électronique 2026
           </h2>
-          <p className="text-amber-100 text-lg mb-6 leading-relaxed max-w-3xl">
+          <p className="text-emerald-100 text-lg mb-6 leading-relaxed max-w-3xl">
             La vitesse n&apos;exclut jamais la conformité. Chaque facture rapide est générée au format{' '}
             <strong>Factur-X</strong> (EN 16931), signée électroniquement (eIDAS), et transmissible via les{' '}
             <strong>Plateformes de Dématérialisation Partenaire (PDP)</strong> dans le cadre de la réforme de
@@ -590,7 +590,7 @@ export default function FactureRapidePage() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/facturation-electronique"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-amber-900 rounded-xl font-semibold hover:bg-amber-50 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-emerald-900 rounded-xl font-semibold hover:bg-emerald-50 transition-colors"
             >
               En savoir plus sur la réforme 2026
               <ArrowRight className="w-4 h-4" />
@@ -741,20 +741,20 @@ export default function FactureRapidePage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-gray-900 rounded-xl font-semibold text-lg transition-colors"
             >
               <Users className="w-5 h-5" />
               Commencer gratuitement
             </Link>
             <Link
               href="/demo"
-              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-300 hover:border-amber-500 text-gray-700 rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-300 hover:border-emerald-500 text-gray-700 rounded-xl font-semibold text-lg transition-colors"
             >
               Voir la démo interactive
             </Link>
           </div>
           <div className="mt-6 flex justify-center items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> 4.8/5</span>
+            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-emerald-400 text-emerald-400" /> 4.8/5</span>
             <span>•</span>
             <span>127 avis</span>
             <span>•</span>

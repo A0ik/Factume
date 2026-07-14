@@ -338,7 +338,7 @@ const howToSteps = [
 /* ──────────────────── HELPER ──────────────────── */
 
 function ScoreBadge({ value }: { value: number }) {
-  const color = value >= 4 ? 'bg-emerald-100 text-emerald-700' : value >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const color = value >= 4 ? 'bg-emerald-100 text-emerald-700' : value >= 3 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
   return (
     <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold ${color}`}>
       {value}
@@ -355,7 +355,7 @@ function StarRating({ score }: { score: Record<string, number> }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={`w-4 h-4 ${star <= Math.round(outOf5) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
+          className={`w-4 h-4 ${star <= Math.round(outOf5) ? 'fill-emerald-400 text-emerald-400' : 'text-gray-200'}`}
         />
       ))}
       <span className="ml-1 text-sm font-semibold text-gray-700">{outOf5.toFixed(1)}</span>
@@ -369,17 +369,17 @@ export default function ComparatifPDPPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* HERO */}
-      <section className="relative bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-gray-900 via-emerald-900 to-emerald-900 text-white overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(59,130,246,0.15),transparent_60%)]" />
         <div className="relative max-w-6xl mx-auto px-4 py-20 sm:py-28">
           <div className="flex items-center gap-2 mb-6">
-            <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-sm font-medium">
+            <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-300 text-sm font-medium">
               Mis à jour — Juin 2026
             </span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-6">
             Comparatif PDP 2026 :<br />
-            <span className="text-blue-400">Les 12 meilleures plateformes</span>
+            <span className="text-emerald-400">Les 12 meilleures plateformes</span>
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mb-8 leading-relaxed">
             Comparatif objectif des <strong>Plateformes de Dématérialisation Partenaire</strong> pour la
@@ -388,7 +388,7 @@ export default function ComparatifPDPPage() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-blue-500 hover:bg-blue-400 text-white rounded-xl font-semibold text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-lg transition-colors"
             >
               <Zap className="w-5 h-5" />
               Tester Factu.me gratuitement
@@ -402,16 +402,16 @@ export default function ComparatifPDPPage() {
             </Link>
           </div>
           <div className="mt-8 flex items-center gap-6 text-sm text-gray-400">
-            <span className="flex items-center gap-1"><Shield className="w-4 h-4 text-blue-400" /> Données vérifiées</span>
-            <span className="flex items-center gap-1"><Users className="w-4 h-4 text-blue-400" /> 12 plateformes comparées</span>
-            <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-blue-400" /> Mis à jour juin 2026</span>
+            <span className="flex items-center gap-1"><Shield className="w-4 h-4 text-emerald-400" /> Données vérifiées</span>
+            <span className="flex items-center gap-1"><Users className="w-4 h-4 text-emerald-400" /> 12 plateformes comparées</span>
+            <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-emerald-400" /> Mis à jour juin 2026</span>
           </div>
         </div>
       </section>
 
       {/* QUICK ANSWER — Passage Ranking */}
       <section className="speakable-section max-w-6xl mx-auto px-4 py-16">
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-8 sm:p-10">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 sm:p-10">
           <ExpertBadge
             name="Marie Dupont"
             title="Expert-comptable"
@@ -425,7 +425,7 @@ export default function ComparatifPDPPage() {
               Une <strong>PDP (Plateforme de Dématérialisation Partenaire)</strong> est une plateforme agréée par la DGFiP
               pour transmettre les factures électroniques. À partir du <strong>1er septembre 2026</strong>, toutes les entreprises
               assujetties à la TVA doivent pouvoir <strong>recevoir</strong> des factures électroniques au format{' '}
-              <Link href="/facturation-factur-x" className="text-blue-600 hover:underline font-semibold">Factur-X</Link>.
+              <Link href="/facturation-factur-x" className="text-emerald-600 hover:underline font-semibold">Factur-X</Link>.
             </p>
             <p>
               <strong>Notre verdict</strong> : pour les TPE et indépendants, <strong>Factu.me</strong> offre le meilleur rapport
@@ -449,8 +449,8 @@ export default function ComparatifPDPPage() {
             {criteria.map((c) => (
               <div key={c.key} className="bg-white rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <c.icon className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                    <c.icon className="w-5 h-5 text-emerald-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">{c.label}</h3>
                 </div>
@@ -476,7 +476,7 @@ export default function ComparatifPDPPage() {
                 key={p.slug}
                 id={p.slug}
                 className={`rounded-3xl border p-6 sm:p-8 transition-shadow hover:shadow-lg ${
-                  p.rank <= 3 ? 'bg-gradient-to-br from-blue-50 to-white border-blue-200' : 'bg-white border-gray-200'
+                  p.rank <= 3 ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200' : 'bg-white border-gray-200'
                 }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-start gap-6">
@@ -484,7 +484,7 @@ export default function ComparatifPDPPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <span className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-black text-lg ${
-                        p.rank === 1 ? 'bg-yellow-400 text-yellow-900' : p.rank === 2 ? 'bg-gray-300 text-gray-700' : p.rank === 3 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-500'
+                        p.rank === 1 ? 'bg-emerald-400 text-emerald-900' : p.rank === 2 ? 'bg-gray-300 text-gray-700' : p.rank === 3 ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500'
                       }`}>
                         {p.rank}
                       </span>
@@ -493,8 +493,8 @@ export default function ComparatifPDPPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             p.pdpStatus === 'agréée' ? 'bg-emerald-100 text-emerald-700' :
-                            p.pdpStatus === 'partenaire' ? 'bg-blue-100 text-blue-700' :
-                            'bg-amber-100 text-amber-700'
+                            p.pdpStatus === 'partenaire' ? 'bg-emerald-100 text-emerald-700' :
+                            'bg-emerald-100 text-emerald-700'
                           }`}>
                             PDP {p.pdpStatus}
                           </span>
@@ -504,7 +504,7 @@ export default function ComparatifPDPPage() {
                     </div>
                     <StarRating score={p.scores} />
                     {p.best && (
-                      <p className="mt-2 text-sm font-semibold text-blue-600">🏆 {p.best}</p>
+                      <p className="mt-2 text-sm font-semibold text-emerald-600">🏆 {p.best}</p>
                     )}
                     {/* Scores grid */}
                     <div className="flex flex-wrap gap-2 mt-4">
@@ -527,7 +527,7 @@ export default function ComparatifPDPPage() {
                       ))}
                     </ul>
                     <p className="text-sm text-gray-600 mb-3">
-                      <AlertTriangle className="w-4 h-4 inline text-amber-500 mr-1" />
+                      <AlertTriangle className="w-4 h-4 inline text-emerald-500 mr-1" />
                       {p.limitation}
                     </p>
                     <p className="text-sm text-gray-800 font-medium bg-gray-50 rounded-xl p-4">
@@ -574,8 +574,8 @@ export default function ComparatifPDPPage() {
                     <td className="p-3 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         p.pdpStatus === 'agréée' ? 'bg-emerald-100 text-emerald-700' :
-                        p.pdpStatus === 'partenaire' ? 'bg-blue-100 text-blue-700' :
-                        'bg-amber-100 text-amber-700'
+                        p.pdpStatus === 'partenaire' ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-emerald-100 text-emerald-700'
                       }`}>
                         {p.pdpStatus}
                       </span>
@@ -596,7 +596,7 @@ export default function ComparatifPDPPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {howToSteps.map((step, i) => (
             <div key={step.name} className="relative bg-gray-50 rounded-2xl p-6 border border-gray-200">
-              <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
+              <div className="absolute -top-4 -left-2 w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-lg">
                 {i + 1}
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{step.name}</h3>
@@ -627,7 +627,7 @@ export default function ComparatifPDPPage() {
       {/* FAQ */}
       <section className="max-w-4xl mx-auto px-4 py-16">
         <div className="flex items-center justify-center gap-3 mb-12">
-          <HelpCircle className="w-8 h-8 text-blue-600" />
+          <HelpCircle className="w-8 h-8 text-emerald-600" />
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Questions fréquentes sur les PDP et la facturation électronique
           </h2>
@@ -637,7 +637,7 @@ export default function ComparatifPDPPage() {
             <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-200">
               <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
                 <h3 className="text-lg font-bold text-gray-900 pr-4">{faq.question}</h3>
-                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-blue-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
+                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-emerald-600 group-open:rotate-45 transition-transform text-xl font-light">+</span>
               </summary>
               <div className="px-6 pb-6 speakable-faq-answer">
                 <p className="text-gray-600">{faq.answer}</p>
@@ -667,11 +667,11 @@ export default function ComparatifPDPPage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group p-5 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
+                className="group p-5 rounded-2xl bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all"
               >
-                <h3 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">{link.title}</h3>
+                <h3 className="font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors">{link.title}</h3>
                 <p className="text-sm text-gray-600">{link.desc}</p>
-                <span className="inline-flex items-center text-sm text-blue-600 mt-2 font-medium">
+                <span className="inline-flex items-center text-sm text-emerald-600 mt-2 font-medium">
                   Lire le guide <ArrowRight className="w-3 h-3 ml-1" />
                 </span>
               </Link>
@@ -682,24 +682,24 @@ export default function ComparatifPDPPage() {
 
       {/* CTA FINAL */}
       <section className="max-w-6xl mx-auto px-4 py-20">
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 sm:p-12 text-white text-center">
-          <Award className="w-12 h-12 text-blue-200 mx-auto mb-6" />
+        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-3xl p-8 sm:p-12 text-white text-center">
+          <Award className="w-12 h-12 text-emerald-200 mx-auto mb-6" />
           <h2 className="text-3xl sm:text-4xl font-black mb-6">
             Prêt à choisir votre plateforme de facturation électronique ?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-emerald-100 mb-8 max-w-2xl mx-auto">
             Testez Factu.me gratuitement : factures Factur-X, dictée vocale IA, signature eIDAS.
             Sans carte bancaire, sans engagement.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-700 rounded-xl font-semibold text-lg hover:bg-blue-50 transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-emerald-700 rounded-xl font-semibold text-lg hover:bg-emerald-50 transition-colors"
           >
             <Zap className="w-5 h-5" />
             Commencer gratuitement
             <ArrowRight className="w-5 h-5" />
           </Link>
-          <p className="mt-6 text-sm text-blue-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Plan gratuit 3 factures/mois &bull; Pro 14,99 €/mois &bull; Business 39,99 €/mois &bull; Aucune CB requise
           </p>
         </div>

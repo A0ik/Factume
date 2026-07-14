@@ -133,6 +133,8 @@ export function AppointmentDetailModal({
                     <div className="text-xs text-gray-500 dark:text-gray-400">Date</div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
                       {(() => {
+                        // ZÉNITH (CIBLE 2) — défense anti-crash si la date est absente.
+                        if (!appointment?.appointment_date) return '—';
                         const [y, m, d] = appointment.appointment_date.split('-').map(Number);
                         return new Date(y, m - 1, d).toLocaleDateString('fr-FR', {
                           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',

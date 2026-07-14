@@ -90,7 +90,7 @@ export default async function StatutPage({ params }: Props) {
 
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold mb-6">
@@ -168,7 +168,7 @@ export default async function StatutPage({ params }: Props) {
                 </div>
                 {data.tva.mentionFranchise && (
                   <div className="flex items-center gap-3 sm:col-span-2">
-                    <CheckCircle2 className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                     <span className="text-gray-700 font-medium">{data.tva.mentionFranchise}</span>
                   </div>
                 )}
@@ -192,7 +192,7 @@ export default async function StatutPage({ params }: Props) {
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-600">Assujetti TVA</span>
-                  <span className={`font-bold ${data.tva.assujetti ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <span className={`font-bold ${data.tva.assujetti ? 'text-emerald-600' : 'text-emerald-600'}`}>
                     {data.tva.assujetti ? 'Oui' : 'Non (franchise)'}
                   </span>
                 </div>
@@ -204,7 +204,7 @@ export default async function StatutPage({ params }: Props) {
               </div>
             </div>
             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-lg">
-              <FileText className="w-10 h-10 text-purple-600 mb-4" />
+              <FileText className="w-10 h-10 text-emerald-600 mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-4">Comment créer vos factures</h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -258,12 +258,12 @@ export default async function StatutPage({ params }: Props) {
                 ))}
               </ul>
             </div>
-            <div className="bg-gradient-to-br from-amber-50 to-white rounded-3xl p-8 border border-amber-100">
-              <h3 className="text-xl font-bold text-amber-700 mb-6">Points d'attention</h3>
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 border border-emerald-100">
+              <h3 className="text-xl font-bold text-emerald-700 mb-6">Points d'attention</h3>
               <ul className="space-y-3">
                 {data.inconvenients.map((inconvenient, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <XCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <XCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700">{inconvenient}</span>
                   </li>
                 ))}
@@ -297,13 +297,13 @@ export default async function StatutPage({ params }: Props) {
                 <Link
                   key={prof.slug}
                   href={`/modeles-facture/${prof.slug}`}
-                  className="group p-6 bg-white rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-lg transition-all"
+                  className="group p-6 bg-white rounded-2xl border border-gray-100 hover:border-emerald-200 hover:shadow-lg transition-all"
                 >
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
                     Facture {prof.nom}
                   </h3>
                   <p className="text-sm text-gray-600 mb-3">TVA {prof.tva.taux}% • {prof.secteur}</p>
-                  <span className="inline-flex items-center gap-1 text-sm text-purple-600 font-medium">
+                  <span className="inline-flex items-center gap-1 text-sm text-emerald-600 font-medium">
                     Voir le modèle <ArrowRightCircle className="w-4 h-4" />
                   </span>
                 </Link>

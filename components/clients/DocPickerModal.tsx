@@ -11,8 +11,8 @@ const DOC_TYPES = [
     label: 'Facture',
     description: 'Facture client standard',
     icon: Receipt,
-    gradient: 'from-blue-500 to-blue-600',
-    glow: 'shadow-blue-500/20',
+    gradient: 'from-emerald-500 to-emerald-600',
+    glow: 'shadow-emerald-500/20',
     path: '/documents/factures/new',
   },
   {
@@ -20,8 +20,8 @@ const DOC_TYPES = [
     label: 'Devis',
     description: 'Estimatif avant commande',
     icon: FileCheck,
-    gradient: 'from-purple-500 to-purple-600',
-    glow: 'shadow-purple-500/20',
+    gradient: 'from-emerald-600 to-teal-600',
+    glow: 'shadow-emerald-500/20',
     path: '/documents/devis/new',
   },
   {
@@ -38,8 +38,8 @@ const DOC_TYPES = [
     label: 'Bon de livraison',
     description: 'Suivi d\'expédition',
     icon: Truck,
-    gradient: 'from-indigo-500 to-indigo-600',
-    glow: 'shadow-indigo-500/20',
+    gradient: 'from-teal-500 to-emerald-600',
+    glow: 'shadow-teal-500/20',
     path: '/documents/livraisons/new',
   },
   {

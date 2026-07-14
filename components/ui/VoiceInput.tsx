@@ -124,13 +124,13 @@ export function VoiceInput({
         </button>
         {/* Upgrade tooltip */}
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
             <span className="flex items-center gap-1">
               <Sparkles size={10} />
               Disponible avec Pro
             </span>
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-              <div className="border-4 border-transparent border-t-purple-600" />
+              <div className="border-4 border-transparent border-t-emerald-600" />
             </div>
           </div>
         </div>
@@ -147,14 +147,14 @@ export function VoiceInput({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute -top-16 left-0 right-0 z-50 bg-gradient-to-r from-primary/10 to-purple-600/10 dark:from-primary/20 dark:to-purple-600/20 backdrop-blur-xl border border-primary/30 dark:border-primary/40 rounded-2xl p-4 shadow-xl"
+              className="absolute -top-16 left-0 right-0 z-50 bg-gradient-to-r from-primary/10 to-emerald-600/10 dark:from-primary/20 dark:to-emerald-600/20 backdrop-blur-xl border border-primary/30 dark:border-primary/40 rounded-2xl p-4 shadow-xl"
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-emerald-600 flex items-center justify-center">
                     <Mic size={18} className="text-white animate-pulse" />
                   </div>
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-purple-600 animate-ping opacity-30" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-emerald-600 animate-ping opacity-30" />
                 </div>
                 <div className="flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Écoute en cours...</p>
@@ -185,7 +185,7 @@ export function VoiceInput({
           isListening
             ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-red-300'
             : isPro
-            ? 'bg-gradient-to-r from-primary to-purple-600 text-white shadow-primary/30 hover:shadow-primary/50'
+            ? 'bg-gradient-to-r from-primary to-emerald-600 text-white shadow-primary/30 hover:shadow-primary/50'
             : 'bg-gray-200 text-gray-400 cursor-not-allowed',
           (!isPro || disabled) && 'cursor-not-allowed hover:shadow-none active:scale-100',
           className
@@ -235,7 +235,7 @@ export function VoiceInput({
               {[1, 2, 3, 4, 5].map((i) => (
                 <motion.div
                   key={i}
-                  className="w-0.5 bg-gradient-to-t from-primary to-purple-600 rounded-full"
+                  className="w-0.5 bg-gradient-to-t from-primary to-emerald-600 rounded-full"
                   style={{ height: 4 }}
                   animate={{
                     height: [4, 12, 6, 14, 8, 16, 4],

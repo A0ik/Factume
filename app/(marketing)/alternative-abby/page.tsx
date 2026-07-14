@@ -38,14 +38,14 @@ export default function AlternativeAbbyPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-bold mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold mb-6">
               Comparatif objectif 2026
             </div>
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Factu.me vs <span className="text-blue-600">Abby</span>
+              Factu.me vs <span className="text-emerald-600">Abby</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Lequel est le meilleur logiciel de facturation pour freelances et TPE en 2026 ? Comparatif honnête.
@@ -63,8 +63,8 @@ export default function AlternativeAbbyPage() {
           <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
             <div className="grid grid-cols-3 bg-gray-900 text-white">
               <div className="p-4 font-bold">Fonctionnalité</div>
-              <div className="p-4 font-bold text-purple-400">Factu.me</div>
-              <div className="p-4 font-bold text-blue-400">Abby</div>
+              <div className="p-4 font-bold text-emerald-400">Factu.me</div>
+              <div className="p-4 font-bold text-emerald-400">Abby</div>
             </div>
             {comparisonFeatures.map((row, i) => (
               <div key={i} className="grid grid-cols-3 border-b border-gray-100 last:border-0">
@@ -82,8 +82,8 @@ export default function AlternativeAbbyPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-black text-center text-gray-900 mb-12">Pour qui ?</h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-purple-50 to-white rounded-3xl p-8 border border-purple-100">
-              <h3 className="text-xl font-bold text-purple-700 mb-4">Choisissez Factu.me si...</h3>
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 border border-emerald-100">
+              <h3 className="text-xl font-bold text-emerald-700 mb-4">Choisissez Factu.me si...</h3>
               <ul className="space-y-3">
                 {[
                   'Vous voulez la dictée vocale IA',
@@ -94,14 +94,14 @@ export default function AlternativeAbbyPage() {
                   'Vous voulez signer électroniquement',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-8 border border-blue-100">
-              <h3 className="text-xl font-bold text-blue-700 mb-4">Choisissez Abby si...</h3>
+            <div className="bg-gradient-to-br from-emerald-50 to-white rounded-3xl p-8 border border-emerald-100">
+              <h3 className="text-xl font-bold text-emerald-700 mb-4">Choisissez Abby si...</h3>
               <ul className="space-y-3">
                 {[
                   'Vous cherchez une application native iOS/Android',
@@ -109,7 +109,7 @@ export default function AlternativeAbbyPage() {
                   'Vous avez besoin de la certification Plateforme Agréée',
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-gray-700">{item}</span>
                   </li>
                 ))}
@@ -120,17 +120,17 @@ export default function AlternativeAbbyPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-purple-600 to-purple-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Testez Factu.me gratuitement
           </h2>
-          <p className="text-xl text-purple-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Pas besoin de choisir tout de suite. Essayez gratuitement et décidez.
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-purple-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             <Zap className="w-5 h-5 mr-2" />
             Essayer gratuitement

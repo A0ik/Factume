@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     images: [
       {
-        url: '/api/og?title=Facture%20IA%20-%20Intelligence%20Artificielle&description=Cr%C3%A9ez%20vos%20factures%20par%20IA&theme=blue',
+        url: '/api/og?title=Facture%20IA%20-%20Intelligence%20Artificielle&description=Cr%C3%A9ez%20vos%20factures%20par%20IA&theme=emerald',
         width: 1200,
         height: 630,
         alt: 'Facture IA — Factu.me',
@@ -591,7 +591,7 @@ export default function FactureIAPage() {
               <div key={t.name} className="bg-white rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center gap-1 mb-3">
                   {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <Star key={i} className="w-4 h-4 fill-emerald-400 text-emerald-400" />
                   ))}
                 </div>
                 <p className="text-gray-700 mb-4 leading-relaxed italic">&ldquo;{t.quote}&rdquo;</p>
@@ -796,7 +796,7 @@ export default function FactureIAPage() {
             </Link>
           </div>
           <div className="mt-6 flex justify-center items-center gap-4 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> 4.8/5</span>
+            <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-emerald-400 text-emerald-400" /> 4.8/5</span>
             <span>•</span>
             <span>127 avis</span>
             <span>•</span>

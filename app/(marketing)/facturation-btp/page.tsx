@@ -128,11 +128,11 @@ export default function BTPPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-amber-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Facturation BTP : <span className="text-orange-600">2h de perdues par semaine</span> sur vos factures de chantier ?
+              Facturation BTP : <span className="text-emerald-600">2h de perdues par semaine</span> sur vos factures de chantier ?
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               Factu.me automatise vos factures de situation, acomptes et relances. <strong>Essai gratuit, conforme loi 2026.</strong>
@@ -140,14 +140,14 @@ export default function BTPPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl hover:from-orange-700 hover:to-amber-700 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-600 rounded-2xl hover:from-emerald-700 hover:to-emerald-700 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Essayer gratuitement
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-orange-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir une démo
@@ -164,19 +164,19 @@ export default function BTPPage() {
       <div className="bg-gray-50 border-y border-gray-200 py-6">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-8 text-center">
           <div>
-            <div className="text-2xl font-bold text-orange-600">5 000+</div>
+            <div className="text-2xl font-bold text-emerald-600">5 000+</div>
             <div className="text-xs text-gray-500">Artisans &amp; TPE</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-orange-600">50 000+</div>
+            <div className="text-2xl font-bold text-emerald-600">50 000+</div>
             <div className="text-xs text-gray-500">Factures créées</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-orange-600">4.8/5</div>
+            <div className="text-2xl font-bold text-emerald-600">4.8/5</div>
             <div className="text-xs text-gray-500">Note utilisateurs</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-orange-600">15h</div>
+            <div className="text-2xl font-bold text-emerald-600">15h</div>
             <div className="text-xs text-gray-500">Économisées/mois</div>
           </div>
         </div>
@@ -190,8 +190,8 @@ export default function BTPPage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-orange-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 transition-all">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-500 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -213,8 +213,8 @@ export default function BTPPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {useCases.map((useCase, i) => (
               <div key={i} className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center mb-4">
-                  <Hammer className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-100 flex items-center justify-center mb-4">
+                  <Hammer className="w-6 h-6 text-emerald-600" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{useCase.title}</h3>
                 <p className="text-gray-600">{useCase.description}</p>
@@ -237,7 +237,7 @@ export default function BTPPage() {
                 <ul className="space-y-3">
                   {feature.items.map((item, j) => (
                     <li key={j} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-600">{item}</span>
                     </li>
                   ))}
@@ -259,7 +259,7 @@ export default function BTPPage() {
                   <tr className="bg-gray-50">
                     <th className="p-3 text-left">Fonctionnalité</th>
                     <th className="p-3 text-center">Excel / Word</th>
-                    <th className="p-3 text-center bg-orange-50 text-orange-600 font-bold">Factu.me</th>
+                    <th className="p-3 text-center bg-emerald-50 text-emerald-600 font-bold">Factu.me</th>
                     <th className="p-3 text-center">Tiime / Pennylane</th>
                   </tr>
                 </thead>
@@ -279,14 +279,14 @@ export default function BTPPage() {
                     const renderCell = (val: boolean | string) => {
                       if (val === true) return <CheckCircle size={16} className="text-emerald-500 inline" />;
                       if (val === false) return <XCircle size={16} className="text-red-400 inline" />;
-                      if (val === 'partial') return <AlertTriangle size={16} className="text-amber-500 inline" />;
+                      if (val === 'partial') return <AlertTriangle size={16} className="text-emerald-500 inline" />;
                       return val;
                     };
                     return (
                       <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="p-3 font-medium">{feature as string}</td>
                         <td className="p-3 text-center">{renderCell(excel as boolean | string)}</td>
-                        <td className="p-3 text-center bg-orange-50 font-medium">{renderCell(factume as boolean | string)}</td>
+                        <td className="p-3 text-center bg-emerald-50 font-medium">{renderCell(factume as boolean | string)}</td>
                         <td className="p-3 text-center">{renderCell(other as boolean | string)}</td>
                       </tr>
                     );
@@ -294,7 +294,7 @@ export default function BTPPage() {
                   <tr className="bg-white">
                     <td className="p-3 font-medium">Prix/mois</td>
                     <td className="p-3 text-center">Gratuit</td>
-                    <td className="p-3 text-center bg-orange-50 font-medium">14,99€</td>
+                    <td className="p-3 text-center bg-emerald-50 font-medium">14,99€</td>
                     <td className="p-3 text-center">25-35€</td>
                   </tr>
                 </tbody>
@@ -325,21 +325,21 @@ export default function BTPPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-orange-600 to-amber-600">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             Simplifiez la facturation de vos chantiers
           </h2>
-          <p className="text-xl text-orange-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Rejoignez les artisans du BTP qui facturent plus vite et sont payés plus tôt
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-orange-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Commencer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-orange-200">
+          <p className="mt-6 text-sm text-emerald-200">
             3 factures gratuites par mois • Sans engagement
           </p>
         </div>

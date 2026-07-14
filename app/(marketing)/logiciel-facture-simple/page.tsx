@@ -112,11 +112,11 @@ export default function LogicielFactureSimplePage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero */}
       <section className="relative overflow-hidden py-20 sm:py-32">
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-              Logiciel de Facture Simple – <span className="text-sky-600">Pas de Prise de Tête</span>
+              Logiciel de Facture Simple – <span className="text-emerald-600">Pas de Prise de Tête</span>
             </h1>
             <p className="text-xl sm:text-2xl text-gray-600 mb-8">
               L\'interface la plus simple du marché. <strong>Pas de fonctionnalités inutiles</strong>, pas de paramétrage sans fin. Juste vos factures, vite fait.
@@ -124,14 +124,14 @@ export default function LogicielFactureSimplePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-sky-600 to-sky-700 rounded-2xl hover:from-sky-700 hover:to-sky-800 transition-all shadow-xl hover:shadow-2xl"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-2xl hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-xl hover:shadow-2xl"
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Essayer – c\'est simple
               </Link>
               <Link
                 href="/demo"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-sky-300 transition-all"
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-gray-700 bg-white border-2 border-gray-200 rounded-2xl hover:border-emerald-300 transition-all"
               >
                 <FileText className="w-5 h-5 mr-2" />
                 Voir la démo
@@ -152,8 +152,8 @@ export default function LogicielFactureSimplePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, i) => (
-              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-sky-200 transition-all">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center text-white">
+              <div key={i} className="flex gap-4 p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:border-emerald-200 transition-all">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white">
                   <benefit.icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -179,7 +179,7 @@ export default function LogicielFactureSimplePage() {
               { step: '3', title: 'Envoyez', desc: 'PDF professionnel généré automatiquement. Envoyez par email en 1 clic.' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 text-center">
-                <div className="w-16 h-16 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-3xl font-black mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl font-black mx-auto mb-4">
                   {item.step}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
@@ -235,21 +235,21 @@ export default function LogicielFactureSimplePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-sky-600 to-sky-700">
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-emerald-600 to-emerald-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-6">
             La facturation, ça doit être simple
           </h2>
-          <p className="text-xl text-sky-100 mb-8">
+          <p className="text-xl text-emerald-100 mb-8">
             Rejoignez ceux qui en ont fini avec les logiciels compliqués
           </p>
           <Link
             href="/register"
-            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-sky-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
+            className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-emerald-700 bg-white rounded-2xl hover:bg-gray-50 transition-all shadow-xl"
           >
             Essayer gratuitement
           </Link>
-          <p className="mt-6 text-sm text-sky-200">
+          <p className="mt-6 text-sm text-emerald-200">
             Inscription en 2 minutes • Aucune carte bancaire • 3 factures gratuites/mois
           </p>
         </div>

@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useDataStore } from '@/stores/dataStore';
-import { useEnsureClientEmail } from '@/components/invoices/EnsureClientEmailModal';
+import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
 
 interface CopilotResult {
   type: string;
@@ -196,7 +196,7 @@ function ResultCard({ result, onNavigate, onSendReminder, sendingReminderId }: {
 export default function CopilotFAB() {
   const { canUseCopilot } = useSubscription();
   const { invoices } = useDataStore();
-  const { promptForEmail, modal: ensureEmailModal } = useEnsureClientEmail();
+  const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
   // Ref miroir des invoices pour éviter une closure périmée dans handleSendReminder (deps []).
   const invoicesRef = useRef(invoices);
   invoicesRef.current = invoices;
@@ -373,12 +373,12 @@ export default function CopilotFAB() {
   // brouillon était un dead-end (aucun bouton). Route /api/reminders/send avec
   // confirmed:true (l'humain dispose). Gère le cas pendingEmail (client sans email).
   const handleSendReminder = useCallback(async (invoiceId: string) => {
-    // ASTRÉE (CIBLE 1) — si le client n'a pas d'email, on le demande avant l'envoi.
+    // ZÉNITH (CIBLE 1) — garde unifiée BLOQUANTE : no-client → modal bloquant,
+    // missing-email → saisie + persistance clients.email. Fini l'envoi fantôme.
     const inv: any = invoicesRef.current.find((i: any) => i.id === invoiceId);
-    if (inv?.client?.id && !inv.client?.email) {
-      const email = await promptForEmail(inv.client);
-      if (!email) { toast.info('Relance annulée.'); return; }
-    }
+    if (!inv) { toast.error('Facture introuvable.'); return; }
+    const canSend = await ensureCanSend([inv]);
+    if (!canSend) return; // bloqué ou annulé
     setSendingReminderId(invoiceId);
     try {
       const supabase = getSupabaseClient();
@@ -402,7 +402,7 @@ export default function CopilotFAB() {
     } finally {
       setSendingReminderId(null);
     }
-  }, [promptForEmail]);
+  }, [ensureCanSend]);
 
   // Ref pour éviter une closure périmée dans le handler vocal (déclaré après sendCommand)
   const sendCommandRef = useRef(sendCommand);
@@ -513,7 +513,7 @@ export default function CopilotFAB() {
         )}
       </motion.button>
 
-      {ensureEmailModal}
+      {relanceGuardModal}
 
       {/* ── Modal ── */}
       <AnimatePresence>
