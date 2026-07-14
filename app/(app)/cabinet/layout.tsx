@@ -133,7 +133,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
         {/* ─── Zone principale ─── */}
         <main className="flex-1 flex flex-col min-w-0 min-h-screen">
           {/* ─── Topbar desktop ─── */}
-          <header className="hidden lg:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-white/80 backdrop-blur-xl border-b border-gray-200">
+          <header className="hidden lg:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-background/80 backdrop-blur-xl border-b border-border">
             <div className="flex items-center gap-2 min-w-0">
               {/* ZÉNITH — Switcher de cabinet TOUJOURS visible dans la topbar (pattern
                   Pennylane). Donne accès au changement de cabinet ET à la création
@@ -166,7 +166,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
 
           {/* ─── Topbar mobile ─── */}
           <div
-            className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-200"
+            className="lg:hidden sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border"
             style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
           >
             <div className="flex items-center justify-between px-4 h-14">
@@ -192,7 +192,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
 
           {/* ─── Barre d'onglets mobile ─── */}
           <div
-            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-200"
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div className="flex items-center justify-around h-16 px-2">

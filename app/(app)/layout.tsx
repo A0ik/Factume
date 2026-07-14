@@ -97,7 +97,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // ZÉNITH (CIBLE 2a) — Le cabinet a sa PROPRE chrome (CabinetSidebar + top bar +
   // bottom bar via CabinetLayout). Sur /cabinet on NE rend PAS la Sidebar/BottomTabBar/
   // top bar globaux, sinon double navbar empilée (le bug « navbar qui part sous l'écran »).
-  const isCabinet = pathname.startsWith('/cabinet');
+  // ATTENTION : on exclut /cabinets (PLURIEL = page main-app de gestion) qui doit garder
+  // la chrome globale. `startsWith('/cabinet/')` avec slash → ne matche pas /cabinets.
+  const isCabinet = pathname === '/cabinet' || pathname.startsWith('/cabinet/');
 
   if (!initialized) {
     return (

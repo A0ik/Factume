@@ -113,7 +113,7 @@ export default function CabinetAgendaPage() {
 
   const renderGroup = ([date, items]: [string, AgendaEvent[]]) => (
     <div key={date} className="space-y-2">
-      <div className="flex items-center gap-2 sticky top-16 bg-white/80 backdrop-blur py-1 z-10">
+      <div className="flex items-center gap-2 sticky top-16 bg-background/80 backdrop-blur py-1 z-10">
         <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{formatDateShort(date)}</span>
         {date === today && <StatusBadge tone="info" size="sm">Aujourd&apos;hui</StatusBadge>}
       </div>
