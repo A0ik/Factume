@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/authStore';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
 import CabinetSidebar from '@/components/cabinet/CabinetSidebar';
 import CabinetLogo from '@/components/cabinet/CabinetLogo';
+import CabinetSwitcher from '@/components/cabinet/CabinetSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Avatar } from '@/components/cabinet/ui';
 import type { LucideIcon } from 'lucide-react';
@@ -105,6 +106,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
   const cabinet = useCabinetStore((state) => state.cabinet);
+  const cabinets = useCabinetStore((state) => state.cabinets);
   const profile = useAuthStore((state) => state.profile);
 
   const primaryColor = cabinet?.primary_color || '#10b981';
@@ -131,9 +133,16 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
           {/* ─── Topbar desktop ─── */}
           <header className="hidden lg:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-white/80 backdrop-blur-xl border-b border-gray-200">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                {brandName}
-              </span>
+              {/* ZÉNITH (CIBLE 2d) — Switcher de cabinet dans la topbar (pattern Pennylane).
+                  La sidebar étant repliée par défaut, le switcher y était invisible ;
+                  on l'expose ici dès qu'il y a ≥2 cabinets. Fallback : nom statique. */}
+              {cabinets.length > 1 ? (
+                <CabinetSwitcher />
+              ) : (
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  {brandName}
+                </span>
+              )}
               <ChevronRight size={13} className="text-gray-300" />
               <h1 className="text-sm font-bold text-gray-900 truncate">{sectionTitle(pathname)}</h1>
             </div>

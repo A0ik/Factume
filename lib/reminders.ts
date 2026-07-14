@@ -20,6 +20,12 @@ export interface ReminderInvoice {
     | { name?: string | null; email?: string | null }
     | Array<{ name?: string | null; email?: string | null }>
     | null;
+  // ZÉNITH (CIBLE 1) — Destinataire dénormalisé (client saisi en ligne à la création,
+  // non lié à un client de la table). 80 factures de production sont dans ce cas
+  // (B2C/inline). Avant, sendReminderEmail n'utilisait QUE client.email (le join) →
+  // ces factures n'étaient jamais relançables. On recourt au snapshot dénormalisé.
+  client_email?: string | null;
+  client_name_override?: string | null;
 }
 
 export interface ReminderProfile {
@@ -75,6 +81,14 @@ export async function sendReminderEmail(params: {
   // Supabase `client:clients(*)` renvoie un TABLEAU ; on normalise en objet unique.
   const client = Array.isArray(invoice.client) ? invoice.client[0] : invoice.client;
 
+  // ZÉNITH (CIBLE 1) — Résolution du destinataire robuste : un client saisi en ligne
+  // à la création (B2C, non lié à la table clients) n'a PAS de join `client`, mais la
+  // facture porte un snapshot dénormalisé (client_email + client_name_override). On
+  // recourt à ce snapshot quand le client lié n'a pas d'email. 80 factures de prod
+  // sont dans ce cas ; avant, elles n'étaient JAMAIS relançables.
+  const clientName = client?.name || invoice.client_name_override || '';
+  const emailTo = client?.email || invoice.client_email || null;
+
   // ATHÉNA (CIBLE 3) — Dégradation gracieuse B2C / client sans email.
   // Avant : `return { ok:false, skipped:true }` → blocage des relances (cron, manuel,
   // batch) dès qu'un client n'avait pas d'email, ce qui est LÉGITIME en B2C
@@ -83,8 +97,7 @@ export async function sendReminderEmail(params: {
   // pour qu'il complète l'email. Idempotent : on ne recrée pas de log/notif si une
   // relance 'pending_email' existe déjà pour cette facture (anti-spam quotidien du
   // cron). Dès que l'utilisateur ajoute l'email, la prochaine relance s'envoie.
-  if (!client?.email) {
-    const clientName = client?.name || '';
+  if (!emailTo) {
     const { data: existingPending } = await admin.from('reminders_log')
       .select('id')
       .eq('invoice_id', invoice.id)
@@ -140,10 +153,10 @@ export async function sendReminderEmail(params: {
   const daysOverdue = Math.max(0, daysOverdueFor(invoice));
   const emailSubject = (config?.email_subject || 'Rappel: Facture {invoice_number} en retard')
     .replace('{invoice_number}', invoice.number || 'N/A')
-    .replace('{client_name}', client.name || '');
+    .replace('{client_name}', clientName);
 
   const emailMessage = (config?.email_message || '')
-    .replace('{client_name}', client.name || '')
+    .replace('{client_name}', clientName)
     .replace('{invoice_number}', invoice.number || 'N/A')
     .replace('{amount}', (invoice.total || 0).toFixed(2))
     .replace('{days_overdue}', daysOverdue.toString())
@@ -160,7 +173,7 @@ export async function sendReminderEmail(params: {
 
   const { data: emailData, error: emailError } = await resend.emails.send({
     from: `${senderName} <${senderEmail}>`,
-    to: [client.email],
+    to: [emailTo],
     subject: emailSubject,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
@@ -169,7 +182,7 @@ export async function sendReminderEmail(params: {
           <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Facture n° ${escapeHtml(invoice.number || '')}</p>
         </div>
         <div style="background:#fff;padding:32px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
-          <p style="font-size:16px;margin:0 0 24px;">Bonjour ${escapeHtml(client.name || '')},</p>
+          <p style="font-size:16px;margin:0 0 24px;">Bonjour ${escapeHtml(clientName)},</p>
           <div style="background:#FEF2F2;padding:16px;border-radius:8px;margin:24px 0;border-left:4px solid #EF4444;">
             <p style="font-size:14px;color:#991B1B;margin:0;">
               <strong>Facture en retard de ${daysOverdue} jours</strong>
@@ -194,7 +207,7 @@ export async function sendReminderEmail(params: {
       invoice_id: invoice.id,
       user_id: userId,
       reminder_level: level,
-      email_to: client.email,
+      email_to: emailTo,
       email_subject: emailSubject,
       status: 'failed',
       error_message: emailError.message,
@@ -206,7 +219,7 @@ export async function sendReminderEmail(params: {
     invoice_id: invoice.id,
     user_id: userId,
     reminder_level: level,
-    email_to: client.email,
+    email_to: emailTo,
     email_subject: emailSubject,
     status: 'sent',
     metadata: { message_id: emailData?.id },
@@ -224,5 +237,5 @@ export async function sendReminderEmail(params: {
     console.warn('[reminders] transition error:', transitionError.message);
   }
 
-  return { ok: true, messageId: emailData?.id, emailTo: client.email };
+  return { ok: true, messageId: emailData?.id, emailTo };
 }

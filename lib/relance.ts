@@ -35,19 +35,41 @@ export function normalizeRelanceClient(inv: any): RelanceClient | null {
 export type RelanceStatus = 'ready' | 'missing-email' | 'no-client';
 
 /**
+ * Extrait l'email destinataire d'une facture, en couvrant les 3 cas réels :
+ *  1. client lié avec email (join `client.email`) ;
+ *  2. client saisi en ligne à la création, NON lié (snapshot `inv.client_email`) ;
+ *  3. brouillon Copilot (champ camelCase `inv.clientEmail`).
+ * Renvoie '' si aucun email exploitable.
+ */
+export function relanceEmail(inv: any): string {
+  const client = normalizeRelanceClient(inv);
+  const fromJoin = client?.email ? String(client.email).trim() : '';
+  if (fromJoin) return fromJoin;
+  const denorm = inv?.client_email ? String(inv.client_email).trim() : '';
+  if (denorm) return denorm;
+  const camel = inv?.clientEmail ? String(inv.clientEmail).trim() : '';
+  return camel;
+}
+
+/**
  * Classifie une facture pour la relance :
- *  - 'no-client'     : aucun client exploitable (impossible d'écrire un email).
- *  - 'missing-email' : client lié mais sans email (pop-up de saisie + persistance).
- *  - 'ready'         : client + email présents, on peut envoyer.
+ *  - 'ready'         : un email destinataire est disponible (client lié OU snapshot
+ *                      dénormalisé client_email). On peut envoyer.
+ *  - 'missing-email' : client LIÉ (client_id) mais sans email — on capture et on
+ *                      persiste dans la fiche client (clients.email).
+ *  - 'no-client'     : ni client lié, ni email dénormalisé — on capture un email et
+ *                      on l'écrit dans le snapshot de la facture (non-fiscal).
  *
- * Ce prédicat est la source unique de vérité : la garde UI et le test serveur
- * doivent toujours s'accorder sur ces définitions.
+ * ZÉNITH (CIBLE 1) — Avant, 'no-client' renvoyait vers une facture verrouillée
+ * (immuable) → impasse. Désormais le snapshot client_email compte comme destinataire
+ * valide (80 factures de prod B2C/inline), et le cas résiduel sans aucun email est
+ * résolu par un pop-up qui écrit dans invoices.client_email (carve-out non-fiscal).
  */
 export function classifyRelanceInvoice(inv: any): RelanceStatus {
+  if (relanceEmail(inv)) return 'ready';
   const client = normalizeRelanceClient(inv);
-  if (!client || !client.id) return 'no-client';
-  if (!client.email || !String(client.email).trim()) return 'missing-email';
-  return 'ready';
+  if (client && client.id) return 'missing-email';
+  return 'no-client';
 }
 
 /** Nom d'affichage dégradé pour une facture (sans client lisible). */

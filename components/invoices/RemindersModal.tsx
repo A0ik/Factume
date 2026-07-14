@@ -88,11 +88,12 @@ export function RemindersModal({ open, onClose }: RemindersModalProps) {
       return;
     }
     // ZÉNITH (CIBLE 1) — garde unifiée BLOQUANTE avant envoi.
-    //  - aucune facture sans client  → NoClientRelanceModal (bloquant, CTA « Ouvrir la facture »)
-    //  - client sans email           → EnsureClientEmailModal (saisie + persistance clients.email)
-    //  - sinon                       → on envoie réellement.
+    //  - ni client ni email (snapshot) → CaptureRecipientModal (saisie email + écriture
+    //    invoices.client_email, carve-out non-fiscal — la facture émise reste immuable)
+    //  - client lié sans email         → EnsureClientEmailModal (saisie + persistance clients.email)
+    //  - sinon (client.email OU client_email) → on envoie réellement.
     // Fini l'impasse silencieuse « 0 envoyée — X sans email » : la garde client
-    // reflète désormais exactement le test serveur (lib/reminders.ts:86).
+    // reflète désormais exactement le test serveur (lib/reminders.ts sendReminderEmail).
     const selectedInvoices = unpaid.filter((i: any) => selected.has(i.id));
     const canSend = await ensureCanSend(selectedInvoices);
     if (!canSend) return; // bloqué (no-client) ou annulé (email)

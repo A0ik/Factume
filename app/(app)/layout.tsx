@@ -94,6 +94,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [initialized, user]);
 
   const hideBanners = pathname === '/paywall' || pathname === '/trial';
+  // ZÉNITH (CIBLE 2a) — Le cabinet a sa PROPRE chrome (CabinetSidebar + top bar +
+  // bottom bar via CabinetLayout). Sur /cabinet on NE rend PAS la Sidebar/BottomTabBar/
+  // top bar globaux, sinon double navbar empilée (le bug « navbar qui part sous l'écran »).
+  const isCabinet = pathname.startsWith('/cabinet');
 
   if (!initialized) {
     return (
@@ -126,60 +130,64 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <InvoiceCounter invoiceCount={invoiceCount} maxInvoices={Number.isFinite(maxInvoices) ? maxInvoices : 3} onClose={() => setShowInvoiceCounter(false)} />
       )}
 
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
-        <main
-          className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0 transition-[margin-left] duration-300"
-          style={{ marginLeft: sidebarWidth > 0 ? undefined : 0 }}
-        >
-          {/* Mobile top bar — native app style with contextual title */}
-          <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-2xl border-b border-border"
-               style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-            <div className="flex items-center justify-between px-4 h-14">
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="flex items-center justify-center w-11 h-11 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
-                aria-label="Menu navigation"
-              >
-                <Menu size={20} strokeWidth={1.8} />
-              </button>
-              <h1 className="text-[15px] font-semibold text-foreground">
-                {getPageTitle(pathname)}
-              </h1>
-              <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
-                <Logo size="sm" variant="icon" />
-              </Link>
+      {isCabinet ? (
+        // ZÉNITH (CIBLE 2a) — Cabinet : chrome 100% assumé par CabinetLayout.
+        // Aucune Sidebar/BottomTabBar/top bar globale → fin de la double navbar.
+        <div className="min-h-screen bg-background">
+          {children}
+          <CopilotFAB />
+        </div>
+      ) : (
+        <div className="flex min-h-screen bg-background">
+          <Sidebar />
+          <main
+            className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0 transition-[margin-left] duration-300"
+            style={{ marginLeft: sidebarWidth > 0 ? undefined : 0 }}
+          >
+            {/* Mobile top bar — native app style with contextual title */}
+            <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-2xl border-b border-border"
+                 style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+              <div className="flex items-center justify-between px-4 h-14">
+                <button
+                  onClick={() => setDrawerOpen(true)}
+                  className="flex items-center justify-center w-11 h-11 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
+                  aria-label="Menu navigation"
+                >
+                  <Menu size={20} strokeWidth={1.8} />
+                </button>
+                <h1 className="text-[15px] font-semibold text-foreground">
+                  {getPageTitle(pathname)}
+                </h1>
+                <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+                  <Logo size="sm" variant="icon" />
+                </Link>
+              </div>
             </div>
-          </div>
 
-          <MobileLayout>
-            <div className={cn(
-              "flex-1 w-full py-5 lg:py-6",
-              pathname.startsWith('/cabinet')
-                ? "px-0 lg:px-0"
-                : "mx-auto px-5 lg:px-8",
-              pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
-                ? "max-w-[1800px]"
-                : pathname.startsWith('/contracts') || pathname === '/dashboard' || pathname === '/'
-                ? "max-w-[1400px]"
-                : !pathname.startsWith('/cabinet')
-                ? "max-w-7xl"
-                : ""
-            )}>
-              {children}
-            </div>
-          </MobileLayout>
-        </main>
+            <MobileLayout>
+              <div className={cn(
+                "flex-1 w-full mx-auto py-5 lg:py-6 px-5 lg:px-8",
+                pathname === '/paywall' || pathname === '/calendar' || pathname === '/ocr' || pathname === '/expenses/analytics' || pathname === '/expenses/export' || pathname === '/expenses/approvals' || pathname.startsWith('/banking/transactions')
+                  ? "max-w-[1800px]"
+                  : pathname.startsWith('/contracts') || pathname === '/dashboard' || pathname === '/'
+                  ? "max-w-[1400px]"
+                  : "max-w-7xl"
+              )}>
+                {children}
+              </div>
+            </MobileLayout>
+          </main>
 
-        {/* Floating pill navigation */}
-        <BottomTabBar />
+          {/* Floating pill navigation */}
+          <BottomTabBar />
 
-        {/* HEPHAISTOS (CIBLE 4) — Copilot IA flottant (plan Business, auto-gating interne) */}
-        <CopilotFAB />
+          {/* HEPHAISTOS (CIBLE 4) — Copilot IA flottant (plan Business, auto-gating interne) */}
+          <CopilotFAB />
 
-        {/* Mobile drawer */}
-        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      </div>
+          {/* Mobile drawer */}
+          <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        </div>
+      )}
     </ToastProvider>
   );
 }

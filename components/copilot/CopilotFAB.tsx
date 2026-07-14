@@ -50,11 +50,70 @@ const fmtDate = (d?: string | null) => {
   catch { return d; }
 };
 
+// ZÉNITH (CIBLE 3) — Carte FORMULAIRE inline proactively émise par l'IA. L'utilisateur
+// remplit les champs ; on substitue les tokens {field_id} dans submitCommand et on
+// renvoie la commande au Copilot, qui l'exécute via sa boucle d'outils. Pas de redirection.
+function FormCard({ result, onSubmit }: { result: CopilotResult; onSubmit: (command: string) => void }) {
+  const fields: any[] = Array.isArray(result.fields) ? result.fields : [];
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const missing = fields.some((f) => f.required && !String(values[f.id] || '').trim());
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (missing || submitting) return;
+    setSubmitting(true);
+    let cmd: string = String(result.submitCommand || '');
+    for (const f of fields) {
+      const val = String(values[f.id] || '').trim();
+      cmd = cmd.split(`{${f.id}}`).join(val);
+    }
+    cmd = cmd.replace(/\{[a-zA-Z0-9_]+\}/g, '').replace(/\s+/g, ' ').trim(); // tokens non remplis retirés
+    await onSubmit(cmd);
+    setSubmitting(false);
+  };
+
+  if (fields.length === 0) return null;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      {result.title && <p className="text-sm font-bold text-foreground">{result.title}</p>}
+      {result.message && <p className="text-xs text-muted-foreground">{result.message}</p>}
+      <div className="space-y-2">
+        {fields.map((f) => (
+          <div key={f.id}>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {f.label}{f.required && <span className="text-red-500"> *</span>}
+            </label>
+            <input
+              type={f.type || 'text'}
+              value={values[f.id] || ''}
+              onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
+              placeholder={f.placeholder || ''}
+              className="w-full rounded-control border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+          </div>
+        ))}
+      </div>
+      <button
+        type="submit"
+        disabled={missing || submitting}
+        className="inline-flex items-center gap-1.5 rounded-control bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+      >
+        {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        {result.cta || 'Valider'}
+      </button>
+    </form>
+  );
+}
+
 // ── Rendu polymorphe des réponses de l'API ──────────────────────────────────
-function ResultCard({ result, onNavigate, onSendReminder, sendingReminderId }: {
+function ResultCard({ result, onNavigate, onSendReminder, onSubmitForm, sendingReminderId }: {
   result: CopilotResult;
   onNavigate?: () => void;
   onSendReminder?: (invoiceId: string) => void;
+  onSubmitForm?: (command: string) => void;
   sendingReminderId?: string | null;
 }) {
   switch (result.type) {
@@ -188,6 +247,9 @@ function ResultCard({ result, onNavigate, onSendReminder, sendingReminderId }: {
           </Link>
         </div>
       );
+    case 'form':
+      // ZÉNITH (CIBLE 3) — formulaire inline proactif émis par l'IA.
+      return <FormCard result={result} onSubmit={(cmd) => onSubmitForm?.(cmd)} />;
     default:
       return <p className="text-sm text-muted-foreground">{result.message || 'Commande traitée.'}</p>;
   }
@@ -603,7 +665,7 @@ export default function CopilotFAB() {
                           ? 'border border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-300'
                           : 'border border-border bg-muted/50 text-foreground',
                       )}>
-                        {m.role === 'assistant' && m.result ? <ResultCard result={m.result} onNavigate={() => setOpen(false)} onSendReminder={handleSendReminder} sendingReminderId={sendingReminderId} /> : m.text}
+                        {m.role === 'assistant' && m.result ? <ResultCard result={m.result} onNavigate={() => setOpen(false)} onSendReminder={handleSendReminder} onSubmitForm={(cmd) => sendCommand(cmd)} sendingReminderId={sendingReminderId} /> : m.text}
                       </div>
                     </div>
                   ))

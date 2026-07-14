@@ -20,7 +20,7 @@ interface LocalMember {
 
 export default function CabinetSettingsPage() {
   const router = useRouter();
-  const { cabinet, fetchCabinet, updateCabinet } = useCabinetStore();
+  const { cabinet, updateCabinet } = useCabinetStore();
   const { profile } = useAuthStore();
   const sub = useSubscription();
   const isOwner = cabinet && profile ? cabinet.owner_id === profile.id : false;
@@ -63,7 +63,12 @@ export default function CabinetSettingsPage() {
     if (accessDenied) router.replace('/cabinet');
   }, [accessDenied, router]);
 
-  useEffect(() => { fetchCabinet(); fetchMembers(); }, []);
+  // ZÉNITH — fetchCabinet() RETIRÉ : le CabinetGuard du layout charge déjà le cabinet
+  // actif (et hydrateFromCache). Cet appel était REDONDANT et causait la boucle de
+  // refresh infinie : fetchCabinet fait basculer store.loading (true→false) → le guard
+  // (render `if (loading) <Loader/>`) démontait la page → remontage → refetch → loop.
+  // On ne garde que fetchMembers, qui utilise un état de chargement LOCAL (inoffensif).
+  useEffect(() => { fetchMembers(); }, []);
 
   // Hydrate le formulaire quand le cabinet ACTIF change — dépendance sur cabinet?.id
   // (pas sur l'objet cabinet entier) : le store produit une nouvelle référence à

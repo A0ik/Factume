@@ -161,8 +161,12 @@ export default function CabinetGuard({ children }: { children: React.ReactNode }
 
   // ── Rendus ──
 
-  // Chargement tant que l'auth ou le fetch n'est pas terminé.
-  if (!initialized || !profile || phase === 'idle' || phase === 'fetching' || loading) {
+  // Chargement tant que l'auth ou le fetch initial n'est pas terminé.
+  // ZÉNITH — `|| loading` RETIRÉ : le flag global store.loading bascule aussi sur les
+  // rafraîchissements de FOND (ex. fetchCabinet depuis une page). L'inclure ici faisait
+  // démonter toute l'UI cabinet (children inclus) à chaque refresh de fond → boucle de
+  // mount/unmount. Le chargement initial est déjà couvert par `phase` (idle/fetching).
+  if (!initialized || !profile || phase === 'idle' || phase === 'fetching') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="text-primary animate-spin" />

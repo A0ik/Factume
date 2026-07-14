@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 interface DataState {
   clients: Client[]; invoices: Invoice[]; recurringInvoices: RecurringInvoice[]; loading: boolean; stats: DashboardStats | null; error: string | null;
   fetchClients: () => Promise<void>; createClient: (data: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<Client>; bulkCreateClients: (items: Omit<Client, 'id'|'user_id'|'created_at'|'updated_at'>[]) => Promise<Client[]>; updateClient: (id: string, data: Partial<Client>) => Promise<void>; deleteClient: (id: string) => Promise<void>;
-  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile, targetDocType?: string) => Promise<Invoice>;
+  fetchInvoices: () => Promise<void>; createInvoice: (data: InvoiceFormData, profile: UserProfile, idempotencyId?: string) => Promise<Invoice>; updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>; setInvoiceRecipient: (id: string, data: { client_email?: string; client_name_override?: string; client_id?: string | null }) => Promise<void>; updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>; deleteInvoice: (id: string) => Promise<void>; duplicateInvoice: (id: string, profile: UserProfile, targetDocType?: string) => Promise<Invoice>;
   fetchRecurringInvoices: () => Promise<void>; createRecurringInvoice: (data: Omit<RecurringInvoice, 'id'|'user_id'|'created_at'|'updated_at'>) => Promise<RecurringInvoice>; updateRecurringInvoice: (id: string, data: Partial<RecurringInvoice>) => Promise<void>; deleteRecurringInvoice: (id: string) => Promise<void>;
   updateInvoiceInList: (updated: any) => void;
   computeStats: () => void; clearData: () => void;
@@ -351,6 +351,23 @@ export const useDataStore = create<DataState>((set, get) => ({
     const data = await response.json();
     set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) }));
     get().computeStats();
+  },
+  // ZÉNITH (CIBLE 1) — Carve-out NON-FISCAL : complète le destinataire de relance
+  // (client_email / client_name_override / client_id) sur une facture déjà émise,
+  // via le routelet dédié (contenu fiscal verrouillé). Sert au pop-up de relance
+  // des factures sans client ni email (ex: FACT-019) — sans déverrouiller l'édition.
+  setInvoiceRecipient: async (id, recipient) => {
+    const response = await fetch(`/api/invoices/${id}/recipient`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(recipient),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Impossible d'enregistrer le destinataire.");
+    }
+    const { invoice } = await response.json();
+    set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? { ...inv, ...invoice } : inv)) }));
   },
   /** Update a single invoice in the local list (no DB write). Used after payment link creation etc. */
   updateInvoiceInList: (updated: any) => {

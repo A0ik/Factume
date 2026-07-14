@@ -408,6 +408,36 @@ async function toolSaveMemory(args: { kind?: string; content?: string }, ctx: To
   }
 }
 
+// ZÉNITH (CIBLE 3) — Outil PROACTIF : quand l'IA a besoin d'une saisie structurée
+// (email, montant, nom, date…) pour agir, elle émet une CARTE FORMULAIRE au lieu de
+// renvoyer l'utilisateur vers une page. L'utilisateur remplit les champs ; le front
+// substitue les valeurs {field_id} dans submit_command et renvoie cette commande au
+// Copilot, qui la traite via sa boucle d'outils habituelle. Aucune redirection.
+async function toolRequestForm(args: {
+  title?: string;
+  message?: string;
+  cta?: string;
+  submit_command?: string;
+  fields?: Array<{ id: string; label: string; type?: string; placeholder?: string; required?: boolean }>;
+}, _ctx: ToolCtx) {
+  const fields = Array.isArray(args?.fields) ? args.fields.slice(0, 6) : [];
+  const card = {
+    type: 'form' as const,
+    title: String(args?.title || 'Information requise').slice(0, 80),
+    message: String(args?.message || '').slice(0, 280),
+    cta: String(args?.cta || 'Valider').slice(0, 24),
+    submitCommand: String(args?.submit_command || '').slice(0, 400),
+    fields: fields.map((f) => ({
+      id: String(f.id || '').slice(0, 40),
+      label: String(f.label || '').slice(0, 60),
+      type: ['text', 'email', 'number', 'date', 'tel'].includes(f.type as string) ? f.type : 'text',
+      placeholder: f.placeholder ? String(f.placeholder).slice(0, 80) : '',
+      required: !!f.required,
+    })),
+  };
+  return { toolResult: { form_requested: true, field_count: card.fields.length }, card };
+}
+
 const TOOL_EXECUTORS: Record<string, (args: any, ctx: ToolCtx) => Promise<{ toolResult: any; card: any }>> = {
   lookup_client: toolLookupClient,
   list_outstanding_invoices: toolListOutstanding,
@@ -419,6 +449,7 @@ const TOOL_EXECUTORS: Record<string, (args: any, ctx: ToolCtx) => Promise<{ tool
   draft_reminder: toolDraftReminder,
   redirect_to_invoice_creator: toolRedirectToCreator,
   save_memory: toolSaveMemory,
+  request_form: toolRequestForm,
 };
 
 // ─── Schémas des outils (format OpenAI, compatible OpenRouter & Groq) ─────────
@@ -537,6 +568,38 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'request_form',
+      description: "ZÉNITH (CIBLE 3) — Affiche un formulaire de saisie INLINE dans le chat (au lieu de renvoyer l'utilisateur vers une page). À utiliser QUAND l'IA a besoin d'informations structurées pour agir (ex: email manquant d'un client, montant d'une dépense à ajouter, nom d'un nouveau client). L'utilisateur remplit les champs, puis la commande submit_command (où {field_id} est remplacé par les valeurs) est renvoyée au Copilot. Le nombre de champs doit rester faible (1 à 4).",
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Titre court du formulaire (ex: « Email du client »).' },
+          message: { type: 'string', description: 'Explication affichée au-dessus des champs.' },
+          cta: { type: 'string', description: 'Libellé du bouton de validation (ex: « Enregistrer »).' },
+          submit_command: { type: 'string', description: "Commande renvoyée au Copilot après saisie, avec les tokens {field_id} remplacés. Ex: « enregistre l\\'email {email} pour le client Dupont »." },
+          fields: {
+            type: 'array',
+            description: 'Champs du formulaire (1 à 4).',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', description: 'Identifiant du champ (utilisé comme token {id} dans submit_command).' },
+                label: { type: 'string', description: 'Libellé affiché.' },
+                type: { type: 'string', enum: ['text', 'email', 'number', 'date', 'tel'] },
+                placeholder: { type: 'string' },
+                required: { type: 'boolean' },
+              },
+              required: ['id', 'label'],
+            },
+          },
+        },
+        required: ['submit_command', 'fields'],
+      },
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `Tu es Copilot Factu.me, l'assistant IA expert d'un indépendant ou expert-comptable français. Tu réponds TOUJOURS en français, de façon précise, concrète et concise.
@@ -549,6 +612,7 @@ RÈGLES ABSOLUES :
 5. Pour CRÉER une facture complète, appelle redirect_to_invoice_creator (tu ne crées rien toi-même).
 6. Ta réponse finale est une phrase naturelle courte qui répond directement, ancrée sur les résultats des outils. Ne répète pas la liste brute si une carte structurée l'affiche déjà ; dis l'essentiel.
 7. MÉMOIRE : si l'utilisateur exprime une préférence claire ou un pattern récurrent (ex: « je facture Nathan 500€ par mois », « fais court », « rappelle-moi d'envoyer la DSN le 5 »), appelle save_memory pour le retenir. Exploite la MÉMOIRE À LONG TERME fournie dans le contexte pour personnaliser tes réponses sans redemander.
+8. FORMULAIRES PROACTIFS : si tu as besoin d'une info pour agir (ex: « quel email pour ce client ? », « quel montant pour cette dépense ? »), appelle request_form plutôt que de demander en texte libre. L'utilisateur remplit un champ inline, puis la commande submit_command (tokens {field_id} remplacés) te revient pour exécuter l'action. Ne renvoie JAMAIS l'utilisateur vers une page quand un formulaire inline suffit.
 
 Tu peux aussi répondre à des questions générales (conseils de facturation, délais légaux français) sans outil.`;
 
