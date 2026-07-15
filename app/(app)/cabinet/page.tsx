@@ -442,7 +442,7 @@ export default function CabinetPage() {
             {safeData.alerts.slice(0, 6).map((alert) => (
               <li key={alert.id}>
                 <Link
-                  href={alert.href || '#'}
+                  href={alert.href || '/cabinet'}
                   className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
                 >
                   <div

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, FileText, Receipt, Shield, Loader2, RefreshCw, Download,
   CheckCircle2, Clock, AlertTriangle, XCircle, TrendingUp,
-  Euro, Building2, Mail, Info, RefreshCcw,
+  Euro, Building2, Mail, Info, RefreshCcw, Pencil,
   Car, UtensilsCrossed, Bed, Laptop, Paperclip, ShoppingCart,
   Smartphone, HardDrive, Map, Package, Check, X as XIcon,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getSupabaseClient } from '@/lib/supabase';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
+import EditCabinetClientModal from '@/components/cabinet/EditCabinetClientModal';
 
 type Tab = 'overview' | 'invoices' | 'expenses' | 'health';
 
@@ -35,7 +36,12 @@ interface Expense {
 }
 
 interface ClientData {
-  client?: { id: string; client_user_id: string; status: string; company_name?: string; contact_name?: string; client_type?: string };
+  client?: {
+    id: string; client_user_id: string; status: string; client_type?: string;
+    company_name?: string | null; contact_name?: string | null; contact_email?: string | null;
+    phone?: string | null; address?: string | null; zip_code?: string | null; city?: string | null;
+    siret?: string | null; notes?: string | null;
+  };
   profile?: { company_name?: string; first_name?: string; last_name?: string; email?: string; siret?: string };
   invoices?: Invoice[];
   expenses?: Expense[];
@@ -91,6 +97,7 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
   const [scan, setScan] = useState<{ score: number; issues: { severity: string; message: string }[] } | null>(null);
   const [scanning, setScanning] = useState(false);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const loadData = async (quiet = false) => {
     if (quiet) setRefreshing(true); else setLoading(true);
@@ -213,22 +220,31 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="min-w-0">
               <h1 className="text-xl font-black text-gray-900 dark:text-white truncate">{clientName}</h1>
-              {clientData.profile?.email && (
+              {(c?.contact_email || clientData.profile?.email) && (
                 <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-0.5">
                   <Mail size={12} />
-                  {clientData.profile.email}
+                  {c?.contact_email || clientData.profile?.email}
                 </p>
               )}
             </div>
           </div>
         </div>
-        <button
-          onClick={() => loadData(true)}
-          disabled={refreshing}
-          className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors flex-shrink-0"
-        >
-          <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => setEditing(true)}
+            title="Modifier la fiche client"
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+          >
+            <Pencil size={15} />
+          </button>
+          <button
+            onClick={() => loadData(true)}
+            disabled={refreshing}
+            className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-colors"
+          >
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* KPI Stats */}
@@ -491,6 +507,14 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
           </AnimatePresence>
         </div>
       </div>
+
+      {editing && clientData?.client && (
+        <EditCabinetClientModal
+          client={clientData.client}
+          onClose={() => setEditing(false)}
+          onSaved={() => loadData(true)}
+        />
+      )}
     </motion.div>
     </CabinetGuard>
   );

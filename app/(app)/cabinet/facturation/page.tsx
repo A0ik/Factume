@@ -18,6 +18,7 @@ import {
   SectionCard, DataTable, KpiCard, StatusBadge, Modal, EmptyState, TableSkeleton,
 } from '@/components/cabinet/ui';
 import type { Column } from '@/components/cabinet/ui';
+import { useCabinetEmailCapture } from '@/components/cabinet/CabinetEmailCaptureModal';
 
 interface CabinetInvoice {
   id: string;
@@ -93,6 +94,10 @@ export default function CabinetFacturationPage() {
   const { clients, cabinet } = useCabinetStore();
   const primaryColor = cabinet?.primary_color || '#10b981';
 
+  // PROMÉTHÉE (CIBLE 2 #1) — capture email IN-PLACE quand l'envoi échoue (fini l'impasse
+  // « allez sur la fiche client »). Persiste contact_email puis relance l'envoi.
+  const { promptForEmail, modal: emailCaptureModal } = useCabinetEmailCapture();
+
   const { data: invoices, loading, error, refresh } = useCabinetData<CabinetInvoice[]>(
     '/api/cabinet/invoices',
   );
@@ -162,12 +167,30 @@ export default function CabinetFacturationPage() {
   };
 
   const handleSendEmail = async (inv: CabinetInvoice) => {
+    const doSend = () => cabinetMutation('/api/cabinet/invoices/send', 'POST', { invoiceId: inv.id });
     setSendingId(inv.id);
     try {
-      await cabinetMutation('/api/cabinet/invoices/send', 'POST', { invoiceId: inv.id });
+      await doSend();
       toast.success(`${inv.number} envoyée`);
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'envoi");
+      const msg = err?.message || '';
+      const c: any = inv.client_id ? clients.find((cl: any) => cl.id === inv.client_id) : null;
+      // PROMÉTHÉE — si l'envoi échoue sur email manquant, on saisit l'email IN-PLACE
+      // (persistance PATCH) puis on relance, au lieu d'orienter vers une fiche read-only.
+      if (c && /fiche client/i.test(msg)) {
+        setSendingId(null);
+        const captured = await promptForEmail({ id: c.id, name: clientName(c.id) });
+        if (!captured) return; // annulé
+        setSendingId(inv.id);
+        try {
+          await doSend();
+          toast.success(`${inv.number} envoyée`);
+        } catch (e2: any) {
+          toast.error(e2.message || "Erreur lors de l'envoi");
+        }
+      } else {
+        toast.error(msg || "Erreur lors de l'envoi");
+      }
     } finally {
       setSendingId(null);
     }
@@ -610,6 +633,8 @@ export default function CabinetFacturationPage() {
           </div>
         </div>
       </Modal>
+
+      {emailCaptureModal}
     </motion.div>
   );
 }

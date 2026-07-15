@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { applyIpRateLimit } from '@/lib/rate-limit';
-import { embed, embedForInsert, parseVector, cosineSim } from '@/lib/embeddings';
+import { embed, embedForInsert } from '@/lib/embeddings';
 
 // ---------------------------------------------------------------------------
 // POST /api/copilot/command — Copilot Factu (plan Business).
@@ -59,36 +59,48 @@ const fmtEur = (n: number) => (Number(n) || 0).toFixed(2);
 // (mots-clés), sinon les plus récents. Sert à personnaliser la réponse.
 // (pgvector index existe pour scale futur ; ici recall léger sur batch récent.)
 async function loadMemoryContext(supabase: any, userId: string, query: string): Promise<string> {
+  const MEMORY_HEADER = `\n\nMÉMOIRE À LONG TERME DE L'UTILISATEUR (préférences, habitudes, faits déjà établis — personnalise ta réponse avec, sans redemander) :`;
   try {
-    const { data: memories } = await supabase
+    const qEmb = await embed(query); // null si pas de clé OpenRouter → fallback mot-clé
+
+    // 1) RAG sémantique NATIF pgvector (RPC match_copilot_memory) — scale-ready,
+    //    plus pertinent qu'un cosine en JS sur un batch de 30. PROMÉTHÉE CIBLE 1B.
+    if (qEmb) {
+      const { data: hits, error } = await supabase.rpc('match_copilot_memory', {
+        query_embedding: qEmb,
+        match_user_id: userId,
+        match_count: 8,
+        match_threshold: 0.3,
+      });
+      if (error) {
+        console.warn('[copilot/memory] RPC match_copilot_memory failed, fallback mot-clé:', error.message);
+      } else if (hits && hits.length) {
+        const lines = hits.map((m: any) => `- (${m.kind}) ${m.content}`);
+        return `${MEMORY_HEADER}\n${lines.join('\n')}`;
+      }
+    }
+
+    // 2) Fallback : recall par mots-clés pg_trgm sur le batch récent, sinon récents.
+    const { data: memories, error: mErr } = await supabase
       .from('copilot_memory')
-      .select('kind, content, embedding')
+      .select('kind, content')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(30);
-    if (!memories || !memories.length) return '';
-
-    let picked: any[];
-    const qEmb = await embed(query); // null si pas de clé OpenAI → fallback mot-clé
-    if (qEmb) {
-      // RAG sémantique : similarité cosinus vs l'embedding de la requête.
-      picked = memories
-        .map((m: any) => ({ m, sim: m.embedding ? cosineSim(qEmb, parseVector(m.embedding) || []) : -1 }))
-        .sort((a: any, b: any) => b.sim - a.sim)
-        .filter((s: any) => s.sim > 0.3)
-        .slice(0, 8)
-        .map((s: any) => s.m);
-      if (!picked.length) picked = memories.slice(0, 5); // rien de pertinent → récents
-    } else {
-      // Fallback (pas d'embeddings dispo) : mot-clé, sinon récents.
-      const keywords = normalize(query).split(' ').filter(w => w.length > 3);
-      const hits = memories.filter((m: any) => keywords.some(k => normalize(m.content).includes(k)));
-      picked = (hits.length ? hits : memories).slice(0, 8);
+    if (mErr) {
+      console.warn('[copilot/memory] load fallback failed:', mErr.message);
+      return '';
     }
+    if (!memories || !memories.length) return '';
+    const keywords = normalize(query).split(' ').filter(w => w.length > 3);
+    const kwHits = memories.filter((m: any) => keywords.some(k => normalize(m.content).includes(k)));
+    const picked = (kwHits.length ? kwHits : memories).slice(0, 8);
     if (!picked.length) return '';
     const lines = picked.map((m: any) => `- (${m.kind}) ${m.content}`);
-    return `\n\nMÉMOIRE À LONG TERME DE L'UTILISATEUR (préférences, habitudes, faits déjà établis — personnalise ta réponse avec, sans redemander) :\n${lines.join('\n')}`;
-  } catch {
+    return `${MEMORY_HEADER}\n${lines.join('\n')}`;
+  } catch (e: any) {
+    // PROMÉTHÉE — ne plus avaler silencieusement : une dégradation mémoire doit être visible.
+    console.error('[copilot/memory] loadMemoryContext error:', e?.message || e);
     return '';
   }
 }
@@ -108,7 +120,8 @@ async function loadRecentConversation(supabase: any, userId: string, sessionId: 
       .filter((m: any) => (m.role === 'user' || m.role === 'assistant') && m.content)
       .slice(-6)
       .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 500) }));
-  } catch {
+  } catch (e: any) {
+    console.warn('[copilot/memory] loadRecentConversation failed:', e?.message || e);
     return [];
   }
 }
@@ -650,8 +663,10 @@ function buildProviders(): Provider[] {
   return providers;
 }
 
-async function runAgentLoop(provider: Provider, messages: any[], ctx: ToolCtx): Promise<{ answer: string; card: any }> {
+async function runAgentLoop(provider: Provider, messages: any[], ctx: ToolCtx): Promise<{ answer: string; card: any; toolCalls: number; toolErrors: number }> {
   let lastCard: any = null;
+  let toolCalls = 0;
+  let toolErrors = 0;
   const MAX_ITERS = 6;
 
   for (let iter = 0; iter < MAX_ITERS; iter++) {
@@ -675,16 +690,20 @@ async function runAgentLoop(provider: Provider, messages: any[], ctx: ToolCtx): 
         try { args = JSON.parse(call.function.arguments || '{}'); } catch { args = {}; }
         const executor = TOOL_EXECUTORS[fnName];
         let toolResult: any;
+        toolCalls += 1;
         try {
           if (!executor) {
             toolResult = { error: 'unknown_tool', name: fnName };
+            toolErrors += 1;
           } else {
             const { toolResult: r, card } = await executor(args, ctx);
             toolResult = r;
             if (card) lastCard = card; // la dernière carte d'action gagne
+            if (r && typeof r === 'object' && r.error) toolErrors += 1;
           }
         } catch (e: any) {
           toolResult = { error: 'tool_failed', message: e?.message || 'erreur' };
+          toolErrors += 1;
         }
         messages.push({
           role: 'tool',
@@ -698,11 +717,93 @@ async function runAgentLoop(provider: Provider, messages: any[], ctx: ToolCtx): 
 
     // Pas d'appel d'outil : réponse finale.
     const answer = (msg.content || '').trim();
-    return { answer, card: lastCard };
+    return { answer, card: lastCard, toolCalls, toolErrors };
   }
 
   // Épuisement du budget d'itérations : on renvoie ce qu'on a.
-  return { answer: 'J\'ai besoin de plus de contexte pour répondre précisément. Pouvez-vous préciser votre demande ?', card: lastCard };
+  return { answer: 'J\'ai besoin de plus de contexte pour répondre précisément. Pouvez-vous préciser votre demande ?', card: lastCard, toolCalls, toolErrors };
+}
+
+// PROMÉTHÉE (S2 — Streaming) — Même boucle que runAgentLoop, mais le tour final est
+// diffusé token-par-token via onDelta. Les tours d'outils restent non streamés
+// (on assemble les tool_calls depuis les chunks, on exécute, on boucle).
+async function runAgentLoopStreaming(
+  provider: Provider,
+  messages: any[],
+  ctx: ToolCtx,
+  onDelta: (chunk: string) => void,
+): Promise<{ answer: string; card: any; toolCalls: number; toolErrors: number }> {
+  let lastCard: any = null;
+  let toolCalls = 0;
+  let toolErrors = 0;
+  const MAX_ITERS = 6;
+
+  for (let iter = 0; iter < MAX_ITERS; iter++) {
+    const stream = await provider.client.chat.completions.create({
+      model: provider.model,
+      messages,
+      tools: TOOLS,
+      tool_choice: 'auto',
+      temperature: 0,
+      stream: true,
+    } as any);
+
+    let content = '';
+    const tcMap = new Map<number, { id: string; name: string; args: string }>();
+    for await (const chunk of stream as any) {
+      const delta = chunk?.choices?.[0]?.delta;
+      if (!delta) continue;
+      if (delta.content) { content += delta.content; onDelta(delta.content); }
+      if (Array.isArray(delta.tool_calls)) {
+        for (const tc of delta.tool_calls) {
+          const idx: number = typeof tc.index === 'number' ? tc.index : 0;
+          if (!tcMap.has(idx)) tcMap.set(idx, { id: '', name: '', args: '' });
+          const entry = tcMap.get(idx)!;
+          if (tc.id) entry.id = tc.id;
+          if (tc.function?.name) entry.name = tc.function.name;
+          if (tc.function?.arguments) entry.args += tc.function.arguments;
+        }
+      }
+    }
+
+    const calls = [...tcMap.values()].filter((c) => c.name);
+    if (calls.length > 0) {
+      // Tour d'outils : on exécute et on reboucle (le content éventuel est du bruit).
+      messages.push({
+        role: 'assistant',
+        content: content || null,
+        tool_calls: calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.args } })),
+      });
+      for (const c of calls) {
+        toolCalls += 1;
+        let args: any = {};
+        try { args = JSON.parse(c.args || '{}'); } catch { args = {}; }
+        const executor = TOOL_EXECUTORS[c.name];
+        let toolResult: any;
+        try {
+          if (!executor) {
+            toolResult = { error: 'unknown_tool', name: c.name };
+            toolErrors += 1;
+          } else {
+            const { toolResult: r, card } = await executor(args, ctx);
+            toolResult = r;
+            if (card) lastCard = card;
+            if (r && typeof r === 'object' && r.error) toolErrors += 1;
+          }
+        } catch (e: any) {
+          toolResult = { error: 'tool_failed', message: e?.message || 'erreur' };
+          toolErrors += 1;
+        }
+        messages.push({ role: 'tool', tool_call_id: c.id, name: c.name, content: JSON.stringify(toolResult) });
+      }
+      continue; // nouveau tour
+    }
+
+    // Réponse finale (déjà streamée via onDelta).
+    return { answer: content.trim(), card: lastCard, toolCalls, toolErrors };
+  }
+
+  return { answer: 'J\'ai besoin de plus de contexte pour répondre précisément. Pouvez-vous préciser votre demande ?', card: lastCard, toolCalls, toolErrors };
 }
 
 export async function POST(req: NextRequest) {
@@ -727,7 +828,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const { text, history, sessionId } = await req.json();
+    const { text, history, sessionId, stream } = await req.json();
     if (!text) return NextResponse.json({ error: 'Texte manquant' }, { status: 400 });
 
     const providers = buildProviders();
@@ -758,27 +859,95 @@ export async function POST(req: NextRequest) {
     ];
 
     const ctx: ToolCtx = { userId: user.id, supabase };
+    const sid = sessionId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null);
+
+    // PROMÉTHÉE (S2 — Streaming) — diffusion SSE token-par-token de la réponse finale.
+    // Événements : meta(sessionId) · delta(text) · done({answer,result,confidence,intent}) · error.
+    if (stream) {
+      const encoder = new TextEncoder();
+      const sseBody = new ReadableStream({
+        async start(controller) {
+          const send = (event: string, data: any) =>
+            controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          if (sid) send('meta', { sessionId: sid });
+          let succeeded = false;
+          for (const provider of providers) {
+            try {
+              const { answer, card, toolCalls, toolErrors } = await runAgentLoopStreaming(
+                provider, messages, ctx,
+                (delta: string) => send('delta', { text: delta }),
+              );
+              let confidence: number;
+              if (!answer) confidence = 0.4;
+              else if (toolCalls > 0 && toolErrors >= toolCalls) confidence = 0.5;
+              else if (toolErrors > 0) confidence = 0.7;
+              else if (toolCalls > 0) confidence = 0.95;
+              else confidence = 0.85;
+              const result = card || { type: 'text', message: answer || 'Commande traitée.' };
+              send('done', {
+                answer: answer || card?.message || '',
+                result, confidence,
+                intent: card?.type || 'text',
+                sessionId: sid,
+              });
+              if (sid) {
+                try {
+                  await supabase.from('copilot_conversations').insert([
+                    { user_id: user.id, session_id: sid, role: 'user', content: text },
+                    { user_id: user.id, session_id: sid, role: 'assistant', content: answer || '' },
+                  ]);
+                } catch (e: any) {
+                  console.warn('[copilot/command stream] conversation persist failed:', e?.message || e);
+                }
+              }
+              succeeded = true;
+              break;
+            } catch (err) {
+              console.warn(`[copilot/command stream] provider ${provider.name} failed:`, (err as any)?.message);
+            }
+          }
+          if (!succeeded) send('error', { message: 'Service IA momentanément indisponible' });
+          controller.close();
+        },
+      });
+      return new Response(sseBody, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
 
     // On essaie les providers en ordre (OpenRouter fort d'abord, Groq en repli).
     let lastError: any = null;
     for (const provider of providers) {
       try {
-        const { answer, card } = await runAgentLoop(provider, messages, ctx);
+        const { answer, card, toolCalls, toolErrors } = await runAgentLoop(provider, messages, ctx);
         const result = card || { type: 'text', message: answer || 'Commande traitée.' };
         const intentByCard = card?.type || 'text';
+        // PROMÉTHÉE — confidence RÉELLE (au lieu du hardcodé 1), basée sur la qualité
+        // d'exécution des outils et la présence d'une réponse finale.
+        let confidence: number;
+        if (!answer) confidence = 0.4;
+        else if (toolCalls > 0 && toolErrors >= toolCalls) confidence = 0.5; // tous les outils ont échoué
+        else if (toolErrors > 0) confidence = 0.7; // exécution partielle
+        else if (toolCalls > 0) confidence = 0.95; // outils exécutés avec succès
+        else confidence = 0.85; // réponse générale (sans outil)
         // CIBLE 1 — Persiste la conversation (court-terme, cross-device, survit au refresh).
-        const sid = sessionId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null);
         if (sid) {
           try {
             await supabase.from('copilot_conversations').insert([
               { user_id: user.id, session_id: sid, role: 'user', content: text },
               { user_id: user.id, session_id: sid, role: 'assistant', content: answer || '' },
             ]);
-          } catch {}
+          } catch (e: any) {
+            console.warn('[copilot/memory] conversation persist failed:', e?.message || e);
+          }
         }
         return NextResponse.json({
           intent: intentByCard,
-          confidence: 1,
+          confidence,
           answer: answer || (card?.message || ''),
           result,
           originalText: text,

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const { data: invoices, error: invoicesError } = await admin
       .from('cabinet_invoices')
-      .select('*, client:cabinet_clients(id, profile:profiles!client_user_id(company_name, first_name, last_name))')
+      .select('*, client:cabinet_clients(id, contact_email, contact_name, company_name, profile:profiles!client_user_id(email, company_name, first_name, last_name))')
       .eq('cabinet_id', cabinet.id)
       .or(`status.eq.overdue,and(status.eq.sent,due_date.lt.${today})`)
       .order('due_date', { ascending: true });
@@ -95,10 +95,16 @@ export async function GET(req: NextRequest) {
       allOverdue.push({
         id: inv.id,
         number: inv.number || '',
-        client_name: inv.client?.profile?.company_name
+        // PROMÉTHÉE (CIBLE 2) — client_id exposé pour permettre la capture d'email in-place.
+        client_id: inv.client?.id || null,
+        client_name: inv.client?.company_name
+          || inv.client?.contact_name
+          || inv.client?.profile?.company_name
           || [inv.client?.profile?.first_name, inv.client?.profile?.last_name].filter(Boolean).join(' ')
           || 'Client',
-        client_email: inv.client?.profile?.email || undefined,
+        // PROMÉTHÉE (CIBLE 2 #5) — avant on ignorait contact_email → un client MANUEL
+        // (sans user lié) n'avait JAMAIS d'email même renseigné en base = dead-end relance.
+        client_email: inv.client?.contact_email || inv.client?.profile?.email || undefined,
         total: inv.amount_ttc || inv.total || 0,
         due_date: inv.due_date,
         issue_date: inv.issue_date || '',
@@ -238,12 +244,16 @@ export async function POST(req: NextRequest) {
       if (invoice.client_id) {
         const { data: cabClient } = await admin
           .from('cabinet_clients')
-          .select('profile:profiles!client_user_id(email, company_name, first_name, last_name)')
+          .select('contact_email, contact_name, company_name, profile:profiles!client_user_id(email, company_name, first_name, last_name)')
           .eq('id', invoice.client_id)
           .maybeSingle();
-        const p = (cabClient as any)?.profile;
-        clientEmail = p?.email || null;
-        clientName = p?.company_name
+        const c = cabClient as any;
+        const p = c?.profile;
+        // PROMÉTHÉE (CIBLE 2 #5) — contact_email couvre les clients MANUELS (sans user lié).
+        clientEmail = c?.contact_email || p?.email || null;
+        clientName = c?.company_name
+          || c?.contact_name
+          || p?.company_name
           || [p?.first_name, p?.last_name].filter(Boolean).join(' ')
           || 'Client';
       }

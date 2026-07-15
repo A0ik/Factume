@@ -9,6 +9,7 @@ import {
   ClipboardList, Bell, UserPlus, Settings, Menu, X,
   ChevronRight, Shield, HardHat, FileCheck,
   CalendarClock, ArrowLeftRight, Scale, Wallet, Target,
+  Calculator, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCabinetStore } from '@/stores/cabinetStore';
@@ -37,6 +38,7 @@ const DRAWER_GROUPS: { title?: string; items: { href: string; icon: LucideIcon; 
       { href: '/cabinet/clients', icon: Users, label: 'Clients' },
       { href: '/cabinet/facturation', icon: FileText, label: 'Facturation' },
       { href: '/cabinet/relances', icon: Bell, label: 'Relances' },
+      { href: '/cabinet/messagerie', icon: MessageSquare, label: 'Messagerie' },
     ],
   },
   {
@@ -55,6 +57,7 @@ const DRAWER_GROUPS: { title?: string; items: { href: string; icon: LucideIcon; 
     items: [
       { href: '/cabinet/echeances', icon: CalendarClock, label: 'Échéances' },
       { href: '/cabinet/reconciliation', icon: ArrowLeftRight, label: 'Réconciliation' },
+      { href: '/cabinet/comptabilite', icon: Calculator, label: 'Comptabilité' },
       { href: '/cabinet/juridique', icon: Scale, label: 'Juridique' },
     ],
   },
@@ -75,6 +78,8 @@ function sectionTitle(pathname: string): string {
     '/cabinet/clients': 'Portefeuille clients',
     '/cabinet/facturation': 'Suivi facturation',
     '/cabinet/relances': 'Relances automatiques',
+    '/cabinet/messagerie': 'Messagerie client',
+    '/cabinet/comptabilite': 'Comptabilité & TVA',
     '/cabinet/paie': 'Paie',
     '/cabinet/salaries': 'Dossiers salariés',
     '/cabinet/dsn': 'DSN',

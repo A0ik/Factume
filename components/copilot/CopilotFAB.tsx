@@ -19,6 +19,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useDataStore } from '@/stores/dataStore';
 import { useRelanceGuard } from '@/components/invoices/RelanceGuard';
+import { useGroqVoiceRecorder } from './useGroqVoiceRecorder';
 
 interface CopilotResult {
   type: string;
@@ -255,6 +256,19 @@ function ResultCard({ result, onNavigate, onSendReminder, onSubmitForm, sendingR
   }
 }
 
+// PROMÉTHÉE (S2) — Parser SSE léger pour le streaming Copilot.
+function parseSSE(raw: string): { name: string; data: any } | null {
+  let name = 'message';
+  const dataLines: string[] = [];
+  for (const line of raw.split('\n')) {
+    if (line.startsWith('event:')) name = line.slice(6).trim();
+    else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+  }
+  if (!dataLines.length) return null;
+  try { return { name, data: JSON.parse(dataLines.join('\n')) }; }
+  catch { return null; }
+}
+
 export default function CopilotFAB() {
   const { canUseCopilot } = useSubscription();
   const { invoices } = useDataStore();
@@ -274,6 +288,13 @@ export default function CopilotFAB() {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const msgId = useRef(0);
+  // PROMÉTHÉE (CIBLE 1A) — refs miroirs pour des handlers vocaux sans closure périmée.
+  const loadingRef = useRef(false);
+  loadingRef.current = loading;
+  const listeningRef = useRef(false);
+  const wantListeningRef = useRef(false); // keep-alive : l'utilisateur maintient le micro
+  const pendingTranscriptRef = useRef<string | null>(null); // transcript mis en file si l'IA traite déjà
+  const [micDenied, setMicDenied] = useState(false);
 
   // ── CIBLE 1 : Drag-and-drop Pointer Events (souris PC + doigt mobile) + persistance ──
   // La position est sauvegardée (localStorage instantané + Supabase copilot_preferences
@@ -383,22 +404,9 @@ export default function CopilotFAB() {
     })();
   }, [open]);
 
-  const sendCommand = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || loading) return;
-    setInput('');
-    const userMsg: Message = { id: ++msgId.current, role: 'user', text: trimmed };
-    setMessages((m) => [...m, userMsg]);
-    setLoading(true);
+  // Repli non-streaming (si le SSE échoue ou n'est pas supporté).
+  const postJsonAndAppend = useCallback(async (trimmed: string, history: any[]) => {
     try {
-      // PROMÉTHÉE — mémoire conversationnelle : on renvoie les derniers échanges
-      // (texte uniquement, sans les cartes structurées) pour permettre les relances
-      // et questions de suivi (« et pour Nathan ? »).
-      const history = messages
-        .filter((m) => !m.error)
-        .slice(-6)
-        .map((m) => ({ role: m.role, content: m.text }));
-
       const res = await fetch('/api/copilot/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -416,20 +424,88 @@ export default function CopilotFAB() {
         setMessages((m) => [...m, { id: ++msgId.current, role: 'assistant', text: errMsg, error: true }]);
         return;
       }
-      // La réponse naturelle de l'IA (answer) prime sur le message générique du résultat.
       const fallbackText = data.answer || data.result?.message || 'Voici ce que j\'ai trouvé.';
-      setMessages((m) => [...m, {
-        id: ++msgId.current,
-        role: 'assistant',
-        text: fallbackText,
-        result: data.result,
-      }]);
+      setMessages((m) => [...m, { id: ++msgId.current, role: 'assistant', text: fallbackText, result: data.result }]);
     } catch {
       setMessages((m) => [...m, { id: ++msgId.current, role: 'assistant', text: 'Connexion impossible. Réessayez.', error: true }]);
+    }
+  }, []);
+
+  const sendCommand = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+    setInput('');
+    setMessages((m) => [...m, { id: ++msgId.current, role: 'user', text: trimmed }]);
+    setLoading(true);
+
+    // Mémoire conversationnelle : derniers échanges (texte seul) pour le suivi.
+    const history = messages
+      .filter((mm) => !mm.error)
+      .slice(-6)
+      .map((mm) => ({ role: mm.role, content: mm.text }));
+
+    // PROMÉTHÉE (S2) — streaming SSE : on crée un message assistant vide mis à jour
+    // au fil des deltas, puis on l'enrichit avec la carte au done.
+    const assistantId = ++msgId.current;
+    setMessages((m) => [...m, { id: assistantId, role: 'assistant', text: '' }]);
+    try {
+      const res = await fetch('/api/copilot/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmed, history, sessionId: sessionIdRef.current, stream: true }),
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok || !res.body || !ct.includes('text/event-stream')) {
+        throw new Error('no-stream');
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let answerText = '';
+      let doneData: any = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sep: number;
+        while ((sep = buffer.indexOf('\n\n')) >= 0) {
+          const evt = parseSSE(buffer.slice(0, sep));
+          buffer = buffer.slice(sep + 2);
+          if (!evt) continue;
+          if (evt.name === 'meta' && evt.data?.sessionId) {
+            sessionIdRef.current = evt.data.sessionId;
+            try { localStorage.setItem('copilot-session-id', evt.data.sessionId); } catch {}
+          } else if (evt.name === 'delta') {
+            answerText += evt.data?.text || '';
+            setMessages((m) => m.map((mm) => (mm.id === assistantId ? { ...mm, text: answerText } : mm)));
+          } else if (evt.name === 'done') {
+            doneData = evt.data;
+          } else if (evt.name === 'error') {
+            throw new Error(evt.data?.message || 'Service IA indisponible');
+          }
+        }
+      }
+      if (doneData) {
+        if (doneData.sessionId) {
+          sessionIdRef.current = doneData.sessionId;
+          try { localStorage.setItem('copilot-session-id', doneData.sessionId); } catch {}
+        }
+        setMessages((m) => m.map((mm) => (mm.id === assistantId ? {
+          ...mm,
+          text: doneData.answer || answerText || doneData.result?.message || 'Voici ce que j\'ai trouvé.',
+          result: doneData.result,
+        } : mm)));
+      } else if (!answerText.trim()) {
+        throw new Error('empty');
+      }
+    } catch {
+      // Repli JSON : on retire le placeholder streamé puis on tente le chemin classique.
+      setMessages((m) => m.filter((mm) => mm.id !== assistantId));
+      await postJsonAndAppend(trimmed, history);
     } finally {
       setLoading(false);
     }
-  }, [loading, messages]);
+  }, [loading, messages, postJsonAndAppend]);
 
   // ATHÉNA — envoie VRAIMENT la relance depuis le brouillon du Copilot. Avant, le
   // brouillon était un dead-end (aucun bouton). Route /api/reminders/send avec
@@ -470,18 +546,59 @@ export default function CopilotFAB() {
   const sendCommandRef = useRef(sendCommand);
   sendCommandRef.current = sendCommand;
 
-  // ── Reconnaissance vocale (SpeechRecognition API) ──
+  // PROMÉTHÉE (S3) — Recorder Groq Whisper = chemin PRIMAIRE du micro (multi-navigateur,
+  // robuste). La Web Speech API (ci-dessous) sert de repli si MediaRecorder est absent.
+  const groqVoice = useGroqVoiceRecorder({
+    onTranscript: (text) => {
+      setInput(text);
+      if (loadingRef.current) pendingTranscriptRef.current = text;
+      else sendCommandRef.current(text);
+    },
+  });
+  const useGroqVoice = groqVoice.supported;
+
+  // Surface les erreurs du recorder Groq en toast.
+  useEffect(() => {
+    if (groqVoice.error) toast.error(groqVoice.error);
+  }, [groqVoice.error]);
+
+  // ── Reconnaissance vocale (Web Speech API) — rebuild robuste PROMÉTHÉE ──
+  // Cause racine PROUVÉE du « micro cassé » : (1) aucun check isSecureContext → la
+  // Web Speech API exige HTTPS, rec.start() échouait en silence ; (2) garde fatale
+  // `if (loading) return` dans sendCommand → le transcript vocal était DROPPÉ quand
+  // l'IA traitait déjà ; (3) continuous:false coupait au 1er silence sans redémarrage ;
+  // (4) rec.start() jette InvalidStateError avalé ; (5) instance jamais recréée après
+  // erreur. Tout cela est corrigé ci-dessous.
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { setSupported(false); return; }
+    if (!SR || typeof window === 'undefined' || !window.isSecureContext) {
+      setSupported(false);
+    }
+  }, []);
+
+  const stopRecognition = useCallback(() => {
+    wantListeningRef.current = false;
+    listeningRef.current = false;
+    setListening(false);
+    const rec = recognitionRef.current;
+    recognitionRef.current = null;
+    if (rec) { try { rec.stop(); } catch { /* noop */ } }
+  }, []);
+
+  const startRecognition = useCallback(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR || typeof window === 'undefined' || !window.isSecureContext) {
+      setSupported(false);
+      toast.error('Reconnaissance vocale indisponible — nécessite Chrome ou Edge en HTTPS.');
+      return;
+    }
+    // Instance fraîche à chaque démarrage : évite l'instance « morte » après une erreur.
     const rec = new SR();
     rec.lang = 'fr-FR';
-    rec.continuous = false;
+    rec.continuous = true; // autorise les pauses ; le keep-alive (onend) maintient le micro
     rec.interimResults = true;
+
     rec.onresult = (e: any) => {
-      // PROMÉTHÉE — on affiche le transcript INTERMÉDIAIRE en direct dans le champ.
-      // Avant, seul le résultat final remplissait l'input → le micro semblait cassé
-      // (aucun feedback pendant la parole).
       let interim = '';
       let finalText = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -490,25 +607,81 @@ export default function CopilotFAB() {
         else interim += transcript;
       }
       if (finalText) {
-        setInput(finalText);
-        rec.stop();
-        sendCommandRef.current(finalText); // envoi automatique du transcript final
+        finalText = finalText.trim();
+        if (finalText) setInput(finalText);
+        wantListeningRef.current = false; // phrase finale reçue → pas de keep-alive
+        try { rec.stop(); } catch { /* noop */ }
+        // PROMÉTHÉE — ne DROP PLUS le transcript si l'IA est en cours : on le met en file,
+        // il sera envoyé dès que loading repasse à false (useEffect ci-dessous).
+        if (loadingRef.current) {
+          pendingTranscriptRef.current = finalText;
+        } else {
+          sendCommandRef.current(finalText);
+        }
       } else if (interim) {
-        setInput(interim);
+        setInput(interim); // feedback live pendant la parole
       }
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = (e: any) => {
+
+    rec.onend = () => {
+      if (rec !== recognitionRef.current) return; // instance périmée
+      // Keep-alive : tant que l'utilisateur veut écouter, on relance (la Web Speech API
+      // s'arroute automatiquement après un silence ; ce restart maintient le micro actif).
+      if (wantListeningRef.current) {
+        try { rec.start(); return; } catch { /* retombé ci-dessous */ }
+      }
+      listeningRef.current = false;
       setListening(false);
-      // PROMÉTHÉE — guidage explicite selon la cause (permission vs indispo).
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        toast.error('Microphone bloqué — autorisez l\'accès au micro dans votre navigateur.');
-      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        toast.error('Reconnaissance vocale indisponible');
-      }
     };
+
+    rec.onerror = (e: any) => {
+      console.warn('[copilot/voice] SpeechRecognition error:', e?.error);
+      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed') {
+        setMicDenied(true);
+        wantListeningRef.current = false;
+        listeningRef.current = false;
+        setListening(false);
+        toast.error('Microphone bloqué — cliquez sur le cadenas 📍 du navigateur et autorisez le micro.');
+      } else if (e?.error === 'network' || e?.error === 'audio-capture') {
+        wantListeningRef.current = false;
+        listeningRef.current = false;
+        setListening(false);
+        toast.error('Reconnaissance vocale indisponible (micro ou connexion).');
+      } else if (e?.error && e.error !== 'no-speech' && e.error !== 'aborted') {
+        toast.error('Reconnaissance vocale indisponible.');
+      }
+      // no-speech / aborted : silencieux ; le keep-alive (onend) relancera si besoin.
+    };
+
     recognitionRef.current = rec;
-    return () => { try { rec.abort(); } catch { /* noop */ } };
+    wantListeningRef.current = true;
+    try {
+      rec.start();
+      listeningRef.current = true;
+      setListening(true);
+      setMicDenied(false);
+    } catch (err) {
+      // InvalidStateError : la session précédente n'était pas terminée — on nettoie.
+      console.warn('[copilot/voice] start() threw:', (err as any)?.message);
+      try { rec.abort(); } catch { /* noop */ }
+    }
+  }, []);
+
+  // Consomme le transcript mis en file dès que l'IA a fini de traiter la commande précédente.
+  useEffect(() => {
+    if (!loading && pendingTranscriptRef.current) {
+      const pending = pendingTranscriptRef.current;
+      pendingTranscriptRef.current = null;
+      sendCommandRef.current(pending);
+    }
+  }, [loading]);
+
+  // Cleanup au démontage : libère le micro.
+  useEffect(() => {
+    return () => {
+      wantListeningRef.current = false;
+      try { recognitionRef.current?.abort(); } catch { /* noop */ }
+    };
   }, []);
 
   // ── Auto-scroll bas de conversation ──
@@ -523,15 +696,33 @@ export default function CopilotFAB() {
     return () => window.removeEventListener('copilot:open', handler);
   }, []);
 
-  const toggleMic = () => {
-    const rec = recognitionRef.current;
-    if (!rec) return;
-    if (listening) { rec.stop(); setListening(false); }
-    else {
-      setInput(''); // repartir d'un champ vide pour voir le transcript live
-      try { rec.start(); setListening(true); } catch { /* déjà actif */ }
+  const toggleMic = useCallback(async () => {
+    // Pre-check permission commun (Groq + Web Speech).
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as any).permissions?.query) {
+        const perm = await (navigator as any).permissions.query({ name: 'microphone' });
+        if (perm.state === 'denied') {
+          setMicDenied(true);
+          toast.error('Microphone bloqué — cliquez sur le cadenas 📍 du navigateur et autorisez le micro.');
+          return;
+        }
+      }
+    } catch { /* permissions API indispo : on laisse start() gérer */ }
+
+    // PROMÉTHÉE (S3) — chemin PRIMAIRE Groq Whisper (multi-navigateur).
+    if (useGroqVoice) {
+      if (groqVoice.listening) { groqVoice.stop(); return; }
+      setMicDenied(false);
+      setInput('');
+      await groqVoice.start();
+      return;
     }
-  };
+    // Repli Web Speech API.
+    if (listeningRef.current) { stopRecognition(); return; }
+    setMicDenied(false);
+    setInput('');
+    startRecognition();
+  }, [useGroqVoice, groqVoice, startRecognition, stopRecognition]);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -539,6 +730,9 @@ export default function CopilotFAB() {
   };
 
   // ── Auto-gating : Business uniquement (après tous les hooks) ──
+  // Le micro est disponible si Groq (primaire) OU Web Speech (repli) est supporté.
+  const voiceAvailable = useGroqVoice || supported;
+  const isListening = useGroqVoice ? groqVoice.listening : listening;
   if (!canUseCopilot) return null;
 
   return (
@@ -682,19 +876,22 @@ export default function CopilotFAB() {
 
               {/* Barre de saisie */}
               <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-border bg-background px-3 py-3">
-                {supported && (
+                {voiceAvailable ? (
                   <button
                     type="button"
                     onClick={toggleMic}
-                    aria-label={listening ? 'Arrêter le micro' : 'Parler'}
+                    aria-label={isListening ? 'Arrêter le micro' : 'Parler'}
+                    title={micDenied ? 'Micro bloqué — cliquez sur le cadenas du navigateur.' : isListening ? 'Arrêter' : 'Parler'}
                     className={cn(
                       'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all',
-                      listening
+                      isListening
                         ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30'
-                        : 'bg-muted text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600',
+                        : micDenied
+                          ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20'
+                          : 'bg-muted text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600',
                     )}
                   >
-                    {listening ? (
+                    {isListening ? (
                       <span className="relative">
                         <MicOff size={18} />
                         <span className="absolute -inset-2 -z-10 animate-ping rounded-full bg-red-500/40" />
@@ -703,12 +900,21 @@ export default function CopilotFAB() {
                       <Mic size={18} />
                     )}
                   </button>
+                ) : (
+                  // PROMÉTHÉE — au lieu de masquer le micro (l'utilisateur croyait le bouton absent),
+                  // on l'affiche désactivé avec une explication claire.
+                  <span
+                    title="Reconnaissance vocale indisponible — utilisez un navigateur récent en HTTPS."
+                    className="flex h-10 w-10 shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-muted text-muted-foreground opacity-50"
+                  >
+                    <MicOff size={18} />
+                  </span>
                 )}
                 <input
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={listening ? 'Écoute en cours…' : 'Écrivez une commande…'}
+                  placeholder={isListening ? (useGroqVoice ? 'Parlez, puis cliquez pour transcrire…' : 'Écoute en cours…') : 'Écrivez une commande…'}
                   className="h-10 flex-1 rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20"
                 />
                 <button

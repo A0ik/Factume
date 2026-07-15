@@ -38,7 +38,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Accès non autorisé à ce client' }, { status: 403 });
     }
 
-    const data = await getClientAggregatedData(client.client_user_id);
+    const data: any = await getClientAggregatedData(client.client_user_id);
+
+    // PROMÉTHÉE (CIBLE 2 #6) — un client MANUEL (sans user lié) n'a pas de données
+    // agrégées tenant (client_user_id null → tout vide). On ajoute donc ses factures
+    // d'honoraires cabinet (cabinet_invoices où client_id pointe vers ce cabinet_client)
+    // pour que sa fiche ne soit plus vide.
+    try {
+      const { data: cabInvoices } = await admin
+        .from('cabinet_invoices')
+        .select('id, number, amount_ttc, status, issue_date')
+        .eq('cabinet_id', cabinet.id)
+        .eq('client_id', client.id)
+        .order('issue_date', { ascending: false });
+      if (cabInvoices && cabInvoices.length) {
+        const mapped = cabInvoices.map((ci: any) => ({
+          id: ci.id,
+          number: ci.number,
+          total: Number(ci.amount_ttc) || 0,
+          status: ci.status,
+          issue_date: ci.issue_date,
+          document_type: 'invoice',
+        }));
+        data.invoices = [...mapped, ...(Array.isArray(data.invoices) ? data.invoices : [])];
+      }
+    } catch (e) {
+      console.warn('[cabinet/clients/data] cabinet_invoices merge failed:', (e as any)?.message);
+    }
 
     return NextResponse.json(data);
   } catch (err: any) {

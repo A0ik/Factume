@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Users, FileText, Bell, Wallet, HardHat, Shield,
   FileCheck, ClipboardList, Target, CalendarClock, Scale, ArrowLeftRight,
-  Calendar, BarChart3, UserPlus, Settings,
+  Calendar, BarChart3, UserPlus, Settings, Calculator, MessageSquare,
   ChevronLeft, ArrowLeftRight as ArrowBack,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/cabinet/clients', icon: Users, label: 'Clients' },
       { href: '/cabinet/facturation', icon: FileText, label: 'Facturation' },
       { href: '/cabinet/relances', icon: Bell, label: 'Relances' },
+      { href: '/cabinet/messagerie', icon: MessageSquare, label: 'Messagerie' },
     ],
   },
   {
@@ -60,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/cabinet/echeances', icon: CalendarClock, label: 'Échéances' },
       { href: '/cabinet/reconciliation', icon: ArrowLeftRight, label: 'Réconciliation' },
+      { href: '/cabinet/comptabilite', icon: Calculator, label: 'Comptabilité' },
       { href: '/cabinet/juridique', icon: Scale, label: 'Juridique' },
     ],
   },

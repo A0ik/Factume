@@ -17,10 +17,12 @@ import {
   SectionCard, DataTable, KpiCard, StatusBadge, EmptyState, TableSkeleton,
 } from '@/components/cabinet/ui';
 import type { Column } from '@/components/cabinet/ui';
+import { useCabinetEmailCapture } from '@/components/cabinet/CabinetEmailCaptureModal';
 
 interface OverdueInvoice {
   id: string;
   number: string;
+  client_id?: string | null;
   client_name: string;
   client_email?: string;
   total: number;
@@ -71,35 +73,40 @@ export default function CabinetRelancesPage() {
   const { cabinet } = useCabinetStore();
   const primaryColor = cabinet?.primary_color || '#10b981';
 
+  // PROMÉTHÉE (CIBLE 2 #2) — capture email IN-PLACE pour les relances.
+  const { promptForEmail, modal: emailCaptureModal } = useCabinetEmailCapture();
+
   const { data, loading, error, refresh } = useCabinetData<ReminderData>('/api/cabinet/reminders', { wholeObject: true });
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
   const [batchSending, setBatchSending] = useState(false);
   const [filterLevel, setFilterLevel] = useState<number | null>(null);
 
+  const doSend = async (invoiceId: string, level: number) => {
+    const result: any = await cabinetMutation('/api/cabinet/reminders', 'POST', { invoice_id: invoiceId, level, confirmed: true });
+    clearCabinetCache('/api/cabinet/reminders');
+    if (result?.pendingEmail) {
+      toast.warning('Relance enregistrée — email du client cabinet manquant.');
+    } else {
+      toast.success('Relance envoyée');
+    }
+    await refresh();
+  };
+
   const handleSend = async (invoiceId: string, level: number) => {
-    // ZÉNITH (CIBLE 1) — garde bloquante : pas d'email cabinet → on bloque l'envoi
-    // (aucune impasse silencieuse). Le client cabinet vit dans `profiles`, pas dans
-    // `clients` : on oriente donc vers la fiche client cabinet plutôt que de saisir
-    // l'email ici (écriture sur une autre table).
     const inv = data?.invoices?.find((i) => i.id === invoiceId);
+    // PROMÉTHÉE — plus d'impasse « allez sur la fiche » : on saisit l'email ici même
+    // (PATCH cabinet_clients.contact_email) puis on relance. Nécessite le client_id.
     if (inv && !inv.client_email) {
-      toast.error(
-        `Aucun email pour ${inv.client_name || 'ce client cabinet'}. Ajoutez-le sur sa fiche client puis relancez.`,
-      );
-      return;
+      if (!inv.client_id) {
+        toast.error(`Aucun email pour ${inv.client_name || 'ce client'}. Ouvrez sa fiche pour l'ajouter.`);
+        return;
+      }
+      const captured = await promptForEmail({ id: inv.client_id, name: inv.client_name });
+      if (!captured) return; // annulé
     }
     setSendingIds((p) => new Set(p).add(invoiceId));
     try {
-      // ARGOS — route existante /api/cabinet/reminders, payload snake_case.
-      const result: any = await cabinetMutation('/api/cabinet/reminders', 'POST', { invoice_id: invoiceId, level, confirmed: true });
-      clearCabinetCache('/api/cabinet/reminders');
-      // ASTRÉE (CIBLE 1) — honnête : si le client cabinet n'a pas d'email, on le dit.
-      if (result?.pendingEmail) {
-        toast.warning('Relance enregistrée — email du client cabinet manquant.');
-      } else {
-        toast.success('Relance envoyée');
-      }
-      await refresh();
+      await doSend(invoiceId, level);
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'envoi");
     } finally {
@@ -375,6 +382,8 @@ export default function CabinetRelancesPage() {
           />
         )}
       </SectionCard>
+
+      {emailCaptureModal}
     </motion.div>
   );
 }
