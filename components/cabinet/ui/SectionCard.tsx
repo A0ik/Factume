@@ -27,9 +27,9 @@ export function SectionCard({
   noPadding,
 }: SectionCardProps) {
   return (
-    <section className={cn('rounded-2xl border border-gray-200 bg-white shadow-sm', className)}>
+    <section className={cn('rounded-2xl border border-border bg-card shadow-sm', className)}>
       {(title || action) && (
-        <header className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
+        <header className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border">
           {Icon && (
             <span
               className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -39,7 +39,7 @@ export function SectionCard({
             </span>
           )}
           {title && (
-            <h3 className="font-bold text-gray-900 text-sm flex-1 truncate flex items-center gap-2">
+            <h3 className="font-bold text-card-foreground text-sm flex-1 truncate flex items-center gap-2">
               {title}
               {badge}
             </h3>

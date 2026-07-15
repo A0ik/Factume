@@ -28,18 +28,16 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Groups façon « Lexis Cabinet » : une pastille colorée par domaine.
+// ASTRÉE (CIBLE 2c) — Refonte Pennylane : 4 groupes clairs au lieu de 6 éparpillés.
+//   1. Pilotage (sans titre) — Dashboard, Clients, Facturation, Relances
+//   2. Social & Paie — tout le RH unifié
+//   3. Conformité — échéances, réconciliation, juridique
+//   4. Outils (sans titre) — agenda, analytics, invitations, paramètres
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { href: '/cabinet', icon: LayoutDashboard, label: 'Dashboard' },
       { href: '/cabinet/clients', icon: Users, label: 'Clients' },
-    ],
-  },
-  {
-    title: 'Facturation',
-    accent: '#ef4444',
-    items: [
       { href: '/cabinet/facturation', icon: FileText, label: 'Facturation' },
       { href: '/cabinet/relances', icon: Bell, label: 'Relances' },
     ],
@@ -50,31 +48,25 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/cabinet/paie', icon: Wallet, label: 'Paie' },
       { href: '/cabinet/salaries', icon: HardHat, label: 'Salariés' },
-      { href: '/cabinet/dsn', icon: Shield, label: 'DSN' },
       { href: '/cabinet/dpae', icon: FileCheck, label: 'DPAE' },
+      { href: '/cabinet/dsn', icon: Shield, label: 'DSN' },
       { href: '/cabinet/contrats', icon: ClipboardList, label: 'Contrats' },
       { href: '/cabinet/missions', icon: Target, label: 'Missions' },
     ],
   },
   {
-    title: 'Fiscal & Juridique',
+    title: 'Conformité',
     accent: '#f59e0b',
     items: [
       { href: '/cabinet/echeances', icon: CalendarClock, label: 'Échéances' },
-      { href: '/cabinet/juridique', icon: Scale, label: 'Juridique' },
       { href: '/cabinet/reconciliation', icon: ArrowLeftRight, label: 'Réconciliation' },
+      { href: '/cabinet/juridique', icon: Scale, label: 'Juridique' },
     ],
   },
   {
-    title: 'Organisation',
-    accent: '#3b82f6',
     items: [
       { href: '/cabinet/agenda', icon: Calendar, label: 'Agenda' },
       { href: '/cabinet/analytics', icon: BarChart3, label: 'Analytics' },
-    ],
-  },
-  {
-    items: [
       { href: '/cabinet/invitations', icon: UserPlus, label: 'Invitations' },
       { href: '/cabinet/settings', icon: Settings, label: 'Paramètres' },
     ],
@@ -104,14 +96,10 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
       initial={false}
       animate={{ width: collapsed ? 68 : 264 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="hidden lg:flex flex-col h-screen sticky top-0 border-r border-gray-200 bg-white overflow-hidden flex-shrink-0 z-40"
+      className="hidden lg:flex flex-col h-screen sticky top-0 border-r border-border bg-card overflow-hidden flex-shrink-0 z-40"
     >
-      {/* ─── Header : marque du cabinet ───
-          PROMÉTHÉE — le logo reste ANCRÉ À GAUCHE (px-4 constant) dans les deux
-          états. Avant, le header basculait entre `px-4` (déployé) et `justify-center`
-          (collapsé) → le logo glissait horizontalement pendant l'animation de largeur.
-          En mode collapsé, le logo devient le bouton de dépliage (pas de chevauchement). */}
-      <div className="flex items-center gap-3 h-16 flex-shrink-0 border-b border-gray-100 px-4">
+      {/* ─── Header : marque du cabinet ─── */}
+      <div className="flex items-center gap-3 h-16 flex-shrink-0 border-b border-border px-4">
         {collapsed ? (
           <button
             onClick={onToggle}
@@ -125,12 +113,12 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
           <>
             <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 truncate">{brandName}</p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Expert-Comptable</p>
+              <p className="text-sm font-bold text-foreground truncate">{brandName}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Expert-Comptable</p>
             </div>
             <button
               onClick={onToggle}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"
               aria-label="Replier le menu"
             >
               <ChevronLeft size={16} />
@@ -141,7 +129,7 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
 
       {/* ─── Switcher multi-cabinets ─── */}
       {!collapsed && (
-        <div className="px-3 py-2.5 border-b border-gray-100">
+        <div className="px-3 py-2.5 border-b border-border">
           <CabinetSwitcher />
         </div>
       )}
@@ -156,7 +144,7 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
                   className="w-1.5 h-1.5 rounded-sm flex-shrink-0"
                   style={{ backgroundColor: group.accent || '#6b7280' }}
                 />
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   {group.title}
                 </p>
               </div>
@@ -173,8 +161,8 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
                       'flex items-center gap-3 rounded-xl transition-colors group relative',
                       collapsed ? 'w-11 h-11 mx-auto justify-center' : 'h-10 px-3',
                       active
-                        ? 'bg-gray-100 dark:bg-white/[0.07] text-gray-900 dark:text-white font-semibold'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/[0.04] font-medium',
+                        ? 'bg-muted text-foreground font-semibold'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted font-medium',
                     )}
                   >
                     {active && (
@@ -202,14 +190,14 @@ export default function CabinetSidebar({ collapsed, onToggle }: CabinetSidebarPr
       {/* ─── Footer ─── */}
       <div
         className={cn(
-          'border-t border-gray-100 flex-shrink-0',
+          'border-t border-border flex-shrink-0',
           collapsed ? 'p-2' : 'p-3',
         )}
       >
         <Link
           href="/dashboard"
           className={cn(
-            'flex items-center gap-3 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors',
+            'flex items-center gap-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
             collapsed ? 'w-11 h-11 mx-auto justify-center' : 'h-10 px-3',
           )}
           title="Retour à l'app"

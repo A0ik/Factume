@@ -174,7 +174,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     features: [
       'Tout le plan Pro',
       'OCR multi-factures (lot, type Dext)',
-      '50 cabinets',
+      '1 cabinet comptable',
       'Comptable Connect',
       'Copilot Factu IA (avancé)',
       'Multi-utilisateur (5)',
@@ -183,7 +183,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
     limits: {
       invoicesPerMonth: null,
       quotesPerMonth: null,
-      maxCabinets: 50,
+      maxCabinets: 1,
       maxClientsCRM: null,
       maxUsers: 5,
       voiceCommandsPerMonth: null,

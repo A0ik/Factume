@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
     const { name, siret } = await req.json();
     if (!name) return NextResponse.json({ error: 'Nom du cabinet requis' }, { status: 400 });
 
-    // PROMÉTHÉE — Guard serveur maxCabinets (Business = 5).
+    // PROMÉTHÉE/ASTRÉE — Guard serveur maxCabinets (Business = 1).
     // Les cabinets existants (éventuellement > limite) sont conservés (grandfathering),
     // mais on bloque toute NOUVELLE création au-delà du plafond du plan.
     const maxCabinets = sub.plan?.limits?.maxCabinets ?? 1;

@@ -20,7 +20,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, active, onChange, accent = '#10b981', className }: TabsProps) {
   return (
-    <div className={cn('flex items-center gap-1 overflow-x-auto border-b border-gray-200 scrollbar-none', className)}>
+    <div className={cn('flex items-center gap-1 overflow-x-auto border-b border-border scrollbar-none', className)}>
       {tabs.map((tab) => {
         const isActive = tab.id === active;
         const Icon = tab.icon;
@@ -31,8 +31,8 @@ export function Tabs({ tabs, active, onChange, accent = '#10b981', className }: 
             className={cn(
               'relative flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors -mb-px border-b-2',
               isActive
-                ? 'text-gray-900'
-                : 'text-gray-500 hover:text-gray-700 border-transparent',
+                ? 'text-foreground'
+                : 'text-muted-foreground hover:text-foreground border-transparent',
             )}
             style={isActive ? { borderColor: accent } : undefined}
           >
@@ -42,7 +42,7 @@ export function Tabs({ tabs, active, onChange, accent = '#10b981', className }: 
               <span
                 className={cn(
                   'ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold',
-                  isActive ? 'text-white' : 'bg-gray-100 text-gray-600',
+                  isActive ? 'text-white' : 'bg-muted text-muted-foreground',
                 )}
                 style={isActive ? { backgroundColor: accent } : undefined}
               >

@@ -28,7 +28,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<'theme' | 'form'>('theme');
 
   // BASTION (CIBLE 2) — État du code OTP.
-  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '', '', '']);
   const [otpError, setOtpError] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -66,7 +66,7 @@ export default function RegisterPage() {
     } catch (err: any) {
       if (err.message === 'CONFIRM_EMAIL') {
         setConfirmEmail(true);
-        setOtp(['', '', '', '', '', '']);
+        setOtp(['', '', '', '', '', '', '', '']);
         setOtpError('');
         // Focus le premier chiffre dès l'affichage
         setTimeout(() => inputRefs.current[0]?.focus(), 50);
@@ -91,26 +91,24 @@ export default function RegisterPage() {
     }
   };
 
-  // ASTRÉE (CIBLE 2) — Front résilient : on colle le code tel que Supabase l'envoie.
-  // 6 chiffres est le standard, mais si la config Auth renvoie 8 (réglage dashboard),
-  // on étend dynamiquement à 8 cases pour ne jamais bloquer l'utilisateur.
+  // ASTRÉE — Supabase envoie un OTP à 8 chiffres (réglage Auth du projet hébergé).
+  // On colle le code tel quel dans 8 cases fixes.
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 8);
     if (!digits.length) return;
-    const size = digits.length > 6 ? 8 : 6;
-    const next = Array.from({ length: size }, (_, i) => digits[i] ?? '');
+    const next = Array.from({ length: 8 }, (_, i) => digits[i] ?? '');
     setOtp(next);
     setOtpError('');
-    inputRefs.current[Math.min(digits.length, size - 1)]?.focus();
+    inputRefs.current[Math.min(digits.length, 7)]?.focus();
   };
 
   const handleVerifyOtp = async () => {
     setOtpError('');
     const code = otp.join('');
-    // Résilient : accepte 6 (standard) ou 8 (fallback si la config Supabase renvoie 8).
-    if (code.length !== 6 && code.length !== 8) {
-      setOtpError('Veuillez saisir le code à 6 ou 8 chiffres reçu par email');
+    // Supabase envoie un code à 8 chiffres.
+    if (code.length !== 8) {
+      setOtpError('Veuillez saisir le code à 8 chiffres reçu par email');
       return;
     }
     setOtpLoading(true);
@@ -178,8 +176,8 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Cases OTP (6 standard, 8 si un code plus long est collé) */}
-          <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+          {/* Cases OTP — 8 chiffres (standard Supabase) */}
+          <div className="flex justify-center gap-1 sm:gap-2" onPaste={handleOtpPaste}>
             {otp.map((digit, i) => (
               <input
                 key={i}
@@ -191,7 +189,7 @@ export default function RegisterPage() {
                 value={digit}
                 onChange={(e) => handleOtpChange(i, e.target.value)}
                 onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                className="w-11 h-14 sm:w-12 sm:h-14 rounded-xl bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-center text-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                className="w-9 h-12 sm:w-10 sm:h-14 rounded-xl bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-center text-xl sm:text-2xl font-bold text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
               />
             ))}
           </div>

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Users, FileText, Briefcase, Calendar,
+  LayoutDashboard, Users, FileText, Calendar,
   ClipboardList, Bell, UserPlus, Settings, Menu, X,
   ChevronRight, Shield, HardHat, FileCheck,
   CalendarClock, ArrowLeftRight, Scale, Wallet, Target,
@@ -29,34 +29,29 @@ const MOBILE_TABS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: '/cabinet/settings', icon: Settings, label: 'Réglages' },
 ];
 
-// ─── Drawer mobile ──────────────────────────────────────────────
+// ASTRÉE (CIBLE 2c) — Drawer aligné sur les 4 groupes du sidebar (cohérence desktop/mobile).
 const DRAWER_GROUPS: { title?: string; items: { href: string; icon: LucideIcon; label: string }[] }[] = [
   {
     items: [
       { href: '/cabinet', icon: LayoutDashboard, label: 'Dashboard' },
       { href: '/cabinet/clients', icon: Users, label: 'Clients' },
       { href: '/cabinet/facturation', icon: FileText, label: 'Facturation' },
+      { href: '/cabinet/relances', icon: Bell, label: 'Relances' },
     ],
   },
   {
-    title: 'Social',
+    title: 'Social & Paie',
     items: [
       { href: '/cabinet/paie', icon: Wallet, label: 'Paie' },
       { href: '/cabinet/salaries', icon: HardHat, label: 'Salariés' },
-      { href: '/cabinet/dsn', icon: Shield, label: 'DSN' },
       { href: '/cabinet/dpae', icon: FileCheck, label: 'DPAE' },
-    ],
-  },
-  {
-    title: 'Gestion',
-    items: [
+      { href: '/cabinet/dsn', icon: Shield, label: 'DSN' },
       { href: '/cabinet/contrats', icon: ClipboardList, label: 'Contrats' },
       { href: '/cabinet/missions', icon: Target, label: 'Missions' },
-      { href: '/cabinet/agenda', icon: Calendar, label: 'Agenda' },
     ],
   },
   {
-    title: 'Fiscal & Juridique',
+    title: 'Conformité',
     items: [
       { href: '/cabinet/echeances', icon: CalendarClock, label: 'Échéances' },
       { href: '/cabinet/reconciliation', icon: ArrowLeftRight, label: 'Réconciliation' },
@@ -64,8 +59,9 @@ const DRAWER_GROUPS: { title?: string; items: { href: string; icon: LucideIcon; 
     ],
   },
   {
+    title: 'Outils',
     items: [
-      { href: '/cabinet/relances', icon: Bell, label: 'Relances' },
+      { href: '/cabinet/agenda', icon: Calendar, label: 'Agenda' },
       { href: '/cabinet/invitations', icon: UserPlus, label: 'Invitations' },
       { href: '/cabinet/settings', icon: Settings, label: 'Paramètres' },
     ],
@@ -102,9 +98,6 @@ function sectionTitle(pathname: string): string {
 }
 
 export default function CabinetLayout({ children }: { children: React.ReactNode }) {
-  // ZÉNITH — sidebar DÉPLIÉE par défaut sur desktop (lg+). La sidebar est
-  // `hidden lg:flex`, donc cet état n'affecte que le PC. Avant : collapsed=true →
-  // navigation incompréhensible + switcher/création de cabinet invisibles.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
@@ -135,28 +128,24 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
           {/* ─── Topbar desktop ─── */}
           <header className="hidden lg:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-background/80 backdrop-blur-xl border-b border-border">
             <div className="flex items-center gap-2 min-w-0">
-              {/* ZÉNITH — Switcher de cabinet TOUJOURS visible dans la topbar (pattern
-                  Pennylane). Donne accès au changement de cabinet ET à la création
-                  (dropdown « Créer un cabinet ») même avec un seul cabinet, sans
-                  dépendre de l'état déplié/replié de la sidebar. */}
               <CabinetSwitcher />
-              <ChevronRight size={13} className="text-gray-300" />
-              <h1 className="text-sm font-bold text-gray-900 truncate">{sectionTitle(pathname)}</h1>
+              <ChevronRight size={13} className="text-muted-foreground" />
+              <h1 className="text-sm font-bold text-foreground truncate">{sectionTitle(pathname)}</h1>
             </div>
 
             <div className="ml-auto flex items-center gap-1">
               <ThemeToggle />
-              <div className="w-px h-6 bg-gray-200 mx-1" />
+              <div className="w-px h-6 bg-border mx-1" />
               <Link
                 href="/cabinet/relances"
-                className="relative p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Notifications"
               >
                 <Bell size={18} />
               </Link>
               <Link
                 href="/cabinet/settings"
-                className="ml-1 flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-gray-100 transition-colors"
+                className="ml-1 flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-muted transition-colors"
                 title="Mon cabinet"
               >
                 <Avatar name={userName} size="sm" />
@@ -172,14 +161,14 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
             <div className="flex items-center justify-between px-4 h-14">
               <button
                 onClick={() => setDrawerOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-all active:scale-90"
+                className="flex items-center justify-center w-10 h-10 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all active:scale-90"
                 aria-label="Ouvrir le menu"
               >
                 <Menu size={20} strokeWidth={1.8} />
               </button>
               <div className="flex items-center gap-2 min-w-0">
                 <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} size={24} iconSize={12} rounded="rounded-lg" />
-                <span className="text-[15px] font-bold text-gray-900 truncate max-w-[180px]">
+                <span className="text-[15px] font-bold text-foreground truncate max-w-[180px]">
                   {brandName}
                 </span>
               </div>
@@ -204,7 +193,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                     href={tab.href}
                     className={cn(
                       'flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors',
-                      active ? 'text-gray-900' : 'text-gray-400',
+                      active ? 'text-foreground' : 'text-muted-foreground',
                     )}
                   >
                     <div className="relative">
@@ -242,19 +231,19 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
                 transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-                className="fixed left-0 top-0 bottom-0 w-[280px] bg-white border-r border-gray-200 z-50 lg:hidden flex flex-col"
+                className="fixed left-0 top-0 bottom-0 w-[280px] bg-card border-r border-border z-50 lg:hidden flex flex-col"
               >
-                <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
+                <div className="flex items-center justify-between h-16 px-4 border-b border-border">
                   <div className="flex items-center gap-3">
                     <CabinetLogo logoUrl={cabinet?.logo_url} color={primaryColor} />
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{brandName}</p>
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">Expert-Comptable</p>
+                      <p className="text-sm font-bold text-foreground truncate">{brandName}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Expert-Comptable</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setDrawerOpen(false)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     aria-label="Fermer le menu"
                   >
                     <X size={18} />
@@ -265,7 +254,7 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                   {DRAWER_GROUPS.map((group, gi) => (
                     <div key={gi} className={cn(gi > 0 && 'mt-4')}>
                       {group.title && (
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-1.5">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-3 mb-1.5">
                           {group.title}
                         </p>
                       )}
@@ -280,13 +269,13 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                               className={cn(
                                 'flex items-center gap-3 h-10 px-3 rounded-xl transition-colors',
                                 active
-                                  ? 'bg-gray-100 text-gray-900 font-semibold'
-                                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50',
+                                  ? 'bg-muted text-foreground font-semibold'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                               )}
                             >
                               <item.icon size={18} strokeWidth={active ? 2.2 : 1.7} />
                               <span className="text-[13px] font-medium">{item.label}</span>
-                              <ChevronRight size={14} className="ml-auto text-gray-300" />
+                              <ChevronRight size={14} className="ml-auto text-muted-foreground" />
                             </Link>
                           );
                         })}
@@ -295,11 +284,11 @@ export default function CabinetLayout({ children }: { children: React.ReactNode 
                   ))}
                 </nav>
 
-                <div className="border-t border-gray-100 p-3">
+                <div className="border-t border-border p-3">
                   <Link
                     href="/dashboard"
                     onClick={() => setDrawerOpen(false)}
-                    className="flex items-center gap-3 h-10 px-3 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 h-10 px-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
                     <ArrowLeftRight size={16} />
                     <span className="text-xs font-medium">Retour à l&apos;app</span>

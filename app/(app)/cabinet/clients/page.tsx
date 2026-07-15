@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Plus, Mail, Search, Building2, Hash, MapPin, Phone, X,
+  Plus, Mail, Building2, Hash, MapPin, Phone,
   Download, Trash2, Loader2, UserPlus, ChevronRight, Users,
 } from 'lucide-react';
 import { useCabinetStore } from '@/stores/cabinetStore';
@@ -12,7 +12,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
 import { cn, downloadXLSX } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getSupabaseClient } from '@/lib/supabase';
+import { lookupCompany } from '@/lib/siret-enrich';
+import { CompanySearch } from '@/components/ui/CompanySearch';
+import type { CompanyResult } from '@/components/ui/CompanySearch';
 import {
   SectionCard, DataTable, Avatar, StatusBadge, Modal, Tabs, EmptyState,
 } from '@/components/cabinet/ui';
@@ -28,16 +30,6 @@ interface ManualClientForm {
   contact_email: string;
   contact_name: string;
   notes: string;
-}
-
-interface SirenResult {
-  siren: string | null;
-  siret: string | null;
-  name: string | null;
-  legal_form: string | null;
-  address: string | null;
-  naf_code: string | null;
-  manager: string | null;
 }
 
 const EMPTY_FORM: ManualClientForm = {
@@ -64,12 +56,10 @@ export default function CabinetClientsPage() {
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [enriching, setEnriching] = useState(false);
 
-  // SIREN lookup
-  const [sirenQuery, setSirenQuery] = useState('');
-  const [sirenResults, setSirenResults] = useState<SirenResult[]>([]);
-  const [sirenLoading, setSirenLoading] = useState(false);
-  const [sirenOpen, setSirenOpen] = useState(false);
+  // Recherche entreprise (champ nom du modal) — composant partagé CompanySearch.
+  const [companyQuery, setCompanyQuery] = useState('');
 
   // Hydratation unique — le CabinetGuard a déjà chargé le cabinet ; on ne fetch que si vide.
   useEffect(() => {
@@ -95,40 +85,42 @@ export default function CabinetClientsPage() {
     }
   };
 
-  const handleSirenSearch = useCallback(async (query: string) => {
-    setSirenQuery(query);
-    if (query.trim().length < 2) {
-      setSirenResults([]);
-      setSirenOpen(false);
-      return;
-    }
-    setSirenLoading(true);
-    setSirenOpen(true);
-    try {
-      const supabase = getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch('/api/cabinet/siren-lookup?q=' + encodeURIComponent(query.trim()), {
-        headers: { Authorization: 'Bearer ' + session.access_token },
-      });
-      if (res.ok) setSirenResults((await res.json()).results || []);
-    } catch {
-      setSirenResults([]);
-    } finally {
-      setSirenLoading(false);
-    }
-  }, []);
-
-  const handleSelectSiren = (r: SirenResult) => {
+  // ASTRÉE (CIBLE 3a) — Sélection depuis le composant partagé CompanySearch :
+  // remplit TOUS les champs (nom, SIRET, adresse, CP, ville) — l'ancienne route
+  // cabinet ne remplissait que 3/8 champs et avalait un 403 silencieusement.
+  const applyCompany = (c: EnrichedLike) => {
     setForm((prev) => ({
       ...prev,
-      company_name: r.name || prev.company_name,
-      siret: r.siret || prev.siret,
-      address: r.address ? r.address.split(',').slice(0, 1).join('').trim() : prev.address,
+      company_name: c.name || prev.company_name,
+      siret: c.siret || prev.siret,
+      address: c.address || prev.address,
+      zip_code: c.postal_code || prev.zip_code,
+      city: c.city || prev.city,
     }));
-    setSirenOpen(false);
-    setSirenQuery('');
+  };
+
+  const handleSelectCompany = (c: CompanyResult) => {
+    applyCompany(c);
+    setCompanyQuery(c.name || '');
     toast.success('Informations pré-remplies');
+  };
+
+  // ASTRÉE (CIBLE 3a) — Lookup onBlur du champ SIRET : taper/coller un SIREN ou
+  // SIRET remplit automatiquement la fiche. Fini le champ SIRET « câblé à rien ».
+  const enrichFromSiret = async (raw: string) => {
+    const clean = raw.replace(/\D/g, '');
+    if (clean.length < 9) return; // SIREN (9) ou SIRET (14)
+    setEnriching(true);
+    try {
+      const company = await lookupCompany(raw);
+      if (!company) return;
+      applyCompany(company);
+      toast.success(`${company.name} pré-rempli`);
+    } catch {
+      /* enrichment est un confort : échec silencieux */
+    } finally {
+      setEnriching(false);
+    }
   };
 
   const handleCreateManual = async () => {
@@ -143,6 +135,7 @@ export default function CabinetClientsPage() {
       toast.success('Client créé avec succès');
       setShowAddModal(false);
       setForm({ ...EMPTY_FORM });
+      setCompanyQuery('');
       await fetchCabinet();
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la création');
@@ -199,8 +192,8 @@ export default function CabinetClientsPage() {
         >
           <Avatar name={getClientName(c)} size="sm" />
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 text-sm truncate">{getClientName(c)}</p>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
+            <p className="font-semibold text-foreground text-sm truncate">{getClientName(c)}</p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
               {getClientEmail(c) && <span className="truncate">{getClientEmail(c)}</span>}
               {c.client_type === 'manual' && c.city && (
                 <span className="truncate">· {c.city}</span>
@@ -227,9 +220,9 @@ export default function CabinetClientsPage() {
       hideOnMobile: true,
       render: (c) =>
         c.siret ? (
-          <span className="text-xs font-mono text-gray-500">{c.siret}</span>
+          <span className="text-xs font-mono text-muted-foreground">{c.siret}</span>
         ) : (
-          <span className="text-gray-300">—</span>
+          <span className="text-muted-foreground">—</span>
         ),
     },
     {
@@ -251,7 +244,7 @@ export default function CabinetClientsPage() {
           {c.status === 'active' && (
             <Link
               href={`/cabinet/clients/${c.id}`}
-              className="p-1.5 rounded-lg text-gray-300 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               <ChevronRight size={16} />
             </Link>
@@ -259,7 +252,7 @@ export default function CabinetClientsPage() {
           <button
             onClick={() => handleDelete(c.id)}
             disabled={deletingId === c.id}
-            className="p-1.5 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-40"
             title="Supprimer"
           >
             {deletingId === c.id ? (
@@ -279,13 +272,13 @@ export default function CabinetClientsPage() {
       <SectionCard title="Inviter un client par email" icon={Mail} accent={primaryColor}>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
-            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@client.fr"
-              className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
+              className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
               onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
             />
           </div>
@@ -299,7 +292,7 @@ export default function CabinetClientsPage() {
             Inviter
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-muted-foreground mt-2">
           Le client doit avoir un compte Factu.me avec cet email.
         </p>
       </SectionCard>
@@ -314,7 +307,7 @@ export default function CabinetClientsPage() {
           <>
             <button
               onClick={handleExport}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+              className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               title="Exporter Excel"
             >
               <Download size={16} />
@@ -322,6 +315,7 @@ export default function CabinetClientsPage() {
             <button
               onClick={() => {
                 setForm({ ...EMPTY_FORM });
+                setCompanyQuery('');
                 setAddMode('manual');
                 setShowAddModal(true);
               }}
@@ -336,7 +330,7 @@ export default function CabinetClientsPage() {
       >
         {loading && clients.length === 0 ? (
           <div className="flex items-center justify-center py-10">
-            <Loader2 size={22} className="text-gray-400 animate-spin" />
+            <Loader2 size={22} className="text-muted-foreground animate-spin" />
           </div>
         ) : (
           <DataTable
@@ -367,7 +361,7 @@ export default function CabinetClientsPage() {
           <>
             <button
               onClick={() => setShowAddModal(false)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
             >
               Annuler
             </button>
@@ -397,41 +391,16 @@ export default function CabinetClientsPage() {
 
         {addMode === 'manual' ? (
           <div className="space-y-4">
-            {/* SIREN lookup */}
-            <div className="relative">
-              <Label>Rechercher SIREN / SIRET</Label>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={sirenQuery}
-                  onChange={(e) => handleSirenSearch(e.target.value)}
-                  className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-                  placeholder="Nom d'entreprise ou numéro SIREN…"
-                />
-                {sirenLoading && (
-                  <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
-                )}
-              </div>
-              {sirenOpen && sirenResults.length > 0 && (
-                <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                  {sirenResults.map((r, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleSelectSiren(r)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                    >
-                      <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {r.siret && <span className="font-mono">{r.siret}</span>}
-                        {r.legal_form && <span> · {r.legal_form}</span>}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* ASTRÉE (CIBLE 3a) — Composant partagé CompanySearch (API gouv en direct,
+                fiable, remplit tous les champs). Remplace la route cabinet cassée. */}
+            <CompanySearch
+              value={companyQuery}
+              onChange={setCompanyQuery}
+              onSelect={handleSelectCompany}
+              clientType="b2b"
+              label="Rechercher entreprise (nom, SIREN, SIRET)"
+              placeholder="Nom, SIRET ou raison sociale…"
+            />
 
             <Field label="Nom de l'entreprise" required icon={Building2}>
               <input
@@ -448,10 +417,16 @@ export default function CabinetClientsPage() {
                 type="text"
                 value={form.siret}
                 onChange={(e) => setForm({ ...form, siret: e.target.value })}
+                onBlur={(e) => enrichFromSiret(e.target.value)}
                 className={cn(inputCls, 'font-mono')}
                 placeholder="123 456 789 00012"
                 maxLength={14}
               />
+              {enriching && (
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <Loader2 size={11} className="animate-spin" /> Recherche SIRENE…
+                </p>
+              )}
             </Field>
 
             <Field label="Adresse" icon={MapPin}>
@@ -530,7 +505,7 @@ export default function CabinetClientsPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                   placeholder="email@client.fr"
                   onKeyDown={(e) => e.key === 'Enter' && email.trim() && handleInvite(email)}
                 />
@@ -551,16 +526,12 @@ export default function CabinetClientsPage() {
   );
 }
 
+// ASTRÉE (CIBLE 3c) — tokens sémantiques (lisibilité dark mode + fin du gris-sur-blanc).
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40';
+  'w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40';
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-      {children}
-    </label>
-  );
-}
+// Shape commune (CompanyResult ou lookupCompany) — alimente applyCompany.
+type EnrichedLike = { name?: string; siret?: string; address?: string; postal_code?: string; city?: string };
 
 function Field({
   label,
@@ -575,12 +546,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+      <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
         {Icon && (
-          <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
+          <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
         )}
         <div className={Icon ? '[&_input]:pl-9' : ''}>{children}</div>
       </div>

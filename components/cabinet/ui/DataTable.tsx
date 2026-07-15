@@ -127,7 +127,7 @@ export function DataTable<T>({
                   setPage(0);
                 }}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
+                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
               />
             </div>
           )}
@@ -150,7 +150,7 @@ export function DataTable<T>({
         <div className="overflow-x-auto scrollbar-none">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/60">
+              <tr className="border-b border-border bg-muted/50">
                 {columns.map((col) => {
                   const isSorted = sort?.key === col.key;
                   const sortable = col.sortable || !!col.sortValue;
@@ -159,7 +159,7 @@ export function DataTable<T>({
                       key={col.key}
                       onClick={() => toggleSort(col)}
                       className={cn(
-                        'px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap',
+                        'px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap',
                         ALIGN[col.align || 'left'],
                         col.hideOnMobile && 'hidden md:table-cell',
                         sortable && 'cursor-pointer select-none hover:text-gray-700',
@@ -197,14 +197,14 @@ export function DataTable<T>({
                   onClick={() => onRowClick?.(row)}
                   className={cn(
                     'transition-colors',
-                    onRowClick && 'cursor-pointer hover:bg-gray-50',
+                    onRowClick && 'cursor-pointer hover:bg-muted/50',
                   )}
                 >
                   {columns.map((col) => (
                     <td
                       key={col.key}
                       className={cn(
-                        'px-4 py-3 text-gray-700 align-middle',
+                        'px-4 py-3 text-card-foreground align-middle',
                         ALIGN[col.align || 'left'],
                         col.hideOnMobile && 'hidden md:table-cell',
                         col.className,
@@ -221,7 +221,7 @@ export function DataTable<T>({
       )}
 
       {pageSize && totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-xs text-gray-500">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
           <span>
             {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, processed.length)} sur{' '}
             {processed.length}

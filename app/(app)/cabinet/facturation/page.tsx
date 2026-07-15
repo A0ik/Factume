@@ -7,6 +7,7 @@ import {
   FileText, TrendingUp, CheckCircle2, Clock, AlertTriangle, Plus, Loader2,
   Download, Eye, Printer, Mail, Send, Receipt,
 } from 'lucide-react';
+import { getSupabaseClient } from '@/lib/supabase';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useCabinetData } from '@/hooks/useCabinetData';
 import { cabinetMutation, clearCabinetCache } from '@/hooks/useCabinetFetch';
@@ -102,6 +103,7 @@ export default function CabinetFacturationPage() {
   const [showNew, setShowNew] = useState(false);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   // Nouvelle facture
   const [nClient, setNClient] = useState('');
@@ -168,6 +170,39 @@ export default function CabinetFacturationPage() {
       toast.error(err.message || "Erreur lors de l'envoi");
     } finally {
       setSendingId(null);
+    }
+  };
+
+  // ASTRÉE (CIBLE 2b) — Téléchargement / aperçu PDF d'une facture d'honoraires.
+  const handlePdf = async (inv: CabinetInvoice, mode: 'download' | 'preview' = 'download') => {
+    setPdfLoadingId(inv.id);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
+      const res = await fetch(`/api/cabinet/invoices/${inv.id}/pdf${mode === 'preview' ? '?mode=preview' : ''}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || 'Erreur génération PDF');
+      }
+      const blob = await res.blob();
+      const filename = `${inv.number.replace(/[/\r\n"']/g, '-')}.pdf`;
+      const url = URL.createObjectURL(blob);
+      if (mode === 'preview') {
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      } else {
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de générer le PDF');
+    } finally {
+      setPdfLoadingId(null);
     }
   };
 
@@ -311,6 +346,14 @@ export default function CabinetFacturationPage() {
       align: 'right',
       render: (i) => (
         <div className="flex items-center justify-end gap-0.5">
+          <IconBtn
+            title="Télécharger le PDF"
+            onClick={() => handlePdf(i, 'download')}
+            disabled={pdfLoadingId === i.id}
+            hover="brand"
+          >
+            {pdfLoadingId === i.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          </IconBtn>
           <IconBtn title="Détails" onClick={() => setViewing(i)}>
             <Eye size={14} />
           </IconBtn>
@@ -423,18 +466,36 @@ export default function CabinetFacturationPage() {
         icon={FileText}
         accent={primaryColor}
         footer={
-          viewing && viewing.status !== 'paid' ? (
-            <button
-              onClick={() => {
-                handleMarkPaid(viewing);
-                setViewing(null);
-              }}
-              className="px-4 py-2 rounded-xl text-white text-sm font-semibold flex items-center gap-2"
-              style={{ backgroundColor: '#22c55e' }}
-            >
-              <CheckCircle2 size={14} /> Marquer payée
-            </button>
-          ) : undefined
+          viewing && (
+            <div className="flex items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePdf(viewing, 'preview')}
+                  disabled={pdfLoadingId === viewing.id}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
+                >
+                  <Printer size={14} /> Aperçu
+                </button>
+                <button
+                  onClick={() => handlePdf(viewing, 'download')}
+                  disabled={pdfLoadingId === viewing.id}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 border border-border text-foreground hover:bg-muted disabled:opacity-50"
+                >
+                  {pdfLoadingId === viewing.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  Télécharger
+                </button>
+              </div>
+              {viewing.status !== 'paid' && (
+                <button
+                  onClick={() => { handleMarkPaid(viewing); setViewing(null); }}
+                  className="px-4 py-2 rounded-xl text-white text-sm font-semibold flex items-center gap-2"
+                  style={{ backgroundColor: '#22c55e' }}
+                >
+                  <CheckCircle2 size={14} /> Marquer payée
+                </button>
+              )}
+            </div>
+          )
         }
       >
         {viewing && (

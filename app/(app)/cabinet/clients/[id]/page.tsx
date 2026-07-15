@@ -2,7 +2,7 @@
 import { useEffect, useState, use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, FileText, Receipt, Shield, Loader2, RefreshCw,
+  ArrowLeft, FileText, Receipt, Shield, Loader2, RefreshCw, Download,
   CheckCircle2, Clock, AlertTriangle, XCircle, TrendingUp,
   Euro, Building2, Mail, Info, RefreshCcw,
   Car, UtensilsCrossed, Bed, Laptop, Paperclip, ShoppingCart,
@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getSupabaseClient } from '@/lib/supabase';
 import CabinetGuard from '@/components/cabinet/CabinetGuard';
 
 type Tab = 'overview' | 'invoices' | 'expenses' | 'health';
@@ -34,7 +35,7 @@ interface Expense {
 }
 
 interface ClientData {
-  client?: { id: string; client_user_id: string; status: string };
+  client?: { id: string; client_user_id: string; status: string; company_name?: string; contact_name?: string; client_type?: string };
   profile?: { company_name?: string; first_name?: string; last_name?: string; email?: string; siret?: string };
   invoices?: Invoice[];
   expenses?: Expense[];
@@ -89,6 +90,7 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
   // Health scan state
   const [scan, setScan] = useState<{ score: number; issues: { severity: string; message: string }[] } | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   const loadData = async (quiet = false) => {
     if (quiet) setRefreshing(true); else setLoading(true);
@@ -136,6 +138,34 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
     }
   };
 
+  // ASTRÉE (CIBLE 2b-tenant) — Télécharge une facture locataire du client.
+  const downloadInvoice = async (inv: Invoice) => {
+    setPdfLoadingId(inv.id);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { toast.error('Session expirée'); return; }
+      const res = await fetch(`/api/cabinet/clients/${id}/invoices/${inv.id}/pdf`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || 'Erreur génération PDF');
+      }
+      const blob = await res.blob();
+      const filename = `${(inv.number || inv.id).replace(/[/\r\n"']/g, '-')}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+    } catch (err: any) {
+      toast.error(err.message || 'Téléchargement impossible');
+    } finally {
+      setPdfLoadingId(null);
+    }
+  };
+
   if (loading || !clientData) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -145,7 +175,14 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
   }
 
   const stats = clientData.stats ?? { totalRevenue: 0, totalExpenses: 0, netBalance: 0, pendingInvoices: 0, overdueInvoices: 0, unreconciledTransactions: 0 };
-  const clientName = clientData.profile?.company_name
+  // ASTRÉE (CIBLE 3b) — lire d'abord la fiche cabinet_clients (les clients manuels n'ont
+  // pas de profil utilisateur lié, donc profile.* est vide → fallback 'Client').
+  // Ordre : company_name cabinet → contact_name cabinet → profil lié → placeholder.
+  const c = clientData.client;
+  const clientName =
+    c?.company_name
+    || c?.contact_name
+    || clientData.profile?.company_name
     || `${clientData.profile?.first_name ?? ''} ${clientData.profile?.last_name ?? ''}`.trim()
     || 'Client';
 
@@ -327,6 +364,14 @@ export default function CabinetClientDetailPage({ params }: { params: Promise<{ 
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => downloadInvoice(inv)}
+                            disabled={pdfLoadingId === inv.id}
+                            title="Télécharger le PDF"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                          >
+                            {pdfLoadingId === inv.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                          </button>
                           <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</span>
                           <StatusBadge status={inv.status} />
                         </div>

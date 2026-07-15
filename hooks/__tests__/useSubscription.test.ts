@@ -253,14 +253,14 @@ describe('useSubscription', () => {
       expect(result.current.canCreateWorkspace(1)).toBe(false);
     });
 
-    it('devrait autoriser 5 workspaces pour business', () => {
+    it('devrait autoriser 1 workspace pour business', () => {
       mockAuthState.profile = { subscription_tier: 'business' };
 
       const { result } = renderHook(() => useSubscription());
 
-      expect(result.current.maxWorkspaces).toBe(5);
-      expect(result.current.canCreateWorkspace(4)).toBe(true);
-      expect(result.current.canCreateWorkspace(5)).toBe(false);
+      expect(result.current.maxWorkspaces).toBe(1);
+      expect(result.current.canCreateWorkspace(0)).toBe(true);
+      expect(result.current.canCreateWorkspace(1)).toBe(false);
     });
   });
 });
