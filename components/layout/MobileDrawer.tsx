@@ -12,7 +12,7 @@ import {
   Target,
   Sparkles, ArrowUpRight,
   FileSignature, ClipboardList, UsersRound, DollarSign,
-  Briefcase,
+  Briefcase, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -49,7 +49,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     const sections: Record<string, boolean> = {};
     if (pathname.startsWith('/documents')) sections['documents'] = true;
     if (pathname.startsWith('/contacts') || pathname.startsWith('/clients') || pathname.startsWith('/products') || pathname.startsWith('/crm')) sections['contacts'] = true;
-    if (pathname.startsWith('/expenses') || pathname.startsWith('/accounting') || pathname.startsWith('/banking') || pathname.startsWith('/data-health')) sections['finances'] = true;
+    if (pathname.startsWith('/expenses') || pathname.startsWith('/suppliers') || pathname.startsWith('/accounting') || pathname.startsWith('/banking') || pathname.startsWith('/data-health')) sections['finances'] = true;
     if (pathname.startsWith('/contracts')) sections['contrats'] = true;
     if (pathname.startsWith('/cabinet')) sections['cabinet'] = true;
     if (pathname.startsWith('/ocr') || pathname.startsWith('/integrations') || pathname.startsWith('/calendar')) sections['outils'] = true;
@@ -98,6 +98,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
       icon: DollarSign,
       items: [
         { href: '/expenses', icon: Receipt, label: 'Notes de frais', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+        { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },

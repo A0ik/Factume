@@ -12,7 +12,7 @@ import {
   DollarSign, ClipboardList, UsersRound,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
   Briefcase, Lock, ArrowUpRight, Crown, Sparkles,
-  FileSignature,
+  FileSignature, Building2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -117,6 +117,7 @@ export default function Sidebar() {
       id: 'finances', href: '/expenses', icon: DollarSign, label: 'Finances',
       children: [
         { href: '/expenses', icon: Receipt, label: 'Notes de frais', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+        { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },

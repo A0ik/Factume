@@ -508,43 +508,45 @@ export async function generateInvoicePdfBuffer(invoice: any, profile: any): Prom
     y = H - style.headerH - 20;
 
   } else {
-    // Thin accent bar (templates 1, 4)
-    page.drawRectangle({ x: 0, y: H - style.headerH, width: W, height: style.headerH, color: accent });
-    y = H - style.headerH - 10;
+    // Thin accent bar (templates 1, 4, 7, 9)
+    page.drawRectangle({ x: 0, y: H - style.headerH, width: W, height: style.headerH, color: style.headerBg });
 
-    // ── Logo below thin bar, top-left, BIG ──
+    // DÉDALOS (CIBLE 3b) — bloc droit (label doc + dates) ancré en ABSOLU depuis le haut.
+    // Avant ces textes utilisaient y+50 / y+34 / y+18 ; sans logo y ≈ H-16 → ils tombaient
+    // AU-DESSUS de la page (label « FACTURE » + dates invisibles), laissant le nom de société
+    // flotter seul dans le blanc de la feuille (« design mal placé »). On ancre depuis H.
+    const accentOnBody = legibleAccentOn(style.bodyBg, accent);
+    const rightX = W - margin;
+    rightText(page, safe(docLabel), rightX, H - 30, 11, titleFont, accentOnBody);
+    rightText(page, `Émis le ${fmtDate(invoice.issue_date)}`, rightX, H - 48, 8.5, reg, muted);
+    if (invoice.due_date) {
+      rightText(page, `Échéance : ${fmtDate(invoice.due_date)}`, rightX, H - 64, 8.5, bold, accentOnBody);
+    }
+
+    // ── Bloc gauche : logo (sinon nom de société + SIRET) sous la barre fine ──
+    let leftY = H - style.headerH - 18;
     if (logoImage) {
-      const maxLogoH = 80;
-      const maxLogoW = 240;
+      const maxLogoH = 70;
+      const maxLogoW = 230;
       const dims = logoImage.scaleToFit(maxLogoW, maxLogoH);
       page.drawImage(logoImage, {
         x: margin,
-        y: y - dims.height,
+        y: leftY - dims.height,
         width: dims.width,
         height: dims.height,
       });
-      y -= dims.height + 14;
+      leftY -= dims.height + 12;
+    } else {
+      drawText(page, senderName, margin, leftY - 4, 17, titleFont, ink);
+      leftY -= 26;
+      if (profile?.siret) {
+        drawText(page, `SIRET : ${safe(profile.siret)}`, margin, leftY, 7.5, reg, muted);
+        leftY -= 12;
+      }
     }
 
-    // Doc label + dates — right side
-    const infoX = W - margin;
-    // TITAN (CIBLE contraste) — libellés en accent sur fond clair : accent conservé
-    // s'il passe AA, sinon assombri (legibleAccentOn) pour rester lisible.
-    const accentOnBody = legibleAccentOn(style.bodyBg, accent);
-    drawText(page, safe(docLabel), infoX - 150, y + 50, 10, titleFont, accentOnBody);
-    const dateStr = fmtDate(invoice.issue_date);
-    drawText(page, `Émis le ${dateStr}`, infoX - 150, y + 34, 8.5, reg, muted);
-    if (invoice.due_date) {
-      drawText(page, `Échéance : ${fmtDate(invoice.due_date)}`, infoX - 150, y + 18, 8.5, bold, accentOnBody);
-    }
-
-    // Company name if no logo
-    if (!logoImage) {
-      drawText(page, senderName, margin, y, 18, titleFont, ink);
-      y -= 24;
-    }
-
-    y -= 10;
+    // Le contenu reprend sous l'en-tête (le plus bas des blocs gauche / droit).
+    y = Math.min(leftY, H - 80) - 14;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

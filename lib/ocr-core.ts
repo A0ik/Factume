@@ -21,6 +21,7 @@ import {
 } from '@/lib/ocr-helpers';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import { extractPageRange, type InvoiceSegment } from '@/lib/pdf-splitter';
+import { learnVendorIntelligence, detectDuplicate, type SavedExpenseRef } from '@/lib/vendors';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -142,6 +143,8 @@ export function buildJournalEntryJson(
   vatAmount: number | null,
   vatRate: number | null,
   paymentMethod: string | null,
+  documentType: string | null = null,
+  dueDate: string | null = null,
 ) {
   const journalEntry = generateJournalEntry({
     category,
@@ -151,6 +154,8 @@ export function buildJournalEntryJson(
     vatAmount,
     vatRate,
     paymentMethod,
+    documentType,
+    dueDate,
   });
 
   return {
@@ -160,6 +165,38 @@ export function buildJournalEntryJson(
     journalType: journalEntry.journalType,
     vatAccount: journalEntry.vatAccount || null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// DÉDALOS CIBLE 1a — Réconciliation HT / TVA / TTC
+// amount est la convention TTC (cf. accounting_expenses_view: amount_ht = amount - vat_amount).
+// L'IA peut omettre ht_amount ou renvoyer un triplet incohérent → on impose TTC comme pivot
+// et on dérive HT = TTC − TVA. Évite le bug "HT = NaN €" côté UI et garantit la cohérence
+// comptable (débit 6xx au HT, TVA 44566, crédit 401/512 au TTC).
+// ---------------------------------------------------------------------------
+export function reconcileAmounts(extracted: {
+  amount: number | null;
+  ht_amount: number | null;
+  vat_amount: number | null;
+}): { ttc: number; ht: number; vat: number;_htReconciled: boolean } {
+  const ttc = Number.isFinite(extracted.amount as number) ? (extracted.amount as number) : 0;
+  const vat = Number.isFinite(extracted.vat_amount as number) ? (extracted.vat_amount as number) : 0;
+  let ht = Number.isFinite(extracted.ht_amount as number) ? (extracted.ht_amount as number) : NaN;
+  let htReconciled = false;
+
+  // HT manquant ou non positif → dériver depuis TTC − TVA
+  if (!Number.isFinite(ht) || ht <= 0) {
+    ht = Math.max(0, ttc - vat);
+    htReconciled = true;
+  }
+
+  // Incohérence triplet (tolérance 0,05 €) → on fait confiance au TTC, on recale le HT
+  if (Math.abs(ht + vat - ttc) > 0.05) {
+    ht = Math.max(0, ttc - vat);
+    htReconciled = true;
+  }
+
+  return { ttc, ht, vat, _htReconciled: htReconciled };
 }
 
 // ---------------------------------------------------------------------------
@@ -187,14 +224,23 @@ export async function processAndSaveExpense(
     userId, supabase,
   );
 
-  // 3. Build journal entry
+  // 3. Réconciliation HT/TVA/TTC (DÉDALOS CIBLE 1a — fix HT=NaN + cohérence comptable)
+  const recon = reconcileAmounts({
+    amount: extracted.amount as number | null,
+    ht_amount: extracted.ht_amount as number | null,
+    vat_amount: extracted.vat_amount as number | null,
+  });
+
+  // 3b. Build journal entry (au HT réconcilié)
   const je = buildJournalEntryJson(
     category, supplierCategory,
-    (extracted.amount as number) ?? 0,
-    extracted.ht_amount as number | null,
-    extracted.vat_amount as number | null,
+    recon.ttc,
+    recon.ht,
+    recon.vat,
     extracted.vat_rate as number | null,
     extracted.payment_method as string | null,
+    (extracted.document_type as string | null) ?? null,
+    (extracted.due_date as string | null) ?? null,
   );
 
   const accountMapping = getAccountCode(category, supplierCategory);
@@ -203,8 +249,9 @@ export async function processAndSaveExpense(
   const expenseRecord: Record<string, unknown> = {
     user_id: userId,
     vendor: extracted.vendor,
-    amount: extracted.amount,
-    vat_amount: extracted.vat_amount,
+    amount: recon.ttc,
+    ht_amount: recon.ht,
+    vat_amount: recon.vat,
     category: extracted.category,
     date: extracted.date,
     description: extracted.description,
@@ -236,9 +283,13 @@ export async function processAndSaveExpense(
     supplier_category: extracted.supplier_category,
   };
 
-  // Store validation warnings if any
-  if (validation.warnings.length > 0) {
-    expenseRecord.ocr_validation_warnings = validation.warnings;
+  // Store validation warnings if any (+ transparence sur la réconciliation HT)
+  const warnings = [...validation.warnings];
+  if (recon._htReconciled) {
+    warnings.push('HT réconcilié (TTC − TVA) : montant HT absent ou incohérent dans l\'extraction IA.');
+  }
+  if (warnings.length > 0) {
+    expenseRecord.ocr_validation_warnings = warnings;
   }
 
   // Remove null keys
@@ -257,6 +308,29 @@ export async function processAndSaveExpense(
 
   if (dbError) {
     console.error('[OCR Core] DB insert error:', dbError);
+  }
+
+  // DÉDALOS / Dext-killer — auto-apprentissage fournisseur + détection de doublon
+  // (best-effort). Chaque sauvegarde nourrit l'annuaire /suppliers et vérifie les
+  // doublons contre l'historique — exactement le loop auto-categorize de Dext.
+  if (savedExpense) {
+    try {
+      await learnVendorIntelligence(supabase, userId, {
+        vendor: extracted.vendor,
+        category: extracted.category,
+        amount: recon.ttc,
+        date: extracted.date,
+        ocr_confidence: extracted.confidence,
+        ocr_invoice_number: extracted.invoice_number,
+      });
+    } catch (e) {
+      console.error('[OCR Core] vendor learn error:', e);
+    }
+    try {
+      await detectDuplicate(supabase, userId, savedExpense as SavedExpenseRef);
+    } catch (e) {
+      console.error('[OCR Core] duplicate detect error:', e);
+    }
   }
 
   return {

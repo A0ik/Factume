@@ -57,6 +57,8 @@ export interface CabinetRow {
   phone?: string | null;
   email?: string | null;
   vat_number?: string | null;
+  // DÉDALOS (CIBLE 3a/3c) — IBAN + template PDF stockés dans le jsonb settings.
+  settings?: Record<string, unknown> | null;
 }
 
 const num = (v: unknown): number => {
@@ -139,6 +141,15 @@ export function cabinetInvoiceToPdfInputs(
     payment_short_token: null,
   } as unknown as Invoice;
 
+  // DÉDALOS (CIBLE 3a/3c) — template PDF + coordonnées bancaires issus du jsonb
+  // cabinet.settings (renseignés depuis /cabinet/settings). Défaut : template 7 (PUR,
+  // minimaliste épuré Stripe/Linear) — rendu professionnel pour une facture d'honoraires,
+  // évite le « nom de société prisonnier d'un rectangle de couleur ».
+  const s = (cabinet.settings ?? {}) as Record<string, any>;
+  const pdfTemplate = Number(s.pdf_template);
+  const templateId =
+    Number.isFinite(pdfTemplate) && pdfTemplate >= 1 && pdfTemplate <= 9 ? pdfTemplate : 7;
+
   const profile = {
     company_name: cabinet.name,
     siret: cabinet.siret || null,
@@ -150,14 +161,14 @@ export function cabinetInvoiceToPdfInputs(
     vat_number: cabinet.vat_number || null,
     logo_url: cabinet.logo_url || null,
     accent_color: cabinet.primary_color || '#10b981',
-    template_id: 1,
+    template_id: templateId,
     currency: 'EUR',
     language: 'fr',
-    iban: null,
-    bank_name: null,
-    bic: null,
-    legal_status: null,
-    legal_mention: null,
+    iban: s.iban || null,
+    bank_name: s.bank_name || null,
+    bic: s.bic || null,
+    legal_status: s.legal_status || null,
+    legal_mention: s.legal_mention || null,
     payment_terms: null,
   } as unknown as Profile;
 

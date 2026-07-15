@@ -7,13 +7,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { cn, formatCurrency } from '@/lib/utils';
+import { getAccountCode } from '@/lib/plan-comptable';
 import {
   Receipt, Plus, Search, Edit2, Trash2, TrendingDown,
   X, Check, Calendar, Upload, FileImage, ExternalLink,
   ShoppingCart, Car, Coffee, Home, Laptop, Briefcase, MoreHorizontal,
   ArrowDownUp, Filter, Sparkles, ChevronDown, Clock,
   MapPin, Gauge, Users, FileText, Download,
-  Info, Calculator,
+  Info, Calculator, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
@@ -46,6 +47,13 @@ interface Expense {
   client_id?: string;
   project_code?: string;
   is_deductible?: boolean;
+  // DÉDALOS CIBLE 1c/1d — typage document (split Dext) + compta PCG (sélecteur éditable)
+  document_type?: string;
+  account_code?: string;
+  account_label?: string;
+  vat_account?: string;
+  ocr_invoice_number?: string;
+  ocr_supplier_siret?: string;
 }
 
 const CATEGORIES = [
@@ -122,7 +130,34 @@ const EMPTY_FORM = {
   project_code: '',
   is_deductible: true,
   tax_free_amount: '',
+  // DÉDALOS CIBLE 1d — compte de charge PCG éditable (validation humaine)
+  account_code: '',
+  account_label: '',
 };
+
+// Comptes de charge PCG proposés au sélecteur (validation humaine).
+const PCG_CHARGE_ACCOUNTS = [
+  { code: '601000', label: 'Achats stockés – Matières premières' },
+  { code: '602000', label: 'Achats stockés – Autres approvisionnements' },
+  { code: '604000', label: "Achats d'études et prestations de services" },
+  { code: '606100', label: 'Énergie (électricité, gaz)' },
+  { code: '606150', label: 'Carburants' },
+  { code: '606400', label: 'Fournitures de bureau' },
+  { code: '606800', label: 'Autres approvisionnements non stockés' },
+  { code: '607000', label: 'Achats de marchandises (à revendre en l\'état)' },
+  { code: '611000', label: 'Sous-traitance générale' },
+  { code: '613000', label: 'Locations (immobilier, matériel)' },
+  { code: '615000', label: 'Entretien et réparations' },
+  { code: '616000', label: "Primes d'assurance" },
+  { code: '618300', label: 'Logiciels et abonnements SaaS' },
+  { code: '625100', label: 'Indemnités kilométriques' },
+  { code: '625600', label: 'Missions, réceptions, déplacements' },
+  { code: '626000', label: 'Frais de télécommunications' },
+  { code: '627000', label: 'Services bancaires' },
+  { code: '635000', label: 'Autres impôts et taxes' },
+  { code: '641000', label: 'Rémunérations du personnel' },
+  { code: '648000', label: 'Autres charges de gestion courante' },
+];
 
 const getCat = (v: string) => CATEGORIES.find((c) => c.value === v) || CATEGORIES[CATEGORIES.length - 1];
 
@@ -353,6 +388,8 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  // DÉDALOS CIBLE 1c — split Dext : 'all' | 'invoice' (factures fournisseurs) | 'receipt' (notes de frais)
+  const [filterType, setFilterType] = useState<'all' | 'invoice' | 'receipt'>('all');
   const [showModal, setShowModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -441,6 +478,8 @@ export default function ExpensesPage() {
       project_code: e.project_code || '',
       is_deductible: e.is_deductible ?? true,
       tax_free_amount: String(e.tax_free_amount || ''),
+      account_code: e.account_code || getAccountCode(e.category).code,
+      account_label: e.account_label || getAccountCode(e.category).label,
     });
     setReceiptUrl(e.receipt_url);
     setEditingId(e.id);
@@ -535,6 +574,9 @@ export default function ExpensesPage() {
         client_id: form.client_id || null,
         project_code: form.project_code || null,
         is_deductible: form.is_deductible ?? true,
+        // DÉDALOS CIBLE 1d — compte de charge PCG (validation humaine). Défaut = mapping catégorie.
+        account_code: form.account_code || getAccountCode(form.category).code,
+        account_label: form.account_label || getAccountCode(form.category).label,
       };
 
       if (editingId) {
@@ -618,14 +660,20 @@ export default function ExpensesPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
+    // DÉDALOS CIBLE 1c — un document est une « facture fournisseur » s'il porte un type
+    // de facturation (invoice/credit_note/purchase_order). Tout le reste (receipt,
+    // expense_report, rent_receipt, null) est une « note de frais ».
+    const SUPPLIER_TYPES = ['invoice', 'credit_note', 'purchase_order'];
     return expenses.filter((e) => {
       if (!e) return false; // garde anti-crash : une dépense nulle n'est jamais rendue
       const matchSearch = !q || (e.vendor || '').toLowerCase().includes(q) || e.description?.toLowerCase().includes(q);
       const matchCat = !filterCat || e.category === filterCat;
       const matchStatus = !filterStatus || e.status === filterStatus;
-      return matchSearch && matchCat && matchStatus;
+      const isSupplier = SUPPLIER_TYPES.includes(e.document_type || '');
+      const matchType = filterType === 'all' ? true : filterType === 'invoice' ? isSupplier : !isSupplier;
+      return matchSearch && matchCat && matchStatus && matchType;
     });
-  }, [expenses, search, filterCat, filterStatus]);
+  }, [expenses, search, filterCat, filterStatus, filterType]);
 
   const stats = useMemo(() => {
     const currentMonthPrefix = new Date().toISOString().slice(0, 7);
@@ -736,6 +784,26 @@ export default function ExpensesPage() {
         transition={{ duration: 0.4, delay: 0.15, ease }}
         className="space-y-3 mb-6"
       >
+        {/* DÉDALOS CIBLE 1c — Split Dext : Factures fournisseurs vs Notes de frais */}
+        <div className="flex gap-1 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/[0.03]">
+          {([
+            { v: 'invoice', label: 'Factures fournisseurs', Icon: FileText },
+            { v: 'receipt', label: 'Notes de frais', Icon: Receipt },
+            { v: 'all', label: 'Tout', Icon: Layers },
+          ] as const).map(({ v, label, Icon }) => (
+            <button key={v} onClick={() => setFilterType(v)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
+                filterType === v
+                  ? 'bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
+              )}>
+              <Icon size={13} />
+              <span className="hidden xs:inline sm:inline">{label}</span>
+              <span className="xs:hidden sm:hidden">{label.split(' ')[0]}</span>
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={16} className={cn("absolute left-3.5 top-1/2 -translate-y-1/2", isDark ? "text-zinc-500" : "text-gray-400")} />
@@ -921,7 +989,13 @@ export default function ExpensesPage() {
                     {CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
                       return (
-                        <button key={cat.value} type="button" onClick={() => set('category', cat.value)}
+                        <button key={cat.value} type="button" onClick={() => {
+                          set('category', cat.value);
+                          // DÉDALOS CIBLE 1d — le compte de charge suit la catégorie par défaut (modifiable ci-dessous).
+                          const a = getAccountCode(cat.value);
+                          set('account_code', a.code);
+                          set('account_label', a.label);
+                        }}
                           className={cn(
                             'flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-xs font-medium transition-colors',
                             form.category === cat.value
@@ -939,6 +1013,38 @@ export default function ExpensesPage() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* DÉDALOS CIBLE 1d — Compte de charge PCG éditable (validation humaine) */}
+                <div>
+                  <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>
+                    Compte de charge (PCG)
+                  </label>
+                  <select
+                    value={PCG_CHARGE_ACCOUNTS.some(a => a.code === form.account_code) ? form.account_code : ''}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const found = PCG_CHARGE_ACCOUNTS.find(a => a.code === code);
+                      set('account_code', code);
+                      set('account_label', found?.label || '');
+                    }}
+                    className={cn(
+                      "w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-colors",
+                      isDark
+                        ? "bg-white/[0.04] border border-white/[0.08] text-white focus:border-white/[0.15]"
+                        : "bg-gray-50 border border-gray-200 text-gray-900 focus:border-gray-300"
+                    )}
+                  >
+                    {!PCG_CHARGE_ACCOUNTS.some(a => a.code === form.account_code) && form.account_code && (
+                      <option value={form.account_code}>{form.account_code} — {form.account_label || 'Compte personnalisé'}</option>
+                    )}
+                    {PCG_CHARGE_ACCOUNTS.map(a => (
+                      <option key={a.code} value={a.code} className="text-gray-900">{a.code} — {a.label}</option>
+                    ))}
+                  </select>
+                  <p className={cn("text-[11px] mt-1.5", isDark ? "text-zinc-500" : "text-gray-400")}>
+                    Compte débité dans l'écriture comptable (ex : 607 marchandises, 625600 déplacements).
+                  </p>
                 </div>
 
                 {/* OCR Loading */}

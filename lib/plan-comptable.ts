@@ -278,6 +278,8 @@ export function generateJournalEntry(params: {
   vatAmount: number | null;
   vatRate: number | null;
   paymentMethod: string | null;
+  documentType?: string | null;
+  dueDate?: string | null;
 }): JournalEntry {
   const {
     category,
@@ -287,12 +289,21 @@ export function generateJournalEntry(params: {
     vatAmount,
     vatRate,
     paymentMethod,
+    documentType = null,
+    dueDate = null,
   } = params;
 
   const account = getAccountCode(category, supplierCategory);
   const effectiveHt = Math.max(0, amountHt ?? (amountTtc - (vatAmount ?? 0)));
   const effectiveVat = vatAmount ?? 0;
   const vatAccount = getVatAccount(vatRate);
+
+  // DÉDALOS — une facture fournisseur avec échéance future = dette envers le fournisseur
+  // (non encore payée) → crédit 401 Fournisseurs, comme Dext (Purchase Invoice on credit).
+  // Le cash est toujours un règlement immédiat (530 Caisse).
+  const hasFutureDueDate =
+    !!dueDate && new Date(dueDate + 'T00:00:00').getTime() >= new Date().setHours(0, 0, 0, 0);
+  const isSupplierInvoiceOnCredit = documentType === 'invoice' && hasFutureDueDate;
 
   // Credit account = supplier or bank/cash depending on payment
   let creditAccount: string;
@@ -301,6 +312,9 @@ export function generateJournalEntry(params: {
   if (paymentMethod === 'cash') {
     creditAccount = CASH_ACCOUNT;
     creditLabel = 'Caisse';
+  } else if (isSupplierInvoiceOnCredit) {
+    creditAccount = SUPPLIER_ACCOUNT;
+    creditLabel = 'Fournisseurs';
   } else if (paymentMethod === 'transfer' || paymentMethod === 'card') {
     creditAccount = BANK_ACCOUNT;
     creditLabel = 'Banque';

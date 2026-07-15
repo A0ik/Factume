@@ -180,6 +180,14 @@ CONSIGNES CRITIQUES :
 10. Le champ payment_method déduit le mode de paiement si visible.
 11. Les montants doivent être des NOMBRES, sans symbole monétaire.
 12. Les dates doivent être au format YYYY-MM-DD (ISO 8601).
+13. COHÉRENCE HT/TVA/TTC OBLIGATOIRE : « amount » est TOUJOURS le montant TTC (toutes taxes comprises). Tu DOIS garantir amount ≈ ht_amount + vat_amount (tolérance 0,01). Si seul le TTC est visible : déduis HT = TTC − TVA. Si seul le HT + le taux de TVA sont visibles : calcule TTC = HT × (1 + taux). Ne JAMAIS laisser ht_amount ou vat_amount à null si le TTC et/ou le taux sont connus.
+14. TYPOLOGIE DE DOCUMENT (comme Dext) — « document_type » reflète la nature RÉELLE :
+    - « invoice » = facture fournisseur (B2B) : numéro de facture + SIRET/TVA + date d'échéance + mentions légales. C'est une facture à payer à un fournisseur (ex : SaaS, électricité, télécom, prestataire).
+    - « receipt » = ticket de caisse / reçu employé : repas, taxi, transport, parking, station-service — ticket court, paiement immédiat, SANS échéance.
+    - « expense_report » = note de frais regroupée employé. « credit_note » = avoir.
+    RÈGLE STRICTE : un ticket de restaurant, de taxi ou de train = « receipt » (PAS « invoice »). Une facture SaaS/électricité/télécom avec échéance = « invoice ».
+15. COMPTABILISATION OBLIGATOIRE POUR TOUT DOCUMENT (facture ET reçu) : tu DOIS toujours remplir « account_code » (compte de charge PCG à 6 chiffres) ET « vat_account », MÊME pour un petit ticket. Ex : repas/resto = 625600 + 445660 ; train/taxi/déplacement = 625600 + 445660 ; carburant = 606150 + 445660 ; électricité = 606100 + 445660 ; abonnement SaaS = 618300 + 445660.
+16. « vat_account » = « 445660 » (TVA déductible sur autres biens et services) par défaut pour toute charge professionnelle soumise à TVA. Ne mets null QUE si la charge n'est pas soumise à TVA (ex : indemnité kilométrique 625100).
 
 COMPTABILISATION — PLAN COMPTABLE GÉNÉRAL (PCG) :
 Pour CHAQUE dépense, attribue le numéro de compte PCG le plus précis parmi :
@@ -257,6 +265,7 @@ Retourne UNIQUEMENT du JSON valide, sans texte autour, sans markdown, sans comme
   "supplier_category": "restaurant|gas_station|hotel|supermarket|pharmacy|bookstore|clothing|electronics|telecom_provider|insurance_company|software_provider|transport_company|other",
   "account_code": "625600",
   "account_label": "Missions, réceptions, déplacements",
+  "vat_account": "445660",
   "document_type": "invoice|receipt|expense_report|rent_receipt|credit_note|purchase_order|delivery_note|quote|other",
   "is_professional_expense": true,
   "cost_center": "string ou null"

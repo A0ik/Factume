@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, FileText, Loader2, TrendingUp, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, TrendingUp, AlertTriangle, Clock, CheckCircle2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -122,7 +122,11 @@ export default function CabinetClientInvoicesPage({ params }: { params: Promise<
             {filtered.map((inv) => {
               const s = STATUS_MAP[inv.status] ?? { label: inv.status, className: 'bg-gray-100 text-gray-500' };
               return (
-                <div key={inv.id} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                <div
+                  key={inv.id}
+                  onClick={() => window.open(`/api/cabinet/clients/${id}/invoices/${inv.id}/pdf`, '_blank')}
+                  className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors"
+                >
                   <FileText size={16} className="text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{inv.number || inv.id.slice(0, 8)}</p>
@@ -133,6 +137,7 @@ export default function CabinetClientInvoicesPage({ params }: { params: Promise<
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(inv.total)}</span>
                     <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', s.className)}>{s.label}</span>
+                    <Eye size={15} className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors" />
                   </div>
                 </div>
               );

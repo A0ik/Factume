@@ -307,7 +307,7 @@ export default function CabinetPage() {
             value={cabinetName}
             onChange={(e) => setCabinetName(e.target.value)}
             placeholder="Ex : Cabinet Dubois & Associés"
-            className="flex-1 px-4 py-3.5 rounded-2xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
+            className="flex-1 px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/40"
             onKeyDown={(e) => e.key === 'Enter' && handleCreateCabinet()}
           />
           <button

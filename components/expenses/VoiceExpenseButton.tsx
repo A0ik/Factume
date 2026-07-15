@@ -309,59 +309,59 @@ export default function VoiceExpenseButton({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className={cn(
-          'bg-zinc-900 border border-white/10 rounded-2xl p-4',
+          'bg-card border border-border rounded-2xl p-4 text-foreground',
           className,
         )}
       >
         {fileInput}
         <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-            <Mic size={14} className="text-emerald-400" />
+            <Mic size={14} className="text-emerald-600 dark:text-emerald-400" />
           </div>
-          <p className="text-sm font-semibold text-zinc-100">Dépense détectée</p>
+          <p className="text-sm font-semibold text-foreground">Dépense détectée</p>
         </div>
         <div className="space-y-2 mb-4">
           <div className="flex justify-between">
-            <span className="text-xs text-zinc-500">Fournisseur</span>
-            <span className="text-sm text-zinc-200 font-medium">{pendingExpense.vendor}</span>
+            <span className="text-xs text-muted-foreground">Fournisseur</span>
+            <span className="text-sm text-foreground font-medium">{pendingExpense.vendor}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-xs text-zinc-500">Montant</span>
-            <span className="text-sm text-emerald-400 font-bold">{pendingExpense.amount.toFixed(2)} €</span>
+            <span className="text-xs text-muted-foreground">Montant</span>
+            <span className="text-sm text-emerald-600 dark:text-emerald-400 font-bold">{pendingExpense.amount.toFixed(2)} €</span>
           </div>
           {pendingExpense.description && (
             <div className="flex justify-between">
-              <span className="text-xs text-zinc-500">Description</span>
-              <span className="text-sm text-zinc-300 truncate ml-4">{pendingExpense.description}</span>
+              <span className="text-xs text-muted-foreground">Description</span>
+              <span className="text-sm text-foreground/80 truncate ml-4">{pendingExpense.description}</span>
             </div>
           )}
         </div>
 
         {/* LOI 1 : Upload justificatif OBLIGATOIRE */}
-        <div className="mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+        <div className="mb-4 p-3 rounded-xl bg-muted border border-border">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={13} className={receiptFile ? 'text-emerald-400' : 'text-amber-400'} />
+            <AlertTriangle size={13} className={receiptFile ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'} />
             <p className={cn(
               'text-xs font-semibold',
-              receiptFile ? 'text-emerald-400' : 'text-amber-400',
+              receiptFile ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
             )}>
               {receiptFile ? '✓ Justificatif ajouté' : 'Justificatif obligatoire'}
             </p>
           </div>
-          <p className="text-[10px] text-zinc-500 mb-2">
+          <p className="text-[10px] text-muted-foreground mb-2">
             En France, une note de frais sans justificatif est irrecevable en contrôle fiscal (art. L123-22).
           </p>
 
           {/* Preview */}
           {receiptPreview && (
-            <div className="mb-2 rounded-lg overflow-hidden border border-white/10">
+            <div className="mb-2 rounded-lg overflow-hidden border border-border">
               <img src={receiptPreview} alt="Aperçu justificatif" className="w-full h-24 object-cover" />
             </div>
           )}
           {receiptFile && !receiptPreview && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border">
               <span className="text-xs">📄</span>
-              <span className="text-xs text-zinc-300 truncate">{receiptFile.name}</span>
+              <span className="text-xs text-foreground/80 truncate">{receiptFile.name}</span>
             </div>
           )}
 
@@ -370,8 +370,8 @@ export default function VoiceExpenseButton({
             className={cn(
               'w-full py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2',
               receiptFile
-                ? 'bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.06]'
-                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30',
+                ? 'bg-muted text-muted-foreground border border-border hover:bg-accent'
+                : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30',
             )}
           >
             {receiptFile ? (
@@ -391,7 +391,7 @@ export default function VoiceExpenseButton({
         <div className="flex gap-2">
           <button
             onClick={dismissExpense}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-zinc-400 text-sm font-medium hover:bg-white/5 transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 py-2 rounded-xl border border-border text-muted-foreground text-sm font-medium hover:bg-accent transition-colors flex items-center justify-center gap-1.5"
           >
             <X size={14} />
             Annuler
@@ -403,7 +403,7 @@ export default function VoiceExpenseButton({
               'flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5',
               receiptFile
                 ? 'bg-emerald-500 text-white hover:bg-emerald-400'
-                : 'bg-zinc-700 text-zinc-500 cursor-not-allowed',
+                : 'bg-muted text-muted-foreground cursor-not-allowed',
             )}
           >
             {!receiptFile ? (
@@ -489,7 +489,7 @@ export default function VoiceExpenseButton({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="absolute top-full left-0 mt-2 whitespace-nowrap px-3 py-1.5 rounded-xl bg-zinc-800 text-zinc-200 text-xs font-semibold shadow-lg border border-white/10 z-50"
+              className="absolute top-full left-0 mt-2 whitespace-nowrap px-3 py-1.5 rounded-xl bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border z-50"
             >
               {langBadge.flag} {langBadge.label}
             </motion.div>
@@ -628,7 +628,7 @@ export default function VoiceExpenseButton({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-zinc-800 text-zinc-200 text-[10px] font-semibold shadow-lg border border-white/10"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 whitespace-nowrap px-3 py-1 rounded-xl bg-popover text-popover-foreground text-[10px] font-semibold shadow-lg border border-border"
           >
             {langBadge.flag} {langBadge.label}
           </motion.div>

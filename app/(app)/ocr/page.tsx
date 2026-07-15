@@ -125,6 +125,18 @@ function getConfidenceColor(c: number): { dot: string; text: string; label: stri
   return { dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400', label: 'Faible' };
 }
 
+// ─── HT fiable (DÉDALOS CIBLE 1a — anti "HT = NaN €") ───────────────────────
+// amount = TTC (convention base). Si ht_amount manque ou est incohérent, on dérive
+// HT = TTC − TVA, comme la vue accounting_expenses_view et le journal comptable.
+function htOf(exp: { ht_amount?: number; amount?: number; vat_amount?: number } | null | undefined): number {
+  if (!exp) return 0;
+  const ht = Number(exp.ht_amount);
+  if (Number.isFinite(ht) && ht > 0) return ht;
+  const ttc = Number(exp.amount) || 0;
+  const vat = Number(exp.vat_amount) || 0;
+  return Math.max(0, ttc - vat);
+}
+
 // ─── Codes PCG ─────────────────────────────────────────────────────────────
 const CATEGORY_ACCOUNTING: Record<string, { code: string; label: string }> = {
   transport: { code: '625600', label: 'Transports de personnel' },
@@ -609,7 +621,7 @@ export default function OcrPage() {
     setProjectCode(e.project_code || '');
     setDbEditMode(false);
     setZoom(1);
-    setDbEditData({ vendor: e.vendor || '', amount: e.amount || 0, vat_amount: e.vat_amount || 0, ht_amount: e.ht_amount || 0, date: e.date || '', category: e.category || '', description: e.description || '' });
+    setDbEditData({ vendor: e.vendor || '', amount: e.amount || 0, vat_amount: e.vat_amount || 0, ht_amount: htOf(e) || 0, date: e.date || '', category: e.category || '', description: e.description || '' });
   }, []);
 
   // ── Sauver les edits DB ──────────────────────────────────────────────────
@@ -1102,7 +1114,7 @@ function ReviewForm(props: {
             <DetailView label="Date" value={ext.date ? new Date(ext.date).toLocaleDateString('fr-FR') : '—'} />
             <DetailView label="Montant TTC" value={formatCurrency(ext.amount)} strong />
             <div className="grid grid-cols-2 gap-3">
-              <DetailView label="HT" value={formatCurrency(ext.ht_amount)} />
+              <DetailView label="HT" value={formatCurrency(htOf(ext))} />
               <DetailView label="TVA" value={formatCurrency(ext.vat_amount)} />
             </div>
             <DetailView label="Catégorie" value={CATEGORIES.find(c => c.value === ext.category)?.label || ext.category || '—'} />
@@ -1147,7 +1159,7 @@ function ReviewForm(props: {
             <DetailView label="Date" value={db.date ? new Date(db.date).toLocaleDateString('fr-FR') : '—'} />
             <DetailView label="Montant TTC" value={formatCurrency(db.amount)} strong />
             <div className="grid grid-cols-2 gap-3">
-              <DetailView label="HT" value={formatCurrency(db.ht_amount)} />
+              <DetailView label="HT" value={formatCurrency(htOf(db))} />
               <DetailView label="TVA" value={formatCurrency(db.vat_amount)} />
             </div>
             <DetailView label="Catégorie" value={CATEGORIES.find(c => c.value === db.category)?.label || db.category || '—'} />

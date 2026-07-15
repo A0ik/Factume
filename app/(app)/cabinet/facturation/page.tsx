@@ -73,8 +73,8 @@ function Paywall({ accent }: { accent: string }) {
         <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${accent}1a` }}>
           <Receipt size={40} style={{ color: accent }} />
         </div>
-        <h1 className="text-3xl font-black text-gray-900 mb-3">Facturation du cabinet</h1>
-        <p className="text-gray-500 mb-8 leading-relaxed">
+        <h1 className="text-3xl font-black text-gray-900 dark:text-zinc-100 mb-3">Facturation du cabinet</h1>
+        <p className="text-gray-500 dark:text-zinc-400 mb-8 leading-relaxed">
           Gérez vos factures d&apos;honoraires, suivez les paiements et relancez vos clients.
         </p>
         <Link
@@ -302,28 +302,28 @@ export default function CabinetFacturationPage() {
       sortValue: (i) => clientName(i.client_id),
       sortable: true,
       render: (i) => (
-        <span className="text-sm font-semibold text-gray-900 truncate">{clientName(i.client_id)}</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100 truncate">{clientName(i.client_id)}</span>
       ),
     },
     {
       key: 'objet',
       header: 'Objet',
       hideOnMobile: true,
-      render: (i) => <span className="text-sm text-gray-500 truncate">{i.objet || '—'}</span>,
+      render: (i) => <span className="text-sm text-gray-500 dark:text-zinc-400 truncate">{i.objet || '—'}</span>,
     },
     {
       key: 'ht',
       header: 'HT',
       align: 'right',
       hideOnMobile: true,
-      render: (i) => <span className="text-sm text-gray-700">{formatCurrency(i.amount_ht)}</span>,
+      render: (i) => <span className="text-sm text-gray-700 dark:text-zinc-300">{formatCurrency(i.amount_ht)}</span>,
     },
     {
       key: 'tva',
       header: 'TVA',
       align: 'right',
       hideOnMobile: true,
-      render: (i) => <span className="text-sm text-gray-500">{formatCurrency(i.amount_tva)}</span>,
+      render: (i) => <span className="text-sm text-gray-500 dark:text-zinc-400">{formatCurrency(i.amount_tva)}</span>,
     },
     {
       key: 'ttc',
@@ -332,7 +332,7 @@ export default function CabinetFacturationPage() {
       sortValue: (i) => i.amount_ttc,
       sortable: true,
       render: (i) => (
-        <span className={cn('text-sm font-bold', i.status === 'overdue' ? 'text-red-600' : 'text-gray-900')}>
+        <span className={cn('text-sm font-bold', i.status === 'overdue' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-zinc-100')}>
           {formatCurrency(i.amount_ttc)}
         </span>
       ),
@@ -343,14 +343,14 @@ export default function CabinetFacturationPage() {
       hideOnMobile: true,
       sortValue: (i) => i.issue_date,
       sortable: true,
-      render: (i) => <span className="text-sm text-gray-500">{formatDateShort(i.issue_date)}</span>,
+      render: (i) => <span className="text-sm text-gray-500 dark:text-zinc-400">{formatDateShort(i.issue_date)}</span>,
     },
     {
       key: 'due_date',
       header: 'Échéance',
       hideOnMobile: true,
       render: (i) => (
-        <span className={cn('text-sm', i.status === 'overdue' && 'text-red-600 font-semibold')}>
+        <span className={cn('text-sm', i.status === 'overdue' && 'text-red-600 dark:text-red-400 font-semibold')}>
           {i.due_date ? formatDateShort(i.due_date) : '—'}
         </span>
       ),
@@ -422,7 +422,7 @@ export default function CabinetFacturationPage() {
           <>
             <button
               onClick={handleExport}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 transition-colors"
               title="Exporter Excel"
             >
               <Download size={16} />
@@ -459,7 +459,7 @@ export default function CabinetFacturationPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 border-0 outline-none cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 border-0 outline-none cursor-pointer"
                 >
                   {STATUS_FILTERS.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -468,7 +468,7 @@ export default function CabinetFacturationPage() {
                 <select
                   value={monthFilter}
                   onChange={(e) => setMonthFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 border-0 outline-none cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 border-0 outline-none cursor-pointer"
                 >
                   <option value="">Tous les mois</option>
                   {MONTHS.map((m) => (
@@ -530,7 +530,7 @@ export default function CabinetFacturationPage() {
               <Detail label="Échéance" value={viewing.due_date ? formatDateShort(viewing.due_date) : '—'} />
             </div>
             {viewing.objet && <Detail label="Objet" value={viewing.objet} />}
-            <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+            <div className="rounded-xl border border-gray-200 dark:border-zinc-800 divide-y divide-gray-100 dark:divide-zinc-800">
               <Row label="Total HT" value={formatCurrency(viewing.amount_ht)} />
               <Row label="TVA" value={formatCurrency(viewing.amount_tva)} />
               <Row label="Total TTC" value={formatCurrency(viewing.amount_ttc)} strong />
@@ -548,7 +548,7 @@ export default function CabinetFacturationPage() {
         accent={primaryColor}
         footer={
           <>
-            <button onClick={() => setShowNew(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+            <button onClick={() => setShowNew(false)} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800">
               Annuler
             </button>
             <button
@@ -565,11 +565,11 @@ export default function CabinetFacturationPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Client</label>
+            <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">Client</label>
             <select
               value={nClient}
               onChange={(e) => setNClient(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             >
               <option value="">Sélectionner un client…</option>
               {clients.map((c: any) => (
@@ -580,33 +580,33 @@ export default function CabinetFacturationPage() {
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Objet</label>
+            <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">Objet</label>
             <input
               type="text"
               value={nObjet}
               onChange={(e) => setNObjet(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
               placeholder="Ex : Honoraires comptables T3 2026"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Montant HT (€)</label>
+              <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">Montant HT (€)</label>
               <input
                 type="number"
                 step="0.01"
                 value={nHt}
                 onChange={(e) => setNHt(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">TVA</label>
+              <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">TVA</label>
               <select
                 value={nVat}
                 onChange={(e) => setNVat(parseFloat(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
               >
                 {VAT_RATES.map((v) => (
                   <option key={v.value} value={v.value}>{v.label}</option>
@@ -615,20 +615,20 @@ export default function CabinetFacturationPage() {
             </div>
           </div>
           {nHt && parseFloat(nHt) > 0 && (
-            <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm flex justify-between">
-              <span className="text-gray-500">Total TTC estimé</span>
-              <span className="font-bold text-gray-900">
+            <div className="rounded-xl bg-gray-50 dark:bg-zinc-800/50 px-4 py-3 text-sm flex justify-between">
+              <span className="text-gray-500 dark:text-zinc-400">Total TTC estimé</span>
+              <span className="font-bold text-gray-900 dark:text-zinc-100">
                 {formatCurrency(parseFloat(nHt) * (1 + nVat / 100))}
               </span>
             </div>
           )}
           <div>
-            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Échéance</label>
+            <label className="block text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">Échéance</label>
             <input
               type="date"
               value={nDue}
               onChange={(e) => setNDue(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
             />
           </div>
         </div>
@@ -657,13 +657,13 @@ function IconBtn({
       ? 'hover:text-green-600 hover:bg-green-50'
       : hover === 'brand'
         ? 'hover:text-brand-600 hover:bg-brand-50'
-        : 'hover:text-gray-700 hover:bg-gray-100';
+        : 'hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800';
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={cn('p-1.5 rounded-lg text-gray-400 transition-colors disabled:opacity-40', hoverCls)}
+      className={cn('p-1.5 rounded-lg text-gray-400 dark:text-zinc-400 transition-colors disabled:opacity-40', hoverCls)}
     >
       {children}
     </button>
@@ -673,8 +673,8 @@ function IconBtn({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="text-sm font-semibold text-gray-900">{value}</p>
+      <p className="text-[11px] font-bold text-gray-400 dark:text-zinc-400 uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100">{value}</p>
     </div>
   );
 }
@@ -682,8 +682,8 @@ function Detail({ label, value }: { label: string; value: string }) {
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-center justify-between px-4 py-2.5">
-      <span className={cn('text-sm', strong ? 'font-bold text-gray-900' : 'text-gray-500')}>{label}</span>
-      <span className={cn('text-sm', strong ? 'font-black text-gray-900' : 'font-semibold text-gray-700')}>{value}</span>
+      <span className={cn('text-sm', strong ? 'font-bold text-gray-900 dark:text-zinc-100' : 'text-gray-500 dark:text-zinc-400')}>{label}</span>
+      <span className={cn('text-sm', strong ? 'font-black text-gray-900 dark:text-zinc-100' : 'font-semibold text-gray-700 dark:text-zinc-300')}>{value}</span>
     </div>
   );
 }

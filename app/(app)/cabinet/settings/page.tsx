@@ -46,6 +46,9 @@ export default function CabinetSettingsPage() {
   const [bic, setBic] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
+  // DÉDALOS (CIBLE 3c) — modèle de mise en page des factures cabinet (PDF).
+  // Défaut = 7 (PUR, minimaliste épuré). Voir lib/pdf-server.ts getStyle().
+  const [pdfTemplate, setPdfTemplate] = useState(7);
   // Team
   const [members, setMembers] = useState<LocalMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -92,6 +95,8 @@ export default function CabinetSettingsPage() {
     setBic(s.bic || '');
     setBankName(s.bank_name || '');
     setAccountHolder(s.account_holder || '');
+    const pt = Number(s.pdf_template);
+    setPdfTemplate(pt >= 1 && pt <= 9 ? pt : 7);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cabinet?.id]);
 
@@ -219,6 +224,7 @@ export default function CabinetSettingsPage() {
           bic: bic.trim() || undefined,
           bank_name: bankName.trim() || undefined,
           account_holder: accountHolder.trim() || undefined,
+          pdf_template: pdfTemplate,
         },
       });
       toast.success('Paramètres sauvegardés');
@@ -501,6 +507,41 @@ export default function CabinetSettingsPage() {
               'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500'
             )}
           />
+        </div>
+      </div>
+
+      {/* DÉDALOS (CIBLE 3c) — Modèle de facture (template PDF) */}
+      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+          <FileText size={15} className="text-indigo-500" />
+          Modèle de facture
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Choisissez la mise en page de vos factures d&apos;honoraires. Le logo et la couleur du cabinet s&apos;appliquent automatiquement.
+        </p>
+        <div>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+            <span className="flex items-center gap-1.5"><FileText size={11} />Template PDF</span>
+          </label>
+          <select
+            value={pdfTemplate}
+            onChange={(e) => setPdfTemplate(Number(e.target.value))}
+            className={cn(
+              'w-full px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-sm outline-none transition-all',
+              'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500'
+            )}
+          >
+            <option value={7}>PUR — Minimaliste épuré (recommandé)</option>
+            <option value={8}>AUDACE — Moderne à fort impact</option>
+            <option value={9}>ÉLÉGANCE — Classique formel</option>
+            <option value={1}>Classique — Barre fine</option>
+            <option value={3}>Accent — En-tête coloré plein</option>
+            <option value={5}>Marine — En-tête bleu nuit</option>
+            <option value={6}>Émeraude — En-tête vert</option>
+            <option value={2}>Sobre — En-tête sombre (serif)</option>
+            <option value={4}>Crème — Tons chauds (serif)</option>
+          </select>
+          <p className="text-xs text-gray-400 mt-1.5">Modifiez puis recréez une facture pour voir le nouveau rendu.</p>
         </div>
       </div>
 
