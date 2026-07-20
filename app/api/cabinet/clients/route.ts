@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
+import { resolveCabinetAccess } from '@/lib/cabinet-auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +34,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ cabinet: null, clients: [] });
     }
 
-    const clients = await getCabinetClients(cabinet.id);
+    // ARGUS — un viewer/client ne voit QUE ses propres données (anti-IDOR).
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const allClients = await getCabinetClients(cabinet.id);
+    const clients = access.isStaff
+      ? allClients
+      : allClients.filter((c: any) => c.client_user_id === user.id);
     return NextResponse.json({ cabinet, clients });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erreur serveur' }, { status: 500 });

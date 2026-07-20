@@ -39,7 +39,7 @@ export async function GET(
 
     const { data: invoice, error: fetchError } = await admin
       .from('invoices')
-      .select('id, user_id, number, status, pdp_status, pdp_transmission_id, pdp_last_error, pdp_transmitted_at')
+      .select('id, user_id, number, status, pdp_status, pdp_transmission_id, pdp_last_error, pdp_transmitted_at, einvoice_status_checked_at')
       .eq('id', invoiceId)
       .eq('user_id', user.id) // Sécurité : l'utilisateur ne peut voir que ses factures
       .single();
@@ -75,18 +75,18 @@ export async function GET(
     }
 
     // ── Vérifier le cache (2 min) ─────────────────────────────────────────
-    // On utilise un check basé sur la dernière sync de cette facture
-    // La colonne updated_at sert de proxy en attendant einvoice_status_checked_at
-    const updatedAt = invoice.pdp_transmitted_at;
-    if (updatedAt) {
-      const ageMs = Date.now() - new Date(updatedAt).getTime();
+    // On s'appuie sur einvoice_status_checked_at (dernier poll réel), avec
+    // pdp_transmitted_at en repli pour les factures jamais pollées.
+    const lastCheck = invoice.einvoice_status_checked_at || invoice.pdp_transmitted_at;
+    if (lastCheck) {
+      const ageMs = Date.now() - new Date(lastCheck).getTime();
       if (ageMs < CACHE_TTL_MS) {
         return NextResponse.json({
           pdp_status: invoice.pdp_status,
           invoice_status: invoice.status,
           pdp_transmission_id: invoice.pdp_transmission_id,
           pdp_transmitted_at: invoice.pdp_transmitted_at,
-          checked_at: updatedAt,
+          checked_at: lastCheck,
           source: 'cached',
           cache_age_ms: ageMs,
         });
@@ -100,7 +100,12 @@ export async function GET(
     const eventsResult = await getInvoiceEvents(invoice.pdp_transmission_id, invoice.user_id);
 
     if (!eventsResult.events || eventsResult.events.length === 0) {
-      // Pas d'événements = facture toujours en transit
+      // Pas d'événements = facture toujours en transit. On stamp le poll pour
+      // ne pas re-poller SuperPDP pendant le TTL.
+      await admin
+        .from('invoices')
+        .update({ einvoice_status_checked_at: new Date().toISOString() })
+        .eq('id', invoiceId);
       return NextResponse.json({
         pdp_status: invoice.pdp_status,
         invoice_status: invoice.status,
@@ -141,13 +146,17 @@ export async function GET(
         break;
     }
 
-    // ── Mettre à jour la DB si changement ─────────────────────────────────
+    // ── Mettre à jour la DB ───────────────────────────────────────────────
+    const pollNow = new Date().toISOString();
     if (newInvoiceStatus || newPdpStatus) {
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      const updates: Record<string, any> = {
+        updated_at: pollNow,
+        einvoice_status_checked_at: pollNow,
+      };
 
       if (newInvoiceStatus) {
         updates.status = newInvoiceStatus;
-        if (newInvoiceStatus === 'paid') updates.paid_at = new Date().toISOString();
+        if (newInvoiceStatus === 'paid') updates.paid_at = pollNow;
       }
 
       if (newPdpStatus) {
@@ -175,6 +184,12 @@ export async function GET(
       // Mettre à jour les valeurs locales pour la réponse
       if (newInvoiceStatus) invoice.status = newInvoiceStatus;
       if (newPdpStatus) invoice.pdp_status = newPdpStatus;
+    } else {
+      // Pas de changement de statut, mais on enregistre le poll pour le cache.
+      await admin
+        .from('invoices')
+        .update({ einvoice_status_checked_at: pollNow })
+        .eq('id', invoiceId);
     }
 
     return NextResponse.json({

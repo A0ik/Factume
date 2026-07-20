@@ -51,13 +51,28 @@ export function useTeam() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur');
       await fetchMembers();
-      return { success: true };
+      return { success: true, emailSent: data.emailSent === true, emailError: data.emailError };
     } catch (error: any) {
       return { success: false, error: error.message };
     } finally {
       setInviting(false);
     }
   }, [fetchMembers]);
+
+  const accept = useCallback(async (inviteId: string) => {
+    try {
+      const res = await fetch('/api/team/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }, []);
 
   const remove = useCallback(async (memberId: string) => {
     try {
@@ -91,5 +106,5 @@ export function useTeam() {
     }
   }, [fetchMembers]);
 
-  return { members, loading, inviting, invite, remove, updateRole, refresh: fetchMembers };
+  return { members, loading, inviting, invite, accept, remove, updateRole, refresh: fetchMembers };
 }

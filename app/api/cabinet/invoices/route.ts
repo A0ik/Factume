@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { requireCabinetStaff, resolveCabinetAccess, getScopedClientIds } from '@/lib/cabinet-auth';
 
 // ── Shared auth guard ──────────────────────────────────────────────
 async function authenticate(req: NextRequest) {
@@ -56,17 +57,29 @@ export async function GET(req: NextRequest) {
   try {
     const ctx = await authenticate(req);
     if (!ctx) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    const { admin, cabinet } = ctx;
+    const { admin, cabinet, user } = ctx;
+
+    // ARGUS — un viewer/client ne voit QUE ses propres factures cabinet.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const clientId = searchParams.get('client_id');
     const month = searchParams.get('month'); // YYYY-MM
 
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ invoices: [], stats: emptyStats() });
+    }
+
     let query = admin
       .from('cabinet_invoices')
       .select('*')
       .eq('cabinet_id', cabinet.id);
+
+    if (scopedClientIds) {
+      query = query.in('client_id', scopedClientIds);
+    }
 
     if (status) query = query.eq('status', status);
     if (clientId) query = query.eq('client_id', clientId);
@@ -90,11 +103,15 @@ export async function GET(req: NextRequest) {
       throw error;
     }
 
-    // Compute stats across ALL invoices (not filtered)
-    const { data: allInvoices } = await admin
+    // Compute stats across invoices (scoped pour viewer/client)
+    let allQuery = admin
       .from('cabinet_invoices')
       .select('status, amount_ttc')
       .eq('cabinet_id', cabinet.id);
+    if (scopedClientIds) {
+      allQuery = allQuery.in('client_id', scopedClientIds);
+    }
+    const { data: allInvoices } = await allQuery;
 
     const stats: Record<string, { count: number; total: number }> = {};
     for (const inv of allInvoices || []) {
@@ -118,7 +135,11 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await authenticate(req);
     if (!ctx) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    const { admin, cabinet } = ctx;
+    const { admin, cabinet, user } = ctx;
+
+    // ARGUS — seuls owner / admin / manager peuvent créer des factures cabinet.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { items, client_id, issue_date, due_date, description, objet, payment_method } = body;
@@ -213,7 +234,11 @@ export async function PATCH(req: NextRequest) {
   try {
     const ctx = await authenticate(req);
     if (!ctx) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    const { admin, cabinet } = ctx;
+    const { admin, cabinet, user } = ctx;
+
+    // ARGUS — seuls owner / admin / manager peuvent modifier des factures cabinet.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { id, items, status, client_id, issue_date, due_date, description, objet, payment_method } = body;

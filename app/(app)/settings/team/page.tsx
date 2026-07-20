@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTeam, TeamMember } from '@/hooks/useTeam';
@@ -22,12 +22,49 @@ const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; colo
 export default function TeamSettingsPage() {
   const router = useRouter();
   const sub = useSubscription();
-  const { members, loading, inviting, invite, remove, updateRole } = useTeam();
+  const { members, loading, inviting, invite, accept, remove, updateRole } = useTeam();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
+  const [acceptDone, setAcceptDone] = useState(false);
+  const [acceptOk, setAcceptOk] = useState<boolean | null>(null);
+
+  // ARGUS — Acceptation d'invitation : doit fonctionner même pour un utilisateur
+  // non-Business (l'invité rejoint l'équipe de l'owner, pas la sienne). Traité AVANT
+  // la garde Business. Lecture du paramètre côté client (évite le bailout SSR de
+  // useSearchParams en Next 15).
+  useEffect(() => {
+    if (acceptDone || accepting) return;
+    const acceptId = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('accept')
+      : null;
+    if (!acceptId) return;
+    setAccepting(true);
+    (async () => {
+      const result = await accept(acceptId);
+      setAcceptOk(result.success);
+      setAccepting(false);
+      setAcceptDone(true);
+      if (result.success) {
+        toast.success("Vous avez rejoint l'équipe. Redirection…");
+        setTimeout(() => router.push('/dashboard'), 1200);
+      } else {
+        toast.error(result.error || "Impossible d'accepter l'invitation");
+      }
+    })();
+  }, [acceptDone, accepting, accept, router]);
+
+  if (accepting || (acceptDone && acceptOk)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">Traitement de l’invitation…</p>
+      </div>
+    );
+  }
 
   if (!sub.isBusiness) {
     return (
@@ -59,7 +96,11 @@ export default function TeamSettingsPage() {
     if (!inviteEmail.trim()) return;
     const result = await invite(inviteEmail.trim(), inviteRole);
     if (result.success) {
-      toast.success(`Invitation envoyée à ${inviteEmail}`);
+      if (result.emailSent) {
+        toast.success(`Invitation envoyée à ${inviteEmail}`);
+      } else {
+        toast.warning(`Invitation créée, mais l'email n'a pas pu être envoyé (${result.emailError || 'service indisponible'}). L'invité devra se rendre dans Paramètres → Équipe.`);
+      }
       setInviteEmail('');
       setInviteRole('member');
       setShowInviteModal(false);

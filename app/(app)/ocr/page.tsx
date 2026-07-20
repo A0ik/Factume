@@ -25,11 +25,12 @@ import {
   Upload, FileImage, Sparkles, Check, X, AlertCircle, Eye, Edit2,
   Scan, Loader2, FileText, Crown, Car, Coffee, Home, Laptop, Briefcase,
   ShoppingCart, Smartphone, Disc, Package, Inbox, Archive,
-  Tag, ZoomIn, ZoomOut, RotateCw, ChevronRight, Shield,
+  Tag, ZoomIn, ZoomOut, RotateCw, ChevronRight, Shield, RefreshCw, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { ReceiptImg } from '@/components/storage/ReceiptImg';
+import InboxAddressChip from '@/components/ocr/InboxAddressChip';
 
 // ─── Catégories ────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -111,6 +112,7 @@ interface DbExpense {
   client_id: string;
   project_code: string;
   document_type: string;
+  currency: string;
   created_at: string;
 }
 
@@ -263,6 +265,8 @@ export default function OcrPage() {
   const [dbEditData, setDbEditData] = useState<{
     vendor: string; amount: number; vat_amount: number; ht_amount: number;
     date: string; category: string; description: string;
+    invoice_number: string; payment_method: string; currency: string;
+    account_code: string; account_label: string;
   } | null>(null);
 
   const { clients } = useDataStore();
@@ -621,7 +625,12 @@ export default function OcrPage() {
     setProjectCode(e.project_code || '');
     setDbEditMode(false);
     setZoom(1);
-    setDbEditData({ vendor: e.vendor || '', amount: e.amount || 0, vat_amount: e.vat_amount || 0, ht_amount: htOf(e) || 0, date: e.date || '', category: e.category || '', description: e.description || '' });
+    setDbEditData({
+      vendor: e.vendor || '', amount: e.amount || 0, vat_amount: e.vat_amount || 0, ht_amount: htOf(e) || 0,
+      date: e.date || '', category: e.category || '', description: e.description || '',
+      invoice_number: e.invoice_number || '', payment_method: e.payment_method || '', currency: e.currency || 'EUR',
+      account_code: e.account_code || '', account_label: e.account_label || '',
+    });
   }, []);
 
   // ── Sauver les edits DB ──────────────────────────────────────────────────
@@ -633,6 +642,9 @@ export default function OcrPage() {
         body: JSON.stringify({
           vendor: dbEditData.vendor, amount: dbEditData.amount, vat_amount: dbEditData.vat_amount, ht_amount: dbEditData.ht_amount,
           date: dbEditData.date, category: dbEditData.category, description: dbEditData.description, status: 'reviewed',
+          invoice_number: dbEditData.invoice_number, payment_method: dbEditData.payment_method, currency: dbEditData.currency,
+          ...(dbEditData.account_code ? { account_code: dbEditData.account_code } : {}),
+          ...(dbEditData.account_label ? { account_label: dbEditData.account_label } : {}),
           ...(selectedClientId && { client_id: selectedClientId }), ...(projectCode && { project_code: projectCode }),
         }),
       });
@@ -658,6 +670,31 @@ export default function OcrPage() {
       fetchDbExpenses();
       toast.success('Statut mis à jour');
     } catch { toast.error('Impossible de mettre à jour le statut.'); }
+  }, [fetchDbExpenses]);
+
+  // ── Ré-analyser (re-OCR du justificatif stocké) ───────────────────────────
+  const reanalyzeDb = useCallback(async (id: string) => {
+    try {
+      const res = await fetch('/api/ai/ocr-reanalyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expense_id: id }),
+      });
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) { toast.error(`Ré-analyse impossible : ${data.error || 'inconnue'}`); return; }
+      await fetchDbExpenses();
+      toast.success('Document ré-analysé');
+    } catch { toast.error('Impossible de contacter le serveur.'); }
+  }, [fetchDbExpenses]);
+
+  // ── Supprimer (dépense) ───────────────────────────────────────────────────
+  const deleteDbExpense = useCallback(async (id: string) => {
+    try {
+      const { error } = await getSupabaseClient().from('expenses').delete().eq('id', id);
+      if (error) { toast.error(`Suppression impossible : ${error.message}`); return; }
+      setReviewingDbExpense(null); setDbEditMode(false);
+      fetchDbExpenses();
+      toast.success('Dépense supprimée');
+    } catch { toast.error('Impossible de supprimer.'); }
   }, [fetchDbExpenses]);
 
   // ── Drag & drop ──────────────────────────────────────────────────────────
@@ -713,6 +750,7 @@ export default function OcrPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <InboxAddressChip />
           {pendingCount > 0 && (
             <button onClick={processAllFiles} disabled={isProcessing}
               className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0">
@@ -889,6 +927,8 @@ export default function OcrPage() {
                   onSaveDb={saveDbEdits}
                   onClose={() => { setReviewingFile(null); setReviewingDbExpense(null); setEditMode(false); setDbEditMode(false); }}
                   onArchive={(id) => { updateExpenseStatus(id, 'validated'); setReviewingDbExpense(null); }}
+                  onDeleteDb={deleteDbExpense}
+                  onReanalyzeDb={reanalyzeDb}
                 />
               </section>
             </>
@@ -1043,7 +1083,7 @@ function ReviewForm(props: {
   editData: ExtractedData | null;
   setEditData: (d: ExtractedData | null) => void;
   dbEditMode: boolean;
-  dbEditData: { vendor: string; amount: number; vat_amount: number; ht_amount: number; date: string; category: string; description: string } | null;
+  dbEditData: { vendor: string; amount: number; vat_amount: number; ht_amount: number; date: string; category: string; description: string; invoice_number: string; payment_method: string; currency: string; account_code: string; account_label: string } | null;
   setDbEditData: (d: any) => void;
   selectedClientId: string;
   setSelectedClientId: (s: string) => void;
@@ -1059,6 +1099,8 @@ function ReviewForm(props: {
   onSaveDb: () => void;
   onClose: () => void;
   onArchive: (id: string) => void;
+  onDeleteDb: (id: string) => void;
+  onReanalyzeDb: (id: string) => void;
 }) {
   const f = props.reviewingFile;
   const db = props.reviewingDbExpense;
@@ -1177,7 +1219,9 @@ function ReviewForm(props: {
           <EditFields
             vendor={props.dbEditData.vendor} amount={props.dbEditData.amount} ht_amount={props.dbEditData.ht_amount}
             vat_amount={props.dbEditData.vat_amount} date={props.dbEditData.date} category={props.dbEditData.category}
-            description={props.dbEditData.description} acctCode={CATEGORY_ACCOUNTING[props.dbEditData.category]?.code} acctLabel={CATEGORY_ACCOUNTING[props.dbEditData.category]?.label}
+            description={props.dbEditData.description}
+            invoiceNumber={props.dbEditData.invoice_number} paymentMethod={props.dbEditData.payment_method}
+            currency={props.dbEditData.currency} accountCode={props.dbEditData.account_code} accountLabel={props.dbEditData.account_label}
             onChange={(patch) => props.setDbEditData({ ...props.dbEditData, ...patch })}
             clients={props.clients} selectedClientId={props.selectedClientId} setSelectedClientId={props.setSelectedClientId}
             projectCode={props.projectCode} setProjectCode={props.setProjectCode}
@@ -1213,6 +1257,12 @@ function ReviewForm(props: {
             <button onClick={() => props.onArchive(db.id)} className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5">
               <Archive className="w-4 h-4" /> Valider
             </button>
+            <button onClick={() => props.onReanalyzeDb(db.id)} title="Ré-analyser l'extraction" className="inline-flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-lg border border-gray-200 dark:border-white/[0.1] text-gray-500 dark:text-zinc-400 hover:text-emerald-600 hover:border-emerald-300 dark:hover:border-emerald-700 transition">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button onClick={() => { if (confirm('Supprimer cette dépense et son justificatif ?')) props.onDeleteDb(db.id); }} title="Supprimer" className="inline-flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-lg border border-gray-200 dark:border-white/[0.1] text-gray-500 dark:text-zinc-400 hover:text-red-600 hover:border-red-300 dark:hover:border-red-800 transition">
+              <Trash2 className="w-4 h-4" />
+            </button>
           </>
         )}
         {db && props.dbEditMode && (
@@ -1237,10 +1287,12 @@ function DetailView({ label, value, mono, strong }: { label: string; value: stri
   );
 }
 
-function EditFields({ vendor, amount, ht_amount, vat_amount, date, category, description, acctCode, acctLabel, onChange, clients, selectedClientId, setSelectedClientId, projectCode, setProjectCode }: {
+function EditFields({ vendor, amount, ht_amount, vat_amount, date, category, description, acctCode, acctLabel, invoiceNumber, paymentMethod, currency, accountCode, accountLabel, onChange, clients, selectedClientId, setSelectedClientId, projectCode, setProjectCode }: {
   vendor: string; amount: number; ht_amount: number; vat_amount: number; date: string; category: string; description: string;
   acctCode?: string; acctLabel?: string;
-  onChange: (patch: Partial<ExtractedData>) => void;
+  invoiceNumber?: string; paymentMethod?: string; currency?: string;
+  accountCode?: string; accountLabel?: string;
+  onChange: (patch: any) => void;
   clients: any[] | null; selectedClientId: string; setSelectedClientId: (s: string) => void;
   projectCode: string; setProjectCode: (s: string) => void;
 }) {
@@ -1263,12 +1315,43 @@ function EditFields({ vendor, amount, ht_amount, vat_amount, date, category, des
         <Field label="TVA" hint="€"><input type="number" step="0.01" className={cn(inputCls, "tabular-nums")} value={vat_amount} onChange={(e) => onChange({ vat_amount: parseFloat(e.target.value) || 0 })} /></Field>
       </div>
       <Field label="Description"><textarea className={cn(inputCls, "resize-none")} rows={2} value={description} onChange={(e) => onChange({ description: e.target.value })} /></Field>
-      {acctCode && (
+      {invoiceNumber !== undefined && (
+        <Field label="N° facture"><input className={cn(inputCls, "font-mono")} value={invoiceNumber} onChange={(e) => onChange({ invoice_number: e.target.value })} /></Field>
+      )}
+      {paymentMethod !== undefined && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Mode règlement">
+            <select className={inputCls} value={paymentMethod} onChange={(e) => onChange({ payment_method: e.target.value })}>
+              <option value="">—</option>
+              <option value="card">Carte</option>
+              <option value="bank_transfer">Virement</option>
+              <option value="direct_debit">Prélèvement</option>
+              <option value="cash">Espèces</option>
+              <option value="check">Chèque</option>
+              <option value="other">Autre</option>
+            </select>
+          </Field>
+          <Field label="Devise">
+            <select className={inputCls} value={currency} onChange={(e) => onChange({ currency: e.target.value })}>
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="GBP">GBP £</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </Field>
+        </div>
+      )}
+      {accountCode !== undefined ? (
+        <div className="grid grid-cols-[120px_1fr] gap-2">
+          <Field label="Code PCG"><input className={cn(inputCls, "font-mono")} value={accountCode} onChange={(e) => onChange({ account_code: e.target.value })} placeholder="607000" /></Field>
+          <Field label="Libellé compte"><input className={inputCls} value={accountLabel} onChange={(e) => onChange({ account_label: e.target.value })} /></Field>
+        </div>
+      ) : acctCode ? (
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.02] px-3 py-2">
           <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">{acctCode}</span>
           <span className="text-[11px] text-gray-500 dark:text-zinc-400">{acctLabel || ''}</span>
         </div>
-      )}
+      ) : null}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Client">
           <select className={inputCls} value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>

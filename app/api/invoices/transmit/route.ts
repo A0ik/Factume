@@ -21,25 +21,28 @@ const TransmitSchema = z.object({
  * - Par le cron de retry
  */
 export async function POST(req: NextRequest) {
-  // Rate limiting : 10 requêtes/minute (transmission légale = plus sensible)
-  const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 120, windowMs: 60000 }); // LOI 9
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: 'Trop de requêtes de transmission. Réessayez dans quelques instants.' },
-      { status: 429 }
-    );
+  // Mode interne (cron Supabase pg_cron) : pas de session utilisateur, mais un
+  // x-cron-secret valide. On opère alors pour le user_id de la facture (retry
+  // automatique des transmissions en échec transitoire).
+  const cronSecret = req.headers.get('x-cron-secret');
+  const isInternalCron = !!cronSecret && !!process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET;
+
+  // Rate limiting : 10 req/min par IP pour les utilisateurs (transmission légale
+  // = plus sensible). Le cron interne en est exonéré (batch de retries).
+  if (!isInternalCron) {
+    const rateLimitResult = rateLimit({ key: getClientIp(req), limit: 10, windowMs: 60000 }); // LOI 9
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Trop de requêtes de transmission. Réessayez dans quelques instants.' },
+        { status: 429 }
+      );
+    }
   }
 
   try {
     // ── Authentification ───────────────────────────────────────────────────
     const supabaseAuth = await createServerSupabaseClient();
     const { data: { user } } = await supabaseAuth.auth.getUser();
-
-    // Mode interne (cron Supabase pg_cron / Vercel Cron) : pas de session
-    // utilisateur, mais un x-cron-secret valide. On opère alors pour le user_id
-    // de la facture (retry automatique des transmissions en échec transitoire).
-    const cronSecret = req.headers.get('x-cron-secret');
-    const isInternalCron = !!cronSecret && !!process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET;
 
     if (!user && !isInternalCron) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });

@@ -9,7 +9,7 @@ import {
   ClipboardList, Bell, UserPlus, Settings, Menu, X,
   ChevronRight, Shield, HardHat, FileCheck,
   CalendarClock, ArrowLeftRight, Scale, Wallet, Target,
-  Calculator, MessageSquare,
+  Calculator, MessageSquare, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCabinetStore } from '@/stores/cabinetStore';
@@ -65,6 +65,7 @@ const DRAWER_GROUPS: { title?: string; items: { href: string; icon: LucideIcon; 
     title: 'Outils',
     items: [
       { href: '/cabinet/agenda', icon: Calendar, label: 'Agenda' },
+      { href: '/cabinet/analytics', icon: BarChart3, label: 'Analytics' },
       { href: '/cabinet/invitations', icon: UserPlus, label: 'Invitations' },
       { href: '/cabinet/settings', icon: Settings, label: 'Paramètres' },
     ],

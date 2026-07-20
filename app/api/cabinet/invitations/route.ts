@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { requireCabinetOwner } from '@/lib/cabinet-auth';
 
 // PROMÉTHÉE — CIBLE 1 : gestion des liens d'invitation tokenisés (expert → gérant).
 // Le gérant qui accepte est ajouté à cabinet_members(role='client') → RLS ouvre
@@ -69,6 +70,10 @@ export async function POST(req: NextRequest) {
     const activeCabinetId = req.headers.get('x-active-cabinet-id') || undefined;
     const cabinet = await getCabinetForUser(user.id, activeCabinetId);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
+
+    // ARGUS — seul le propriétaire peut générer un lien d'invitation tokenisé.
+    const ownerGuard = await requireCabinetOwner(admin, cabinet, user.id);
+    if (!ownerGuard.ok) return ownerGuard.response;
 
     const body = await req.json().catch(() => ({}));
     const invitedEmail = typeof body.invited_email === 'string' ? body.invited_email.trim().toLowerCase() : null;

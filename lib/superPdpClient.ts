@@ -20,6 +20,7 @@ import { Invoice, Profile } from '@/types';
 const BASE_URL = 'https://api.superpdp.tech/v1.beta';
 const TOKEN_URL = 'https://api.superpdp.tech/oauth2/token';
 const AUTHORIZE_URL = 'https://api.superpdp.tech/oauth2/authorize';
+const REVOKE_URL = 'https://api.superpdp.tech/oauth2/revoke';
 
 function getClientId(): string {
   const id = process.env.SUPER_PDP_CLIENT_ID;
@@ -127,9 +128,45 @@ export async function getConnectionStatus(userId: string): Promise<{
 
 /**
  * Révoque (déconnecte) la connexion SuperPDP d'un utilisateur.
+ *
+ * Appelle /oauth2/revoke (RFC 7009, doc SuperPDP §Authentification) pour
+ * invalider les tokens CÔTÉ SuperPDP — puis marque la connexion révoquée en
+ * base. Best-effort côté API : on ne fait pas échouer la déconnexion si
+ * l'endpoint est injoignable (la marque revoked_at reste posée).
+ *
+ * On révoque le refresh_token ET l'access_token : la révocation du
+ * refresh_token entraîne celle de tous les access_tokens liés (doc SuperPDP).
  */
 export async function disconnectSuperPdp(userId: string): Promise<void> {
   const admin = createAdminClient();
+  const conn = await getUserConnection(userId);
+
+  if (conn) {
+    const tokensToRevoke: string[] = [];
+    if (conn.refresh_token_encrypted) {
+      try { tokensToRevoke.push(decryptToken(conn.refresh_token_encrypted)); } catch {}
+    }
+    if (conn.access_token_encrypted) {
+      try { tokensToRevoke.push(decryptToken(conn.access_token_encrypted)); } catch {}
+    }
+
+    for (const token of tokensToRevoke) {
+      try {
+        await fetch(REVOKE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            token,
+            client_id: getClientId(),
+            client_secret: getClientSecret(),
+          }),
+        });
+      } catch (err) {
+        console.warn('[SuperPDP] revoke call failed (non-blocking):', (err as Error).message);
+      }
+    }
+  }
+
   await admin
     .from('superpdp_connections')
     .update({ revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() })

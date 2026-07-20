@@ -101,7 +101,70 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de l\'invitation' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, member });
+    // ARGUS — Envoi de l'email d'invitation (Resend). Best-effort : on ne fait pas
+    // échouer l'invitation si l'envoi échoue, mais on signale à l'UI si l'email
+    // est parti (pour ne pas afficher le mensonge « email envoyé »).
+    let emailSent = false;
+    let emailError: string | null = null;
+    try {
+      const RESEND_API_KEY = process.env.RESEND_API_KEY;
+      if (!RESEND_API_KEY) {
+        emailError = 'Service email non configuré';
+      } else {
+        const { Resend } = await import('resend');
+        const resend = new Resend(RESEND_API_KEY);
+        const senderEmail = process.env.RESEND_FROM_EMAIL || 'contact@factu.me';
+        const senderName = process.env.RESEND_FROM_NAME || 'Factu.me';
+        const acceptLink = `${req.nextUrl.origin}/settings/team?accept=${member.id}`;
+
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('company_name')
+          .eq('id', user.id)
+          .single();
+        const ownerName = ownerProfile?.company_name || 'une entreprise';
+        const roleLabel = role === 'admin' ? 'Administrateur'
+          : role === 'member' ? 'Membre' : 'Lecteur';
+
+        const { error: sendErr } = await resend.emails.send({
+          from: `${senderName} <${senderEmail}>`,
+          to: [sanitizedEmail],
+          subject: `${ownerName} vous invite à rejoindre son équipe sur Factu.me`,
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#333;">
+              <div style="background:#10b981;padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+                <h2 style="color:#fff;margin:0;font-size:20px;">Invitation à rejoindre une équipe</h2>
+              </div>
+              <div style="background:#fff;padding:32px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 12px 12px;">
+                <p style="font-size:16px;margin:0 0 16px;">Bonjour,</p>
+                <p style="font-size:15px;margin:0 0 16px;">
+                  <strong>${ownerName.replace(/</g, '&lt;')}</strong> vous invite à rejoindre son équipe sur Factu.me
+                  en tant que <strong>${roleLabel}</strong>.
+                </p>
+                <p style="font-size:14px;color:#666;margin:0 0 24px;">
+                  Vous pourrez consulter et collaborer sur ses documents (factures, clients).
+                </p>
+                <a href="${acceptLink}" style="display:inline-block;background:#10b981;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;">
+                  Accepter l'invitation
+                </a>
+                <p style="font-size:12px;color:#999;margin:24px 0 0;">
+                  Si le bouton ne fonctionne pas, copiez ce lien : ${acceptLink}
+                </p>
+              </div>
+            </div>`,
+        });
+        if (sendErr) {
+          emailError = sendErr.message || 'Échec de l\'envoi';
+        } else {
+          emailSent = true;
+        }
+      }
+    } catch (err: any) {
+      emailError = err?.message || 'Erreur inconnue';
+      console.warn('[team-invite] Envoi email échoué (non bloquant):', emailError);
+    }
+
+    return NextResponse.json({ success: true, member, emailSent, emailError });
   } catch (error: any) {
     console.error('Team invite error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
