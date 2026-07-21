@@ -3,6 +3,7 @@
 import { use, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatCurrency, formatDate, DOC_LABELS } from '@/lib/utils';
+import { safeHref } from '@/lib/safe-href';
 import {
   FileText, Download, CreditCard, CheckCircle2, Clock,
   AlertTriangle, ChevronRight, Building2, Mail, Phone,
@@ -289,8 +290,7 @@ export default function ClientPortalPage({ params }: { params: Promise<{ token: 
                 </button>
                 {selected.stripe_payment_url && selected.status !== 'paid' && (
                   <a
-                    href={selected.stripe_payment_url}
-                    style={{ background: accent }}
+                    href={safeHref(selected.stripe_payment_url)}
                     className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-2 rounded-xl hover:opacity-90 transition-opacity"
                   >
                     <CreditCard size={13} /> Payer en ligne

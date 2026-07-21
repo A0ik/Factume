@@ -451,6 +451,103 @@ async function toolRequestForm(args: {
   return { toolResult: { form_requested: true, field_count: card.fields.length }, card };
 }
 
+// ─── ODIN (CIBLE 1 — actions réelles niveau ChatGPT-4) ─────────────────────────
+// Le Copilot ne se contente plus de rediriger : il AGIT en base. Création de client,
+// enregistrement d'email (ferme la boucle « relance sans email ») et conscience cabinet.
+
+async function toolCreateClient(args: { name?: string; email?: string; phone?: string; siret?: string }, ctx: ToolCtx) {
+  const name = (args?.name || '').trim().slice(0, 120);
+  if (!name) {
+    return { toolResult: { saved: false, reason: 'nom_manquant' }, card: { type: 'text', message: 'Quel nom pour ce nouveau client ?' } };
+  }
+  const payload: any = { user_id: ctx.userId, name };
+  if (args?.email && /^\S+@\S+\.\S+$/.test(args.email)) payload.email = args.email.trim().slice(0, 200);
+  if (args?.phone) payload.phone = String(args.phone).trim().slice(0, 40);
+  if (args?.siret) payload.siret = String(args.siret).replace(/\s+/g, '').slice(0, 20);
+  const { data, error } = await ctx.supabase.from('clients').insert(payload).select('id, name, email').single();
+  if (error) {
+    return { toolResult: { saved: false, error: error.message }, card: { type: 'text', message: `Impossible de créer le client : ${error.message}` } };
+  }
+  return {
+    toolResult: { saved: true, client_id: data.id, name: data.name, has_email: !!data.email },
+    card: { type: 'text', message: `✅ Client « ${data.name} » créé${data.email ? ` (${data.email})` : ''}.` },
+  };
+}
+
+async function toolSetClientEmail(args: { client_query?: string; email?: string }, ctx: ToolCtx) {
+  const email = (args?.email || '').trim().toLowerCase();
+  const want = normalize(args?.client_query);
+  if (!want) return { toolResult: { saved: false, reason: 'client_manquant' }, card: { type: 'text', message: 'Pour quel client souhaitez-vous enregistrer cet email ?' } };
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return { toolResult: { saved: false, reason: 'email_invalide' }, card: { type: 'text', message: 'Cet email ne semble pas valide.' } };
+  }
+  const { data: clients } = await ctx.supabase.from('clients').select('id, name, email').eq('user_id', ctx.userId);
+  const match = (clients || []).find((c: any) => fuzzyMatch(c.name, want));
+  if (!match) return { toolResult: { saved: false, reason: 'introuvable' }, card: { type: 'text', message: `Aucun client trouvé pour « ${args?.client_query} ».` } };
+  const { error } = await ctx.supabase.from('clients').update({ email }).eq('id', match.id).eq('user_id', ctx.userId);
+  if (error) return { toolResult: { saved: false, error: error.message }, card: { type: 'text', message: `Échec de l'enregistrement : ${error.message}` } };
+  return {
+    toolResult: { saved: true, client: match.name, email },
+    card: { type: 'text', message: `✅ Email ${email} enregistré pour ${match.name}. Vous pouvez maintenant relancer ce client.` },
+  };
+}
+
+async function toolGetCabinetOverview(_args: any, ctx: ToolCtx) {
+  const { data: cm } = await ctx.supabase
+    .from('cabinet_members')
+    .select('role, cabinet:cabinets(id, name)')
+    .eq('user_id', ctx.userId)
+    .limit(1);
+  const membership: any = (cm && cm[0]) || null;
+  const cabRaw: any = membership?.cabinet;
+  const cab: any = Array.isArray(cabRaw) ? cabRaw[0] : cabRaw;
+  if (!cab || !cab.id) {
+    return { toolResult: { in_cabinet: false }, card: { type: 'text', message: "Vous n'êtes rattaché à aucun cabinet." } };
+  }
+  const cabinetId = cab.id;
+  const [{ data: members }, { data: clients }] = await Promise.all([
+    ctx.supabase.from('cabinet_members').select('id').eq('cabinet_id', cabinetId),
+    ctx.supabase.from('cabinet_clients').select('id').eq('cabinet_id', cabinetId),
+  ]);
+  const memberCount = (members || []).length;
+  const clientCount = (clients || []).length;
+  return {
+    toolResult: { in_cabinet: true, cabinet: cab.name, role: membership.role, memberCount, clientCount },
+    card: { type: 'text', message: `Cabinet « ${cab.name} » — votre rôle : ${membership.role}. ${memberCount} membre(s), ${clientCount} client(s) rattaché(s).` },
+  };
+}
+
+// ODIN (CIBLE 1 — RAG sémantique documents) — Recherche unifiée multi-entités.
+// Un seul outil pour retrouver "tout ce qui touche à X" : clients + factures + dépenses.
+// Évite à l'IA de deviner quelle entité interroger ; complète les outils ciblés (lookup_client…).
+async function toolSearchDocuments(args: { query?: string }, ctx: ToolCtx) {
+  const q = (args?.query || '').trim();
+  if (q.length < 2) {
+    return { toolResult: { error: 'query_trop_courte' }, card: { type: 'text', message: 'Précisez votre recherche (au moins 2 caractères).' } };
+  }
+  const like = `%${q.replace(/[%_]/g, ' ')}%`;
+  const [{ data: clients }, { data: invoices }, { data: expenses }] = await Promise.all([
+    ctx.supabase.from('clients').select('id, name, email').eq('user_id', ctx.userId).ilike('name', like).limit(5),
+    ctx.supabase.from('invoices').select('id, number, total, status, client_name_override, document_type').eq('user_id', ctx.userId).or(`number.ilike.${like},client_name_override.ilike.${like}`).limit(5),
+    ctx.supabase.from('expenses').select('id, vendor, amount, category').eq('user_id', ctx.userId).or(`vendor.ilike.${like},description.ilike.${like}`).limit(5),
+  ]);
+  const cl = clients || [];
+  const inv = invoices || [];
+  const exp = expenses || [];
+  const total = cl.length + inv.length + exp.length;
+  if (total === 0) {
+    return { toolResult: { count: 0 }, card: { type: 'text', message: `Aucun résultat pour « ${q} ».` } };
+  }
+  const parts: string[] = [];
+  if (cl.length) parts.push(`${cl.length} client(s)`);
+  if (inv.length) parts.push(`${inv.length} facture(s)`);
+  if (exp.length) parts.push(`${exp.length} dépense(s)`);
+  return {
+    toolResult: { count: total, clients: cl, invoices: inv, expenses: exp },
+    card: { type: 'text', message: `🔎 « ${q} » : ${parts.join(', ')}.` },
+  };
+}
+
 const TOOL_EXECUTORS: Record<string, (args: any, ctx: ToolCtx) => Promise<{ toolResult: any; card: any }>> = {
   lookup_client: toolLookupClient,
   list_outstanding_invoices: toolListOutstanding,
@@ -463,6 +560,10 @@ const TOOL_EXECUTORS: Record<string, (args: any, ctx: ToolCtx) => Promise<{ tool
   redirect_to_invoice_creator: toolRedirectToCreator,
   save_memory: toolSaveMemory,
   request_form: toolRequestForm,
+  create_client: toolCreateClient,
+  set_client_email: toolSetClientEmail,
+  get_cabinet_overview: toolGetCabinetOverview,
+  search_documents: toolSearchDocuments,
 };
 
 // ─── Schémas des outils (format OpenAI, compatible OpenRouter & Groq) ─────────
@@ -613,6 +714,58 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'create_client',
+      description: "Crée VRAIMENT un nouveau client en base (action réelle, pas de redirection). À utiliser quand l'utilisateur demande d'ajouter un client (ex: « ajoute le client Acme, email contact@acme.fr »).",
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nom du client (obligatoire).' },
+          email: { type: 'string', description: 'Email (optionnel).' },
+          phone: { type: 'string', description: 'Téléphone (optionnel).' },
+          siret: { type: 'string', description: 'SIRET (optionnel).' },
+        },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'set_client_email',
+      description: "Enregistre ou met à jour l'email d'un client existant (résolution floue du nom). INDISPENSABLE avant une relance si draft_reminder a signalé un email manquant. Ex: l'utilisateur dit « l'email de Nathan c'est nathan@mail.fr ».",
+      parameters: {
+        type: 'object',
+        properties: {
+          client_query: { type: 'string', description: 'Nom/fragment du client.' },
+          email: { type: 'string', description: 'Nouvel email.' },
+        },
+        required: ['client_query', 'email'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_cabinet_overview',
+      description: "Renvoie un aperçu du cabinet comptable auquel l'utilisateur est rattaché (nom, rôle, nombre de membres, nombre de clients). À utiliser quand l'utilisateur évoque son cabinet ou son activité d'expert-comptable.",
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_documents',
+      description: "Recherche UNIFIÉE multi-entités (clients + factures + dépenses) sur un texte libre. À utiliser pour une question transverse (« qu'est-ce que j'ai sur Acme ? », « retrouve ce qui contient X ») plutôt que d'enchaîner plusieurs outils ciblés.",
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string', description: 'Texte à rechercher (nom, numéro, mot-clé).' } },
+        required: ['query'],
+      },
+    },
+  },
 ];
 
 const SYSTEM_PROMPT = `Tu es Copilot Factu.me, l'assistant IA expert d'un indépendant ou expert-comptable français. Tu réponds TOUJOURS en français, de façon précise, concrète et concise.
@@ -622,10 +775,13 @@ RÈGLES ABSOLUES :
 2. Dès que l'utilisateur nomme un client (ex. « nathan », « Durand »), appelle l'outil qui va bien (lookup_client, get_client_info, list_outstanding_invoices, draft_reminder) en passant le nom brut — la résolution insensible à la casse/accents se fait côté base. Ne suppose jamais qu'un client est introuvable sans avoir appelé l'outil.
 3. Tu peux enchaîner plusieurs outils si nécessaire (ex. lookup_client puis list_outstanding_invoices).
 4. Pour une RELANCE, appelle draft_reminder : le système ne fait que préparer un brouillon, l'utilisateur valide chaque envoi (l'IA propose, l'humain dispose). Si l'outil signale un email manquant, dis-le clairement à l'utilisateur.
-5. Pour CRÉER une facture complète, appelle redirect_to_invoice_creator (tu ne crées rien toi-même).
+5. Pour CRÉER un CLIENT, appelle create_client (action réelle : tu l'enregistres en base). Pour RENSEIGNER l'email d'un client (ex: l'utilisateur te donne l'email de Nathan), appelle set_client_email — c'est INDISPENSABLE avant une relance si draft_reminder a signalé un email manquant. Pour CRÉER une facture complète, appelle redirect_to_invoice_creator.
 6. Ta réponse finale est une phrase naturelle courte qui répond directement, ancrée sur les résultats des outils. Ne répète pas la liste brute si une carte structurée l'affiche déjà ; dis l'essentiel.
 7. MÉMOIRE : si l'utilisateur exprime une préférence claire ou un pattern récurrent (ex: « je facture Nathan 500€ par mois », « fais court », « rappelle-moi d'envoyer la DSN le 5 »), appelle save_memory pour le retenir. Exploite la MÉMOIRE À LONG TERME fournie dans le contexte pour personnaliser tes réponses sans redemander.
 8. FORMULAIRES PROACTIFS : si tu as besoin d'une info pour agir (ex: « quel email pour ce client ? », « quel montant pour cette dépense ? »), appelle request_form plutôt que de demander en texte libre. L'utilisateur remplit un champ inline, puis la commande submit_command (tokens {field_id} remplacés) te revient pour exécuter l'action. Ne renvoie JAMAIS l'utilisateur vers une page quand un formulaire inline suffit.
+9. CABINET : si l'utilisateur est expert-comptable ou membre d'un cabinet, appelle get_cabinet_overview pour connaître son cabinet (nom, rôle, membres, clients) avant de répondre sur ce contexte.
+10. RECHERCHE : pour une recherche libre multi-entités (« qu'est-ce que j'ai sur Acme ? »), appelle search_documents qui cherche en une fois clients, factures et dépenses.
+11. IMAGES : l'utilisateur peut joindre une photo (facture, reçu, document). Décris ce que tu y vois factuellement et propose l'action adaptée (ex: « je vois une facture Acme de 450 € TTC — je peux te créer la dépense » puis oriente vers le créateur).
 
 Tu peux aussi répondre à des questions générales (conseils de facturation, délais légaux français) sans outil.`;
 
@@ -633,7 +789,7 @@ Tu peux aussi répondre à des questions générales (conseils de facturation, d
 
 interface Provider { name: string; client: OpenAI; model: string; }
 
-function buildProviders(): Provider[] {
+function buildProviders(vision = false): Provider[] {
   const providers: Provider[] = [];
   if (process.env.OPENROUTER_API_KEY) {
     providers.push({
@@ -646,7 +802,7 @@ function buildProviders(): Provider[] {
           'X-Title': 'Factu.me Copilot',
         },
       }),
-      // Modèle fort en tool-use ; overridable via OPENROUTER_MODEL.
+      // Modèle fort en tool-use ET vision-native ; overridable via OPENROUTER_MODEL.
       model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
     });
   }
@@ -657,7 +813,8 @@ function buildProviders(): Provider[] {
         baseURL: 'https://api.groq.com/openai/v1',
         apiKey: process.env.GROQ_API_KEY,
       }),
-      model: 'llama-3.3-70b-versatile',
+      // ODIN — si une image est jointe, bascule sur le modèle vision de Groq en repli.
+      model: vision ? 'meta-llama/llama-3.2-90b-vision-instruct' : 'llama-3.3-70b-versatile',
     });
   }
   return providers;
@@ -732,6 +889,7 @@ async function runAgentLoopStreaming(
   messages: any[],
   ctx: ToolCtx,
   onDelta: (chunk: string) => void,
+  onTool?: (toolName: string, args: any) => void,
 ): Promise<{ answer: string; card: any; toolCalls: number; toolErrors: number }> {
   let lastCard: any = null;
   let toolCalls = 0;
@@ -778,6 +936,7 @@ async function runAgentLoopStreaming(
         toolCalls += 1;
         let args: any = {};
         try { args = JSON.parse(c.args || '{}'); } catch { args = {}; }
+        if (onTool) { try { onTool(c.name, args); } catch {} } // ODIN — statut streaming outil
         const executor = TOOL_EXECUTORS[c.name];
         let toolResult: any;
         try {
@@ -828,10 +987,33 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const { text, history, sessionId, stream } = await req.json();
+    // ODIN — saisie image/PDF (vision) : multipart/form-data si un fichier est joint.
+    let text: string;
+    let history: HistMsg[] | undefined;
+    let sessionId: string | undefined;
+    let stream: boolean | undefined;
+    let imageDataUrl: string | null = null;
+    const ct = req.headers.get('content-type') || '';
+    if (ct.includes('multipart/form-data')) {
+      const fd = await req.formData();
+      text = String(fd.get('text') || '');
+      sessionId = String(fd.get('sessionId') || '') || undefined;
+      stream = fd.get('stream') === 'true';
+      try { history = fd.get('history') ? JSON.parse(String(fd.get('history'))) : undefined; } catch { history = undefined; }
+      const img = fd.get('image');
+      if (img && img instanceof File && img.size > 0) {
+        if (img.size > 4_500_000) {
+          return NextResponse.json({ error: 'Image trop volumineuse (max 4,5 Mo)' }, { status: 413 });
+        }
+        const buf = Buffer.from(await img.arrayBuffer());
+        imageDataUrl = `data:${img.type || 'image/jpeg'};base64,${buf.toString('base64')}`;
+      }
+    } else {
+      ({ text, history, sessionId, stream } = await req.json());
+    }
     if (!text) return NextResponse.json({ error: 'Texte manquant' }, { status: 400 });
 
-    const providers = buildProviders();
+    const providers = buildProviders(!!imageDataUrl);
     if (providers.length === 0) {
       return NextResponse.json({ error: 'Configuration IA manquante' }, { status: 500 });
     }
@@ -852,10 +1034,15 @@ export async function POST(req: NextRequest) {
     }
     const memoryCtx = await loadMemoryContext(supabase, user.id, text);
 
+    // ODIN — si une image est jointe, on envoie un message multimodal (texte + image_url)
+    // compatible vision (Claude 3.5 Sonnet via OpenRouter, ou Llama 3.2 Vision via Groq).
+    const userContent = imageDataUrl
+      ? [{ type: 'text', text }, { type: 'image_url', image_url: { url: imageDataUrl } }]
+      : text;
     const messages: any[] = [
       { role: 'system', content: SYSTEM_PROMPT + memoryCtx },
       ...effectiveHistory,
-      { role: 'user', content: text },
+      { role: 'user', content: userContent },
     ];
 
     const ctx: ToolCtx = { userId: user.id, supabase };
@@ -876,6 +1063,7 @@ export async function POST(req: NextRequest) {
               const { answer, card, toolCalls, toolErrors } = await runAgentLoopStreaming(
                 provider, messages, ctx,
                 (delta: string) => send('delta', { text: delta }),
+                (toolName: string) => send('tool', { name: toolName }),
               );
               let confidence: number;
               if (!answer) confidence = 0.4;

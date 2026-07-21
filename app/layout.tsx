@@ -232,7 +232,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 unitCode: 'MON',
               },
             },
-            description: '5 cabinets, Comptable Connect, multi-utilisateur, Copilot IA avancé, API & Webhooks',
+            description: '1 cabinet, Comptable Connect, multi-utilisateur, Copilot IA avancé, API & Webhooks',
             availability: 'https://schema.org/InStock',
           },
         ],

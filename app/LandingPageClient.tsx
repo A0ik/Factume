@@ -279,7 +279,7 @@ const testimonials = [
 const plans = [
   { name: 'Starter', monthly: 0, yearly: 0, tag: 'Pour démarrer et tester', features: ['3 factures & devis/mois', '1 cabinet, 10 clients', 'Dictée vocale IA activée', 'Support email'], popular: false },
   { name: 'Pro', monthly: 14.99, yearly: 12.50, tag: 'Indépendants & TPE', features: ['Factures & devis illimités', 'Facture électronique B2B', 'Contrats CDI/CDD', 'Notes de frais + scan simple', 'Signature électronique', 'Voice Expense illimité', 'IK', 'URSSAF One-Click', 'Export FEC/CSV', 'Rapprochement bancaire', 'Sans watermark'], popular: true },
-  { name: 'Business', monthly: 39.99, yearly: 33.33, tag: 'PME & Experts-comptables', features: ['Facture électronique B2B', 'Tout Pro inclus', 'OCR multi-factures (type Dext)', '5 cabinets', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
+  { name: 'Business', monthly: 39.99, yearly: 33.33, tag: 'PME & Experts-comptables', features: ['Facture électronique B2B', 'Tout Pro inclus', 'OCR multi-factures (type Dext)', '1 cabinet comptable', 'Comptable Connect', 'Multi-utilisateur (5)', 'Copilot IA avancé', 'Support dédié'], popular: false },
 ];
 
 const faqItems = [

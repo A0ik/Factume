@@ -136,6 +136,8 @@ export default function VoiceExpenseButton({
         payment_method: pendingExpense.payment_method || 'card',
         status: 'pending',
         source: 'voice',
+        // ATHÉNA CIBLE 3 — une dépense vocale est par défaut une note de frais (ticket salarié).
+        document_type: 'receipt',
         receipt_url: urlData?.signedUrl || null,
         // SAGE (CIBLE 2) — la colonne s'appelle receipt_storage_path (et non receipt_file_path,
         // qui n'existe pas en base → l'insert voice échouait en silence avec une erreur PostgREST).

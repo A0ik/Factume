@@ -204,18 +204,14 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
     setUploadingLogo(true);
     try {
-      const supabase = getSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Non authentifié');
-
-      const fileExt = file.name.split('.').pop();
-      const filePath = `client-logos/${session.user.id}/${id}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage.from('client-logos').upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('client-logos').getPublicUrl(filePath);
-      await updateClient(id, { logo_url: publicUrl });
+      // ATHÉNA CIBLE 1A — upload SERVEUR (l'ancien upload client échouait en RLS à cause
+      // d'un chemin 'client-logos/...' qui polluait foldername(name)[1]). Auth par cookie.
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/clients/${id}/logo`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Erreur lors du téléchargement');
+      await updateClient(id, { logo_url: data.logoUrl });
       toast.success('Logo mis à jour !');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors du téléchargement');

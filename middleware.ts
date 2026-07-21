@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { rateLimitAsync, getClientFingerprint } from '@/lib/rate-limit';
+import { AUTH_COOKIE_SECURITY } from '@/lib/auth-cookies';
 
 // Routes publiques explicites (pas besoin d'auth)
 const PUBLIC_PATHS = [
@@ -230,7 +231,7 @@ export async function middleware(req: NextRequest) {
         setAll(cookieList: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookieList.forEach(({ name, value, options }) => {
             req.cookies.set(name, value);
-            res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
+            res.cookies.set(name, value, { ...(options as object), ...AUTH_COOKIE_SECURITY } as Parameters<typeof res.cookies.set>[2]);
           });
         },
       },

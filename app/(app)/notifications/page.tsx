@@ -5,6 +5,7 @@ import { useWorkspaceStore, type Notification } from '@/stores/workspaceStore';
 import { useDataStore } from '@/stores/dataStore';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { safeHref } from '@/lib/safe-href';
 import {
   Bell, CheckCheck, FileText, AlertTriangle, Users,
   Info, Zap, Check, ChevronRight, Clock, BellRing,
@@ -78,7 +79,7 @@ function NotifItem({ notif, onRead }: { notif: Notification; onRead: (id: string
 
       {notif.link && (
         <Link
-          href={notif.link}
+          href={safeHref(notif.link) ?? '#'}
           onClick={(e) => e.stopPropagation()}
           className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-400 transition-all mt-0.5"
         >
@@ -133,7 +134,7 @@ function NotifCard({ notif, onRead, index }: { notif: Notification; onRead: (id:
         </div>
         {notif.link && (
           <Link
-            href={notif.link}
+            href={safeHref(notif.link) ?? '#'}
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-emerald-400 transition-all"
           >

@@ -102,7 +102,7 @@ const CATEGORIES = [
     bg: 'bg-rose-50 dark:bg-rose-500/10',
     description: 'Plans, tarifs et gestion d\'abonnement',
     faqs: [
-      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 7 jours disponible (carte bancaire requise, 0€ débité).' },
+      { q: 'Quels sont les différents plans ?', a: 'Plan Starter (Gratuit) : 3 factures/mois, 1 cabinet, e-facturation certifiée, dictée vocale IA activée.\nPlan Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense illimité, Copilot Factu IA, export FEC, contrats, CRM.\nPlan Business (39,99€/mois) : Tout Pro + 1 cabinet, Comptable Connect, multi-utilisateur (5), API & Webhooks, support dédié.\n\nEssai gratuit de 7 jours disponible (carte bancaire requise, 0€ débité).' },
       { q: 'Comment passer à un plan payant ?', a: 'Cliquez sur « Passer à Pro » dans le menu ou sur la page Tarifs. Le paiement s\'effectue directement sur factu.me via Stripe Elements (carte bancaire, Apple Pay, Google Pay) — sans redirection vers un site externe. Vous pouvez annuler à tout moment depuis les paramètres.' },
       { q: 'Faut-il une carte bancaire pour l\'essai gratuit ?', a: 'Oui. Pour éviter les abus (multi-comptes, robots), l\'essai gratuit de 7 jours nécessite une carte bancaire. Aucun débit n\'est effectué pendant l\'essai : nous procédons à une simple vérification de la carte (autorisation à 0€ via Stripe). Vous pouvez annuler à tout moment avant la fin des 7 jours et rien ne sera facturé.' },
       { q: 'Comment fonctionne le prorata lors d\'un changement de plan ?', a: 'Si vous montez de plan (ex. Pro → Business), Stripe calcule le différentiel au prorata des jours restants de votre période et le facture immédiatement. Si vous descendez de plan (Business → Pro), le crédit correspondant est reporté sur votre prochaine facture. Le montant exact vous est toujours affiché avant que vous ne confirmiez.' },
@@ -468,6 +468,20 @@ export default function HelpPage() {
             <p className="text-sm text-muted-foreground">{totalFaqs} questions pour maîtriser Factu.me</p>
           </div>
         </div>
+      </motion.div>
+
+      {/* ODIN — Accès au suivi des tickets (page /support : liste, fil de discussion, réponse). */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.03 }}>
+        <Link href="/support" className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 transition hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center"><Ticket size={16} className="text-white" /></div>
+            <div>
+              <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Mes tickets de support</p>
+              <p className="text-xs text-emerald-700/80 dark:text-emerald-200/70">Suivez vos demandes et répondez à l&apos;équipe</p>
+            </div>
+          </div>
+          <ChevronRight className="text-emerald-600" size={18} />
+        </Link>
       </motion.div>
 
       {/* Stats bar */}

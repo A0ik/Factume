@@ -334,7 +334,12 @@ export default function OcrPage() {
     if (!reviewingFile) return;
     const fresh = files.find(f => f.id === reviewingFile.id);
     if (!fresh) { setReviewingFile(null); setEditMode(false); return; }
-    if (fresh !== reviewingFile) {
+    // ATHÉNA CIBLE 4 — ne remplace reviewingFile que sur un changement signifiant
+    // (status/preview/receiptUrl/result), PAS sur les ticks de `progress` (toutes les
+    // 200ms). Sinon reviewingFile se recréait → l'effet pdfObjectUrl se déclenchait →
+    // l'iframe rechargeait le PDF en boucle (flicker).
+    const sig = (f: ScannedFile) => `${f.status}|${f.preview}|${f.receiptUrl}|${!!f.result?.receipt_url}`;
+    if (sig(fresh) !== sig(reviewingFile) || fresh.result !== reviewingFile.result) {
       setReviewingFile(fresh);
       if (fresh.status === 'complete' && fresh.result?.extracted && !editMode) {
         setEditData({ ...fresh.result.extracted });
@@ -343,15 +348,18 @@ export default function OcrPage() {
   }, [files, reviewingFile, editMode]);
 
   // ── PDF source preview URL ───────────────────────────────────────────────
+  // ATHÉNA CIBLE 4 — l'URL blob est stable pour un fichier donné (l'objet File ne change
+  // pas pendant l'analyse). Keyée sur l'identité du fichier — plus sur l'objet reviewingFile
+  // qui se recréait à chaque tick → fin du flicker. previewUrl privilégie de toute façon
+  // le receipt_url signé quand il existe, donc on minte le blob local pour tout PDF sélectionné.
   useEffect(() => {
-    if (pdfObjectUrl) { URL.revokeObjectURL(pdfObjectUrl); setPdfObjectUrl(null); }
     const f = reviewingFile?.file;
-    if (f && f.type === 'application/pdf' && !reviewingFile.receiptUrl && !reviewingFile.result?.receipt_url) {
-      const url = URL.createObjectURL(f);
-      setPdfObjectUrl(url);
-    }
+    if (!f || f.type !== 'application/pdf') { setPdfObjectUrl(null); return; }
+    const url = URL.createObjectURL(f);
+    setPdfObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviewingFile]);
+  }, [reviewingFile?.id, reviewingFile?.file]);
 
   // ── File handling ────────────────────────────────────────────────────────
   const addFiles = useCallback((newFiles: FileList | File[]) => {
@@ -374,6 +382,15 @@ export default function OcrPage() {
     if (!reviewingFileRef.current && mapped[0]) {
       setReviewingFile(mapped[0]);
     }
+    // ATHÉNA CIBLE 4 — thumbnails PDF (rendu de la 1ʳᵉ page via pdfjs) pour la barre
+    // latérale : avant, les PDF n'affichaient qu'une icône générique (incohérent vs images).
+    mapped.filter((m) => m.file.type === 'application/pdf').forEach((m) => {
+      generatePdfThumbnail(m.file).then((dataUrl) => {
+        if (!dataUrl) return;
+        setFiles((prev) => prev.map((f) => (f.id === m.id ? { ...f, preview: dataUrl } : f)));
+        setReviewingFile((prev) => (prev && prev.id === m.id && !prev.preview ? { ...prev, preview: dataUrl } : prev));
+      });
+    });
   }, []);
 
   const removeFile = useCallback((id: string) => {
@@ -960,6 +977,31 @@ function IconBtn({ children, onClick }: { children: React.ReactNode; onClick: ()
   );
 }
 
+// ATHÉNA CIBLE 4 — génère un thumbnail (PNG dataURL) de la 1ʳᵉ page d'un PDF via pdfjs,
+// pour la barre latérale de l'OCR. Même config worker que PdfPreviewModal (CDN unpkg),
+// repli sur le main thread si le worker échoue. Renvoie '' en cas d'erreur (placeholder).
+async function generatePdfThumbnail(file: File): Promise<string> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist');
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    } catch { /* worker indisponible → rendu sur le main thread */ }
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.4 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    await page.render({ canvasContext: ctx, viewport, background: '#ffffff' } as any).promise;
+    return canvas.toDataURL('image/png');
+  } catch {
+    return '';
+  }
+}
+
 function FileRow({ file, active, onClick, onRemove }: {
   file: ScannedFile; active: boolean; onClick?: () => void; onRemove: () => void;
 }) {
@@ -977,7 +1019,15 @@ function FileRow({ file, active, onClick, onRemove }: {
         !clickable && !active && "opacity-70"
       )}>
       <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-white/[0.05] flex items-center justify-center flex-shrink-0">
-        {file.preview ? <img src={file.preview} alt="" className="w-full h-full object-cover rounded-md" /> : <FileText className="w-4 h-4 text-gray-400 dark:text-zinc-500" />}
+        {file.preview ? (
+          <img src={file.preview} alt="" className="w-full h-full object-cover rounded-md" />
+        ) : file.file.type === 'application/pdf' ? (
+          <div className="w-full h-full rounded-md bg-rose-500/10 flex items-center justify-center">
+            <span className="text-[8px] font-black text-rose-500 tracking-tight">PDF</span>
+          </div>
+        ) : (
+          <FileText className="w-4 h-4 text-gray-400 dark:text-zinc-500" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">

@@ -2,6 +2,7 @@ import 'server-only';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { AUTH_COOKIE_SECURITY } from '@/lib/auth-cookies';
 
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
@@ -14,7 +15,7 @@ export async function createServerSupabaseClient() {
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, { ...options, ...AUTH_COOKIE_SECURITY })
             );
           } catch { /* ignore in RSC/middleware contexts */ }
         },

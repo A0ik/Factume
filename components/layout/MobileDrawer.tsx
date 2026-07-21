@@ -7,7 +7,7 @@ import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
   Package, Receipt, Calculator, HelpCircle, CreditCard,
   Bell, Lock, ChevronDown,
-  Moon, Sun, Search, Activity, Landmark,
+  Moon, Sun, Search, ScanLine, Activity, Landmark,
   Shield, Plug,
   Target,
   Sparkles, ArrowUpRight,
@@ -102,6 +102,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
         { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
       ],
     },
     {
@@ -132,7 +133,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
     items: [
       { href: '/cards', icon: CreditCard, label: 'Mes cartes' },
       { href: '/calendar', icon: Calendar, label: 'Agenda' },
-      { href: '/ocr', icon: Search, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
+      { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
       { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
       { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
       { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },

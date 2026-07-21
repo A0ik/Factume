@@ -119,6 +119,7 @@ export default function Sidebar() {
         { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
       ],
     },
     {
@@ -135,21 +136,38 @@ export default function Sidebar() {
     }] : []),
   ];
 
-  // HERMÈS CIBLE 2 — outils secondaires relégués dans le popover profil.
-  const toolsItems: { href: string; icon: any; label: string; locked?: boolean; lockTier?: string }[] = [
-    { href: '/cards', icon: CreditCard, label: 'Mes cartes' },
-    { href: '/calendar', icon: Calendar, label: 'Agenda' },
-    { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
-    { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-    { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-    { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-    { href: '/help', icon: HelpCircle, label: 'Aide' },
+  // ATHÉNA CIBLE 5 — menu profil réorganisé en 3 groupes (benchmark Pennylane/Tiime) :
+  // Compte / Outils / Aide. Paramètres + Notifications quittent le bas de la nav (doublon)
+  // et rejoignent le groupe Compte (avec le badge de notifications).
+  const toolGroups: { title: string; items: { href: string; icon: any; label: string; locked?: boolean; lockTier?: string; badge?: number }[] }[] = [
+    {
+      title: 'Compte',
+      items: [
+        { href: '/settings', icon: Settings, label: 'Paramètres' },
+        { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
+        { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+        { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+      ],
+    },
+    {
+      title: 'Outils',
+      items: [
+        { href: '/calendar', icon: Calendar, label: 'Agenda' },
+        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
+        { href: '/cards', icon: CreditCard, label: 'Mes cartes' },
+      ],
+    },
+    {
+      title: 'Aide',
+      items: [
+        { href: '/help', icon: HelpCircle, label: 'Aide' },
+        { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+      ],
+    },
   ];
 
-  const utilityItems: NavItem[] = [
-    { id: 'settings', href: '/settings', icon: Settings, label: 'Réglages' },
-    { id: 'notifications', href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
-  ];
+  // ATHÉNA CIBLE 5 — vide : Paramètres/Notifications sont dans le popover (plus de doublon).
+  const utilityItems: NavItem[] = [];
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
@@ -357,6 +375,8 @@ export default function Sidebar() {
           {navItems.map(renderNavItem)}
 
           {/* Divider */}
+          {/* ATHÉNA CIBLE 5 — section utilitaire conditionnelle (vide : déplacée dans le popover). */}
+          {utilityItems.length > 0 && (<>
           <div className={cn(
             'h-px bg-gray-100 dark:bg-white/5 my-3',
             isExpanded ? 'mx-1' : 'mx-2',
@@ -416,6 +436,7 @@ export default function Sidebar() {
               </Link>
             );
           })}
+          </>)}
         </nav>
 
         {/* ─── Bottom section ──────────────────────────────── */}
@@ -521,35 +542,13 @@ export default function Sidebar() {
                     </Link>
                   )}
 
-                  <div className="p-2">
-                    <button
-                      onClick={() => { router.push('/settings'); setShowProfile(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <Settings size={14} strokeWidth={1.8} />
-                      Paramètres
-                    </button>
-                    <button
-                      onClick={() => { router.push('/notifications'); setShowProfile(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <Bell size={14} strokeWidth={1.8} />
-                      Notifications
-                      {unreadCount > 0 && (
-                        <span className="ml-auto min-w-4 h-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* HERMÈS CIBLE 2 — outils secondaires relégués ici (nav épurée) */}
-                  <div className="border-t border-gray-100 dark:border-white/5 p-2">
-                    <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Outils</p>
-                    <div className="grid grid-cols-2 gap-0.5">
-                      {toolsItems.map((t) => (
+                  {/* ATHÉNA CIBLE 5 — 3 groupes : Compte / Outils / Aide (benchmark Pennylane/Tiime). */}
+                  {toolGroups.map((group, gi) => (
+                    <div key={group.title} className={cn('p-2', gi > 0 && 'border-t border-gray-100 dark:border-white/5')}>
+                      <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.title}</p>
+                      {group.items.map((t) => (
                         t.locked ? (
-                          <div key={t.href} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-400 opacity-60" title={`Disponible avec ${t.lockTier === 'pro' ? 'Pro' : 'Business'}`}>
+                          <div key={t.href} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[11px] text-gray-400 opacity-60" title={`Disponible avec ${t.lockTier === 'pro' ? 'Pro' : 'Business'}`}>
                             <t.icon size={13} strokeWidth={1.8} />
                             <span className="flex-1 truncate">{t.label}</span>
                             <Lock size={10} className="text-gray-400" />
@@ -558,15 +557,20 @@ export default function Sidebar() {
                           <button
                             key={t.href}
                             onClick={() => { router.push(t.href); setShowProfile(false); }}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
+                            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[11px] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
                           >
                             <t.icon size={13} strokeWidth={1.8} />
                             <span className="flex-1 truncate">{t.label}</span>
+                            {!!t.badge && (
+                              <span className="ml-auto min-w-4 h-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                {t.badge > 9 ? '9+' : t.badge}
+                              </span>
+                            )}
                           </button>
                         )
                       ))}
                     </div>
-                  </div>
+                  ))}
 
                   <div className="border-t border-gray-100 dark:border-white/5 p-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">

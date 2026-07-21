@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 
 import { use, useEffect, useRef, useState, useCallback } from 'react';
 import { formatCurrency, formatDate, DOC_LABELS } from '@/lib/utils';
+import { safeHref } from '@/lib/safe-href';
 import {
   Download, PenTool, CheckCircle2, X, RotateCcw, Loader2,
 } from 'lucide-react';
@@ -275,8 +276,7 @@ export default function SharePage({ params }: { params: Promise<{ invoiceId: str
         {/* ── Pay online ── */}
         {invoice.stripe_payment_url && invoice.status !== 'paid' && (
           <a
-            href={invoice.stripe_payment_url}
-            style={{ background: accent }}
+            href={safeHref(invoice.stripe_payment_url)}
             className="flex items-center justify-center gap-2 text-white text-base font-bold py-4 rounded-2xl hover:opacity-90 transition-opacity"
           >
             Payer {fmt(invoice.total)} en ligne (Stripe) →
@@ -284,8 +284,7 @@ export default function SharePage({ params }: { params: Promise<{ invoiceId: str
         )}
         {invoice.payment_link && !invoice.stripe_payment_url && invoice.status !== 'paid' && (
           <a
-            href={invoice.payment_link}
-            style={{ background: '#1D9E75' }}
+            href={safeHref(invoice.payment_link)}
             className="flex items-center justify-center gap-2 text-white text-base font-bold py-4 rounded-2xl hover:opacity-90 transition-opacity"
           >
             Payer {fmt(invoice.total)} avec SumUp →

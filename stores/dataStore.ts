@@ -60,7 +60,15 @@ export const useDataStore = create<DataState>((set, get) => ({
     const user = session?.user; if (!user) throw new Error('Non authentifié');
     const { data, error } = await getSupabaseClient().from('clients').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id).select().single();
     if (error) throw error;
-    set((s) => ({ clients: s.clients.map((c) => (c.id === id ? data : c)) }));
+    set((s) => ({
+      clients: s.clients.map((c) => (c.id === id ? data : c)),
+      // ATHÉNA CIBLE 2 — propage la mise à jour au snapshot client embarqué sur chaque
+      // facture (invoices.client est un join figé au fetch). Sans ceci, le Copilot et la
+      // garde relance relisent un email périmé (null) → pop-up « Aucun email » en boucle.
+      invoices: s.invoices.map((inv) =>
+        inv.client && inv.client.id === id ? { ...inv, client: { ...inv.client, ...updates } } : inv
+      ),
+    }));
   },
   deleteClient: async (id) => {
     const { data: { session } } = await getSupabaseClient().auth.getSession();

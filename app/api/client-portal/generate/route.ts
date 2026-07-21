@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
     return NextResponse.json({ token: data.token });
-  } catch {
+  } catch (e) {
+    console.error('[client-portal/generate]', e);
     return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
   }
 }

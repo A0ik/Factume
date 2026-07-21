@@ -61,7 +61,7 @@ const PLANS: PlanConfig[] = [
     recommended: false,
     features: [
       'Tout le plan Pro inclus',
-      '5 cabinets',
+      '1 cabinet',
       'Comptable Connect',
       'Copilot IA avancé',
       'Multi-utilisateur (5)',

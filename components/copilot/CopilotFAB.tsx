@@ -10,7 +10,7 @@ import { useState, useEffect, useRef, useCallback, type FormEvent, type PointerE
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Mic, MicOff, X, Send, Loader2,
-  Receipt, TrendingUp, Calculator, Wallet, Mail, ArrowRight, FilePlus,
+  Receipt, TrendingUp, Calculator, Wallet, Mail, ArrowRight, FilePlus, Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -269,6 +269,24 @@ function parseSSE(raw: string): { name: string; data: any } | null {
   catch { return null; }
 }
 
+// ODIN — libellés affichés pendant l'exécution des outils (statut streaming temps réel).
+const TOOL_STATUS_LABELS: Record<string, string> = {
+  lookup_client: '🔎 Recherche client…',
+  list_outstanding_invoices: '🔎 Lecture des impayés…',
+  get_revenue: '🔎 Calcul du CA…',
+  compute_urssaf: '🔎 Calcul URSSAF…',
+  list_expenses: '🔎 Lecture des dépenses…',
+  get_treasury: '🔎 Synthèse trésorerie…',
+  get_client_info: '🔎 Fiche client…',
+  draft_reminder: '✍️ Préparation relance…',
+  create_client: '✨ Création client…',
+  set_client_email: '✉️ Enregistrement email…',
+  get_cabinet_overview: '🏢 Lecture cabinet…',
+  redirect_to_invoice_creator: '🧾 Préparation créateur…',
+  save_memory: '🧠 Mémorisation…',
+  request_form: '📋 Préparation formulaire…',
+};
+
 export default function CopilotFAB() {
   const { canUseCopilot } = useSubscription();
   const { invoices } = useDataStore();
@@ -295,6 +313,11 @@ export default function CopilotFAB() {
   const wantListeningRef = useRef(false); // keep-alive : l'utilisateur maintient le micro
   const pendingTranscriptRef = useRef<string | null>(null); // transcript mis en file si l'IA traite déjà
   const [micDenied, setMicDenied] = useState(false);
+  // ODIN — saisie image (vision) : fichier joint au message Copilot.
+  const [attachedImage, setAttachedImage] = useState<{ file: File; url: string } | null>(null);
+  const attachedImageRef = useRef<{ file: File; url: string } | null>(null);
+  attachedImageRef.current = attachedImage;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── CIBLE 1 : Drag-and-drop Pointer Events (souris PC + doigt mobile) + persistance ──
   // La position est sauvegardée (localStorage instantané + Supabase copilot_preferences
@@ -449,11 +472,26 @@ export default function CopilotFAB() {
     const assistantId = ++msgId.current;
     setMessages((m) => [...m, { id: assistantId, role: 'assistant', text: '' }]);
     try {
-      const res = await fetch('/api/copilot/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed, history, sessionId: sessionIdRef.current, stream: true }),
-      });
+      // ODIN — si une image est jointe, on envoie du multipart/form-data (vision) au lieu de JSON.
+      const img = attachedImageRef.current;
+      let res: Response;
+      if (img) {
+        const fd = new FormData();
+        fd.append('text', trimmed);
+        fd.append('history', JSON.stringify(history));
+        fd.append('sessionId', sessionIdRef.current || '');
+        fd.append('stream', 'true');
+        fd.append('image', img.file);
+        res = await fetch('/api/copilot/command', { method: 'POST', body: fd });
+        URL.revokeObjectURL(img.url);
+        setAttachedImage(null);
+      } else {
+        res = await fetch('/api/copilot/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: trimmed, history, sessionId: sessionIdRef.current, stream: true }),
+        });
+      }
       const ct = res.headers.get('content-type') || '';
       if (!res.ok || !res.body || !ct.includes('text/event-stream')) {
         throw new Error('no-stream');
@@ -475,6 +513,10 @@ export default function CopilotFAB() {
           if (evt.name === 'meta' && evt.data?.sessionId) {
             sessionIdRef.current = evt.data.sessionId;
             try { localStorage.setItem('copilot-session-id', evt.data.sessionId); } catch {}
+          } else if (evt.name === 'tool') {
+            // ODIN — statut streaming : montre ce que l'IA est en train de faire.
+            const label = TOOL_STATUS_LABELS[evt.data?.name as string] || 'Traitement…';
+            setMessages((m) => m.map((mm) => (mm.id === assistantId && !mm.text ? { ...mm, text: label } : mm)));
           } else if (evt.name === 'delta') {
             answerText += evt.data?.text || '';
             setMessages((m) => m.map((mm) => (mm.id === assistantId ? { ...mm, text: answerText } : mm)));
@@ -530,6 +572,16 @@ export default function CopilotFAB() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error || "Échec de l'envoi de la relance."); return; }
+      // ATHÉNA CIBLE 2 — la carte du Copilot gardait le ⚠️ « Aucun email » à vie car le
+      // drapeau missingEmail (calculé serveur au moment du draft) n'était jamais rafraîchi.
+      // L'email est désormais persisté + propagé (dataStore.updateClient) ; on actualise le draft.
+      if (!data.pendingEmail) {
+        setMessages((m) => m.map((mm) => {
+          const drafts = (mm as any)?.result?.drafts;
+          if (!Array.isArray(drafts)) return mm;
+          return { ...mm, result: { ...(mm as any).result, drafts: drafts.map((d: any) => (d.invoiceId === invoiceId ? { ...d, missingEmail: false } : d)) } };
+        }));
+      }
       if (data.pendingEmail) {
         toast.warning('Relance enregistrée — email du client manquant. Ajoutez-le puis relancez.');
       } else {
@@ -909,6 +961,44 @@ export default function CopilotFAB() {
                   >
                     <MicOff size={18} />
                   </span>
+                )}
+                {/* ODIN — saisie image (vision) : trombone + aperçu. */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (!f.type.startsWith('image/')) { toast.error('Image uniquement'); return; }
+                    if (f.size > 4_500_000) { toast.error('Image trop lourde (max 4,5 Mo)'); return; }
+                    setAttachedImage({ file: f, url: URL.createObjectURL(f) });
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Joindre une image"
+                  title="Joindre une image (facture, reçu…)"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600"
+                >
+                  <Paperclip size={18} />
+                </button>
+                {attachedImage && (
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={attachedImage.url} alt="aperçu" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { URL.revokeObjectURL(attachedImage.url); setAttachedImage(null); }}
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow"
+                      aria-label="Retirer l'image"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
                 )}
                 <input
                   ref={inputRef}

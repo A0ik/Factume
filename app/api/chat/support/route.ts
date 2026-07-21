@@ -38,7 +38,7 @@ const SYSTEM_PROMPT = `Tu es l'assistant support de Factu.me, un logiciel de fac
 ## Tarifs
 - Discovery (Gratuit) : 3 factures/mois, clients illimités, templates de base
 - Pro (14,99€/mois) : Factures illimitées, URSSAF One-Click, Voice Expense, Copilot IA, export FEC, contrats
-- Business (39,99€/mois) : Tout Pro + 5 cabinets, Comptable Connect, multi-utilisateur, API, support dédié
+- Business (39,99€/mois) : Tout Pro + 1 cabinet, Comptable Connect, multi-utilisateur, API, support dédié
 
 - Essai gratuit 7 jours sans carte bancaire
 

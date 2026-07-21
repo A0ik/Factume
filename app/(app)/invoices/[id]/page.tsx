@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use, useRef } from 'react';
+import { useState, useEffect, use, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
@@ -7,7 +7,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useInvoiceRealtime } from '@/hooks/use-invoice-realtime';
 import { formatCurrency } from '@/lib/utils';
 import { downloadInvoicePdf, hasPaymentLink, getPaymentUrl } from '@/lib/pdf';
-import { Invoice, InvoiceStatus } from '@/types';
+import { Invoice, InvoiceStatus, PartialPayment } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft, Edit2, Download, Mail, CreditCard, Copy, CheckCircle,
@@ -145,6 +145,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // ATHÉNA CIBLE 1B — confirmation de paiement + acomptes (paiements partiels) + solde temps réel.
+  const [showMarkPaidConfirm, setShowMarkPaidConfirm] = useState(false);
+  const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
+  const [showAccompteModal, setShowAccompteModal] = useState(false);
+  const [accompteAmount, setAccompteAmount] = useState('');
+  const [accompteDate, setAccompteDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [accompteMethod, setAccompteMethod] = useState('Virement');
+  const [accompteNote, setAccompteNote] = useState('');
+  const [savingAccompte, setSavingAccompte] = useState(false);
+
   // ZÉNITH (CIBLE 1) — garde relance bloquante (no-client / missing-email).
   const { ensureCanSend, modal: relanceGuardModal } = useRelanceGuard();
 
@@ -190,6 +200,17 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, invoice?.id, id]);
+
+  // ATHÉNA CIBLE 1B — recharge les acomptes (paiements partiels) + solde depuis la BDD.
+  // Hook AVANT le return anticipé « if (!invoice) » (Règles des hooks).
+  const refreshPartialPayments = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/invoices/${id}/partial-payments`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.payments)) setPartialPayments(data.payments as PartialPayment[]);
+    } catch { /* réseau — ignoré, réessaiera au prochain changement */ }
+  }, [id]);
+  useEffect(() => { refreshPartialPayments(); }, [refreshPartialPayments]);
 
   // INSPECTOR (BUG 3) — Auto-régén silencieuse : quand une édition de prix a
   // invalidé le lien (payment_link_stale), on recrée immédiatement le lien au
@@ -441,6 +462,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     setShowPaymentModal(true);
   };
 
+  // ATHÉNA CIBLE 1B — solde = total − Σ acomptes (temps réel).
+  const paidAmount = partialPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const balanceDue = Math.max(0, (invoice?.total || 0) - paidAmount);
+
+  const requestMarkPaid = () => setShowMarkPaidConfirm(true);
+
   const handleMarkPaid = async () => {
     setStatusLoading(true);
     try {
@@ -450,6 +477,43 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       toast.error(e.message || 'Erreur.');
     } finally {
       setStatusLoading(false);
+      setShowMarkPaidConfirm(false);
+    }
+  };
+
+  // ATHÉNA CIBLE 1B — enregistre un acompte via la RPC record_partial_payment
+  // (insert + recalcul du solde + bascule partial/paid, atomique). Rafraîchit la liste
+  // et le statut local en temps réel.
+  const handleSubmitAccompte = async () => {
+    const amount = parseFloat(accompteAmount.replace(',', '.'));
+    if (!amount || amount <= 0) { toast.error('Montant invalide.'); return; }
+    setSavingAccompte(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}/partial-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, paidAt: accompteDate || null, method: accompteMethod || null, note: accompteNote || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Erreur lors de l'enregistrement.");
+      await refreshPartialPayments();
+      if (invoice) {
+        const updated: Invoice = {
+          ...invoice,
+          status: (data.status as InvoiceStatus) || invoice.status,
+          paid_at: data.status === 'paid' ? (invoice.paid_at || new Date().toISOString()) : invoice.paid_at,
+        };
+        setInvoice(updated);
+        useDataStore.getState().updateInvoiceInList(updated);
+      }
+      toast.success(data.status === 'paid' ? 'Solde réglé — facture entièrement payée.' : `Acompte de ${formatCurrency(amount)} enregistré.`);
+      setAccompteAmount('');
+      setAccompteNote('');
+      setShowAccompteModal(false);
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de l'enregistrement de l'acompte.");
+    } finally {
+      setSavingAccompte(false);
     }
   };
 
@@ -612,7 +676,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                       >
                         {invoice.status !== 'paid' && (
                           <button
-                            onClick={() => { setShowMenu(false); handleMarkPaid(); }}
+                            onClick={() => { setShowMenu(false); requestMarkPaid(); }}
                             disabled={statusLoading}
                             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                           >
@@ -964,12 +1028,40 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
             {invoice.status !== 'paid' && (
               <button
-                onClick={handleMarkPaid}
+                onClick={requestMarkPaid}
                 disabled={statusLoading}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {statusLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                 Marquer comme payée
+              </button>
+            )}
+
+            {/* ATHÉNA CIBLE 1B — acomptes encaissés + solde restant en temps réel */}
+            {partialPayments.length > 0 && (
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Acomptes encaissés</p>
+                {partialPayments.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700">
+                      {formatCurrency(Number(p.amount))}
+                      <span className="text-gray-400"> · {p.method || 'Acompte'}{p.note ? ` · ${p.note}` : ''}</span>
+                    </span>
+                    <span className="text-xs text-gray-400">{p.paid_at ? new Date(p.paid_at).toLocaleDateString('fr-FR') : ''}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                  <span className="text-sm font-semibold text-gray-700">Solde restant</span>
+                  <span className={`text-sm font-bold ${balanceDue <= 0.005 ? 'text-emerald-500' : 'text-amber-500'}`}>{formatCurrency(balanceDue)}</span>
+                </div>
+              </div>
+            )}
+            {invoice.status !== 'paid' && (
+              <button
+                onClick={() => setShowAccompteModal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 text-sm font-semibold transition-colors"
+              >
+                <Banknote size={16} /> {partialPayments.length > 0 ? 'Ajouter un acompte' : 'Encaisser un acompte'}
               </button>
             )}
 
@@ -1221,6 +1313,80 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         />
       )}
       {relanceGuardModal}
+
+      {/* ATHÉNA CIBLE 1B — confirmation « Marquer comme payée » (avant : action immédiate sans garde). */}
+      <AnimatePresence>
+        {showMarkPaidConfirm && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] bg-black/50" onClick={() => setShowMarkPaidConfirm(false)} />
+            <div className="fixed inset-0 z-[81] flex items-center justify-center p-4 pointer-events-none">
+              <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 8 }} transition={{ duration: 0.15, ease }} className="pointer-events-auto w-full max-w-sm rounded-2xl bg-white border border-gray-200 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-500" /></div>
+                  <div>
+                    <p className="text-base font-bold text-gray-900">Marquer comme payée ?</p>
+                    <p className="text-xs text-gray-500">Total : {formatCurrency(invoice?.total || 0)}</p>
+                  </div>
+                </div>
+                {partialPayments.length > 0 && (
+                  <p className="text-xs text-amber-600 mb-3">⚠️ Cette facture a déjà {formatCurrency(paidAmount)} d'acomptes — le solde restant ({formatCurrency(balanceDue)}) sera clôturé.</p>
+                )}
+                <p className="text-sm text-gray-500 mb-4">Confirmez le règlement intégral de cette facture.</p>
+                <div className="flex items-center justify-end gap-2">
+                  <button onClick={() => setShowMarkPaidConfirm(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">Annuler</button>
+                  <button onClick={handleMarkPaid} disabled={statusLoading} className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold inline-flex items-center gap-2">{statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Confirmer</button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ATHÉNA CIBLE 1B — acompte / paiement partiel : montant + date + méthode + note. */}
+      <AnimatePresence>
+        {showAccompteModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] bg-black/50" onClick={() => setShowAccompteModal(false)} />
+            <div className="fixed inset-0 z-[81] flex items-center justify-center p-4 pointer-events-none">
+              <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 8 }} transition={{ duration: 0.15, ease }} className="pointer-events-auto w-full max-w-sm rounded-2xl bg-white border border-gray-200 p-5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center"><Banknote className="w-5 h-5 text-emerald-500" /></div>
+                  <div>
+                    <p className="text-base font-bold text-gray-900">Encaisser un acompte</p>
+                    <p className="text-xs text-gray-500">Solde restant : {formatCurrency(balanceDue || invoice?.total || 0)}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Montant (€)</label>
+                    <input type="number" min="0" step="0.01" autoFocus value={accompteAmount} onChange={(e) => setAccompteAmount(e.target.value)} placeholder="0,00" className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Date</label>
+                      <input type="date" value={accompteDate} onChange={(e) => setAccompteDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Méthode</label>
+                      <select value={accompteMethod} onChange={(e) => setAccompteMethod(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                        <option>Virement</option><option>Carte</option><option>Espèces</option><option>Chèque</option><option>Stripe</option><option>Autre</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Note (optionnel)</label>
+                    <input type="text" value={accompteNote} onChange={(e) => setAccompteNote(e.target.value)} placeholder="Acompte de 30 %…" className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 mt-5">
+                  <button onClick={() => setShowAccompteModal(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">Annuler</button>
+                  <button onClick={handleSubmitAccompte} disabled={savingAccompte || !accompteAmount} className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold inline-flex items-center gap-2">{savingAccompte ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />} Enregistrer</button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Quote action modal */}
       {invoice && profile && (

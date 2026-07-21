@@ -88,7 +88,7 @@ export default function TrialPage() {
       features: [
         'Tout le plan Pro',
         'OCR multi-factures (type Dext)',
-        '5 cabinets',
+        '1 cabinet',
         'Comptable Connect',
         'Copilot Factu IA avancé',
         'Multi-utilisateur (5)',

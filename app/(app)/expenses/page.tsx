@@ -135,6 +135,8 @@ const EMPTY_FORM = {
   // DÉDALOS CIBLE 1d — compte de charge PCG éditable (validation humaine)
   account_code: '',
   account_label: '',
+  // ATHÉNA CIBLE 3 — séparation Dext : 'invoice' (facture fournisseur, 401) vs 'receipt' (note de frais, 625).
+  document_type: 'receipt' as 'invoice' | 'receipt',
 };
 
 // Comptes de charge PCG proposés au sélecteur (validation humaine).
@@ -505,6 +507,8 @@ export default function ExpensesPage() {
       tax_free_amount: String(e.tax_free_amount || ''),
       account_code: e.account_code || getAccountCode(e.category).code,
       account_label: e.account_label || getAccountCode(e.category).label,
+      // ATHÉNA CIBLE 3 — type de document (facture fournisseur vs note de frais).
+      document_type: (['invoice', 'credit_note', 'purchase_order'].includes(e.document_type || '') ? 'invoice' : 'receipt') as 'invoice' | 'receipt',
     });
     setReceiptUrl(e.receipt_url);
     setEditingId(e.id);
@@ -538,6 +542,8 @@ export default function ExpensesPage() {
       if (extracted?.date) set('date', extracted.date);
       if (extracted?.description) set('description', extracted.description);
       if (extracted?.category) set('category', extracted.category);
+      // ATHÉNA CIBLE 3 — conserve la classification IA (facture fournisseur vs note de frais).
+      if (extracted?.document_type) set('document_type', extracted.document_type);
     } catch { } finally { setOcrLoading(false); }
   };
 
@@ -602,6 +608,8 @@ export default function ExpensesPage() {
         // DÉDALOS CIBLE 1d — compte de charge PCG (validation humaine). Défaut = mapping catégorie.
         account_code: form.account_code || getAccountCode(form.category).code,
         account_label: form.account_label || getAccountCode(form.category).label,
+        // ATHÉNA CIBLE 3 — persiste le type de document (jamais NULL → classé correctement).
+        document_type: form.document_type || 'receipt',
       };
 
       if (editingId) {
@@ -714,6 +722,52 @@ export default function ExpensesPage() {
 
   const { totalMonth, totalAll, totalVat, totalMileage, pending } = stats;
 
+  // ATHÉNA CIBLE 3 — séparation visuelle stricte (Dext) : factures fournisseurs vs notes de frais.
+  const SUPPLIER_DOC_TYPES = ['invoice', 'credit_note', 'purchase_order'];
+  const supplierDocCount = expenses.filter((e) => SUPPLIER_DOC_TYPES.includes(e.document_type || '')).length;
+  const receiptDocCount = expenses.length - supplierDocCount;
+  const supplierInvoices = filtered.filter((e) => SUPPLIER_DOC_TYPES.includes(e.document_type || ''));
+  const notes = filtered.filter((e) => !SUPPLIER_DOC_TYPES.includes(e.document_type || ''));
+
+  const renderExpenseBlock = (items: Expense[], title: string, Icon: any) => {
+    if (items.length === 0) return null;
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 pt-1">
+          <Icon size={15} className="text-emerald-500" />
+          <h2 className={cn("text-xs font-bold uppercase tracking-wider", isDark ? "text-zinc-300" : "text-gray-600")}>{title}</h2>
+          <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full", isDark ? "bg-white/[0.06] text-zinc-400" : "bg-gray-100 text-gray-500")}>{items.length}</span>
+        </div>
+        {/* Mobile */}
+        <div className="md:hidden space-y-3">
+          {items.map((expense, i) => (
+            <MobileExpenseCard key={expense.id} expense={expense} index={i} onEdit={openEdit} onDelete={handleDelete} onValidate={handleValidate} isDark={isDark} />
+          ))}
+        </div>
+        {/* Desktop */}
+        <div className={cn("hidden md:block rounded-2xl overflow-hidden", isDark ? "bg-[#111113] border border-white/[0.08]" : "bg-white border border-gray-200")}>
+          <table className="w-full">
+            <thead>
+              <tr className={cn("border-b", isDark ? "border-white/[0.06]" : "border-gray-200")}>
+                <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Fournisseur</th>
+                <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Montant</th>
+                <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</th>
+                <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Date</th>
+                <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Statut</th>
+                <th className={cn("px-5 py-3 text-right text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Actions</th>
+              </tr>
+            </thead>
+            <tbody className={cn("divide-y", isDark ? "divide-white/[0.06]" : "divide-gray-200")}>
+              {items.map((expense) => (
+                <DesktopTableRow key={expense.id} expense={expense} onEdit={openEdit} onDelete={handleDelete} onValidate={handleValidate} isDark={isDark} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className={cn(
       "min-h-screen p-4 md:p-6 lg:p-8",
@@ -749,8 +803,12 @@ export default function ExpensesPage() {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8"
       >
         <div>
-          <h1 className={cn("text-3xl font-bold tracking-tight", isDark ? "text-white" : "text-gray-900")}>Notes de Frais</h1>
-          <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-gray-500")}>Légal FR · IK · Plafonds repas</p>
+          <h1 className={cn("text-3xl font-bold tracking-tight", isDark ? "text-white" : "text-gray-900")}>
+            {filterType === 'invoice' ? 'Factures fournisseurs' : filterType === 'receipt' ? 'Notes de frais' : 'Dépenses'}
+          </h1>
+          <p className={cn("mt-1 text-sm", isDark ? "text-zinc-500" : "text-gray-500")}>
+            {filterType === 'invoice' ? 'Factures à payer · compte 401' : filterType === 'receipt' ? 'Tickets salariés · compte 625' : 'Factures fournisseurs & notes de frais'}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* LOI 5 (SENTINEL) : Input vocal directement sur la page Notes de frais */}
@@ -834,10 +892,10 @@ export default function ExpensesPage() {
         {/* DÉDALOS CIBLE 1c — Split Dext : Factures fournisseurs vs Notes de frais */}
         <div className="flex gap-1 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/[0.03]">
           {([
-            { v: 'invoice', label: 'Factures fournisseurs', Icon: FileText },
-            { v: 'receipt', label: 'Notes de frais', Icon: Receipt },
-            { v: 'all', label: 'Tout', Icon: Layers },
-          ] as const).map(({ v, label, Icon }) => (
+            { v: 'invoice', label: 'Factures fournisseurs', count: supplierDocCount, Icon: FileText },
+            { v: 'receipt', label: 'Notes de frais', count: receiptDocCount, Icon: Receipt },
+            { v: 'all', label: 'Tout', count: expenses.length, Icon: Layers },
+          ] as const).map(({ v, label, count, Icon }) => (
             <button key={v} onClick={() => setFilterType(v)}
               className={cn(
                 'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
@@ -846,7 +904,7 @@ export default function ExpensesPage() {
                   : 'text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200'
               )}>
               <Icon size={13} />
-              <span className="hidden xs:inline sm:inline">{label}</span>
+              <span className="hidden xs:inline sm:inline">{label} <span className="opacity-60">({count})</span></span>
               <span className="xs:hidden sm:hidden">{label.split(' ')[0]}</span>
             </button>
           ))}
@@ -943,55 +1001,10 @@ export default function ExpensesPage() {
           </button>
         </motion.div>
       ) : (
-        <>
-          {/* Mobile Cards */}
-          <div className="md:hidden space-y-3">
-            {filtered.map((expense, i) => (
-              <MobileExpenseCard
-                key={expense.id}
-                expense={expense}
-                index={i}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onValidate={handleValidate}
-                isDark={isDark}
-              />
-            ))}
-          </div>
-
-          {/* Desktop Table */}
-          <div className={cn(
-            "hidden md:block rounded-2xl overflow-hidden",
-            isDark
-              ? "bg-[#111113] border border-white/[0.08]"
-              : "bg-white border border-gray-200"
-          )}>
-            <table className="w-full">
-              <thead>
-                <tr className={cn("border-b", isDark ? "border-white/[0.06]" : "border-gray-200")}>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Fournisseur</th>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Montant</th>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</th>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Date</th>
-                  <th className={cn("px-5 py-3 text-left text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Statut</th>
-                  <th className={cn("px-5 py-3 text-right text-xs font-medium uppercase tracking-wider", isDark ? "text-zinc-500" : "text-gray-500")}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className={cn("divide-y", isDark ? "divide-white/[0.06]" : "divide-gray-200")}>
-                {filtered.map((expense) => (
-                  <DesktopTableRow
-                    key={expense.id}
-                    expense={expense}
-                    onEdit={openEdit}
-                    onDelete={handleDelete}
-                    onValidate={handleValidate}
-                    isDark={isDark}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+        <div className="space-y-8">
+          {filterType !== 'receipt' && renderExpenseBlock(supplierInvoices, 'Factures fournisseurs', FileText)}
+          {filterType !== 'invoice' && renderExpenseBlock(notes, 'Notes de frais', Receipt)}
+        </div>
       )}
 
       {/* ─── Modal Creation/Edition ────────────────────────────── */}
@@ -1029,6 +1042,26 @@ export default function ExpensesPage() {
               </div>
 
               <form id="expense-form" onSubmit={handleSave} className="p-5 space-y-5 overflow-y-auto flex-1">
+                {/* ATHÉNA CIBLE 3 — séparation Dext : Facture fournisseur (401) vs Note de frais (625). */}
+                <div>
+                  <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>Type de document</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([['invoice', 'Facture fournisseur', FileText], ['receipt', 'Note de frais', Receipt]] as const).map(([val, lbl, Icon]) => (
+                      <button key={val} type="button" onClick={() => set('document_type', val)}
+                        className={cn('flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors',
+                          form.document_type === val
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                            : isDark ? 'border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:border-white/[0.12]'
+                                     : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300')}>
+                        <Icon size={15} /> {lbl}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={cn("text-[11px] mt-1.5", isDark ? "text-zinc-500" : "text-gray-400")}>
+                    Facture fournisseur = tiers à payer (compte 401). Note de frais = ticket salarié (compte 625).
+                  </p>
+                </div>
+
                 {/* Category Selection */}
                 <div>
                   <label className={cn("text-xs font-medium uppercase tracking-wider block mb-2.5", isDark ? "text-zinc-500" : "text-gray-500")}>Catégorie</label>
