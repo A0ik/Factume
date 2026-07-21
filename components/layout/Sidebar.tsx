@@ -8,7 +8,7 @@ import {
   ChevronRight, ChevronLeft, Search, Bell, HelpCircle,
   Package, Receipt, Calculator, Activity, Landmark,
   Target, Shield, Plug, Calendar, ScanLine,
-  EyeOff, Eye, LogOut, Moon, Sun, Keyboard,
+  Eye, LogOut, Moon, Sun, Keyboard,
   DollarSign, ClipboardList, UsersRound,
   FilePlus2, FileCheck, FilePenLine, Truck, CreditCard,
   Briefcase, Lock, ArrowUpRight, Crown, Sparkles,
@@ -54,7 +54,7 @@ export default function Sidebar() {
   const { invoices } = useDataStore();
   const { unreadCount, fetchNotifications } = useWorkspaceStore();
   const sub = useSubscription();
-  const { mode, setMode, toggleFocus } = useSidebarState();
+  const { mode, setMode } = useSidebarState();
 
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -86,10 +86,15 @@ export default function Sidebar() {
   }, [showProfile]);
 
   // ─── Build nav items ──────────────────────────────────────────
+  // HERMÈS CIBLE 2 — épuration « enfant de 8 ans » : 5 hubs primaires + icônes
+  // universelles. Tout le secondaire (Agenda, Activité, Connexions, Scan OCR,
+  // Santé des données, Aide) est relégué dans le popover profil (toolsItems).
+  // Cabinet n'apparaît QUE pour les Business (leur outil principal) — fini le
+  // lock-badge bruyant pour les autres plans.
   const navItems: NavItem[] = [
-    { id: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+    { id: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Accueil' },
     {
-      id: 'documents', href: '/documents', icon: FileText, label: 'Documents', subLabel: 'Factures, devis…',
+      id: 'documents', href: '/documents', icon: FileText, label: 'Factures', subLabel: 'Factures, devis…',
       children: [
         { href: '/documents/factures', icon: FilePlus2, label: 'Factures' },
         { href: '/documents/devis', icon: FileCheck, label: 'Devis' },
@@ -100,27 +105,20 @@ export default function Sidebar() {
       ],
     },
     {
-      id: 'contacts', href: '/contacts', icon: UsersRound, label: 'Contacts', subLabel: 'Clients, articles…',
+      id: 'contacts', href: '/clients', icon: UsersRound, label: 'Clients', subLabel: 'Clients, articles…',
       children: [
         { href: '/clients', icon: Users, label: 'Clients' },
         { href: '/products', icon: Package, label: 'Articles' },
         { href: '/crm', icon: Target, label: 'Pipeline CRM', locked: !sub.canUseCRM, lockTier: 'pro' },
       ],
     },
-    // PROMÉTHÉE — Cabinet d'expertise comptable (Business). Entrée globale manquante
-    // jusqu'ici (Briefcase était importé mais inutilisé). Lock Business pour les autres plans.
     {
-      id: 'cabinet', href: '/cabinet', icon: Briefcase, label: 'Cabinet', subLabel: 'Expert-comptable',
-      locked: !sub.isBusiness, lockTier: 'business',
-    },
-    {
-      id: 'finances', href: '/expenses', icon: DollarSign, label: 'Finances',
+      id: 'finances', href: '/expenses', icon: DollarSign, label: 'Dépenses',
       children: [
         { href: '/expenses', icon: Receipt, label: 'Notes de frais', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-        { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
       ],
     },
     {
@@ -131,20 +129,25 @@ export default function Sidebar() {
         { href: '/contracts/list/other', icon: FileSignature, label: 'Autres' },
       ],
     },
-    {
-      id: 'tools', href: '/integrations', icon: ScanLine, label: 'Outils',
-      children: [
-        { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
-        { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-        { href: '/calendar', icon: Calendar, label: 'Agenda' },
-        { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-      ],
-    },
+    // Cabinet : visible uniquement pour les Business (sinon bruit visuel).
+    ...(sub.isBusiness ? [{
+      id: 'cabinet', href: '/cabinet', icon: Briefcase, label: 'Cabinet', subLabel: 'Expert-comptable',
+    }] : []),
+  ];
+
+  // HERMÈS CIBLE 2 — outils secondaires relégués dans le popover profil.
+  const toolsItems: { href: string; icon: any; label: string; locked?: boolean; lockTier?: string }[] = [
+    { href: '/cards', icon: CreditCard, label: 'Mes cartes' },
+    { href: '/calendar', icon: Calendar, label: 'Agenda' },
+    { href: '/ocr', icon: ScanLine, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
+    { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+    { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+    { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+    { href: '/help', icon: HelpCircle, label: 'Aide' },
   ];
 
   const utilityItems: NavItem[] = [
-    { id: 'settings', href: '/settings', icon: Settings, label: 'Paramètres' },
-    { id: 'help', href: '/help', icon: HelpCircle, label: 'Aide' },
+    { id: 'settings', href: '/settings', icon: Settings, label: 'Réglages' },
     { id: 'notifications', href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
   ];
 
@@ -420,26 +423,6 @@ export default function Sidebar() {
           'flex-shrink-0 border-t border-emerald-100/60 dark:border-white/[0.04]',
           isExpanded ? 'px-4 py-3' : 'py-3 flex flex-col items-center gap-2',
         )}>
-          {/* Focus mode toggle */}
-          {isExpanded ? (
-            <button
-              onClick={toggleFocus}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
-            >
-              <EyeOff size={15} strokeWidth={1.8} />
-              <span>Mode Focus</span>
-              <kbd className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 font-mono">⌘/</kbd>
-            </button>
-          ) : (
-            <button
-              onClick={toggleFocus}
-              className="flex items-center justify-center w-12 h-12 rounded-xl text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-300 transition-all"
-              title="Mode Focus (⌘/)"
-            >
-              <EyeOff size={20} strokeWidth={1.8} />
-            </button>
-          )}
-
           {/* Expand/collapse toggle (only in non-focus) */}
           {isExpanded ? (
             <button
@@ -558,6 +541,31 @@ export default function Sidebar() {
                         </span>
                       )}
                     </button>
+                  </div>
+
+                  {/* HERMÈS CIBLE 2 — outils secondaires relégués ici (nav épurée) */}
+                  <div className="border-t border-gray-100 dark:border-white/5 p-2">
+                    <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Outils</p>
+                    <div className="grid grid-cols-2 gap-0.5">
+                      {toolsItems.map((t) => (
+                        t.locked ? (
+                          <div key={t.href} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-400 opacity-60" title={`Disponible avec ${t.lockTier === 'pro' ? 'Pro' : 'Business'}`}>
+                            <t.icon size={13} strokeWidth={1.8} />
+                            <span className="flex-1 truncate">{t.label}</span>
+                            <Lock size={10} className="text-gray-400" />
+                          </div>
+                        ) : (
+                          <button
+                            key={t.href}
+                            onClick={() => { router.push(t.href); setShowProfile(false); }}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
+                          >
+                            <t.icon size={13} strokeWidth={1.8} />
+                            <span className="flex-1 truncate">{t.label}</span>
+                          </button>
+                        )
+                      ))}
+                    </div>
                   </div>
 
                   <div className="border-t border-gray-100 dark:border-white/5 p-2 flex items-center justify-between">

@@ -28,29 +28,135 @@ export interface SavedExpenseRef {
 }
 
 /**
+ * HERMÈS CIBLE 1 — Résout (ou crée) l'entrée vendor_intelligence d'un fournisseur.
+ * Ordre de matching : SIRET exact → VAT exact → nom (ilike). Retourne l'id de la
+ * ligne (ou null si aucun nom). Ne touche PAS aux stats — c'est le rôle de
+ * learnVendorIntelligence, appelé après l'insert de l'expense.
+ *
+ * C'est le chaînon manquant : chaque facture scannée est maintenant reliée à une
+ * entrée du référentiel fournisseur (la table vendor_intelligence qui alimente
+ * la page /suppliers), via la FK expenses.vendor_intelligence_id.
+ */
+export async function resolveOrCreateVendor(
+  supabase: SupabaseLike,
+  userId: string,
+  signal: {
+    vendor: string | null;
+    siret?: string | null;
+    vat?: string | null;
+  },
+): Promise<string | null> {
+  const vendorName = signal.vendor?.trim();
+  if (!vendorName) return null;
+
+  const siret = signal.siret?.trim() || null;
+  const vat = signal.vat?.trim() || null;
+
+  // 1) SIRET exact
+  if (siret) {
+    const { data: bySiret } = await supabase
+      .from('vendor_intelligence')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('vendor_siret', siret)
+      .maybeSingle();
+    if (bySiret?.id) return bySiret.id;
+  }
+
+  // 2) VAT exact
+  if (vat) {
+    const { data: byVat } = await supabase
+      .from('vendor_intelligence')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('vat_number', vat)
+      .maybeSingle();
+    if (byVat?.id) return byVat.id;
+  }
+
+  // 3) Nom (ilike) — cohérent avec le comportement historique
+  const { data: byName } = await supabase
+    .from('vendor_intelligence')
+    .select('id')
+    .eq('user_id', userId)
+    .ilike('vendor_name', vendorName)
+    .maybeSingle();
+  if (byName?.id) return byName.id;
+
+  // 4) Création minimale (les stats seront nourries par learnVendorIntelligence).
+  //    vendor_siret a une contrainte UNIQUE → on ne l'insère que si présent.
+  const insert: Record<string, unknown> = {
+    user_id: userId,
+    vendor_name: vendorName,
+    typical_categories: [],
+    typical_amount_range: { min: 0, max: 0 },
+    total_invoices: 0,
+    total_purchases: 0,
+    ocr_confidence_avg: 0,
+  };
+  if (siret) insert.vendor_siret = siret;
+  if (vat) insert.vat_number = vat;
+
+  const { data: created, error } = await supabase
+    .from('vendor_intelligence')
+    .insert(insert)
+    .select('id')
+    .single();
+
+  if (error || !created?.id) {
+    // Race possible (double scan simultané) → on retente le match
+    if (siret) {
+      const { data: r } = await supabase
+        .from('vendor_intelligence')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('vendor_siret', siret)
+        .maybeSingle();
+      if (r?.id) return r.id;
+    }
+    const { data: r2 } = await supabase
+      .from('vendor_intelligence')
+      .select('id')
+      .eq('user_id', userId)
+      .ilike('vendor_name', vendorName)
+      .maybeSingle();
+    return r2?.id ?? null;
+  }
+  return created.id;
+}
+
+/**
  * Apprend (crée ou met à jour) le profil d'intelligence d'un fournisseur
- * à partir d'une dépense. Idempotent par nom (ilike). Cœur de l'automatisation
+ * à partir d'une dépense. Idempotent. Cœur de l'automatisation
  * « Supplier Rules / auto-categorize » façon Dext.
+ *
+ * HERMÈS CIBLE 1 : accepte un `vendorId` optionnel (résolu par
+ * resolveOrCreateVendor) pour mettre à jour la BONNE ligne même si le nom
+ * OCR diffère d'une orthographe existante.
  */
 export async function learnVendorIntelligence(
   supabase: SupabaseLike,
   userId: string,
   exp: ExpenseSignal,
+  vendorId?: string | null,
 ): Promise<void> {
   const vendorName = exp.vendor?.trim();
-  if (!vendorName) return;
+  if (!vendorName && !vendorId) return;
 
   const now = new Date().toISOString();
   const amount = Number(exp.amount) || 0;
   const confidence = Number(exp.ocr_confidence) || 0.8;
   const day = exp.date ? `day_${new Date(exp.date).getDate()}` : null;
 
-  const { data: existing } = await supabase
-    .from('vendor_intelligence')
-    .select('*')
-    .eq('user_id', userId)
-    .ilike('vendor_name', vendorName)
-    .maybeSingle();
+  // Priorise l'id résolu (SIRET/VAT/name) au matching ilike
+  const { data: existing } = vendorId
+    ? await supabase.from('vendor_intelligence').select('*').eq('id', vendorId).maybeSingle()
+    : await supabase
+        .from('vendor_intelligence')
+        .select('*')
+        .eq('user_id', userId)
+        .ilike('vendor_name', vendorName ?? '')
+        .maybeSingle();
 
   if (existing) {
     const total = (Number(existing.total_invoices) || 0) + 1;
@@ -74,6 +180,10 @@ export async function learnVendorIntelligence(
     await supabase.from('vendor_intelligence').update(upd).eq('id', existing.id);
     return;
   }
+
+  // vendor_name est NOT NULL en BDD — garde-fou (cas tordu : vendorId fourni
+  // mais ligne supprimée entre resolve et learn, sans nom exploitable).
+  if (!vendorName) return;
 
   await supabase.from('vendor_intelligence').insert({
     user_id: userId,

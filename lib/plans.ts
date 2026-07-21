@@ -59,6 +59,11 @@ export interface PlanConfig {
     //  - ocrMultiInvoice : OCR multi-factures type Dext (lot, segmentation) → Business seul.
     ocrSimple: boolean;
     ocrMultiInvoice: boolean;
+    // HERMÈS (CIBLE 3) — Commande de cartes Stripe Issuing (virtuelle 5€ / physique 30€).
+    // Pro + Business. Le paiement réel de la fee et l'émission sont gérés par
+    // /api/stripe/issuing/* ; l'émission réelle est gate derrière STRIPE_ISSUING_ENABLED
+    // (card program Stripe à valider — Option C « pont »).
+    issuingCard: boolean;
   };
 }
 
@@ -113,6 +118,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       contracts: false,
       ocrSimple: false,
       ocrMultiInvoice: false,
+      issuingCard: false,
     },
   },
 
@@ -162,6 +168,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       contracts: true,
       ocrSimple: true,        // Pro+ : scan simple d'un justificatif (pré-remplissage note de frais)
       ocrMultiInvoice: false, // L'OCR multi-factures type Dext reste Business
+      issuingCard: true,      // HERMÈS — cartes Stripe Issuing (Pro+)
     },
   },
 
@@ -205,6 +212,7 @@ export const PLANS: Record<PlanTier, PlanConfig> = {
       contracts: true,
       ocrSimple: true,
       ocrMultiInvoice: true, // Business : OCR multi-factures type Dext
+      issuingCard: true,     // HERMÈS — cartes Stripe Issuing (Pro+)
     },
   },
 };

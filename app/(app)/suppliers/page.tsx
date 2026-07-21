@@ -340,6 +340,21 @@ export default function SuppliersPage() {
                       </span>
                     </div>
                   )}
+
+                  {/* HERMÈS CIBLE 1 — lien direct vers les factures de ce fournisseur */}
+                  <Link
+                    href={`/expenses?supplier=${v.id}`}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 mt-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                      isDark
+                        ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    )}
+                  >
+                    <FileText size={13} />
+                    Voir les {v.total_invoices || 0} {(v.total_invoices || 0) > 1 ? 'factures' : 'facture'}
+                    <ChevronRight size={13} />
+                  </Link>
                 </motion.div>
               ))}
             </div>

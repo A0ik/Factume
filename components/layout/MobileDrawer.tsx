@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, LayoutDashboard, FileText, Users, Calendar, Settings,
-  Package, Receipt, Calculator, HelpCircle,
+  Package, Receipt, Calculator, HelpCircle, CreditCard,
   Bell, Lock, ChevronDown,
   Moon, Sun, Search, Activity, Landmark,
   Shield, Plug,
@@ -73,11 +73,12 @@ export default function MobileDrawer({ open, onClose }: Props) {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // PROMÉTHÉE — section Cabinet (expert-comptable, Business) ajoutée à la navbar mobile.
+  // HERMÈS CIBLE 2 — épuration mobile : 4 sections primaires + Cabinet (Business).
+  // Outils secondaires relégués dans toolsSection (en bas, replié par défaut).
   const sections: NavSection[] = [
     {
       id: 'documents',
-      label: 'Documents',
+      label: 'Factures',
       icon: FileText,
       items: [
         { href: '/documents', icon: FileText, label: 'Tous les documents' },
@@ -85,23 +86,22 @@ export default function MobileDrawer({ open, onClose }: Props) {
     },
     {
       id: 'contacts',
-      label: 'Contacts',
+      label: 'Clients',
       icon: UsersRound,
       items: [
-        { href: '/contacts', icon: Users, label: 'Clients & Articles' },
+        { href: '/clients', icon: Users, label: 'Clients & Articles' },
         { href: '/crm', icon: Target, label: 'Pipeline CRM', locked: !sub.canUseCRM, lockTier: 'pro' },
       ],
     },
     {
       id: 'finances',
-      label: 'Finances',
+      label: 'Dépenses',
       icon: DollarSign,
       items: [
         { href: '/expenses', icon: Receipt, label: 'Notes de frais', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/suppliers', icon: Building2, label: 'Fournisseurs', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/accounting', icon: Calculator, label: 'Comptabilité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
         { href: '/banking', icon: Landmark, label: 'Banque', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-        { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
       ],
     },
     {
@@ -110,30 +110,35 @@ export default function MobileDrawer({ open, onClose }: Props) {
       icon: ClipboardList,
       items: [
         { href: '/contracts', icon: FileSignature, label: 'Tous les contrats' },
-        { href: '/contracts/reports', icon: ClipboardList, label: 'Rapports' },
       ],
     },
-    {
+    // Cabinet : visible uniquement pour les Business (sinon bruit).
+    ...(sub.isBusiness ? [{
       id: 'cabinet',
       label: 'Cabinet',
       icon: Briefcase,
       items: [
-        { href: '/cabinet', icon: Briefcase, label: 'Dashboard cabinet', locked: !sub.isBusiness, lockTier: 'business' },
-        { href: '/cabinet/clients', icon: Users, label: 'Clients du cabinet', locked: !sub.isBusiness, lockTier: 'business' },
+        { href: '/cabinet', icon: Briefcase, label: 'Dashboard cabinet' },
+        { href: '/cabinet/clients', icon: Users, label: 'Clients du cabinet' },
       ],
-    },
-    {
-      id: 'outils',
-      label: 'Outils',
-      icon: Plug,
-      items: [
-        { href: '/ocr', icon: Search, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
-        { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-        { href: '/calendar', icon: Calendar, label: 'Agenda' },
-        { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
-      ],
-    },
+    }] : []),
   ];
+
+  // Outils secondaires (section repliée par défaut, en bas du drawer).
+  const toolsSection: NavSection = {
+    id: 'outils',
+    label: 'Outils',
+    icon: Plug,
+    items: [
+      { href: '/cards', icon: CreditCard, label: 'Mes cartes' },
+      { href: '/calendar', icon: Calendar, label: 'Agenda' },
+      { href: '/ocr', icon: Search, label: 'Scan OCR', locked: !sub.isBusiness, lockTier: 'business' },
+      { href: '/integrations', icon: Plug, label: 'Connexions', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+      { href: '/data-health', icon: Shield, label: 'Santé des données', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+      { href: '/activity', icon: Activity, label: 'Activité', locked: !sub.effectiveIsPro, lockTier: 'pro' },
+      { href: '/help', icon: HelpCircle, label: 'Aide' },
+    ],
+  };
 
   const isOpen = (id: string) => expanded[id] ?? false;
 
@@ -197,8 +202,7 @@ export default function MobileDrawer({ open, onClose }: Props) {
   };
 
   const accountLinks = [
-    { href: '/settings', icon: Settings, label: 'Paramètres' },
-    { href: '/help', icon: HelpCircle, label: 'Aide' },
+    { href: '/settings', icon: Settings, label: 'Réglages' },
     { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount > 0 ? unreadCount : undefined },
   ];
 
@@ -282,10 +286,14 @@ export default function MobileDrawer({ open, onClose }: Props) {
                 )}>
                   <LayoutDashboard size={17} strokeWidth={pathname.startsWith('/dashboard') ? 2.5 : 1.8} />
                 </span>
-                <span className="flex-1 font-semibold">Tableau de bord</span>
+                <span className="flex-1 font-semibold">Accueil</span>
               </Link>
 
               {sections.map(section => <SectionRow key={section.id} section={section} />)}
+
+              {/* HERMÈS CIBLE 2 — outils secondaires, séparés et repliés par défaut */}
+              <div className="h-px bg-gray-100 dark:bg-white/5 my-2" />
+              <SectionRow section={toolsSection} />
 
               {/* Account links */}
               <div>

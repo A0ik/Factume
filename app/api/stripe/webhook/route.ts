@@ -389,7 +389,7 @@ export async function POST(req: NextRequest) {
         if (piInvoiceId) {
           const { data: invoice } = await supabase
             .from('invoices')
-            .select('id, status, number, total, client:clients(name)')
+            .select('id, status, number, user_id, total, client:clients(name)')
             .eq('id', piInvoiceId)
             .single();
 

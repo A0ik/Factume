@@ -14,7 +14,7 @@ import {
   ShoppingCart, Car, Coffee, Home, Laptop, Briefcase, MoreHorizontal,
   ArrowDownUp, Filter, Sparkles, ChevronDown, Clock,
   MapPin, Gauge, Users, FileText, Download,
-  Info, Calculator, Layers,
+  Info, Calculator, Layers, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceExpenseButton from '@/components/expenses/VoiceExpenseButton';
@@ -54,6 +54,8 @@ interface Expense {
   vat_account?: string;
   ocr_invoice_number?: string;
   ocr_supplier_siret?: string;
+  // HERMÈS CIBLE 1 — FK vers vendor_intelligence (la table qui alimente /suppliers)
+  vendor_intelligence_id?: string;
 }
 
 const CATEGORIES = [
@@ -399,6 +401,9 @@ export default function ExpensesPage() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [categorizingAI, setCategorizingAI] = useState(false);
+  // HERMÈS CIBLE 1 — filtre fournisseur (?supplier=<vendor_intelligence_id> depuis /suppliers)
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
@@ -423,6 +428,26 @@ export default function ExpensesPage() {
       if (!clients || clients.length === 0) fetchClients();
     }
   }, [user]);
+
+  // HERMÈS CIBLE 1 — lecture du filtre fournisseur depuis l'URL (?supplier=<id>).
+  // On lit window.location plutôt que useSearchParams pour éviter le bail-out
+  // Next15 (cf. mémoire ZÉNITH /calendar). + suggestions pour l'autocomplete.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setSupplierFilter(params.get('supplier') || '');
+    }
+    (async () => {
+      const sb = getSupabaseClient();
+      if (!sb) return;
+      const { data } = await sb
+        .from('vendor_intelligence')
+        .select('vendor_name')
+        .order('total_invoices', { ascending: false })
+        .limit(50);
+      if (data) setVendorSuggestions(data.map((v: { vendor_name: string }) => v.vendor_name).filter(Boolean));
+    })();
+  }, []);
 
   // ZEUS (suivi #2) — Notes de frais = Pro+Business. Un compte free qui accède
   // directement à /expenses est redirigé vers le paywall (défense-en-profondeur,
@@ -671,9 +696,11 @@ export default function ExpensesPage() {
       const matchStatus = !filterStatus || e.status === filterStatus;
       const isSupplier = SUPPLIER_TYPES.includes(e.document_type || '');
       const matchType = filterType === 'all' ? true : filterType === 'invoice' ? isSupplier : !isSupplier;
-      return matchSearch && matchCat && matchStatus && matchType;
+      // HERMÈS CIBLE 1 — filtre par fournisseur (FK vendor_intelligence_id)
+      const matchSupplier = !supplierFilter || e.vendor_intelligence_id === supplierFilter;
+      return matchSearch && matchCat && matchStatus && matchType && matchSupplier;
     });
-  }, [expenses, search, filterCat, filterStatus, filterType]);
+  }, [expenses, search, filterCat, filterStatus, filterType, supplierFilter]);
 
   const stats = useMemo(() => {
     const currentMonthPrefix = new Date().toISOString().slice(0, 7);
@@ -694,6 +721,26 @@ export default function ExpensesPage() {
         ? "bg-[#09090B]"
         : "bg-gradient-to-br from-gray-50 via-white to-gray-50"
     )}>
+      {/* HERMÈS CIBLE 1 — bannière de filtre fournisseur (arrivée depuis /suppliers) */}
+      {supplierFilter && (
+        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+          <div className={cn(
+            "inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium",
+            isDark ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                   : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          )}>
+            <Building2 size={13} />
+            Fournisseur : {filtered[0]?.vendor || 'sélectionné'}
+            <button
+              onClick={() => { setSupplierFilter(''); router.push('/expenses'); }}
+              className="ml-1 opacity-70 hover:opacity-100"
+              title="Retirer le filtre"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </motion.div>
+      )}
       {/* ─── Header ────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
@@ -1175,6 +1222,7 @@ export default function ExpensesPage() {
                     )}
                   </div>
                   <input required={form.category !== 'mileage'} disabled={form.category === 'mileage'}
+                    list="hermes-vendor-list"
                     value={form.vendor} onChange={(e) => set('vendor', e.target.value)}
                     placeholder={form.category === 'mileage' ? 'Indemnités kilométriques' : 'Ex : SNCF, Amazon, Leroy Merlin...'}
                     className={cn(
@@ -1183,6 +1231,12 @@ export default function ExpensesPage() {
                         ? "bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-600 focus:border-white/[0.15]"
                         : "bg-gray-100 border border-gray-200 text-gray-900 placeholder-gray-500 focus:border-gray-300"
                     )} />
+                  {/* HERMÈS CIBLE 1 — autocomplete natif sur l'annuaire fournisseurs existant */}
+                  <datalist id="hermes-vendor-list">
+                    {vendorSuggestions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                 </div>
 
                 {/* Amount + VAT */}

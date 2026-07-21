@@ -21,7 +21,7 @@ import {
 } from '@/lib/ocr-helpers';
 import { getAccountCode, generateJournalEntry } from '@/lib/plan-comptable';
 import { extractPageRange, type InvoiceSegment } from '@/lib/pdf-splitter';
-import { learnVendorIntelligence, detectDuplicate, type SavedExpenseRef } from '@/lib/vendors';
+import { learnVendorIntelligence, detectDuplicate, resolveOrCreateVendor, type SavedExpenseRef } from '@/lib/vendors';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -245,10 +245,25 @@ export async function processAndSaveExpense(
 
   const accountMapping = getAccountCode(category, supplierCategory);
 
+  // 3c. HERMÈS CIBLE 1 — résout/crée le fournisseur (SIRET > VAT > nom) AVANT
+  // l'insert pour câbler la FK vendor_intelligence_id. C'est le chaînon qui
+  // relie chaque facture scannée à son entrée du référentiel /suppliers.
+  let vendorIntelligenceId: string | null = null;
+  try {
+    vendorIntelligenceId = await resolveOrCreateVendor(supabase, userId, {
+      vendor: extracted.vendor as string | null,
+      siret: extracted.vendor_siret as string | null,
+      vat: extracted.vendor_vat_number as string | null,
+    });
+  } catch (e) {
+    console.error('[OCR Core] vendor resolve error:', e);
+  }
+
   // 4. Build expense record
   const expenseRecord: Record<string, unknown> = {
     user_id: userId,
     vendor: extracted.vendor,
+    vendor_intelligence_id: vendorIntelligenceId,
     amount: recon.ttc,
     ht_amount: recon.ht,
     vat_amount: recon.vat,
@@ -322,7 +337,7 @@ export async function processAndSaveExpense(
         date: extracted.date,
         ocr_confidence: extracted.confidence,
         ocr_invoice_number: extracted.invoice_number,
-      });
+      }, vendorIntelligenceId);
     } catch (e) {
       console.error('[OCR Core] vendor learn error:', e);
     }
