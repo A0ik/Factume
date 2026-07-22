@@ -95,13 +95,22 @@ export async function POST(req: NextRequest) {
 
     const currency = (profile?.currency || 'EUR').toUpperCase();
 
-    console.log('[sumup-payment-link] Creating checkout with OAuth token — invoice:', invoiceId, 'amount:', amount, 'currency:', currency);
+    // ODIN (CIBLE 2 — fix SumUp) — checkout_reference UNIQUE PAR SOLDE. SumUp impose
+    // l'unicité du checkout_reference par marchand : régénérer avec le même invoiceId
+    // déclenchait un 409, et le handler réutilisait l'ancien checkout au TOTAL COMPLET
+    // (ignorant l'acompte → double-encaissement). On suffixe par le solde en centimes :
+    // un nouveau solde (acompte versé) => un NOUVEAU checkout au bon montant ; un même
+    // solde re-cliqué => 409 légitime, on réutilise (même montant, correct).
+    // Le webhook rapproche par sumup_checkout_id (PAS par référence) : rapprochement préservé.
+    const checkoutReference = `${invoiceId}-s${Math.round(amount * 100)}`;
+
+    console.log('[sumup-payment-link] Creating checkout with OAuth token — invoice:', invoiceId, 'amount:', amount, 'currency:', currency, 'ref:', checkoutReference);
 
     // Build checkout request
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${req.headers.get('host')}`;
 
     const checkoutBody: Record<string, unknown> = {
-      checkout_reference: invoiceId,
+      checkout_reference: checkoutReference,
       amount,
       currency,
       merchant_code: profile?.sumup_merchant_code,
@@ -155,7 +164,7 @@ export async function POST(req: NextRequest) {
         }
         // Fallback: try to list checkouts to find the existing one
         try {
-          const listRes = await fetch(`https://api.sumup.com/v0.1/checkouts?checkout_reference=${invoiceId}`, {
+          const listRes = await fetch(`https://api.sumup.com/v0.1/checkouts?checkout_reference=${checkoutReference}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
           if (listRes.ok) {
