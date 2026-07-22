@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
 import { getUserSubscriptionStatus, requireFeature } from '@/lib/subscription-guard';
-import { resolveCabinetAccess } from '@/lib/cabinet-auth';
+import { resolveCabinetAccess, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -196,6 +196,10 @@ export async function DELETE(req: NextRequest) {
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
 
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent supprimer un client cabinet.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
+
     if (clientId) {
       const { error } = await admin.from('cabinet_clients').delete().eq('id', clientId).eq('cabinet_id', cabinet.id);
       if (error) throw error;
@@ -246,6 +250,10 @@ export async function POST(req: NextRequest) {
 
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent créer un client cabinet.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const { data: client, error } = await admin
       .from('cabinet_clients')

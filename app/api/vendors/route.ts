@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
+// ODIN (CIBLE 1) — sanitize search avant .or() PostgREST : neutralise l'injection
+// de filtres (`,()` = séparateurs/clauses PostgREST) et plafonne la longueur.
+function sanitizeOrSearch(input: string): string {
+  return input.replace(/[(),]/g, '').substring(0, 100);
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -57,7 +63,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`vendor_name.ilike.%${search}%,vendor_domain.ilike.%${search}%`);
+      // ODIN (CIBLE 1) — assainir search avant .or() pour empêcher l'injection de filtres PostgREST
+      const safeSearch = sanitizeOrSearch(search);
+      query = query.or(`vendor_name.ilike.%${safeSearch}%,vendor_domain.ilike.%${safeSearch}%`);
     }
 
     const { data: vendors } = await query;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 const VALID_MISSION_TYPES = [
   'expertise_comptable',
@@ -39,6 +40,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
 
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE ses propres missions.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ missions: [] });
+    }
+
     const { searchParams } = new URL(req.url);
     const clientId = searchParams.get('client_id');
     const status = searchParams.get('status');
@@ -50,6 +58,7 @@ export async function GET(req: NextRequest) {
       .eq('cabinet_id', cabinet.id)
       .order('start_date', { ascending: false });
 
+    if (scopedClientIds) query = query.in('client_id', scopedClientIds);
     if (clientId) query = query.eq('client_id', clientId);
     if (status) query = query.eq('status', status);
     if (missionType) query = query.eq('mission_type', missionType);
@@ -96,6 +105,10 @@ export async function POST(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent créer une mission.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { client_id, mission_type, start_date, description, end_date, auto_renew, monthly_fee, status, responsible, notes } = body;
@@ -177,6 +190,10 @@ export async function PATCH(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent modifier une mission.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { id, mission_type, description, start_date, end_date, auto_renew, monthly_fee, status, responsible, signed_at, signed_by, notes } = body;

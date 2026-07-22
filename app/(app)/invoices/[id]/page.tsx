@@ -25,6 +25,7 @@ import PaymentProviderModal from '@/components/ui/PaymentProviderModal';
 import PaymentLinkSuccessModal from '@/components/ui/PaymentLinkSuccessModal';
 import { FacturXButton, FacturXInfoTooltip } from '@/components/ui/FacturXButton';
 import { isFacturXEligible } from '@/lib/facturx';
+import { computeRemainingFromPayments } from '@/lib/invoice-balance';
 import { motion, AnimatePresence } from 'framer-motion';
 import MobileActionBar from '@/components/invoices/InvoiceMobileActionBar';
 import { PdpStatusBadge } from '@/components/invoices/PdpStatusBadge';
@@ -238,16 +239,23 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     // total et le montant figé du lien (comparaison client-side). L'effet devient insensible
     // à l'oscillation du flag stale. Une nouvelle édition de prix change le total → nouvelle
     // clé → exactement une régénération par changement de montant. Plus de réarmage.
+    // ODIN (CIBLE 2) — la régénération se déclenche sur le SOLDE RESTANT, pas sur le
+    // total. Un acompte ne change pas `total` mais change le solde dû : l'ancien effet
+    // (clé `${id}:${total}`) restait silencieux après un acompte. Désormais :
+    //   • expectedRemaining = total − Σ acomptes (depuis l'état partialPayments) ;
+    //   • regen si stale + provider + reste > 0 ET (pas de montant figé, ou montant
+    //     figé ≠ solde attendu) ;
+    //   • clé collée au solde attendu → exactement une régénération par acompte/édition.
     const total = Number(invoice.total ?? 0);
+    const expectedRemaining = computeRemainingFromPayments(total, partialPayments);
     const linkAmount = invoice.payment_link_amount != null ? Number(invoice.payment_link_amount) : null;
-    const amountDiverges = linkAmount != null && Math.abs(total - linkAmount) > 0.01;
-    const regenKey = `${invoice.id}:${total}`;
-    if (
+    const needsRegen =
       invoice.payment_link_stale &&
       invoice.payment_provider &&
-      amountDiverges &&
-      autoRegenAttemptedRef.current !== regenKey
-    ) {
+      expectedRemaining > 0.01 &&
+      (linkAmount == null || Math.abs(linkAmount - expectedRemaining) > 0.01);
+    const regenKey = `${invoice.id}:${expectedRemaining}`;
+    if (needsRegen && autoRegenAttemptedRef.current !== regenKey) {
       autoRegenAttemptedRef.current = regenKey;
       const provider = invoice.payment_provider;
       (provider === 'stripe' ? handleCreatePaymentLink(true, true) : handleSumUpLink(true, true)).catch(() => {
@@ -255,7 +263,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider, invoice?.total, invoice?.payment_link_amount]);
+  }, [invoice?.id, invoice?.payment_link_stale, invoice?.payment_provider, invoice?.total, invoice?.payment_link_amount, partialPayments]);
 
   if (!invoice) {
     return (

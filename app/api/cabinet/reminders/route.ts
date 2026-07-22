@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 import { Resend } from 'resend';
 
 export async function GET(req: NextRequest) {
@@ -29,13 +30,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
 
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE les relances de SES propres
+    // factures (sinon fuite des emails/identités des autres locataires du cabinet).
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ invoices: [], summary: { total_overdue: 0, total_amount: 0, level_1_count: 0, level_2_count: 0, level_3_count: 0 } });
+    }
+
     // Fetch overdue or past-due sent invoices for this cabinet
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: invoices, error: invoicesError } = await admin
+    let invoicesQuery = admin
       .from('cabinet_invoices')
       .select('*, client:cabinet_clients(id, contact_email, contact_name, company_name, profile:profiles!client_user_id(email, company_name, first_name, last_name))')
-      .eq('cabinet_id', cabinet.id)
+      .eq('cabinet_id', cabinet.id);
+    if (scopedClientIds) invoicesQuery = invoicesQuery.in('client_id', scopedClientIds);
+
+    const { data: invoices, error: invoicesError } = await invoicesQuery
       .or(`status.eq.overdue,and(status.eq.sent,due_date.lt.${today})`)
       .order('due_date', { ascending: true });
 
@@ -162,6 +174,11 @@ export async function POST(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — émettre une relance (écriture + envoi email) est réservé au
+    // staff du cabinet.
+    const staffGuard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!staffGuard.ok) return staffGuard.response;
 
     const body = await req.json();
     const { invoice_id, level, notes } = body;

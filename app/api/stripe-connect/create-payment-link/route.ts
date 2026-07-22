@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { buildFreshLinkUpdate } from '@/lib/payment-link';
 import { ensureShortToken, buildShortPayUrl } from '@/lib/pay-token';
+import { getPaidTotal, computeRemaining } from '@/lib/invoice-balance';
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +31,17 @@ export async function POST(req: NextRequest) {
 
     if (!invoice) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
+    // ODIN (CIBLE 2) — Vérité comptable : le lien charge le SOLDE RESTANT, pas le
+    // total. Un acompte déjà versé est déduit. remaining = total − Σ acomptes.
+    const paidTotal = await getPaidTotal(admin, invoiceId);
+    const remaining = computeRemaining(Number(invoice.total ?? 0), paidTotal);
+    if (remaining <= 0) {
+      return NextResponse.json(
+        { error: 'Cette facture est déjà soldée (acomptes ≥ total).' },
+        { status: 400 },
+      );
     }
 
     // FIXER (BUG 1) — cache court-circuité quand l'utilisateur force la régénération
@@ -62,33 +74,48 @@ export async function POST(req: NextRequest) {
       stripeAccount: profile.stripe_connect_account_id,
     });
 
-    // Build line items from invoice items
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (invoice.items || []).map(
-      (item: { description: string; unit_price: number; vat_rate: number; quantity: number; total: number }) => {
-        const ttcPrice = item.unit_price * (1 + (item.vat_rate ?? 20) / 100);
-        return {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: (item.description || 'Prestation').substring(0, 100),
-            },
-            unit_amount: Math.round(ttcPrice * 100),
-          },
-          quantity: item.quantity || 1,
-        };
-      },
-    );
-
-    // Fallback if no items
-    if (lineItems.length === 0) {
-      lineItems.push({
+    // Build line items from invoice items.
+    // ODIN (CIBLE 2) — si un acompte a été versé, on charge le SOLDE RESTANT en une
+    // seule ligne (vérité comptable + évite toute dérive d'arrondi sur la somme des
+    // lignes). Sans acompte, on garde l'itemisation normale.
+    let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+    if (paidTotal > 0) {
+      lineItems = [{
         price_data: {
           currency: 'eur',
-          product_data: { name: `Facture ${invoice.number}` },
-          unit_amount: Math.round((invoice.total || 0) * 100),
+          product_data: { name: `Solde restant — Facture ${invoice.number || ''}`.substring(0, 100) },
+          unit_amount: Math.round(remaining * 100),
         },
         quantity: 1,
-      });
+      }];
+    } else {
+      lineItems = (invoice.items || []).map(
+        (item: { description: string; unit_price: number; vat_rate: number; quantity: number; total: number }) => {
+          const ttcPrice = item.unit_price * (1 + (item.vat_rate ?? 20) / 100);
+          return {
+            price_data: {
+              currency: 'eur',
+              product_data: {
+                name: (item.description || 'Prestation').substring(0, 100),
+              },
+              unit_amount: Math.round(ttcPrice * 100),
+            },
+            quantity: item.quantity || 1,
+          };
+        },
+      );
+
+      // Fallback if no items
+      if (lineItems.length === 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'eur',
+            product_data: { name: `Facture ${invoice.number}` },
+            unit_amount: Math.round(remaining * 100),
+          },
+          quantity: 1,
+        });
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -121,7 +148,9 @@ export async function POST(req: NextRequest) {
     const shortToken = await ensureShortToken(admin, invoiceId, invoice.payment_short_token);
     const freshUpdate = buildFreshLinkUpdate('stripe', {
       url: session.url as string,
-      amount: Number(invoice.total ?? 0),
+      // ODIN (CIBLE 2) — on figure le SOLDE RESTANT réellement chargé (et non le
+      // total), pour que l'auto-régénération et les résolveurs restent cohérents.
+      amount: remaining,
     });
     if (shortToken) freshUpdate.payment_short_token = shortToken;
 

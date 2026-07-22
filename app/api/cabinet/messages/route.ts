@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds } from '@/lib/cabinet-auth';
 import { Resend } from 'resend';
 
 // PROMÉTHÉE (CIBLE 3 — C3) — Messagerie contextuelle cabinet ↔ client.
@@ -19,27 +20,33 @@ export async function GET(req: NextRequest) {
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
 
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE les messages de ses propres fils.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ messages: [] });
+    }
+
     const { searchParams } = new URL(req.url);
     const clientId = searchParams.get('client_id');
     if (!clientId) return NextResponse.json({ error: 'client_id requis' }, { status: 400 });
 
-    const { data: messages, error } = await admin
+    // Un rôle lecture seule ne peut lire qu'un fil le concernant (anti-IDOR intra-cabinet).
+    if (scopedClientIds && !scopedClientIds.includes(clientId)) {
+      return NextResponse.json({ messages: [] });
+    }
+
+    let msgQuery = admin
       .from('cabinet_messages')
       .select('id, author_role, author_id, body, read_at, created_at')
       .eq('cabinet_id', cabinet.id)
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: true });
+      .eq('client_id', clientId);
+    if (scopedClientIds) msgQuery = msgQuery.in('client_id', scopedClientIds);
+    const { data: messages, error } = await msgQuery.order('created_at', { ascending: true });
     if (error) throw error;
 
     // Accusé de lecture : seul le STAFF du cabinet marque les messages client comme lus.
-    const { data: membership } = await admin
-      .from('cabinet_members')
-      .select('role')
-      .eq('cabinet_id', cabinet.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-    const isStaff = cabinet.owner_id === user.id || ['admin', 'manager'].includes(membership?.role);
-    if (isStaff) {
+    if (access.isStaff) {
       await admin
         .from('cabinet_messages')
         .update({ read_at: new Date().toISOString() })

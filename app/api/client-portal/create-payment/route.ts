@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase-server';
+import { getPaidTotal, computeRemaining } from '@/lib/invoice-balance';
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,14 @@ export async function POST(req: NextRequest) {
     if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     if (invoice.status === 'paid') return NextResponse.json({ error: 'Already paid' }, { status: 400 });
 
+    // ODIN (CIBLE 2) — le client paie le SOLDE RESTANT, pas le total. Une facture
+    // 'partial' (acompte versé) charge uniquement ce qu'il reste. On bloque si soldé.
+    const paidTotal = await getPaidTotal(supabase, invoiceId);
+    const remaining = computeRemaining(Number(invoice.total || invoice.amount || 0), paidTotal);
+    if (remaining <= 0) {
+      return NextResponse.json({ error: 'Already paid' }, { status: 400 });
+    }
+
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
     // Get user's Stripe Connect account if available
@@ -55,9 +64,12 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: invoice.currency?.toLowerCase() || 'eur',
           product_data: {
-            name: `Facture ${invoice.number || invoiceId}`,
+            name: paidTotal > 0
+              ? `Solde restant — Facture ${invoice.number || invoiceId}`
+              : `Facture ${invoice.number || invoiceId}`,
           },
-          unit_amount: Math.round((invoice.total || invoice.amount || 0) * 100),
+          // ODIN (CIBLE 2) — solde restant (total − acomptes).
+          unit_amount: Math.round(remaining * 100),
         },
         quantity: 1,
       }],
@@ -72,7 +84,9 @@ export async function POST(req: NextRequest) {
     // If user has Stripe Connect, create on their behalf
     if (profile?.stripe_connect_account_id) {
       sessionParams.payment_intent_data = {
-        application_fee_amount: Math.round((invoice.total || invoice.amount || 0) * 100 * 0.015), // 1.5% fee
+        // ODIN (CIBLE 2) — la commission plateforme (1,5 %) porte sur le solde
+        // réellement encaissé, pas sur le total de la facture.
+        application_fee_amount: Math.round(remaining * 100 * 0.015),
         transfer_data: {
           destination: profile.stripe_connect_account_id,
         },

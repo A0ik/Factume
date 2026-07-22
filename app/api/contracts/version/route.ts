@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { createContractVersion } from '@/lib/labor-law/contract-version-service';
 
+// ODIN (CIBLE 1) — Allowlist des tables de contrats. Avant, le nom de table était
+// interpolé depuis l'entrée utilisateur (`.from(`contracts_${contractType}`)`) :
+// injection de nom de table permettait de sonder des tables arbitraires.
+const CONTRACT_TABLE_BY_TYPE: Record<string, string> = {
+  cdi: 'contracts_cdi',
+  cdd: 'contracts_cdd',
+  other: 'contracts_other',
+};
+
+function resolveContractTable(contractType: unknown): string | null {
+  if (typeof contractType !== 'string') return null;
+  return CONTRACT_TABLE_BY_TYPE[contractType.toLowerCase()] ?? null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -17,9 +31,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Données manquantes' }, { status: 400 });
     }
 
+    // ODIN (CIBLE 1) — résolution allowlist du nom de table (anti-injection).
+    const cTable = resolveContractTable(contractType);
+    if (!cTable) {
+      return NextResponse.json({ error: 'Type de contrat invalide' }, { status: 400 });
+    }
+
     // Vérifier que l'utilisateur a le droit d'accéder à ce contrat
     const { data: contract, error: accessError } = await supabase
-      .from(`contracts_${contractType}`)
+      .from(cTable)
       .select('user_id')
       .eq('id', contractId)
       .single();
@@ -65,9 +85,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
     }
 
+    // ODIN (CIBLE 1) — résolution allowlist du nom de table (anti-injection).
+    const cTable = resolveContractTable(contractType);
+    if (!cTable) {
+      return NextResponse.json({ error: 'Type de contrat invalide' }, { status: 400 });
+    }
+
     // Vérifier l'accès
     const { data: contract, error: accessError } = await supabase
-      .from(`contracts_${contractType}`)
+      .from(cTable)
       .select('user_id')
       .eq('id', contractId)
       .single();

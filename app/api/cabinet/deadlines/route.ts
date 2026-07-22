@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,9 +29,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ deadlines: [], clients: [] });
     }
 
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE ses propres échéances.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ deadlines: [], clients: [] });
+    }
+
     // Fetch clients for the cabinet
     const clients = await getCabinetClients(cabinet.id);
-    const activeClients = clients.filter((c: any) => c.status === 'active');
+    let activeClients = clients.filter((c: any) => c.status === 'active');
+    if (scopedClientIds) {
+      // Un rôle lecture seule ne voit que ses propres clients dans le filtre.
+      activeClients = activeClients.filter((c: any) => scopedClientIds.includes(c.id));
+    }
 
     // Parse optional query params
     const { searchParams } = new URL(req.url);
@@ -46,6 +58,7 @@ export async function GET(req: NextRequest) {
       .eq('cabinet_id', cabinet.id)
       .order('deadline_date', { ascending: true });
 
+    if (scopedClientIds) query = query.in('client_id', scopedClientIds);
     if (month) {
       const start = `${month}-01`;
       const [y, m] = month.split('-').map(Number);
@@ -129,6 +142,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Aucun cabinet trouve' }, { status: 404 });
     }
 
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent créer une échéance.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
+
     const body = await req.json();
     const { client_id, deadline_type, description, deadline_date, priority, responsible, notes } = body;
 
@@ -205,6 +222,10 @@ export async function PATCH(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouve' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent modifier une échéance.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { id, status, priority, description, deadline_date, responsible, notes } = body;

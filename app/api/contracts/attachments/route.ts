@@ -6,8 +6,8 @@ import { ContractType } from '@/types';
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       .select('*')
       .eq('contract_id', contractId)
       .eq('contract_type', contractType)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         .from(cTable)
         .select('id')
         .eq('id', contractId)
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
       if (!ownContract) {
         return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
@@ -95,8 +95,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Use user ID and contract ID for folder organization
-    const folderPath = `${session.user.id}/${contractId}`;
-    const fileName = `${Date.now()}-${file.name}`;
+    const folderPath = `${user.id}/${contractId}`;
+    // ODIN (CIBLE 1) — assainit le nom de fichier avant de l'inscrire dans le path
+    // Storage : un file.name malveillant (ex. '../../../evil.pdf') injectait des
+    // segments de traversal. Le nom original est conservé en base pour l'affichage.
+    const safeBase = (file.name || 'document')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/\.{2,}/g, '.');
+    const fileName = `${Date.now()}-${safeBase}`;
     const storagePath = `${folderPath}/${fileName}`;
 
     // Upload to storage
@@ -115,7 +121,7 @@ export async function POST(req: NextRequest) {
       .insert({
         contract_id: contractId,
         contract_type: contractType,
-        user_id: session.user.id,
+        user_id: user.id,
         file_name: file.name,
         file_type: file.type,
         file_size: file.size,

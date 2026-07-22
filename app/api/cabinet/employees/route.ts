@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 const VALID_CONTRACT_TYPES = [
   'CDI', 'CDD', 'CDD_usage', 'Interim', 'Stage',
@@ -36,6 +37,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
 
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE ses propres employés. Sans ce
+    // scope, un membre client du cabinet lisait les SSN/salaires de TOUS les autres
+    // locataires (IDOR intra-cabinet). Les staff (owner/admin/manager) voient tout.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ employees: [] });
+    }
+
     // Parse query params
     const { searchParams } = new URL(req.url);
     const clientId = searchParams.get('client_id');
@@ -45,9 +55,11 @@ export async function GET(req: NextRequest) {
     let query = admin
       .from('cabinet_employees')
       .select('*')
-      .eq('cabinet_id', cabinet.id)
-      .order('last_name', { ascending: true });
+      .eq('cabinet_id', cabinet.id);
 
+    if (scopedClientIds) query = query.in('client_id', scopedClientIds);
+
+    query = query.order('last_name', { ascending: true });
     if (clientId) query = query.eq('client_id', clientId);
     if (status) query = query.eq('status', status);
     if (contractType) query = query.eq('contract_type', contractType);
@@ -94,6 +106,12 @@ export async function POST(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — l'écriture (création/édition d'un salarié) est réservée au
+    // staff (owner/admin/manager). Un rôle client/viewer ne doit pas pouvoir muter
+    // les données sociales d'un autre locataire du cabinet.
+    const staffGuard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!staffGuard.ok) return staffGuard.response;
 
     const body = await req.json();
     const {
@@ -204,6 +222,12 @@ export async function PATCH(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — l'écriture (création/édition d'un salarié) est réservée au
+    // staff (owner/admin/manager). Un rôle client/viewer ne doit pas pouvoir muter
+    // les données sociales d'un autre locataire du cabinet.
+    const staffGuard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!staffGuard.ok) return staffGuard.response;
 
     const body = await req.json();
     const { id, ...fields } = body;

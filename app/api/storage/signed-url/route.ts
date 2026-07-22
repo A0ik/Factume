@@ -40,16 +40,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chemin de justificatif invalide' }, { status: 400 });
   }
 
-  // Ownership : path attendu = `${userId}/<file>`.
-  if (!path.startsWith(`${user.id}/`)) {
+  // ODIN (CIBLE 1) — défense contre le path traversal. Avant, un path de la forme
+  // `<uid>/../../<victime>/file.pdf` passait le `startsWith(`${uid}/`)` puis était
+  // signé tel quel par Supabase, forgant une URL signée vers le justificatif
+  // d'autrui. On normalise : on rejette tout segment '.' / '..' et on exige que le
+  // PREMIER segment (canonique) soit l'uid de l'utilisateur courant.
+  const segs = path.split('/').map((s) => s.trim()).filter(Boolean);
+  if (segs.length === 0 || segs.some((s) => s === '..' || s === '.')) {
+    return NextResponse.json({ error: 'Chemin de justificatif invalide' }, { status: 400 });
+  }
+  if (segs[0] !== user.id) {
     return NextResponse.json({ error: 'Accès refusé à ce justificatif' }, { status: 403 });
   }
+  const cleanPath = segs.join('/');
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .storage
     .from(RECEIPTS_BUCKET)
-    .createSignedUrl(path, SIGNED_URL_TTL_SEC);
+    .createSignedUrl(cleanPath, SIGNED_URL_TTL_SEC);
 
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: 'Justificatif introuvable' }, { status: 404 });

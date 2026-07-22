@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser, getCabinetClients } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,6 +21,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const clients = await getCabinetClients(cabinet.id);
     const client = clients.find((c: any) => c.id === id);
     if (!client) return NextResponse.json({ error: 'Client non trouvé' }, { status: 404 });
+
+    // ODIN (CIBLE 1) — un viewer/client n'accède qu'à SA propre fiche cabinet.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    if (access.isReadOnly) {
+      const scoped = await getScopedClientIds(admin, cabinet.id, user.id, access);
+      if (!scoped || !scoped.includes(id)) {
+        return NextResponse.json({ error: 'Accès refusé à ce client' }, { status: 403 });
+      }
+    }
 
     const { data: profile } = await admin
       .from('profiles')
@@ -51,6 +61,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Aucun cabinet' }, { status: 404 });
+
+    // ODIN (CIBLE 1) — l'édition d'une fiche client cabinet est réservée au staff.
+    // Avant, un rôle client/viewer pouvait renommer/éditer n'importe quel client.
+    const staffGuard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!staffGuard.ok) return staffGuard.response;
 
     const body = await req.json();
     const {

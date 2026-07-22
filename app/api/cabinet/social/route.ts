@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds, requireCabinetStaff } from '@/lib/cabinet-auth';
 
 const VALID_DSN_STATUSES = ['sent', 'pending', 'blocked', 'na'] as const;
 
@@ -28,6 +29,13 @@ export async function GET(req: NextRequest) {
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
+    }
+
+    // ODIN (CIBLE 1) — un viewer/client ne voit QUE son propre suivi social.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+    if (scopedClientIds && scopedClientIds.length === 0) {
+      return NextResponse.json({ tracking: [] });
     }
 
     // Parse required query params
@@ -66,6 +74,7 @@ export async function GET(req: NextRequest) {
       .eq('month', month)
       .eq('year', year);
 
+    if (scopedClientIds) query = query.in('client_id', scopedClientIds);
     if (clientId) query = query.eq('client_id', clientId);
 
     const { data: tracking, error } = await query;
@@ -110,6 +119,10 @@ export async function POST(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent écrire le suivi social.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const {
@@ -209,6 +222,10 @@ export async function PATCH(req: NextRequest) {
     if (!cabinet) {
       return NextResponse.json({ error: 'Aucun cabinet trouvé' }, { status: 404 });
     }
+
+    // ODIN (CIBLE 1) — seuls owner / admin / manager peuvent modifier le suivi social.
+    const guard = await requireCabinetStaff(admin, cabinet, user.id);
+    if (!guard.ok) return guard.response;
 
     const body = await req.json();
     const { id, ...fields } = body;

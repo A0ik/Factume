@@ -6,8 +6,9 @@ import { ContractType } from '@/types';
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    // ODIN (CIBLE 1) — getUser() valide la session côté serveur (defense-in-depth)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
       .select('*')
       .eq('contract_id', contractId)
       .eq('contract_type', contractType)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -40,8 +41,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    // ODIN (CIBLE 1) — getUser() valide la session côté serveur (defense-in-depth)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
         .from(cTable)
         .select('id')
         .eq('id', contractId)
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
       if (!ownContract) {
         return NextResponse.json({ error: 'Contrat introuvable' }, { status: 404 });
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
       .insert({
         contract_id: contractId,
         contract_type: contractType,
-        user_id: session.user.id,
+        user_id: user.id,
         content: content.trim(),
       })
       .select()

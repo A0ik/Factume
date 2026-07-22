@@ -6,6 +6,7 @@ import { getValidSumUpToken } from '@/lib/sumup/oauth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { buildFreshLinkUpdate } from '@/lib/payment-link';
 import { ensureShortToken, buildShortPayUrl } from '@/lib/pay-token';
+import { getPaidTotal, computeRemaining } from '@/lib/invoice-balance';
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,10 +85,12 @@ export async function POST(req: NextRequest) {
     // Idempotent : renvoie le token existant ou en minte un nouveau (une seule fois).
     const shortToken = await ensureShortToken(supabase, invoiceId, invoice.payment_short_token);
 
-    // Validate and round amount
-    const amount = Math.round(Number(invoice.total) * 100) / 100;
+    // ODIN (CIBLE 2) — on charge le SOLDE RESTANT (total − acomptes), jamais le
+    // total brut. Une facture soldée est refusée.
+    const paidTotal = await getPaidTotal(supabase, invoiceId);
+    const amount = computeRemaining(Number(invoice.total), paidTotal);
     if (!amount || amount <= 0) {
-      return NextResponse.json({ error: 'Le montant de la facture doit être supérieur à 0.' }, { status: 400 });
+      return NextResponse.json({ error: 'Cette facture est déjà soldée (acomptes ≥ total).' }, { status: 400 });
     }
 
     const currency = (profile?.currency || 'EUR').toUpperCase();

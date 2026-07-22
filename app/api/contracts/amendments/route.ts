@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
+// ODIN (CIBLE 1) — Allowlist des tables de contrats (anti-injection de nom de table).
+const CONTRACT_TABLE_BY_TYPE: Record<string, string> = {
+  cdi: 'contracts_cdi',
+  cdd: 'contracts_cdd',
+  other: 'contracts_other',
+};
+function resolveContractTable(contractType: unknown): string | null {
+  if (typeof contractType !== 'string') return null;
+  return CONTRACT_TABLE_BY_TYPE[contractType.toLowerCase()] ?? null;
+}
+
 // GET /api/contracts/amendments?contractId=&contractType=
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -24,7 +35,7 @@ export async function GET(req: NextRequest) {
       .select('*')
       .eq('contract_id', contractId)
       .eq('contract_type', contractType)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -39,8 +50,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -52,9 +63,15 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
 
+    // ODIN (CIBLE 1) — résolution allowlist du nom de table (anti-injection).
+    const cTable = resolveContractTable(contractType);
+    if (!cTable) {
+      return NextResponse.json({ error: 'Type de contrat invalide' }, { status: 400 });
+    }
+
     // Get contract for amendment number + verify ownership (BUG-06 fix)
     const { data: contract } = await admin
-      .from(`contracts_${contractType}`)
+      .from(cTable)
       .select('contract_number, user_id')
       .eq('id', contractId)
       .single();
@@ -64,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Ownership check — prevent creating amendments on someone else's contract
-    if (contract.user_id !== session.user.id) {
+    if (contract.user_id !== user.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
@@ -80,7 +97,7 @@ export async function POST(req: NextRequest) {
       .insert({
         contract_id: contractId,
         contract_type: contractType,
-        user_id: session.user.id,
+        user_id: user.id,
         amendment_number: amendmentNumber,
         amendment_type: amendmentType,
         description,

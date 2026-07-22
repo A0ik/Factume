@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds } from '@/lib/cabinet-auth';
 import { cabinetInvoiceToPdfInputs } from '@/lib/cabinet-pdf';
 import { generatePdfBuffer } from '@/lib/pdf-server';
 
@@ -27,6 +28,10 @@ export async function GET(
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Cabinet non trouvé' }, { status: 404 });
 
+    // ODIN (CIBLE 1) — un rôle lecture seule ne génère QUE ses propres PDF d'honoraires.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+
     const { id } = await params;
 
     const { data: ci, error } = await admin
@@ -37,6 +42,12 @@ export async function GET(
       .maybeSingle();
     if (error || !ci) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 });
+    }
+
+    // Un rôle lecture seule ne peut accéder qu'à SES propres factures (anti-IDOR).
+    // Une facture sans client lié (niveau cabinet) reste réservée au staff.
+    if (scopedClientIds && (!ci.client_id || !scopedClientIds.includes(ci.client_id))) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
     }
 
     // Destinataire (client cabinet lié) pour le bloc FACTURÉ À.

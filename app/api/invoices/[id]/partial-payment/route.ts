@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server';
+import { buildVoidLinkUpdate } from '@/lib/payment-link';
 
 // ATHÉNA CIBLE 1B — enregistre un acompte via la RPC atomique record_partial_payment
 // (insert partial_payments + recalcul du solde + bascule du statut partial/paid).
@@ -29,6 +30,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('[partial-payment RPC]', error);
       return NextResponse.json({ error: error.message || 'Erreur.' }, { status: 400 });
     }
+
+    // ODIN (CIBLE 2) — un acompte modifie le SOLDE RESTANT. Tout lien de paiement
+    // déjà créé a figé un montant désormais faux (le total). On l'invalide
+    // (payment_link_stale=true + nullification des URL) pour que :
+    //   • /pay/<token> n'envoie plus vers un checkout au montant obsolète ;
+    //   • l'auto-régénération recrée un lien au SOLDE RESTANT (voir effet page facture).
+    // Colonnes de paiement ≠ colonnes immuables → le trigger d'immutabilité ne s'y oppose pas.
+    try {
+      await createAdminClient()
+        .from('invoices')
+        .update(buildVoidLinkUpdate())
+        .eq('id', id);
+    } catch (e) {
+      console.error('[partial-payment] void link update failed', e);
+    }
+
     return NextResponse.json(data);
   } catch (e) {
     console.error('[partial-payment POST]', e);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getCabinetForUser } from '@/lib/cabinet-helpers';
+import { resolveCabinetAccess, getScopedClientIds } from '@/lib/cabinet-auth';
 import { generatePdfBuffer } from '@/lib/pdf-server';
 
 export const maxDuration = 60;
@@ -29,7 +30,16 @@ export async function GET(
     const cabinet = await getCabinetForUser(user.id);
     if (!cabinet) return NextResponse.json({ error: 'Cabinet non trouvé' }, { status: 404 });
 
+    // ODIN (CIBLE 1) — un rôle lecture seule ne génère QUE ses propres PDF locataire.
+    const access = await resolveCabinetAccess(admin, cabinet, user.id);
+    const scopedClientIds = await getScopedClientIds(admin, cabinet.id, user.id, access);
+
     const { clientId, invoiceId } = await params;
+
+    // Un rôle lecture seule ne peut cibler qu'un client le concernant (anti-IDOR).
+    if (scopedClientIds && !scopedClientIds.includes(clientId)) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
 
     // 1. Le client appartient bien à ce cabinet.
     const { data: client } = await admin

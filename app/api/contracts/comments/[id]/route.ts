@@ -9,9 +9,10 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = await createServerSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    // ODIN (CIBLE 1) — getUser() valide la session côté serveur (defense-in-depth)
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -28,7 +29,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Commentaire introuvable' }, { status: 404 });
     }
 
-    if (comment.user_id !== session.user.id) {
+    if (comment.user_id !== user.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
